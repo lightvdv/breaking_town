@@ -1,0 +1,114 @@
+[
+  {
+    "id": "newspaper_quality_1",
+    "name": "Цветная печать",
+    "description": "Газета: +20% интересности, +5 к доверию.",
+    "cost": 150,
+    "requires": null,
+    "effects": { "channel": "newspaper", "interestMul": 1.2, "trustBonus": 5 }
+  },
+  {
+    "id": "newspaper_reach_1",
+    "name": "Больше киосков",
+    "description": "Газета: +15% охвата.",
+    "cost": 200,
+    "requires": null,
+    "effects": { "channel": "newspaper", "reachAdd": 0.15 }
+  },
+  {
+    "id": "newspaper_quality_2",
+    "name": "Колумнист с именем",
+    "description": "Газета: +20% интересности, +5 к доверию.",
+    "cost": 400,
+    "requires": { "upgrade": "newspaper_quality_1" },
+    "effects": { "channel": "newspaper", "interestMul": 1.2, "trustBonus": 5 }
+  },
+  {
+    "id": "radio_reach_1",
+    "name": "Новые частоты",
+    "description": "Радио: +15% охвата.",
+    "cost": 400,
+    "requires": null,
+    "effects": { "channel": "radio", "reachAdd": 0.15 }
+  },
+  {
+    "id": "radio_quality_1",
+    "name": "Харизматичный ведущий",
+    "description": "Радио: +25% интересности, +5 к доверию.",
+    "cost": 450,
+    "requires": null,
+    "effects": { "channel": "radio", "interestMul": 1.25, "trustBonus": 5 }
+  },
+  {
+    "id": "tv_studio",
+    "name": "Новая студия",
+    "description": "ТВ: +20% интересности, +5 к доверию.",
+    "cost": 900,
+    "requires": null,
+    "effects": { "channel": "tv", "interestMul": 1.2, "trustBonus": 5 }
+  },
+  {
+    "id": "tv_reach_1",
+    "name": "Кабельные сети",
+    "description": "ТВ: +10% охвата.",
+    "cost": 1000,
+    "requires": null,
+    "effects": { "channel": "tv", "reachAdd": 0.1 }
+  },
+  {
+    "id": "social_boost",
+    "name": "Продвижение постов",
+    "description": "Соцсети: +20% охвата.",
+    "cost": 600,
+    "requires": null,
+    "effects": { "channel": "social", "reachAdd": 0.2 }
+  },
+  {
+    "id": "social_bots",
+    "name": "Сеть ботов",
+    "description": "Соцсети: +30% интересности.",
+    "cost": 900,
+    "requires": null,
+    "effects": { "channel": "social", "interestMul": 1.3 }
+  },
+  {
+    "id": "editorial_1",
+    "name": "Сильные журналисты",
+    "description": "+1 карта в руке.",
+    "cost": 300,
+    "requires": null,
+    "effects": { "handSize": 1 }
+  },
+  {
+    "id": "editorial_2",
+    "name": "Аналитический отдел",
+    "description": "+1 публикация за ход.",
+    "cost": 800,
+    "requires": { "upgrade": "editorial_1" },
+    "effects": { "publishPerTurn": 1 }
+  },
+  {
+    "id": "lawyers",
+    "name": "Юристы",
+    "description": "Шкала разоблачений растёт на 30% медленнее.",
+    "cost": 500,
+    "requires": null,
+    "effects": { "exposureGainMul": 0.7 }
+  },
+  {
+    "id": "insider",
+    "name": "Свои люди в мэрии",
+    "description": "Шанс разоблачения −25%.",
+    "cost": 900,
+    "requires": { "upgrade": "lawyers" },
+    "effects": { "checkerMul": 0.75 }
+  },
+  {
+    "id": "experts",
+    "name": "Независимые эксперты",
+    "description": "+0.1 к правдоподобию всех новостей.",
+    "cost": 700,
+    "requires": null,
+    "effects": { "plausibilityAdd": 0.1 }
+  }
+]

@@ -1,0 +1,9 @@
+// Checks that the simulation stays free of DOM, browser and Node APIs (CONCEPT.md §7.1).
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": ["src/sim", "src/content"]
+}

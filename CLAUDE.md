@@ -4,24 +4,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-News Fights is a turn-based satirical strategy game: the player is a media outlet that manipulates true / half-true / false news to destroy a simulated city. There is **no code yet** — the repository contains only the design document. No build, lint or test commands exist; add them here once the project is scaffolded.
+News Fights is a turn-based satirical strategy game: the player is a media outlet that manipulates true / half-true / false news to destroy a simulated city. Current stage: **core prototype** (CONCEPT.md §7.3 step 1–2) — full simulation, headless bots, and a minimal UI with SVG shapes instead of art.
+
+## Commands
+
+Node.js is installed but may be missing from PATH in an already-open shell (refresh PATH or restart the app).
+
+```bash
+npm run dev          # Vite dev server (http://localhost:5173)
+npm test             # Vitest, all tests
+npx vitest run -t "true news"   # single test by name
+npm run typecheck    # tsc for the app + tsconfig.sim.json (sim must not use DOM/Node APIs)
+npm run build        # typecheck + production build
+npm run bots -- --games 200 --seed 1   # headless balance table; exit code 1 if a strategy wins >60%
+npm run bots -- --trace mixed --seed 3 # one bot game turn by turn
+```
 
 ## Source of truth
 
 [CONCEPT.md](CONCEPT.md) (in Russian) is the authoritative spec and is meant to drive code, content and art generation. Read it before implementing anything. Its rules are mandatory unless the user says otherwise; numbers marked «стартовые» are initial balance values and belong in JSON, not code. Keep CONCEPT.md updated when the user changes the design — it should describe the game only (no market analysis or other side material).
 
-The user communicates in Russian.
+The user communicates in Russian; UI text and content are in Russian, code identifiers and comments in English.
 
-## Planned stack and architecture (CONCEPT.md §6–7)
+Never edit files through PowerShell `Get-Content`/`Set-Content` pipelines: Windows PowerShell 5.1 corrupts UTF-8 Cyrillic. Use the Edit/Write tools.
 
-TypeScript (strict) + Vite; PixiJS v8 renders the city; HTML/CSS (Preact or Svelte) overlay for cards/menus/reports; Vitest; Electron + steamworks.js for Steam; Capacitor for mobile; plain web build for demos.
+## Architecture
 
-Key constraints that span the whole codebase:
-- **`sim` module is isolated**: no imports from rendering, UI or browser APIs. Rendering only reads state and subscribes to events.
-- **Deterministic**: all randomness goes through a seeded RNG; same seed + same actions = same game. Saves = serialized sim state + seed.
-- **Headless balance runs**: the sim must run without a screen so bots can play many games; a single strategy winning >60% is a balance bug (§4.1).
-- **All balance numbers and content** (cards, buildings, audience groups, channels, upgrades, prices) live in JSON.
-- **Platform code** (Steam, mobile APIs) sits behind an adapter interface.
-- **Art**: fixed sprite sizes and file naming from the start, sprites in atlases, UI styling via CSS variables — so temporary AI art can be swapped by a designer without code changes.
+- `src/sim/` — the whole game: pure TypeScript, deterministic, JSON-serializable `GameState`. Entry points in `index.ts`: `createGame(content, seed)`, `playTurn(state, content, decision)` → `TurnReport`, `listPurchases`/`purchase`, `previewPublication` (what UI and bots show before publishing). `tsconfig.sim.json` enforces no DOM/Node APIs here.
+  - Turn order (`game.ts`): exposure decay → late exposures of old lies → publish each card (`news.ts`: reach → belief → effects → word of mouth) → fact-check → ad income/upkeep (`economy.ts`) → next turn: city day (`city.ts`), real events become true cards, deal hand → outcome check.
+  - All randomness goes through `rng.ts` with the state stored in `GameState.rng`; never use `Math.random` in sim.
+  - Upgrades never mutate state directly; their effects are recomputed by `getModifiers()` from `state.upgrades`.
+  - Resident ids equal their index in `state.residents`, building ids their index in `state.buildings`.
+- `src/content/*.json` — all cards, channels, upgrades, groups, buildings and balance numbers. `validateContent()` (run in tests) checks consistency, e.g. card `titles`/`effects` are indexed by truth level and must be `null` below `baseTruth`.
+- `src/ui/` — prototype UI in plain DOM (`dom.ts` `h()` helper) + SVG city (`cityView.ts`); it only reads state and calls sim functions. Styling only via CSS variables in `style.css`. The SVG city is a placeholder for the planned PixiJS renderer.
+- `tools/bots.ts` — strategy bots for balance checks; `mixed` approximates a thoughtful player. After balance changes, rerun the bots and compare.
 
-Development order: core prototype without the city (cards + numbers) → headless bot balancing → visual city with placeholder art → final art.
+Planned stack beyond the prototype (CONCEPT.md §6): PixiJS v8 city, Preact/Svelte UI, Electron + steamworks.js, Capacitor.

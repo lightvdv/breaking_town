@@ -1,0 +1,9 @@
+[
+  { "type": "factory", "name": "Завод", "count": 1, "jobs": 100, "color": "#8a8f98" },
+  { "type": "shop", "name": "Магазин", "count": 3, "jobs": 8, "color": "#e0a458" },
+  { "type": "entertainment", "name": "Бар", "count": 2, "jobs": 6, "color": "#c77dff" },
+  { "type": "hospital", "name": "Больница", "count": 1, "jobs": 12, "color": "#ef6f6c" },
+  { "type": "cityHall", "name": "Мэрия", "count": 1, "jobs": 8, "color": "#5b8def" },
+  { "type": "factCheckers", "name": "Фактчекеры", "count": 1, "jobs": 6, "color": "#3fb68b" },
+  { "type": "home", "name": "Жилой дом", "count": 12, "jobs": 0, "color": "#b9a38a" }
+]

@@ -7,11 +7,14 @@
 import { content } from '../src/content';
 import {
   averageTrust,
+  cardTruth,
   channelOf,
   createGame,
   createRng,
   getModifiers,
+  isHarmful,
   listPurchases,
+  templateOf,
   maxDistortion,
   playTurn,
   previewPublication,
@@ -43,7 +46,7 @@ function mixed(s: GameState): Decision {
   const mods = getModifiers(s, content);
   const channels = rankedChannels(s);
   const preview = (card: CardInstance, distortion: number) =>
-    previewPublication(s, content, mods, { cardUid: card.uid, channel: channels[0], targetGroup: null, framing: 1, distortion });
+    previewPublication(s, content, mods, { cardUid: card.uid, channel: channels[0], framing: 1, distortion });
   const harm = (card: CardInstance, distortion: number) => {
     const p = preview(card, distortion);
     return p.effect !== null && p.effect.type !== 'moodUp' ? p.interest : -1;
@@ -61,15 +64,15 @@ function mixed(s: GameState): Decision {
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, lieSlots);
+  // Loud framing only for stories worth it, so the channel does not "cry wolf".
+  const framingFor = (card: CardInstance, distortion: number, channel: string): Framing => {
+    if ((s.hype[channel] ?? 0) > 40) return 0;
+    const harmful = isHarmful(preview(card, distortion).effect);
+    return card.tier >= 3 && harmful ? 2 : card.tier >= 2 ? 1 : 0;
+  };
   for (const lie of lies) {
-    const effect = preview(lie.c, lie.d).effect;
-    publish.push({
-      cardUid: lie.c.uid,
-      channel: channelFor(),
-      targetGroup: effect?.type === 'quitJob' ? 'workers' : null,
-      framing: 1,
-      distortion: lie.d,
-    });
+    const channel = channelFor();
+    publish.push({ cardUid: lie.c.uid, channel, framing: framingFor(lie.c, lie.d, channel), distortion: lie.d });
     used.add(lie.c.uid);
   }
 
@@ -79,7 +82,8 @@ function mixed(s: GameState): Decision {
     .sort((a, b) => harm(b, 0) - harm(a, 0));
   for (const c of truths) {
     if (publish.length >= mods.publishPerTurn) break;
-    publish.push({ cardUid: c.uid, channel: channelFor(), targetGroup: null, framing: 0, distortion: 0 });
+    const channel = channelFor();
+    publish.push({ cardUid: c.uid, channel, framing: framingFor(c, 0, channel), distortion: 0 });
   }
   return { publish, hold: [] };
 }
@@ -123,12 +127,13 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
   if (choice === 'random') {
     const cards = [...s.hand].sort(() => next(rng) - 0.5).slice(0, mods.publishPerTurn);
     for (const card of cards) {
+      const distortion = Math.floor(next(rng) * (maxDistortion(card) + 1));
+      const harmful = isHarmful(templateOf(content, card.templateId).effects[cardTruth(card, distortion)]);
       publish.push({
         cardUid: card.uid,
         channel: channels[Math.floor(next(rng) * channels.length)],
-        targetGroup: null,
-        framing: Math.floor(next(rng) * 3) as Framing,
-        distortion: Math.floor(next(rng) * (maxDistortion(card) + 1)),
+        framing: Math.floor(next(rng) * (harmful ? 3 : 2)) as Framing,
+        distortion,
       });
     }
     return { publish, hold: [] };
@@ -140,7 +145,6 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
       const pub: Publication = {
         cardUid: card.uid,
         channel: channels[0],
-        targetGroup: null,
         framing: choice.framing,
         distortion: distortionFor(card, choice.distortion),
       };

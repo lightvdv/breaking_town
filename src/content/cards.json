@@ -4,307 +4,650 @@
     "source": "event",
     "topic": "factory",
     "baseTruth": 0,
-    "titles": ["На заводе произошла авария", "Завод скрывает серию аварий", "Рабочие задыхаются и умирают на заводе"],
-    "effects": [
-      { "type": "quitJob", "building": "factory", "strength": 0.05 },
-      { "type": "quitJob", "building": "factory", "strength": 0.15 },
-      { "type": "quitJob", "building": "factory", "strength": 0.3 }
+    "titles": [
+      "На заводе произошла авария",
+      "Завод скрывает серию аварий",
+      "Рабочие задыхаются и умирают на заводе"
     ],
-    "interest": 0.6,
+    "effects": [
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.05
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.15
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.3
+      }
+    ],
     "engagement": 0.4,
     "weight": 3,
     "witness": "factory",
     "requires": "factory",
-    "cityEffect": { "type": "mood", "building": "factory", "amount": -0.05 }
+    "cityEffect": {
+      "type": "mood",
+      "building": "factory",
+      "amount": -0.05
+    },
+    "audience": [
+      "workers"
+    ],
+    "interest": 0.6
   },
   {
     "id": "price_rise",
     "source": "event",
     "topic": "food",
     "baseTruth": 0,
-    "titles": ["В магазинах подорожали продукты", "Торговцы сговорились взвинтить цены", "В городе начинается голод"],
-    "effects": [
-      { "type": "moodDown", "strength": 0.03 },
-      { "type": "avoid", "building": "shop", "strength": 0.2, "duration": 3 },
-      { "type": "leaveCity", "strength": 0.08 }
+    "titles": [
+      "В магазинах подорожали продукты",
+      "Торговцы сговорились взвинтить цены",
+      "В городе начинается голод"
     ],
-    "interest": 0.5,
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.03
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.2,
+        "duration": 3
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.08
+      }
+    ],
     "engagement": 0.4,
     "weight": 3,
     "witness": "shop",
     "requires": "shop",
-    "cityEffect": { "type": "money", "amount": -3 }
+    "cityEffect": {
+      "type": "money",
+      "amount": -3
+    },
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.5
   },
   {
     "id": "new_bar",
     "source": "event",
     "topic": "fun",
     "baseTruth": 0,
-    "titles": ["Открылась новая барная программа", "В бар по вечерам заходит криминал", "В баре травят посетителей"],
-    "effects": [
-      { "type": "moodUp", "strength": 0.05 },
-      { "type": "avoid", "building": "entertainment", "strength": 0.2, "duration": 3 },
-      { "type": "avoid", "building": "entertainment", "strength": 0.4, "duration": 4 }
+    "titles": [
+      "Открылась новая барная программа",
+      "В бар по вечерам заходит криминал",
+      "В баре травят посетителей"
     ],
-    "interest": 0.45,
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.2,
+        "duration": 3
+      },
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.4,
+        "duration": 4
+      }
+    ],
     "engagement": 0.3,
     "weight": 2,
     "witness": "entertainment",
     "requires": "entertainment",
-    "cityEffect": { "type": "mood", "amount": 0.02 }
+    "cityEffect": {
+      "type": "mood",
+      "amount": 0.02
+    },
+    "audience": [
+      "youth"
+    ],
+    "interest": 0.45
   },
   {
     "id": "hospital_queue",
     "source": "event",
     "topic": "health",
     "baseTruth": 0,
-    "titles": ["В больнице большие очереди", "Врачи не справляются с наплывом больных", "В городе эпидемия, больница скрывает данные"],
-    "effects": [
-      { "type": "moodDown", "strength": 0.05 },
-      { "type": "moodDown", "strength": 0.12 },
-      { "type": "leaveCity", "strength": 0.1 }
+    "titles": [
+      "В больнице большие очереди",
+      "Врачи не справляются с наплывом больных",
+      "В городе эпидемия, больница скрывает данные"
     ],
-    "interest": 0.5,
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.12
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.1
+      }
+    ],
     "engagement": 0.3,
     "weight": 2,
     "witness": "hospital",
     "requires": "hospital",
-    "cityEffect": { "type": "mood", "amount": -0.02 }
+    "cityEffect": {
+      "type": "mood",
+      "amount": -0.02
+    },
+    "audience": [
+      "pensioners"
+    ],
+    "interest": 0.5
   },
   {
     "id": "mayor_promise",
     "source": "event",
     "topic": "power",
     "baseTruth": 0,
-    "titles": ["Мэр пообещал новые рабочие места", "Мэр раздаёт пустые обещания", "Мэр ворует бюджет города"],
-    "effects": [
-      { "type": "moodUp", "strength": 0.05 },
-      { "type": "moodDown", "strength": 0.06 },
-      { "type": "protest", "strength": 0.2, "duration": 3 }
+    "titles": [
+      "Мэр пообещал новые рабочие места",
+      "Мэр раздаёт пустые обещания",
+      "Мэр ворует бюджет города"
     ],
-    "interest": 0.4,
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.06
+      },
+      {
+        "type": "protest",
+        "strength": 0.2,
+        "duration": 3
+      }
+    ],
     "engagement": 0.5,
     "weight": 2,
     "witness": "cityHall",
-    "requires": "cityHall"
+    "requires": "cityHall",
+    "audience": [
+      "workers",
+      "intelligentsia"
+    ],
+    "interest": 0.4
   },
   {
     "id": "factory_bonus",
     "source": "event",
     "topic": "factory",
     "baseTruth": 0,
-    "titles": ["Завод выплатил премии", "Премии получило только начальство", "Завод не платит зарплату уже три месяца"],
-    "effects": [
-      { "type": "moodUp", "strength": 0.05 },
-      { "type": "moodDown", "strength": 0.08 },
-      { "type": "quitJob", "building": "factory", "strength": 0.2 }
+    "titles": [
+      "Завод выплатил премии",
+      "Премии получило только начальство",
+      "Завод не платит зарплату уже три месяца"
     ],
-    "interest": 0.35,
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.08
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.2
+      }
+    ],
     "engagement": 0.3,
     "weight": 2,
     "witness": "factory",
     "requires": "factory",
-    "cityEffect": { "type": "mood", "building": "factory", "amount": 0.05 }
+    "cityEffect": {
+      "type": "mood",
+      "building": "factory",
+      "amount": 0.05
+    },
+    "audience": [
+      "workers"
+    ],
+    "interest": 0.35
   },
   {
     "id": "festival",
     "source": "event",
     "topic": "fun",
     "baseTruth": 0,
-    "titles": ["В парке прошёл фестиваль", "Фестиваль закончился дракой", "На фестивале была массовая драка с жертвами"],
-    "effects": [
-      { "type": "moodUp", "strength": 0.06 },
-      { "type": "avoid", "building": "entertainment", "strength": 0.15, "duration": 2 },
-      { "type": "avoid", "building": "entertainment", "strength": 0.35, "duration": 3 }
+    "titles": [
+      "В парке прошёл фестиваль",
+      "Фестиваль закончился дракой",
+      "На фестивале была массовая драка с жертвами"
     ],
-    "interest": 0.55,
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.06
+      },
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.15,
+        "duration": 2
+      },
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.35,
+        "duration": 3
+      }
+    ],
     "engagement": 0.5,
     "weight": 2,
-    "cityEffect": { "type": "mood", "amount": 0.03 }
+    "cityEffect": {
+      "type": "mood",
+      "amount": 0.03
+    },
+    "audience": [
+      "youth"
+    ],
+    "interest": 0.55
   },
   {
     "id": "shop_layoff",
     "source": "event",
     "topic": "food",
     "baseTruth": 0,
-    "titles": ["Магазин сократил продавцов", "Торговля в городе умирает", "Все магазины скоро закроются"],
-    "effects": [
-      { "type": "moodDown", "strength": 0.03 },
-      { "type": "avoid", "building": "shop", "strength": 0.1, "duration": 2 },
-      { "type": "leaveCity", "strength": 0.06 }
+    "titles": [
+      "Магазин сократил продавцов",
+      "Торговля в городе умирает",
+      "Все магазины скоро закроются"
     ],
-    "interest": 0.35,
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.03
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.1,
+        "duration": 2
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.06
+      }
+    ],
     "engagement": 0.2,
     "weight": 1,
     "witness": "shop",
     "requires": "shop",
-    "cityEffect": { "type": "layoff", "building": "shop", "amount": 2 }
+    "cityEffect": {
+      "type": "layoff",
+      "building": "shop",
+      "amount": 2
+    },
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.35
   },
   {
     "id": "sports_win",
     "source": "event",
     "topic": "fun",
     "baseTruth": 0,
-    "titles": ["Городская команда выиграла кубок", "Победа куплена спонсорами", "Матч был договорным, команду распустят"],
-    "effects": [
-      { "type": "moodUp", "strength": 0.08 },
-      { "type": "moodDown", "strength": 0.03 },
-      { "type": "moodDown", "strength": 0.08 }
+    "titles": [
+      "Городская команда выиграла кубок",
+      "Победа куплена спонсорами",
+      "Матч был договорным, команду распустят"
     ],
-    "interest": 0.75,
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.08
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.03
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.08
+      }
+    ],
     "engagement": 0.7,
     "weight": 2,
-    "cityEffect": { "type": "mood", "amount": 0.03 }
+    "cityEffect": {
+      "type": "mood",
+      "amount": 0.03
+    },
+    "audience": [
+      "youth",
+      "workers"
+    ],
+    "interest": 0.75
   },
   {
     "id": "water_poison",
     "source": "rumor",
     "topic": "health",
     "baseTruth": 2,
-    "titles": [null, null, "В водопроводе нашли яд"],
-    "effects": [null, null, { "type": "leaveCity", "strength": 0.12 }],
-    "interest": 0.8,
+    "titles": [
+      null,
+      null,
+      "В водопроводе нашли яд"
+    ],
+    "effects": [
+      null,
+      null,
+      {
+        "type": "leaveCity",
+        "strength": 0.12
+      }
+    ],
     "engagement": 0.6,
-    "weight": 2
+    "weight": 2,
+    "audience": [],
+    "interest": 0.8
   },
   {
     "id": "factory_sold",
     "source": "rumor",
     "topic": "factory",
     "baseTruth": 1,
-    "titles": [null, "Завод собираются продать чужакам", "Завод закроют уже в следующем месяце"],
+    "titles": [
+      null,
+      "Завод собираются продать чужакам",
+      "Завод закроют уже в следующем месяце"
+    ],
     "effects": [
       null,
-      { "type": "quitJob", "building": "factory", "strength": 0.1 },
-      { "type": "quitJob", "building": "factory", "strength": 0.25 }
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.1
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.25
+      }
     ],
-    "interest": 0.55,
     "engagement": 0.4,
     "weight": 3,
     "witness": "factory",
-    "requires": "factory"
+    "requires": "factory",
+    "audience": [
+      "workers"
+    ],
+    "interest": 0.55
   },
   {
     "id": "shop_rats",
     "source": "rumor",
     "topic": "food",
     "baseTruth": 1,
-    "titles": [null, "В магазине у рынка видели крыс", "Продукты в магазинах заражены"],
+    "titles": [
+      null,
+      "В магазине у рынка видели крыс",
+      "Продукты в магазинах заражены"
+    ],
     "effects": [
       null,
-      { "type": "avoid", "building": "shop", "strength": 0.15, "duration": 3 },
-      { "type": "avoid", "building": "shop", "strength": 0.35, "duration": 4 }
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.15,
+        "duration": 3
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.35,
+        "duration": 4
+      }
     ],
-    "interest": 0.6,
     "engagement": 0.5,
     "weight": 3,
     "witness": "shop",
-    "requires": "shop"
+    "requires": "shop",
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.6
   },
   {
     "id": "mayor_flee",
     "source": "rumor",
     "topic": "power",
     "baseTruth": 2,
-    "titles": [null, null, "Мэр готовится сбежать из города с казной"],
-    "effects": [null, null, { "type": "protest", "strength": 0.25, "duration": 3 }],
-    "interest": 0.7,
+    "titles": [
+      null,
+      null,
+      "Мэр готовится сбежать из города с казной"
+    ],
+    "effects": [
+      null,
+      null,
+      {
+        "type": "protest",
+        "strength": 0.25,
+        "duration": 3
+      }
+    ],
     "engagement": 0.6,
     "weight": 2,
-    "witness": "cityHall"
+    "witness": "cityHall",
+    "audience": [
+      "intelligentsia",
+      "pensioners"
+    ],
+    "interest": 0.7
   },
   {
     "id": "crime_wave",
     "source": "rumor",
     "topic": "crime",
     "baseTruth": 1,
-    "titles": [null, "Вечером на улицах стало неспокойно", "В городе орудует банда, полиция бездействует"],
+    "titles": [
+      null,
+      "Вечером на улицах стало неспокойно",
+      "В городе орудует банда, полиция бездействует"
+    ],
     "effects": [
       null,
-      { "type": "avoid", "building": "entertainment", "strength": 0.15, "duration": 2 },
-      { "type": "leaveCity", "strength": 0.07 }
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.15,
+        "duration": 2
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.07
+      }
     ],
-    "interest": 0.6,
     "engagement": 0.5,
-    "weight": 3
+    "weight": 3,
+    "audience": [
+      "pensioners"
+    ],
+    "interest": 0.6
   },
   {
     "id": "bar_drugs",
     "source": "rumor",
     "topic": "crime",
     "baseTruth": 1,
-    "titles": [null, "В баре продают запрещённое", "Молодёжь массово травится в барах"],
+    "titles": [
+      null,
+      "В баре продают запрещённое",
+      "Молодёжь массово травится в барах"
+    ],
     "effects": [
       null,
-      { "type": "avoid", "building": "entertainment", "strength": 0.2, "duration": 3 },
-      { "type": "avoid", "building": "entertainment", "strength": 0.4, "duration": 4 }
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.2,
+        "duration": 3
+      },
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.4,
+        "duration": 4
+      }
     ],
-    "interest": 0.55,
     "engagement": 0.5,
     "weight": 2,
     "witness": "entertainment",
-    "requires": "entertainment"
+    "requires": "entertainment",
+    "audience": [
+      "youth",
+      "pensioners"
+    ],
+    "interest": 0.55
   },
   {
     "id": "doctors_strike",
     "source": "rumor",
     "topic": "health",
     "baseTruth": 1,
-    "titles": [null, "Врачи грозят забастовкой", "Больница закрывается, врачи уезжают"],
+    "titles": [
+      null,
+      "Врачи грозят забастовкой",
+      "Больница закрывается, врачи уезжают"
+    ],
     "effects": [
       null,
-      { "type": "moodDown", "strength": 0.08 },
-      { "type": "leaveCity", "strength": 0.08 }
+      {
+        "type": "moodDown",
+        "strength": 0.08
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.08
+      }
     ],
-    "interest": 0.5,
     "engagement": 0.4,
     "weight": 2,
     "witness": "hospital",
-    "requires": "hospital"
+    "requires": "hospital",
+    "audience": [
+      "pensioners"
+    ],
+    "interest": 0.5
   },
   {
     "id": "layoffs_coming",
     "source": "rumor",
     "topic": "factory",
     "baseTruth": 1,
-    "titles": [null, "Ходят слухи о сокращениях", "Половину рабочих уволят до конца недели"],
+    "titles": [
+      null,
+      "Ходят слухи о сокращениях",
+      "Половину рабочих уволят до конца недели"
+    ],
     "effects": [
       null,
-      { "type": "quitJob", "building": "factory", "strength": 0.08 },
-      { "type": "quitJob", "building": "factory", "strength": 0.18 }
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.08
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.18
+      }
     ],
-    "interest": 0.5,
     "engagement": 0.4,
     "weight": 3,
     "witness": "factory",
-    "requires": "factory"
+    "requires": "factory",
+    "audience": [
+      "workers"
+    ],
+    "interest": 0.5
   },
   {
     "id": "tax_rise",
     "source": "rumor",
     "topic": "power",
     "baseTruth": 1,
-    "titles": [null, "Мэрия обсуждает новый налог", "Мэрия заберёт у горожан последние деньги"],
+    "titles": [
+      null,
+      "Мэрия обсуждает новый налог",
+      "Мэрия заберёт у горожан последние деньги"
+    ],
     "effects": [
       null,
-      { "type": "moodDown", "strength": 0.08 },
-      { "type": "protest", "strength": 0.18, "duration": 3 }
+      {
+        "type": "moodDown",
+        "strength": 0.08
+      },
+      {
+        "type": "protest",
+        "strength": 0.18,
+        "duration": 3
+      }
     ],
-    "interest": 0.5,
     "engagement": 0.5,
     "weight": 3,
-    "witness": "cityHall"
+    "witness": "cityHall",
+    "audience": [
+      "intelligentsia",
+      "workers"
+    ],
+    "interest": 0.5
   },
   {
     "id": "celebrity",
     "source": "rumor",
     "topic": "fun",
     "baseTruth": 2,
-    "titles": [null, null, "В город тайно приехала звезда"],
-    "effects": [null, null, { "type": "moodUp", "strength": 0.04 }],
-    "interest": 0.9,
+    "titles": [
+      null,
+      null,
+      "В город тайно приехала звезда"
+    ],
+    "effects": [
+      null,
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.04
+      }
+    ],
     "engagement": 0.8,
-    "weight": 1
+    "weight": 1,
+    "audience": [
+      "youth"
+    ],
+    "interest": 0.9
   },
   {
     "id": "global_recession",
@@ -312,15 +655,29 @@
     "scope": "global",
     "topic": "power",
     "baseTruth": 0,
-    "titles": ["В стране начался экономический спад", "Кризис ударит по каждой семье", "Страна на грани дефолта, сбережения сгорят"],
-    "effects": [
-      { "type": "moodDown", "strength": 0.04 },
-      { "type": "moodDown", "strength": 0.1 },
-      { "type": "leaveCity", "strength": 0.08 }
+    "titles": [
+      "В стране начался экономический спад",
+      "Кризис ударит по каждой семье",
+      "Страна на грани дефолта, сбережения сгорят"
     ],
-    "interest": 0.55,
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.1
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.08
+      }
+    ],
     "engagement": 0.4,
-    "weight": 2
+    "weight": 2,
+    "audience": [],
+    "interest": 0.55
   },
   {
     "id": "global_grain",
@@ -328,15 +685,34 @@
     "scope": "global",
     "topic": "food",
     "baseTruth": 0,
-    "titles": ["В мире дорожает зерно", "Скоро хлеб станет роскошью", "Продукты исчезнут с полок по всей стране"],
-    "effects": [
-      { "type": "moodDown", "strength": 0.03 },
-      { "type": "avoid", "building": "shop", "strength": 0.15, "duration": 2 },
-      { "type": "leaveCity", "strength": 0.06 }
+    "titles": [
+      "В мире дорожает зерно",
+      "Скоро хлеб станет роскошью",
+      "Продукты исчезнут с полок по всей стране"
     ],
-    "interest": 0.45,
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.03
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.15,
+        "duration": 2
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.06
+      }
+    ],
     "engagement": 0.35,
-    "weight": 2
+    "weight": 2,
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.45
   },
   {
     "id": "global_star",
@@ -344,15 +720,32 @@
     "scope": "global",
     "topic": "fun",
     "baseTruth": 0,
-    "titles": ["Звезда эстрады выпустила новый альбом", "Звезда эстрады попала в больницу", "Звезда эстрады погибла при загадочных обстоятельствах"],
-    "effects": [
-      { "type": "moodUp", "strength": 0.04 },
-      { "type": "moodDown", "strength": 0.04 },
-      { "type": "moodDown", "strength": 0.08 }
+    "titles": [
+      "Звезда эстрады выпустила новый альбом",
+      "Звезда эстрады попала в больницу",
+      "Звезда эстрады погибла при загадочных обстоятельствах"
     ],
-    "interest": 0.8,
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.04
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.08
+      }
+    ],
     "engagement": 0.8,
-    "weight": 2
+    "weight": 2,
+    "audience": [
+      "youth",
+      "pensioners"
+    ],
+    "interest": 0.8
   },
   {
     "id": "global_cup",
@@ -360,15 +753,32 @@
     "scope": "global",
     "topic": "fun",
     "baseTruth": 0,
-    "titles": ["Сборная выиграла чемпионат", "Победа сборной куплена", "Сборную дисквалифицировали за допинг"],
-    "effects": [
-      { "type": "moodUp", "strength": 0.07 },
-      { "type": "moodDown", "strength": 0.03 },
-      { "type": "moodDown", "strength": 0.06 }
+    "titles": [
+      "Сборная выиграла чемпионат",
+      "Победа сборной куплена",
+      "Сборную дисквалифицировали за допинг"
     ],
-    "interest": 0.75,
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.07
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.03
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.06
+      }
+    ],
     "engagement": 0.7,
-    "weight": 2
+    "weight": 2,
+    "audience": [
+      "youth",
+      "workers"
+    ],
+    "interest": 0.75
   },
   {
     "id": "global_flu",
@@ -376,11 +786,28 @@
     "scope": "global",
     "topic": "health",
     "baseTruth": 1,
-    "titles": [null, "В соседней стране вспышка гриппа", "Смертельный вирус уже движется к нам"],
-    "effects": [null, { "type": "moodDown", "strength": 0.06 }, { "type": "leaveCity", "strength": 0.1 }],
-    "interest": 0.65,
+    "titles": [
+      null,
+      "В соседней стране вспышка гриппа",
+      "Смертельный вирус уже движется к нам"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.06
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.1
+      }
+    ],
     "engagement": 0.55,
-    "weight": 2
+    "weight": 2,
+    "audience": [
+      "pensioners"
+    ],
+    "interest": 0.65
   },
   {
     "id": "global_plants",
@@ -388,16 +815,31 @@
     "scope": "global",
     "topic": "factory",
     "baseTruth": 1,
-    "titles": [null, "В стране закрывают заводы", "Наш завод — следующий в списке на закрытие"],
+    "titles": [
+      null,
+      "В стране закрывают заводы",
+      "Наш завод — следующий в списке на закрытие"
+    ],
     "effects": [
       null,
-      { "type": "quitJob", "building": "factory", "strength": 0.08 },
-      { "type": "quitJob", "building": "factory", "strength": 0.2 }
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.08
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.2
+      }
     ],
-    "interest": 0.5,
     "engagement": 0.4,
     "weight": 2,
-    "requires": "factory"
+    "requires": "factory",
+    "audience": [
+      "workers"
+    ],
+    "interest": 0.5
   },
   {
     "id": "global_taxes",
@@ -405,11 +847,30 @@
     "scope": "global",
     "topic": "power",
     "baseTruth": 1,
-    "titles": [null, "Правительство готовит новые налоги", "Налоги вырастут вдвое уже в этом месяце"],
-    "effects": [null, { "type": "moodDown", "strength": 0.07 }, { "type": "protest", "strength": 0.15, "duration": 3 }],
-    "interest": 0.55,
+    "titles": [
+      null,
+      "Правительство готовит новые налоги",
+      "Налоги вырастут вдвое уже в этом месяце"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.07
+      },
+      {
+        "type": "protest",
+        "strength": 0.15,
+        "duration": 3
+      }
+    ],
     "engagement": 0.5,
-    "weight": 2
+    "weight": 2,
+    "audience": [
+      "intelligentsia",
+      "workers"
+    ],
+    "interest": 0.55
   },
   {
     "id": "global_aliens",
@@ -417,10 +878,22 @@
     "scope": "global",
     "topic": "crime",
     "baseTruth": 2,
-    "titles": [null, null, "Учёные подтвердили: пришельцы среди нас"],
-    "effects": [null, null, { "type": "moodDown", "strength": 0.04 }],
-    "interest": 0.95,
+    "titles": [
+      null,
+      null,
+      "Учёные подтвердили: пришельцы среди нас"
+    ],
+    "effects": [
+      null,
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      }
+    ],
     "engagement": 0.9,
-    "weight": 1
+    "weight": 1,
+    "audience": [],
+    "interest": 0.95
   }
 ]

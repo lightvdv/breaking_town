@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { content } from '../src/content';
 import {
   averageTrust,
+  cardTruth,
   createGame,
   createRng,
   fireReporter,
+  isHarmful,
+  previewPublication,
+  getModifiers,
+  templateOf,
   isRoadTile,
   listPurchases,
   tierWeights,
@@ -29,13 +34,12 @@ function simpleDecision(state: GameState, distortion: 'none' | 'max', framing: 0
     .filter((c) => (distortion === 'none' ? c.baseTruth === 0 : true))
     .slice(0, 2);
   return {
-    publish: cards.map((c) => ({
-      cardUid: c.uid,
-      channel: 'newspaper',
-      targetGroup: null,
-      framing,
-      distortion: distortion === 'max' ? maxDistortion(c) : 0,
-    })),
+    publish: cards.map((c) => {
+      const d = distortion === 'max' ? maxDistortion(c) : 0;
+      // Panic is only allowed for harmful stories.
+      const harmful = isHarmful(templateOf(content, c.templateId).effects[cardTruth(c, d)]);
+      return { cardUid: c.uid, channel: 'newspaper', framing: framing === 2 && !harmful ? 1 : framing, distortion: d };
+    }),
     hold: [],
   };
 }
@@ -111,7 +115,6 @@ describe('game', () => {
       publish: s.hand.slice(0, 1).map((c) => ({
         cardUid: c.uid,
         channel: 'newspaper',
-        targetGroup: null,
         framing: 0,
         distortion: 0,
       })),
@@ -123,7 +126,7 @@ describe('game', () => {
   it('rejects channels the player does not own', () => {
     const s = createGame(content, 1);
     const d: Decision = {
-      publish: [{ cardUid: s.hand[0].uid, channel: 'tv', targetGroup: null, framing: 0, distortion: 0 }],
+      publish: [{ cardUid: s.hand[0].uid, channel: 'tv', framing: 0, distortion: 0 }],
       hold: [],
     };
     expect(() => playTurn(s, content, d)).toThrow(/not owned/);
@@ -216,6 +219,43 @@ describe('reporters', () => {
     const star = content.reporters.find((r) => r.skills.nose === 3)!;
     const share = (w: number[]) => w[3] / w.reduce((a, b) => a + b, 0);
     expect(share(tierWeights(content, star))).toBeGreaterThan(share(tierWeights(content, plain)) * 2);
+  });
+});
+
+describe('framing', () => {
+  /** A game whose hand holds the given template at the given tier. */
+  function gameWith(templateId: string): GameState {
+    const s = createGame(content, 4);
+    const tpl = templateOf(content, templateId);
+    s.hand = [{ uid: 999, templateId, baseTruth: tpl.baseTruth, createdTurn: s.turn, tier: 1, scope: 'local', reporterId: s.reporters[0] }];
+    return s;
+  }
+
+  it('rejects panic for a story without a harmful effect', () => {
+    const s = gameWith('celebrity');
+    expect(() => playTurn(s, content, { publish: [{ cardUid: 999, channel: 'newspaper', framing: 2, distortion: 0 }], hold: [] })).toThrow(
+      /Panic/,
+    );
+  });
+
+  it('loud framing raises hype, and hype fades', () => {
+    const s = gameWith('factory_sold');
+    playTurn(s, content, { publish: [{ cardUid: 999, channel: 'newspaper', framing: 2, distortion: 0 }], hold: [] });
+    const { hypeGain, hypeDecay } = content.balance;
+    expect(s.hype.newspaper).toBe(hypeGain[2] - hypeDecay);
+    playTurn(s, content, { publish: [], hold: [] });
+    expect(s.hype.newspaper).toBe(hypeGain[2] - 2 * hypeDecay);
+  });
+
+  it('hype weakens loud framing and belief', () => {
+    const s = gameWith('factory_sold');
+    const pub = { cardUid: 999, channel: 'newspaper', framing: 2 as const, distortion: 0 };
+    const calm = previewPublication(s, content, getModifiers(s, content), pub);
+    s.hype.newspaper = 100;
+    const hyped = previewPublication(s, content, getModifiers(s, content), pub);
+    expect(hyped.interest).toBeLessThan(calm.interest);
+    expect(hyped.credibility).toBeLessThan(calm.credibility);
+    expect(calm.credibility).toBe(1);
   });
 });
 

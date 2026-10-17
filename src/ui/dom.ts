@@ -21,7 +21,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = 
 }
 
 export function select(
-  options: { value: string; label: string }[],
+  options: { value: string; label: string; disabled?: boolean }[],
   value: string,
   onChange: (v: string) => void,
   disabled = false,
@@ -29,7 +29,7 @@ export function select(
   const s = h(
     'select',
     { disabled },
-    ...options.map((o) => h('option', { value: o.value, selected: o.value === value }, o.label)),
+    ...options.map((o) => h('option', { value: o.value, selected: o.value === value, disabled: o.disabled }, o.label)),
   );
   s.addEventListener('change', () => onChange(s.value));
   return s;

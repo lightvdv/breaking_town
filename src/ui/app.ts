@@ -4,9 +4,11 @@ import {
   buildingDefOf,
   channelOf,
   createGame,
+  cardTruth,
   fireReporter,
   getModifiers,
   groupOf,
+  isHarmful,
   listPurchases,
   maxDistortion,
   playTurn,
@@ -43,7 +45,6 @@ interface Draft {
   publish: boolean;
   hold: boolean;
   channel: string;
-  target: string;
   framing: Framing;
   distortion: number;
 }
@@ -187,7 +188,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const draftOf = (card: CardInstance): Draft => {
     let d = drafts.get(card.uid);
     if (!d) {
-      d = { publish: false, hold: false, channel: state.ownedChannels[0], target: '', framing: 0, distortion: 0 };
+      d = { publish: false, hold: false, channel: state.ownedChannels[0], framing: 0, distortion: 0 };
       drafts.set(card.uid, d);
     }
     if (!state.ownedChannels.includes(d.channel)) d.channel = state.ownedChannels[0];
@@ -225,7 +226,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
         decision.publish.push({
           cardUid: card.uid,
           channel: d.channel,
-          targetGroup: d.target || null,
           framing: d.framing,
           distortion: d.distortion,
         });
@@ -346,10 +346,17 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h(
           'div',
           { class: 'stat trust' },
-          h('span', {}, 'Доверие'),
-          ...state.ownedChannels.map((ch) =>
-            h('div', { class: 'trust-row' }, h('small', {}, channelOf(c, ch).name), meter(averageTrust(state, c, ch) / 100, 'ok')),
-          ),
+          h('span', {}, 'Доверие · крикливость'),
+          ...state.ownedChannels.map((ch) => {
+            const hype = (state.hype[ch] ?? 0) / 100;
+            return h(
+              'div',
+              { class: 'trust-row', title: `Доверие ${Math.round(averageTrust(state, c, ch))}%, крикливость ${Math.round(hype * 100)}%` },
+              h('small', {}, channelOf(c, ch).name),
+              meter(averageTrust(state, c, ch) / 100, 'ok'),
+              meter(hype, hype >= 0.5 ? 'danger' : 'warn'),
+            );
+          }),
         ),
       ),
       h('button', { class: 'ghost small', onclick: newGame }, 'Новая игра'),
@@ -366,13 +373,18 @@ export function mountApp(root: HTMLElement, c: Content): void {
   function cardView(card: CardInstance, mods: ReturnType<typeof getModifiers>, publishedCount: number): HTMLElement {
     const tpl = templateOf(c, card.templateId);
     const d = draftOf(card);
+    // Panic is only for harmful stories; drop to sensational if the distortion made it harmless.
+    const harmful = isHarmful(tpl.effects[cardTruth(card, d.distortion)]);
+    if (d.framing === 2 && !harmful) d.framing = 1;
     const p = previewPublication(state, c, mods, {
       cardUid: card.uid,
       channel: d.channel,
-      targetGroup: d.target || null,
       framing: d.framing,
       distortion: d.distortion,
     });
+    const audience = tpl.audience?.length
+      ? tpl.audience.map((g) => groupOf(c, g).name.toLowerCase()).join(', ')
+      : 'все жители';
     const limitReached = !d.publish && publishedCount >= mods.publishPerTurn;
     const holdCount = state.hand.filter((x) => drafts.get(x.uid)?.hold).length;
     const update = (patch: Partial<Draft>) => {
@@ -418,6 +430,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       ),
       h('h3', {}, p.title),
       h('p', { class: 'effect' }, effectText(c, p.effect)),
+      h('p', { class: 'audience' }, `Аудитория: ${audience}`),
       stat('Интерес', p.interest, 'ok'),
       stat('Охват', p.reachChance, 'ok'),
       stat('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
@@ -430,14 +443,18 @@ export function mountApp(root: HTMLElement, c: Content): void {
           {},
           'Подача',
           select(
-            framingLabels.map((l, i) => ({ value: String(i), label: l })),
+            framingLabels.map((l, i) => ({
+              value: String(i),
+              label: i === 2 && !harmful ? `${l} (только для плохих новостей)` : l,
+              disabled: i === 2 && !harmful,
+            })),
             String(d.framing),
             (v) => update({ framing: Number(v) as Framing }),
           ),
         ),
         h(
           'label',
-          {},
+          { class: 'wide' },
           'Канал',
           select(
             state.ownedChannels.map((ch) => ({ value: ch, label: channelOf(c, ch).name })),
@@ -445,16 +462,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
             (v) => update({ channel: v }),
           ),
         ),
-        h(
-          'label',
-          {},
-          'Аудитория',
-          select(
-            [{ value: '', label: 'Все' }, ...c.groups.map((g) => ({ value: g.id, label: g.name }))],
-            d.target,
-            (v) => update({ target: v }),
-          ),
-        ),
+      ),
+      h(
+        'p',
+        { class: `hype-note${p.hype >= 50 ? ' bad' : ''}` },
+        `Крикливость: ${channelOf(c, d.channel).name.toLowerCase()} ${Math.round(p.hype)}%. `,
+        d.framing > 0 ? `Громкая подача добавит +${c.balance.hypeGain[d.framing]}. ` : '',
+        p.credibility < 0.999 ? `Доверие к этой новости ×${p.credibility.toFixed(2)}. ` : '',
+        p.hype >= 50 && d.framing > 0 ? 'Читатели устали от крика — громкая подача почти не работает.' : '',
       ),
       h(
         'div',
@@ -633,6 +648,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
             r.metricsBefore.activeResidents,
             r.metricsAfter.activeResidents,
           )}, разоблачения ${r.exposureDelta >= 0 ? '+' : ''}${Math.round(r.exposureDelta)}`,
+        ),
+        h(
+          'p',
+          {},
+          `Крикливость: ${Object.entries(r.hypeAfter)
+            .filter(([ch]) => state.ownedChannels.includes(ch))
+            .map(([ch, v]) => `${channelOf(c, ch).name.toLowerCase()} ${Math.round(v)}%`)
+            .join(', ')}`,
         ),
       ),
       ...(r.events.length || r.notes.length

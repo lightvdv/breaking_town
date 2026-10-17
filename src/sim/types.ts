@@ -119,6 +119,8 @@ export interface CardTemplate {
   source: 'event' | 'rumor';
   /** local = about this city (default), global = about the country or the world. */
   scope?: NewsScope;
+  /** Groups this story interests; they read it more often. Empty or missing = everyone alike. */
+  audience?: GroupId[];
   topic: Topic;
   /** Title per truth level; null where that level is impossible (below baseTruth). */
   titles: Triple<string | null>;
@@ -219,8 +221,15 @@ export interface Balance {
   maxBelief: number;
   wordOfMouthChance: number;
   wordOfMouthFactor: number;
-  targetBoost: number;
-  targetOthers: number;
+  /** Reach multiplier for the story's audience and for everyone else. */
+  audienceBoost: number;
+  audienceOthers: number;
+  /** Hype added to a channel per publication, by framing. */
+  hypeGain: Triple<number>;
+  hypeDecay: number;
+  /** At hype 100: belief drop for all news of the channel / extra drop for loudly framed news. */
+  hypeBeliefPenalty: number;
+  hypeLoudPenalty: number;
   fatiguePerRepeat: number;
   staleInterestPerTurn: number;
   minStaleInterest: number;
@@ -325,7 +334,7 @@ export interface Find {
 export interface Publication {
   cardUid: number;
   channel: ChannelId;
-  targetGroup: GroupId | null;
+  /** Panic (2) is only allowed for stories with a harmful effect. */
   framing: Framing;
   /** Added to the card's baseTruth to get the published truth level. */
   distortion: number;
@@ -387,6 +396,8 @@ export interface GameState {
   lastFinds: Find[];
   /** Ad-rate multiplier per channel, drops after a scandal. */
   scandal: Record<ChannelId, number>;
+  /** "Crying wolf" meter per channel, 0..100: loud framing raises it, it fades over time. */
+  hype: Record<ChannelId, number>;
   /** Consecutive turns each topic was published, ending last turn. */
   topicStreak: Partial<Record<Topic, number>>;
   pendingLies: PendingLie[];
@@ -424,6 +435,7 @@ export interface TurnReport {
   upkeep: number;
   moneyDelta: number;
   exposureDelta: number;
+  hypeAfter: Record<ChannelId, number>;
   trustBefore: Record<ChannelId, number>;
   trustAfter: Record<ChannelId, number>;
   metricsBefore: CityMetrics;

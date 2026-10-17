@@ -191,7 +191,7 @@ select {
 
 .trust-row {
   display: grid;
-  grid-template-columns: 62px 70px;
+  grid-template-columns: 62px 60px 40px;
   align-items: center;
   gap: 6px;
 }
@@ -474,6 +474,27 @@ select {
   flex-direction: column;
   gap: 2px;
   color: var(--paper-muted);
+}
+
+.controls label.wide {
+  grid-column: 1 / -1;
+}
+
+.card .audience {
+  margin: 0;
+  font-size: 12px;
+  color: var(--paper-muted);
+}
+
+.hype-note {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--paper-muted);
+}
+
+.hype-note.bad {
+  color: #a22633;
+  font-weight: 600;
 }
 
 .card-actions {

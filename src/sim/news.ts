@@ -27,6 +27,10 @@ export interface PublicationPreview {
   reachChance: number;
   /** Fact-check chance assuming the news reaches a quarter of the city. */
   exposureRisk: number;
+  /** Belief multiplier from the channel's hype (1 = undamaged). */
+  credibility: number;
+  /** The channel's current hype, 0..100. */
+  hype: number;
 }
 
 export function cardTruth(card: CardInstance, distortion: number): TruthLevel {
@@ -35,6 +39,20 @@ export function cardTruth(card: CardInstance, distortion: number): TruthLevel {
 
 export function maxDistortion(card: CardInstance): number {
   return 2 - card.baseTruth;
+}
+
+/** Panic framing is only allowed for stories that harm the city. */
+export function isHarmful(effect: CardEffect | null): boolean {
+  return effect !== null && effect.type !== 'moodUp';
+}
+
+/** Loud framing works less the more the channel has already shouted (CONCEPT.md §4.2). */
+function loudBonus(multiplier: number, hype: number): number {
+  return 1 + (multiplier - 1) * (1 - hype / 100);
+}
+
+function hypeOf(state: GameState, channel: ChannelId): number {
+  return state.hype[channel] ?? 0;
 }
 
 function interestOf(
@@ -55,7 +73,7 @@ function interestOf(
     tpl.interest *
     b.tierInterest[card.tier] *
     scope *
-    b.framingInterest[pub.framing] *
+    loudBonus(b.framingInterest[pub.framing], hypeOf(state, pub.channel)) *
     mods.channels[pub.channel].interestMul *
     fatigue *
     stale
@@ -126,7 +144,16 @@ export function previewPublication(
     interest,
     reachChance: reachChanceOf(c, mods, card, tpl, pub.channel, interest),
     exposureRisk: exposureRiskOf(state, c, mods, truth, pub.channel, pub.framing, 0.25),
+    credibility: hypeCredibility(state, c, pub),
+    hype: hypeOf(state, pub.channel),
   };
+}
+
+/** How much the channel's shouting undermines belief in this publication (1 = not at all). */
+function hypeCredibility(state: GameState, c: Content, pub: Publication): number {
+  const h = hypeOf(state, pub.channel) / 100;
+  const all = 1 - c.balance.hypeBeliefPenalty * h;
+  return pub.framing > 0 ? all * (1 - c.balance.hypeLoudPenalty * h) : all;
 }
 
 function beliefChance(
@@ -146,7 +173,7 @@ function beliefChance(
   const trust = (r.trust[pub.channel] + mods.channels[pub.channel].trustBonus) / 100;
   const skepticism = groupOf(c, r.group).skepticism;
   return clamp(
-    b.beliefScale * trust * plausibility * (1 - skepticism) * b.framingBelief[pub.framing],
+    b.beliefScale * trust * plausibility * (1 - skepticism) * b.framingBelief[pub.framing] * hypeCredibility(state, c, pub),
     0,
     b.maxBelief,
   );
@@ -158,11 +185,10 @@ function applyEffect(
   rng: RngState,
   r: Resident,
   e: CardEffect,
-  framing: Framing,
-  cardMul: number,
+  /** Framing (already weakened by hype) × tier × scope × global scale. */
+  mult: number,
 ): boolean {
   const b = c.balance;
-  const mult = b.framingEffect[framing] * b.effectScale * cardMul;
   switch (e.type) {
     case 'moodUp':
       r.mood = clamp(r.mood + e.strength * mult);
@@ -228,7 +254,9 @@ export function publish(
   const effect = tpl.effects[truth];
   const interest = interestOf(state, c, mods, card, tpl, pub, repeatsThisTurn);
   const reachChance = reachChanceOf(c, mods, card, tpl, pub.channel, interest);
-  const cardMul = effectMulOf(c, card);
+  const framingMul = loudBonus(b.framingEffect[pub.framing], hypeOf(state, pub.channel));
+  const cardMul = effectMulOf(c, card) * framingMul;
+  const audience = tpl.audience ?? [];
 
   const report: PublicationReport = {
     cardUid: card.uid,
@@ -260,9 +288,9 @@ export function publish(
     if (r.beliefs.length > b.maxBeliefs) r.beliefs.shift();
     if (effect) {
       const delta = effect.type === 'moodUp' ? b.hopePerBelief : -b.fearPerBelief;
-      r.outlook = clamp(r.outlook + delta * b.framingEffect[pub.framing] * cardMul);
+      r.outlook = clamp(r.outlook + delta * cardMul);
     }
-    if (effect && applyEffect(state, c, rng, r, effect, pub.framing, cardMul)) {
+    if (effect && applyEffect(state, c, rng, r, effect, b.effectScale * cardMul)) {
       report.effects[effect.type] = (report.effects[effect.type] ?? 0) + 1;
     }
     return true;
@@ -271,8 +299,8 @@ export function publish(
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
     const affinity = groupOf(c, r.group).channels[pub.channel] ?? 0;
-    const target = pub.targetGroup === null ? 1 : r.group === pub.targetGroup ? b.targetBoost : b.targetOthers;
-    if (!chance(rng, clamp(affinity * reachChance * target))) continue;
+    const interested = audience.length === 0 ? 1 : audience.includes(r.group) ? b.audienceBoost : b.audienceOthers;
+    if (!chance(rng, clamp(affinity * reachChance * interested))) continue;
     viewers.push(r.id);
     if (consider(r, 1)) believers.push(r);
   }

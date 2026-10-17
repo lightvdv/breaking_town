@@ -58,6 +58,7 @@ export function validateContent(c: Content): string[] {
     if (t.source === 'event' && t.baseTruth !== 0) errors.push(`card ${t.id}: events must be true`);
     if (t.scope === 'global' && (t.witness || t.cityEffect)) errors.push(`card ${t.id}: global news cannot have witnesses or city effects`);
     if (t.scope && t.scope !== 'local' && t.scope !== 'global') errors.push(`card ${t.id}: unknown scope ${t.scope}`);
+    for (const g of t.audience ?? []) if (!c.groups.some((x) => x.id === g)) errors.push(`card ${t.id}: unknown audience ${g}`);
     if (t.source === 'rumor' && t.baseTruth === 0) errors.push(`card ${t.id}: rumors cannot be fully true`);
   }
   unique('reporter', c.reporters.map((x) => x.id));

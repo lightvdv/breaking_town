@@ -4,7 +4,7 @@ export { createGame, playTurn, checkOutcome } from './game';
 export { fireReporter, listPurchases, purchase, totalUpkeep, type PurchaseOption } from './economy';
 export { reporterLuck, reporterOf, tierWeights } from './reporters';
 export { getModifiers, type Modifiers } from './modifiers';
-export { previewPublication, cardTruth, maxDistortion, type PublicationPreview } from './news';
+export { previewPublication, cardTruth, isHarmful, maxDistortion, type PublicationPreview } from './news';
 export { averageTrust, buildingDefOf, channelOf, groupOf, templateOf } from './lookup';
 export { validateContent } from './validateContent';
 export { isRoadTile, mapSizeFor } from './map';

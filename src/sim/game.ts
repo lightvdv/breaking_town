@@ -11,7 +11,7 @@ import { collectIncome } from './economy';
 import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf, trustSnapshot } from './lookup';
 import { getModifiers, type Modifiers } from './modifiers';
-import { maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
+import { cardTruth, isHarmful, maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
 import { findNews, scopeOf } from './reporters';
 import type {
   CardTemplate,
@@ -32,7 +32,11 @@ export function createGame(c: Content, seed: number): GameState {
   for (const r of residents) tryAssignJob(r, groupOf(c, r.group), buildings, workers);
 
   const scandal: Record<ChannelId, number> = {};
-  for (const ch of c.channels) scandal[ch.id] = 1;
+  const hype: Record<ChannelId, number> = {};
+  for (const ch of c.channels) {
+    scandal[ch.id] = 1;
+    hype[ch.id] = 0;
+  }
 
   const state: GameState = {
     version: 1,
@@ -53,6 +57,7 @@ export function createGame(c: Content, seed: number): GameState {
     reporters: [...c.balance.startReporters],
     lastFinds: [],
     scandal,
+    hype,
     topicStreak: {},
     pendingLies: [],
     initialPopulation: residents.length,
@@ -111,10 +116,12 @@ export function validateDecision(state: GameState, c: Content, d: Decision, mods
     if (used.has(p.cardUid)) throw new Error(`Card ${p.cardUid} published twice`);
     used.add(p.cardUid);
     if (!state.ownedChannels.includes(p.channel)) throw new Error(`Channel ${p.channel} is not owned`);
-    if (p.targetGroup !== null) groupOf(c, p.targetGroup);
     if (![0, 1, 2].includes(p.framing)) throw new Error(`Bad framing ${p.framing}`);
     if (!Number.isInteger(p.distortion) || p.distortion < 0 || p.distortion > maxDistortion(card)) {
       throw new Error(`Bad distortion ${p.distortion} for card ${p.cardUid}`);
+    }
+    if (p.framing === 2 && !isHarmful(templateOf(c, card.templateId).effects[cardTruth(card, p.distortion)])) {
+      throw new Error(`Panic framing needs a harmful story (card ${p.cardUid})`);
     }
   }
   for (const uid of d.hold) {
@@ -166,6 +173,10 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     topicsThisTurn[topic] = (topicsThisTurn[topic] ?? 0) + 1;
   }
   verifyNews(state, c, rng, mods, published);
+  // Loud framing makes the channel "cry wolf" (CONCEPT.md §4.2); the decay happens now so that
+  // next turn's previews show exactly the hype the publications will meet.
+  for (const p of d.publish) state.hype[p.channel] = Math.min(100, (state.hype[p.channel] ?? 0) + b.hypeGain[p.framing]);
+  for (const ch of Object.keys(state.hype)) state.hype[ch] = Math.max(0, state.hype[ch] - b.hypeDecay);
 
   const viewSets: Record<ChannelId, Set<number>> = {};
   for (const n of published) {
@@ -198,6 +209,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     upkeep,
     moneyDelta: state.money - moneyBefore,
     exposureDelta: state.exposure - exposureBefore,
+    hypeAfter: { ...state.hype },
     trustBefore,
     trustAfter: trustSnapshot(state, c),
     metricsBefore,

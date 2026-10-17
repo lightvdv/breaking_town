@@ -656,10 +656,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
     return [
       h('p', { class: 'hint' }, `У вас ${state.money}. Расходы (каналы и зарплаты): ${totalUpkeep(state, c)} за ход.`),
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
-      ...reportersSection(),
-      ...(channels.length ? [h('h3', { class: 'section' }, 'Каналы'), ...channels.map(item)] : []),
       h('h3', { class: 'section' }, 'Улучшения'),
       ...upgrades.map(item),
+      ...(channels.length ? [h('h3', { class: 'section' }, 'Каналы'), ...channels.map(item)] : []),
+      ...reportersSection(),
     ];
   }
 

@@ -259,13 +259,24 @@ export function mountApp(root: HTMLElement, c: Content): void {
 
   // ---------- Actions ----------
 
+  /**
+   * Default layout of a new issue (CONCEPT.md §7.3): every story goes in, the highest-tier ones take
+   * the front page, boring ones become briefs, the rest are articles.
+   */
+  function layOutIssue(): void {
+    const fresh = state.hand.filter((card) => !drafts.has(card.uid));
+    if (!fresh.length) return;
+    for (const card of fresh) drafts.set(card.uid, { publish: true, placement: card.tier === 0 ? 0 : 1, distortion: 0 });
+    const mods = getModifiers(state, c);
+    const free = mods.frontPageSlots - state.hand.filter((x) => drafts.get(x.uid)!.placement === 2).length;
+    const impact = (card: CardInstance) => previewPublication(state, c, mods, { cardUid: card.uid, placement: 2, distortion: 0 }).impact;
+    const best = [...fresh].sort((a, b) => b.tier - a.tier || impact(b) - impact(a)).slice(0, Math.max(0, free));
+    for (const card of best) drafts.get(card.uid)!.placement = 2;
+  }
+
   const draftOf = (card: CardInstance): Draft => {
-    let d = drafts.get(card.uid);
-    if (!d) {
-      d = { publish: false, placement: 1, distortion: 0 };
-      drafts.set(card.uid, d);
-    }
-    return d;
+    if (!drafts.has(card.uid)) layOutIssue();
+    return drafts.get(card.uid)!;
   };
 
   function openModal(m: Modal, anchor?: string): void {
@@ -878,6 +889,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
   }
 
   function render(): void {
+    layOutIssue();
     renderHud();
     reporterBar.render(state, repStatus, searching);
     renderCityEvents();

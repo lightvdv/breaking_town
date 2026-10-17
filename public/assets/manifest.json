@@ -120,6 +120,10 @@
     "global_flu",
     "global_plants",
     "global_taxes",
-    "global_aliens"
+    "global_aliens",
+    "investigation_pensioners",
+    "investigation_workers",
+    "investigation_youth",
+    "investigation_intelligentsia"
   ]
 }

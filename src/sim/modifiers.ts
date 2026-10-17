@@ -8,7 +8,7 @@ export interface ChannelMods {
 /** Combined effect of everything the player has bought. */
 export interface Modifiers {
   reporterLuck: number;
-  publishPerTurn: number;
+  frontPageSlots: number;
   exposureGainMul: number;
   checkerMul: number;
   plausibilityAdd: number;
@@ -20,7 +20,7 @@ export interface Modifiers {
 export function getModifiers(state: GameState, c: Content): Modifiers {
   const m: Modifiers = {
     reporterLuck: 0,
-    publishPerTurn: c.balance.publishPerTurn,
+    frontPageSlots: c.balance.frontPageSlots,
     exposureGainMul: 1,
     checkerMul: 1,
     plausibilityAdd: 0,
@@ -34,7 +34,7 @@ export function getModifiers(state: GameState, c: Content): Modifiers {
     if (!u) continue;
     const e = u.effects;
     m.reporterLuck += e.reporterLuck ?? 0;
-    m.publishPerTurn += e.publishPerTurn ?? 0;
+    m.frontPageSlots += e.frontPageSlots ?? 0;
     m.exposureGainMul *= e.exposureGainMul ?? 1;
     m.checkerMul *= e.checkerMul ?? 1;
     m.plausibilityAdd += e.plausibilityAdd ?? 0;

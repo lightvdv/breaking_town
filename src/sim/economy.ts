@@ -72,6 +72,7 @@ export function fireReporter(state: GameState, id: string): void {
   if (!state.reporters.includes(id)) throw new Error(`Reporter ${id} is not hired`);
   if (state.reporters.length <= 1) throw new Error('The last reporter cannot be fired');
   state.reporters = state.reporters.filter((x) => x !== id);
+  state.investigations = state.investigations.filter((x) => x.reporterId !== id);
 }
 
 export function purchase(state: GameState, c: Content, id: string): void {
@@ -85,11 +86,13 @@ export function purchase(state: GameState, c: Content, id: string): void {
   else state.upgrades.push(id);
 }
 
-/** Channel upkeep plus reporter salaries, paid every turn. */
+/** Channel upkeep, reporter salaries and running investigations, paid every turn. */
 export function totalUpkeep(state: GameState, c: Content): number {
   const channels = state.ownedChannels.reduce((s, ch) => s + channelOf(c, ch).upkeep, 0);
   const salaries = state.reporters.reduce((s, id) => s + reporterOf(c, id).salary, 0);
-  return channels + salaries;
+  // Digging dirt costs money every turn: sources, bribes, stakeouts (CONCEPT.md §3.3а).
+  const investigations = state.investigations.length * c.balance.investigationCost;
+  return channels + salaries + investigations;
 }
 
 /** Sales to this turn's regular readers of each channel, minus upkeep (CONCEPT.md §5.4). */

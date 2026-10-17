@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { content } from '../src/content';
 import {
   averageTrust,
-  cardTruth,
   createGame,
   createRng,
   fireReporter,
   followersOf,
-  isHarmful,
+  investigationTurns,
+  reporterOf,
+  startInvestigation,
   previewPublication,
   getModifiers,
   templateOf,
@@ -29,18 +30,17 @@ function withBalance(patch: Partial<Content['balance']>): Content {
   return { ...content, balance: { ...content.balance, ...patch } };
 }
 
-/** Publishes the first cards of the hand on the newspaper at the given distortion (capped per card). */
-function simpleDecision(state: GameState, distortion: 'none' | 'max', framing: 0 | 1 | 2 = 0): Decision {
+/** Publishes the first two cards at the given distortion; only the first may take the front page. */
+function simpleDecision(state: GameState, distortion: 'none' | 'max', placement: 0 | 1 | 2 = 1): Decision {
   const cards = state.hand
     .filter((c) => (distortion === 'none' ? c.baseTruth === 0 : true))
     .slice(0, 2);
   return {
-    publish: cards.map((c) => {
-      const d = distortion === 'max' ? maxDistortion(c) : 0;
-      // Panic is only allowed for harmful stories.
-      const harmful = isHarmful(templateOf(content, c.templateId).effects[cardTruth(c, d)]);
-      return { cardUid: c.uid, framing: framing === 2 && !harmful ? 1 : framing, distortion: d };
-    }),
+    publish: cards.map((c, i) => ({
+      cardUid: c.uid,
+      placement: i > 0 && placement === 2 ? 1 : placement,
+      distortion: distortion === 'max' ? maxDistortion(c) : 0,
+    })),
   };
 }
 
@@ -108,17 +108,14 @@ describe('game', () => {
     expect(JSON.parse(JSON.stringify(s))).toEqual(s);
   });
 
-  it('rejects publishing more cards than allowed', () => {
-    const c0 = withBalance({ publishPerTurn: 0 });
-    const s = createGame(c0, 1);
-    const d: Decision = {
-      publish: s.hand.slice(0, 1).map((c) => ({
-        cardUid: c.uid,
-        framing: 0,
-        distortion: 0,
-      })),
-    };
-    expect(() => playTurn(s, c0, d)).toThrow(/at most/);
+  it('allows any number of stories but only frontPageSlots on the front page', () => {
+    const s = createGame(content, 1);
+    const tpl = templateOf(content, 'factory_sold');
+    s.hand = [0, 1, 2, 3].map((i) => ({ uid: 700 + i, templateId: tpl.id, baseTruth: 1, createdTurn: s.turn, tier: 1, scope: 'local', reporterId: s.reporters[0] }));
+    const two = { publish: [0, 1].map((i) => ({ cardUid: 700 + i, placement: 2 as const, distortion: 0 })) };
+    expect(() => playTurn(s, content, two)).toThrow(/front page/);
+    const all = { publish: [0, 1, 2, 3].map((i) => ({ cardUid: 700 + i, placement: (i === 0 ? 2 : i === 1 ? 1 : 0) as 0 | 1 | 2, distortion: 0 })) };
+    expect(playTurn(s, content, all).publications.length).toBe(4);
   });
 
   it('discards cards that were not published', () => {
@@ -130,13 +127,13 @@ describe('game', () => {
 });
 
 describe('reach vs impact', () => {
-  it('reach depends on the outlet and trust, not on the story or framing; impact does the opposite', () => {
+  it('reach depends on the outlet and trust, not on the story or placement; impact does the opposite', () => {
     const s = createGame(content, 8);
     const mods = getModifiers(s, content);
     const tpl = templateOf(content, 'factory_sold');
     s.hand = [0, 3].map((tier, i) => ({ uid: 900 + i, templateId: tpl.id, baseTruth: tpl.baseTruth, createdTurn: s.turn, tier: tier as 0 | 3, scope: 'local' as const, reporterId: s.reporters[0] }));
-    const dull = previewPublication(s, content, mods, { cardUid: 900, framing: 0, distortion: 0 });
-    const loud = previewPublication(s, content, mods, { cardUid: 901, framing: 2, distortion: 0 });
+    const dull = previewPublication(s, content, mods, { cardUid: 900, placement: 1, distortion: 0 });
+    const loud = previewPublication(s, content, mods, { cardUid: 901, placement: 1, distortion: 0 });
     expect(loud.reachChance).toBe(dull.reachChance);
     expect(loud.impact).toBeGreaterThan(dull.impact * 2);
   });
@@ -148,7 +145,7 @@ describe('distortion', () => {
     const tpl = templateOf(content, 'factory_accident');
     s.hand = [{ uid: 950, templateId: tpl.id, baseTruth: 0, createdTurn: s.turn, tier: 0, scope: 'local', reporterId: s.reporters[0] }];
     const mods = getModifiers(s, content);
-    const at = (distortion: number) => previewPublication(s, content, mods, { cardUid: 950, framing: 0, distortion });
+    const at = (distortion: number) => previewPublication(s, content, mods, { cardUid: 950, placement: 0, distortion });
     expect([0, 1, 2].map((d) => at(d).tier)).toEqual([0, 1, 2]);
     expect(at(2).impact).toBeGreaterThan(at(0).impact);
     s.hand[0].tier = 3;
@@ -284,7 +281,7 @@ describe('reporters', () => {
   });
 });
 
-describe('framing', () => {
+describe('placement', () => {
   /** A game whose hand holds the given template at the given tier. */
   function gameWith(templateId: string): GameState {
     const s = createGame(content, 4);
@@ -293,31 +290,53 @@ describe('framing', () => {
     return s;
   }
 
-  it('rejects panic for a story without a harmful effect', () => {
-    const s = gameWith('celebrity');
-    expect(() => playTurn(s, content, { publish: [{ cardUid: 999, framing: 2, distortion: 0 }] })).toThrow(
-      /Panic/,
-    );
-  });
-
-  it('loud framing raises hype, and hype fades', () => {
+  it('front page hits harder and is noticed by more readers than a brief, at a higher risk', () => {
     const s = gameWith('factory_sold');
-    playTurn(s, content, { publish: [{ cardUid: 999, framing: 2, distortion: 0 }] });
-    const { hypeGain, hypeDecay } = content.balance;
-    expect(s.hype).toBe(hypeGain[2] - hypeDecay);
+    const mods = getModifiers(s, content);
+    const brief = previewPublication(s, content, mods, { cardUid: 999, placement: 0, distortion: 0 });
+    const front = previewPublication(s, content, mods, { cardUid: 999, placement: 2, distortion: 0 });
+    expect(front.impact).toBeGreaterThan(brief.impact * 2);
+    expect(front.reachChance).toBeGreaterThan(brief.reachChance);
+    expect(front.exposureRisk).toBeGreaterThan(brief.exposureRisk);
+  });
+});
+
+describe('investigations', () => {
+  it('an assigned reporter skips the search and brings dirt on the group after a few turns', () => {
+    const s = createGame(content, 12);
+    const id = s.reporters[0];
+    startInvestigation(s, content, id, 'workers');
+    expect(() => startInvestigation(s, content, id, 'youth')).toThrow(/already/);
+    const turns = investigationTurns(content, reporterOf(content, id));
+    for (let i = 1; i < turns; i++) {
+      playTurn(s, content, { publish: [] });
+      expect(s.lastFinds.find((f) => f.reporterId === id)?.kind).toBe('investigating');
+    }
     playTurn(s, content, { publish: [] });
-    expect(s.hype).toBe(hypeGain[2] - 2 * hypeDecay);
+    const find = s.lastFinds.find((f) => f.reporterId === id)!;
+    expect(find.kind).toBe('investigation');
+    const card = s.hand.find((x) => x.uid === find.cardUid)!;
+    expect(templateOf(content, card.templateId).target).toBe('workers');
+    expect(card.tier).toBeGreaterThanOrEqual(2);
+    expect(card.baseTruth).toBeLessThanOrEqual(1);
+    expect(s.investigations.length).toBe(0);
   });
 
-  it('hype weakens loud framing and belief', () => {
-    const s = gameWith('factory_sold');
-    const pub = { cardUid: 999, framing: 2 as const, distortion: 0 };
-    const calm = previewPublication(s, content, getModifiers(s, content), pub);
-    s.hype = 100;
-    const hyped = previewPublication(s, content, getModifiers(s, content), pub);
-    expect(hyped.impact).toBeLessThan(calm.impact);
-    expect(hyped.credibility).toBeLessThan(calm.credibility);
-    expect(calm.credibility).toBe(1);
+  it('published dirt makes the target group feel hunted', () => {
+    const s = createGame(content, 13);
+    const tpl = templateOf(content, 'investigation_youth');
+    for (const r of s.residents) {
+      r.trust = 100;
+      r.follows = ['newspaper'];
+    }
+    s.hand = [{ uid: 990, templateId: tpl.id, baseTruth: 0, createdTurn: s.turn, tier: 3, scope: 'local', reporterId: s.reporters[0] }];
+    const youth = s.residents.filter((r) => r.group === 'youth');
+    const before = youth.reduce((sum, r) => sum + r.outlook, 0);
+    const report = playTurn(s, content, { publish: [{ cardUid: 990, placement: 2, distortion: 2 }] });
+    expect(report.publications[0].stigma?.target).toBe('youth');
+    expect(report.publications[0].stigma!.pressure).toBeGreaterThan(0);
+    const after = youth.reduce((sum, r) => sum + r.outlook, 0);
+    expect(after).toBeLessThan(before);
   });
 });
 

@@ -11,9 +11,9 @@ import { collectIncome } from './economy';
 import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf } from './lookup';
 import { getModifiers, type Modifiers } from './modifiers';
-import { cardTruth, isHarmful, maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
+import { maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
 import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
-import { findNews, scopeOf } from './reporters';
+import { advanceInvestigations, findNews, scopeOf } from './reporters';
 import type {
   CardTemplate,
   ChannelId,
@@ -51,7 +51,7 @@ export function createGame(c: Content, seed: number): GameState {
     reporters: [...c.balance.startReporters],
     lastFinds: [],
     scandal: 1,
-    hype: 0,
+    investigations: [],
     topicStreak: {},
     pendingLies: [],
     initialPopulation: residents.length,
@@ -92,29 +92,27 @@ function startTurn(state: GameState, c: Content): string[] {
   state.todayEvents = [];
   const notes = advanceCity(state, c, state.rng);
   const events = generateEvents(state, c, state.rng);
+  const dug = advanceInvestigations(state, c, state.rng);
   const { cards, finds } = findNews(state, c, state.rng, getModifiers(state, c), events);
-  state.hand = [...state.hand, ...cards];
-  state.lastFinds = finds;
+  state.hand = [...state.hand, ...dug.cards, ...cards];
+  state.lastFinds = [...dug.finds, ...finds];
   state.metrics = computeMetrics(state, c);
   return notes;
 }
 
-export function validateDecision(state: GameState, c: Content, d: Decision, mods: Modifiers): void {
-  if (d.publish.length > mods.publishPerTurn) {
-    throw new Error(`Can publish at most ${mods.publishPerTurn} cards per turn`);
-  }
+export function validateDecision(state: GameState, _c: Content, d: Decision, mods: Modifiers): void {
+  // Any number of stories, but the front page has limited room (CONCEPT.md §4.2).
+  const front = d.publish.filter((p) => p.placement === 2).length;
+  if (front > mods.frontPageSlots) throw new Error(`Only ${mods.frontPageSlots} story fits on the front page`);
   const used = new Set<number>();
   for (const p of d.publish) {
     const card = state.hand.find((x) => x.uid === p.cardUid);
     if (!card) throw new Error(`Card ${p.cardUid} is not in hand`);
     if (used.has(p.cardUid)) throw new Error(`Card ${p.cardUid} published twice`);
     used.add(p.cardUid);
-    if (![0, 1, 2].includes(p.framing)) throw new Error(`Bad framing ${p.framing}`);
+    if (![0, 1, 2].includes(p.placement)) throw new Error(`Bad placement ${p.placement}`);
     if (!Number.isInteger(p.distortion) || p.distortion < 0 || p.distortion > maxDistortion(card)) {
       throw new Error(`Bad distortion ${p.distortion} for card ${p.cardUid}`);
-    }
-    if (p.framing === 2 && !isHarmful(templateOf(c, card.templateId).effects[cardTruth(card, p.distortion)])) {
-      throw new Error(`Panic framing needs a harmful story (card ${p.cardUid})`);
     }
   }
 }
@@ -163,10 +161,6 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     topicsThisTurn[topic] = (topicsThisTurn[topic] ?? 0) + 1;
   }
   verifyNews(state, c, rng, mods, published);
-  // Loud framing makes the channel "cry wolf" (CONCEPT.md §4.2); the decay happens now so that
-  // next turn's previews show exactly the hype the publications will meet.
-  const gain = d.publish.reduce((s, p) => s + b.hypeGain[p.framing], 0);
-  state.hype = Math.max(0, Math.min(100, state.hype + gain) - b.hypeDecay);
 
   const { income, upkeep } = collectIncome(state, c, buyers);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
@@ -195,7 +189,6 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     upkeep,
     moneyDelta: state.money - moneyBefore,
     exposureDelta: state.exposure - exposureBefore,
-    hypeAfter: state.hype,
     readers: { before: readersBefore, ...readers, after: readerCount(state) },
     trustBefore,
     trustAfter: averageTrust(state, c),

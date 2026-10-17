@@ -59,6 +59,11 @@ export function validateContent(c: Content): string[] {
     if (t.scope === 'global' && (t.witness || t.cityEffect)) errors.push(`card ${t.id}: global news cannot have witnesses or city effects`);
     if (t.scope && t.scope !== 'local' && t.scope !== 'global') errors.push(`card ${t.id}: unknown scope ${t.scope}`);
     for (const g of t.audience ?? []) if (!c.groups.some((x) => x.id === g)) errors.push(`card ${t.id}: unknown audience ${g}`);
+    const stigma = t.effects.some((e) => e?.type === 'stigma');
+    if (t.source === 'investigation' && (!t.target || !c.groups.some((g) => g.id === t.target))) {
+      errors.push(`card ${t.id}: investigation needs a valid target group`);
+    }
+    if (stigma && !t.target) errors.push(`card ${t.id}: stigma effect needs a target group`);
     if (t.source === 'rumor' && t.baseTruth === 0) errors.push(`card ${t.id}: rumors cannot be fully true`);
     // Reporters bring only truth or half-truth; outright lies are the player's doing.
     if (t.baseTruth > 1) errors.push(`card ${t.id}: reporters never bring outright lies (baseTruth must be 0 or 1)`);
@@ -79,5 +84,8 @@ export function validateContent(c: Content): string[] {
   if (b.maxReporters > c.reporters.length) errors.push('maxReporters exceeds the number of reporters');
   if (b.minFinds < 1) errors.push('minFinds must be at least 1');
   if (!c.cards.some((t) => t.scope === 'global')) errors.push('no global news');
+  for (const g of c.groups) {
+    if (!c.cards.some((t) => t.source === 'investigation' && t.target === g.id)) errors.push(`no investigation story about ${g.id}`);
+  }
   return errors;
 }

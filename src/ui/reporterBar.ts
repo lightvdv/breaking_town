@@ -1,4 +1,4 @@
-import { getModifiers, reporterLuck, reporterOf, type Content, type Find, type GameState, type ReporterDef } from '../sim';
+import { getModifiers, groupOf, reporterLuck, reporterOf, type Content, type Find, type GameState, type ReporterDef } from '../sim';
 import { h, pct } from './dom';
 import { scopeLabels, tierLabels, topicLabels } from './text';
 
@@ -33,10 +33,13 @@ export class ReporterBar {
   private cards = new Map<string, { root: HTMLElement; info: HTMLElement; status: HTMLElement; key: string }>();
   private layoutKey = '';
 
+  private animating = false;
+
   constructor(
     private c: Content,
     private onHire: () => void,
     private onSkip: () => void,
+    private onInvestigate: (id: string) => void,
   ) {
     this.el.addEventListener('click', () => this.onSkip());
   }
@@ -57,7 +60,22 @@ export class ReporterBar {
         const r = reporterOf(this.c, id);
         const info = h('div', { class: 'rep-info' });
         const status = h('div', { class: 'rep-status' });
-        const root = h('div', { class: 'rep-card', title: `${r.name}. ${r.bio}` }, h('div', { class: 'rep-portrait' }, portrait(id)), info, status);
+        const root = h(
+          'div',
+          {
+            class: 'rep-card',
+            title: `${r.name}. ${r.bio} Щёлкните, чтобы поручить расследование.`,
+            onclick: (e: Event) => {
+              // During the search animation a click skips it (handled by the bar).
+              if (this.animating) return;
+              e.stopPropagation();
+              this.onInvestigate(id);
+            },
+          },
+          h('div', { class: 'rep-portrait' }, portrait(id)),
+          info,
+          status,
+        );
         this.cards.set(id, { root, info, status, key: '' });
         slots.push(root);
       }
@@ -79,28 +97,46 @@ export class ReporterBar {
       this.el.replaceChildren(h('div', { class: 'rep-title' }, 'Редакция'), ...slots);
     }
     this.el.classList.toggle('animating', animating);
+    this.animating = animating;
 
     for (const [id, card] of this.cards) {
       const r = reporterOf(this.c, id);
+      const inv = state.investigations.find((x) => x.reporterId === id);
+      const invLine = inv
+        ? `Расследует: ${groupOf(this.c, inv.target).name.toLowerCase()} · ещё ${inv.turnsLeft} ${inv.turnsLeft === 1 ? 'ход' : 'хода'}`
+        : '';
       card.info.replaceChildren(
         h('b', {}, r.name),
-        h('span', {}, skillLine(this.c, state, r)),
+        inv ? h('span', { class: 'rep-inv' }, invLine) : h('span', {}, skillLine(this.c, state, r)),
         h('span', { class: 'muted' }, `${topicLine(r)} · ${r.salary}/ход`),
       );
       const s = statuses.get(id);
-      const statusKey = !s ? '' : s.phase === 'searching' ? 'searching' : `done:${s.find.tier ?? 'empty'}`;
+      const statusKey = !s ? `idle:${invLine}` : s.phase === 'searching' ? 'searching' : `done:${s.find.kind}:${s.find.tier ?? 'empty'}`;
       if (statusKey === card.key) continue;
       card.key = statusKey;
-      const result = s?.phase === 'done' ? (s.find.cardUid === null ? 'result-empty' : `result-${s.find.tier}`) : '';
-      card.root.className = `rep-card${s ? ` is-${s.phase}` : ''}${result ? ` ${result}` : ''}`;
+      const result =
+        s?.phase === 'done'
+          ? s.find.kind === 'investigating'
+            ? 'result-digging'
+            : s.find.cardUid === null
+              ? 'result-empty'
+              : `result-${s.find.tier}${s.find.kind === 'investigation' ? ' result-exclusive' : ''}`
+          : '';
+      card.root.className = `rep-card${s ? ` is-${s.phase}` : ''}${result ? ` ${result}` : ''}${inv ? ' investigating' : ''}`;
       if (!s) card.status.replaceChildren();
       else if (s.phase === 'searching') {
-        card.status.replaceChildren(h('span', {}, 'Ищет новость'), h('span', { class: 'dots' }, '...'));
+        card.status.replaceChildren(h('span', {}, inv ? 'Копает грязь' : 'Ищет новость'), h('span', { class: 'dots' }, '...'));
+      } else if (s.find.kind === 'investigating') {
+        card.status.replaceChildren(h('b', {}, 'Расследует'), h('span', {}, invLine.replace(/^Расследует: /, '')));
       } else if (s.find.cardUid === null || s.find.tier === null) {
         card.status.replaceChildren(h('b', {}, 'Пусто'), h('span', {}, 'Ничего не нашёл'));
       } else {
         card.status.replaceChildren(
-          s.find.tier === 3 ? h('b', { class: 'sensation-banner' }, 'СЕНСАЦИЯ!') : '',
+          s.find.kind === 'investigation'
+            ? h('b', { class: 'sensation-banner' }, 'ЭКСКЛЮЗИВ!')
+            : s.find.tier === 3
+              ? h('b', { class: 'sensation-banner' }, 'СЕНСАЦИЯ!')
+              : '',
           h('span', { class: 'clip-tier' }, tierLabels[s.find.tier]),
           h('span', { class: 'clip-title' }, s.title ?? ''),
         );

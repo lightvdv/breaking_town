@@ -15,8 +15,8 @@ export type BuildingType =
 export type Topic = 'factory' | 'food' | 'fun' | 'health' | 'power' | 'crime';
 /** 0 = правда, 1 = полуправда, 2 = ложь */
 export type TruthLevel = 0 | 1 | 2;
-/** 0 = нейтральная, 1 = сенсационная, 2 = паническая подача */
-export type Framing = 0 | 1 | 2;
+/** Where a story stands in the issue: 0 = заметка, 1 = статья, 2 = первая полоса (CONCEPT.md §4.2). */
+export type Placement = 0 | 1 | 2;
 export type Triple<T> = [T, T, T];
 /** 0 = скучная, 1 = обычная, 2 = интересная, 3 = сенсация */
 export type NewsTier = 0 | 1 | 2 | 3;
@@ -84,7 +84,8 @@ export interface UpgradeEffects {
   trustBonus?: number;
   /** Added to every reporter's luck. */
   reporterLuck?: number;
-  publishPerTurn?: number;
+  /** Extra front-page slots. */
+  frontPageSlots?: number;
   exposureGainMul?: number;
   checkerMul?: number;
   plausibilityAdd?: number;
@@ -99,7 +100,8 @@ export interface UpgradeDef {
   effects: UpgradeEffects;
 }
 
-export type EffectType = 'quitJob' | 'avoid' | 'leaveCity' | 'protest' | 'moodDown' | 'moodUp';
+/** stigma = dirt on the template's `target` group: other groups turn on it, it feels hunted. */
+export type EffectType = 'quitJob' | 'avoid' | 'leaveCity' | 'protest' | 'moodDown' | 'moodUp' | 'stigma';
 
 export interface CardEffect {
   type: EffectType;
@@ -117,8 +119,13 @@ export interface CityEffect {
 
 export interface CardTemplate {
   id: string;
-  /** event = real event (true card), rumor = made-up or exaggerated story. */
-  source: 'event' | 'rumor';
+  /**
+   * event = real event (true card), rumor = made-up or exaggerated story,
+   * investigation = dirt on a social group, only from assigned reporters (CONCEPT.md §3.3а).
+   */
+  source: 'event' | 'rumor' | 'investigation';
+  /** Investigations: the social group the dirt is about. */
+  target?: GroupId;
   /** local = about this city (default), global = about the country or the world. */
   scope?: NewsScope;
   /** Groups this story interests; they read it more often. Empty or missing = everyone alike. */
@@ -155,7 +162,6 @@ export interface Balance {
   turnLimit: number;
   winCityIndex: number;
   startMoney: number;
-  publishPerTurn: number;
 
   maxReporters: number;
   startReporters: string[];
@@ -180,8 +186,6 @@ export interface Balance {
   startTrust: number;
   /** Acquisition multiplier at trust 0; it grows linearly to 1 at trust 100. */
   reachTrustMin: number;
-  /** Chance a follower actually reads a given issue. */
-  readChance: number;
   /** Share of the potential audience that already follows the starting channels. */
   startFollowShare: number;
   /** Scales how fast non-followers start following a channel each turn. */
@@ -229,13 +233,31 @@ export interface Balance {
   defenseDebunkChance: number;
   defenseRehireBonus: number;
 
-  /** Impact multiplier by framing (weakened by hype). */
-  framingInterest: Triple<number>;
-  framingBelief: Triple<number>;
+  /** By placement (brief, article, front page): impact, share of readers who notice, fact-check risk, exposure meter growth. */
+  placementImpact: Triple<number>;
+  placementRead: Triple<number>;
+  placementExposureRisk: Triple<number>;
+  placementExposureGain: Triple<number>;
+  frontPageSlots: number;
   /** Global multiplier on card effect strength. */
   effectScale: number;
-  framingExposureRisk: Triple<number>;
-  framingExposureGain: Triple<number>;
+
+  /** Investigations (CONCEPT.md §3.3а). */
+  investigationTurns: number;
+  /** Reporters with at least this nose finish one turn faster. */
+  investigationFastNose: number;
+  investigationSensationBase: number;
+  investigationSensationPerNose: number;
+  /** Chance the dirt is true rather than half-true. */
+  investigationTruthBase: number;
+  investigationTruthPerNose: number;
+  /** Stigma: protest chance factor for believers from other groups. */
+  stigmaProtest: number;
+  /** Stigma on the target group, scaled by the share of the city that believed. */
+  stigmaOutlook: number;
+  stigmaLeave: number;
+  /** Money per turn for each running investigation. */
+  investigationCost: number;
   plausibility: Triple<number>;
   witness: Triple<number>;
   beliefScale: number;
@@ -245,12 +267,6 @@ export interface Balance {
   /** Impact multiplier for the story's audience and for everyone else. */
   audienceBoost: number;
   audienceOthers: number;
-  /** Hype added to a channel per publication, by framing. */
-  hypeGain: Triple<number>;
-  hypeDecay: number;
-  /** At hype 100: belief drop for all news / extra drop for loudly framed news. */
-  hypeBeliefPenalty: number;
-  hypeLoudPenalty: number;
   fatiguePerRepeat: number;
 
   trustGain: number;
@@ -351,13 +367,23 @@ export interface Find {
   tier: NewsTier | null;
   /** True when the story was given by the minimum-finds rule after everyone failed. */
   forced: boolean;
+  /** search = ordinary search; investigating = still digging; investigation = brought the dirt. */
+  kind: 'search' | 'investigating' | 'investigation';
+}
+
+/** A reporter digging for dirt on a social group (CONCEPT.md §3.3а). */
+export interface Investigation {
+  reporterId: string;
+  target: GroupId;
+  turnsLeft: number;
+  total: number;
 }
 
 /** A story goes out on every owned channel at once (CONCEPT.md §3.2). */
 export interface Publication {
   cardUid: number;
-  /** Panic (2) is only allowed for stories with a harmful effect. */
-  framing: Framing;
+  /** Only `frontPageSlots` stories may go on the front page. */
+  placement: Placement;
   /** Added to the card's baseTruth to get the published truth level. */
   distortion: number;
 }
@@ -370,7 +396,7 @@ export interface Decision {
 export interface PendingLie {
   cardUid: number;
   title: string;
-  framing: Framing;
+  placement: Placement;
   viewers: number[];
   risk: number;
   turnsLeft: number;
@@ -416,8 +442,7 @@ export interface GameState {
   lastFinds: Find[];
   /** Ad-rate multiplier of the outlet, drops after a scandal. */
   scandal: number;
-  /** "Crying wolf" meter of the outlet, 0..100: loud framing raises it, it fades over time. */
-  hype: number;
+  investigations: Investigation[];
   /** Consecutive turns each topic was published, ending last turn. */
   topicStreak: Partial<Record<Topic, number>>;
   pendingLies: PendingLie[];
@@ -436,7 +461,7 @@ export interface PublicationReport {
   cardUid: number;
   title: string;
   truth: TruthLevel;
-  framing: Framing;
+  placement: Placement;
   /** Residents who saw the story on at least one channel. */
   reached: number;
   /** Viewers per channel (a resident may be counted on several channels). */
@@ -446,6 +471,8 @@ export interface PublicationReport {
   wordOfMouth: number;
   effects: Partial<Record<EffectType, number>>;
   exposed: boolean;
+  /** Investigations: who was targeted and what the stigma did to them. */
+  stigma?: { target: GroupId; pressure: number; left: number };
 }
 
 export interface TurnReport {
@@ -458,7 +485,6 @@ export interface TurnReport {
   upkeep: number;
   moneyDelta: number;
   exposureDelta: number;
-  hypeAfter: number;
   /** Followers of at least one channel: at the start of the turn, lost and gained after it. */
   readers: { before: number; lost: number; gained: number; after: number };
   trustBefore: number;

@@ -907,5 +907,153 @@
     "weight": 1,
     "audience": [],
     "interest": 0.95
+  },
+  {
+    "id": "investigation_pensioners",
+    "source": "investigation",
+    "target": "pensioners",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Пенсионерам подняли надбавки, пока зарплаты стоят",
+      "Пенсионеры живут за счёт работающих",
+      "Пенсионеры разворовывают городской бюджет"
+    ],
+    "effects": [
+      {
+        "type": "stigma",
+        "strength": 0.03,
+        "duration": 2
+      },
+      {
+        "type": "stigma",
+        "strength": 0.05,
+        "duration": 2
+      },
+      {
+        "type": "stigma",
+        "strength": 0.07,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "workers",
+      "youth",
+      "intelligentsia"
+    ],
+    "interest": 0.6,
+    "engagement": 0.5,
+    "weight": 1
+  },
+  {
+    "id": "investigation_workers",
+    "source": "investigation",
+    "target": "workers",
+    "topic": "factory",
+    "baseTruth": 0,
+    "titles": [
+      "С завода выносят инструменты домой",
+      "Рабочие завода массово воруют",
+      "Рабочие готовят диверсию на заводе"
+    ],
+    "effects": [
+      {
+        "type": "stigma",
+        "strength": 0.03,
+        "duration": 2
+      },
+      {
+        "type": "stigma",
+        "strength": 0.05,
+        "duration": 2
+      },
+      {
+        "type": "stigma",
+        "strength": 0.07,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "youth",
+      "intelligentsia"
+    ],
+    "interest": 0.6,
+    "engagement": 0.5,
+    "weight": 1
+  },
+  {
+    "id": "investigation_youth",
+    "source": "investigation",
+    "target": "youth",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Молодёжь шумит по ночам у баров",
+      "Молодёжь устраивает пьяные погромы",
+      "Молодёжные банды терроризируют город"
+    ],
+    "effects": [
+      {
+        "type": "stigma",
+        "strength": 0.03,
+        "duration": 2
+      },
+      {
+        "type": "stigma",
+        "strength": 0.05,
+        "duration": 2
+      },
+      {
+        "type": "stigma",
+        "strength": 0.07,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers",
+      "intelligentsia"
+    ],
+    "interest": 0.6,
+    "engagement": 0.5,
+    "weight": 1
+  },
+  {
+    "id": "investigation_intelligentsia",
+    "source": "investigation",
+    "target": "intelligentsia",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Врачи и чиновники принимают подарки от горожан",
+      "Интеллигенция живёт на взятки",
+      "Чиновники и врачи — тайная мафия города"
+    ],
+    "effects": [
+      {
+        "type": "stigma",
+        "strength": 0.03,
+        "duration": 2
+      },
+      {
+        "type": "stigma",
+        "strength": 0.05,
+        "duration": 2
+      },
+      {
+        "type": "stigma",
+        "strength": 0.07,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers",
+      "youth"
+    ],
+    "interest": 0.6,
+    "engagement": 0.5,
+    "weight": 1
   }
 ]

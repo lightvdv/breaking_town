@@ -593,15 +593,92 @@ select {
   gap: 2px;
 }
 
-.hype-note {
+.place-note {
   margin: 2px 0 0;
   font-size: 12px;
   color: var(--paper-muted);
 }
 
-.hype-note.bad {
-  color: #a22633;
+/* Placement: a brief is a small clipping, the front page story is set in bold. */
+.card.place-2 h3 {
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.card.place-2.selected {
+  outline-width: 4px;
+  outline-color: #e43b44;
+}
+
+.card.place-0 h3 {
+  font-size: 15px;
+}
+
+/* ---------- Investigations (CONCEPT.md §7.3) ---------- */
+.investigations {
+  padding: 10px;
+  background: rgba(24, 20, 37, 0.75);
+  border: 2px dashed #e43b44;
+}
+
+.investigations > h3 {
+  margin: 0 0 8px;
+  text-align: center;
+  color: #e43b44;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 var(--ink);
+}
+
+.card.investigation {
+  border: 3px solid #181425;
+  box-shadow:
+    0 0 0 3px #e43b44,
+    0 0 18px rgba(228, 59, 68, 0.55);
+}
+
+.card.investigation .card-band {
+  background: #3e2731;
+}
+
+.inv-band {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 -10px;
+  padding: 4px 10px;
+  background: #181425;
+  color: #e43b44;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.inv-band span {
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 0;
+  color: #ead4aa;
+}
+
+.stamp.exclusive {
+  border-color: #e43b44;
+  color: #e43b44;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.rep-inv {
+  color: #e43b44;
   font-weight: 600;
+}
+
+.rep-card {
+  cursor: pointer;
+}
+
+.rep-card.investigating {
+  border-color: #e43b44;
 }
 
 .card-actions {

@@ -20,7 +20,7 @@ export const reactionLabels: Record<Reaction, string> = {
 export const truthLabels = ['Правда', 'Полуправда', 'Ложь'];
 export const tierLabels = ['Скучная', 'Обычная', 'Интересная', 'Сенсация'];
 export const scopeLabels: Record<NewsScope | 'any', string> = { local: 'Город', global: 'Мир', any: 'Город и мир' };
-export const framingLabels = ['Нейтрально', 'Сенсация', 'Паника'];
+export const placementLabels = ['Заметка', 'Статья', 'Первая полоса'];
 export const distortionLabels = ['Как есть', 'Додумать', 'Исказить'];
 
 export const topicLabels: Record<Topic, string> = {
@@ -39,9 +39,10 @@ export const effectLabels: Record<EffectType, string> = {
   protest: 'протестуют',
   moodDown: 'расстроились',
   moodUp: 'обрадовались',
+  stigma: 'ополчились',
 };
 
-export function effectText(c: Content, e: CardEffect | null): string {
+export function effectText(c: Content, e: CardEffect | null, target?: string): string {
   if (!e) return 'Без эффекта';
   const building = e.building ? buildingDefOf(c, e.building).name.toLowerCase() : '';
   switch (e.type) {
@@ -57,6 +58,10 @@ export function effectText(c: Content, e: CardEffect | null): string {
       return 'Поверившие расстраиваются';
     case 'moodUp':
       return 'Поверившие радуются';
+    case 'stigma': {
+      const g = c.groups.find((x) => x.id === target)?.name.toLowerCase() ?? 'группа';
+      return `Город ополчится: злость и протесты, а ${g} почувствуют травлю и начнут уезжать`;
+    }
   }
 }
 

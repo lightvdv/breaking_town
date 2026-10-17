@@ -699,6 +699,43 @@ export const scenes: Record<string, Scene> = {
       { name: 'up', x: 52, y: 12 },
     ],
   },
+  investigation_pensioners: {
+    sky: 'night',
+    ground: 'plaza',
+    building: { type: 'cityHall', x: 2 },
+    people: [p('pensioners', 'idle_front', 72), p('workers', 'react_outraged', 90, { frame: 1 }), p('youth', 'react_outraged', 108, { frame: 3 })],
+    icons: [
+      { name: 'money', x: 74, y: 8 },
+      { name: 'document', x: 98, y: 10 },
+    ],
+  },
+  investigation_workers: {
+    sky: 'night',
+    ground: 'road',
+    building: { type: 'factory', x: 2 },
+    people: [p('workers', 'walk_bag_front', 72), p('intelligentsia', 'react_outraged', 92, { frame: 1 }), p('pensioners', 'react_outraged', 110, { frame: 3 })],
+    icons: [{ name: 'warning', x: 82, y: 10 }],
+  },
+  investigation_youth: {
+    sky: 'night',
+    ground: 'road',
+    building: { type: 'entertainment', x: 6 },
+    people: [p('youth', 'react_happy', 70, { frame: 2 }), p('pensioners', 'react_scared', 92, { frame: 2 }), p('workers', 'react_outraged', 110, { frame: 1 })],
+    icons: [
+      { name: 'skull', x: 70, y: 8 },
+      { name: 'warning', x: 96, y: 12 },
+    ],
+  },
+  investigation_intelligentsia: {
+    sky: 'night',
+    ground: 'plaza',
+    building: { type: 'hospital', x: 2 },
+    people: [p('intelligentsia', 'idle_front', 72, { variant: 1 }), p('workers', 'react_outraged', 92, { frame: 1 }), p('pensioners', 'react_outraged', 110, { frame: 3 })],
+    icons: [
+      { name: 'money', x: 72, y: 8 },
+      { name: 'eyes', x: 104, y: 24 },
+    ],
+  },
   global_aliens: {
     sky: 'night',
     ground: 'grass',

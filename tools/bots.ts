@@ -7,13 +7,13 @@
 import { content } from '../src/content';
 import {
   averageTrust,
-  cardTruth,
   createGame,
   createRng,
   getModifiers,
   isHarmful,
   listPurchases,
-  templateOf,
+  reporterOf,
+  startInvestigation,
   maxDistortion,
   playTurn,
   previewPublication,
@@ -21,7 +21,7 @@ import {
   totalUpkeep,
   type CardInstance,
   type Decision,
-  type Framing,
+  type Placement,
   type GameState,
   type Outcome,
   type Publication,
@@ -31,7 +31,7 @@ import { next } from '../src/sim/rng';
 
 interface Choice {
   distortion: 'none' | 'half' | 'max';
-  framing: Framing;
+  placement: Placement;
   harmfulOnly: boolean;
 }
 
@@ -43,55 +43,57 @@ type Strategy = (state: GameState, rng: RngState) => Choice | 'random' | Decisio
  */
 function mixed(s: GameState): Decision {
   const mods = getModifiers(s, content);
-  const preview = (card: CardInstance, distortion: number) =>
-    previewPublication(s, content, mods, { cardUid: card.uid, framing: 1, distortion });
+  const preview = (card: CardInstance, distortion: number, placement: Placement = 1) =>
+    previewPublication(s, content, mods, { cardUid: card.uid, placement, distortion });
   const harm = (card: CardInstance, distortion: number) => {
     const p = preview(card, distortion);
     return isHarmful(p.effect) ? p.impact : -1;
   };
   const trust = averageTrust(s, content);
-  const lieSlots =
-    trust < 35 || s.exposure > 60 ? 0 : s.exposure > 30 ? 1 : Math.max(1, mods.publishPerTurn - 1);
+  const lieSlots = trust < 35 || s.exposure > 60 ? 0 : s.exposure > 30 ? 1 : 2;
   const publish: Publication[] = [];
   const used = new Set<number>();
 
+  // A few half-truths pushed one step further; risky ones go in as briefs.
   const lies = s.hand
     .filter((c) => c.baseTruth <= 1)
     .map((c) => ({ c, d: 1 - c.baseTruth, score: harm(c, 1 - c.baseTruth) }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, lieSlots);
-  // Loud framing only for stories worth it, so the outlet does not "cry wolf".
-  const framingFor = (card: CardInstance, distortion: number): Framing => {
-    if (s.hype > 40) return 0;
-    const p = preview(card, distortion);
-    return p.tier >= 3 && isHarmful(p.effect) ? 2 : p.tier >= 2 ? 1 : 0;
-  };
   for (const lie of lies) {
-    publish.push({ cardUid: lie.c.uid, framing: framingFor(lie.c, lie.d), distortion: lie.d });
+    publish.push({ cardUid: lie.c.uid, placement: s.exposure > 30 ? 0 : 1, distortion: lie.d });
     used.add(lie.c.uid);
   }
-
-  const truths = s.hand
-    .filter((c) => c.baseTruth === 0 && !used.has(c.uid))
-    .filter((c) => harm(c, 0) > 0 || trust < 45)
-    .sort((a, b) => harm(b, 0) - harm(a, 0));
-  for (const c of truths) {
-    if (publish.length >= mods.publishPerTurn) break;
-    publish.push({ cardUid: c.uid, framing: framingFor(c, 0), distortion: 0 });
+  // Every harmful truth goes out; good news only to rebuild trust.
+  for (const c of s.hand.filter((x) => !used.has(x.uid) && (harm(x, 0) > 0 || trust < 45))) {
+    publish.push({ cardUid: c.uid, placement: 1, distortion: 0 });
   }
+  // The strongest harmful story takes the front page.
+  const best = publish
+    .map((p) => ({ p, impact: harm(s.hand.find((x) => x.uid === p.cardUid)!, p.distortion) }))
+    .sort((a, b) => b.impact - a.impact)
+    .slice(0, mods.frontPageSlots);
+  for (const { p, impact } of best) if (impact > 0) p.placement = 2;
   return { publish };
+}
+
+/** The thoughtful bot keeps one reporter digging dirt on the biggest group. */
+function manageInvestigations(s: GameState): void {
+  if (s.investigations.length || s.reporters.length < 2) return;
+  const r = [...s.reporters].sort((a, b) => reporterOf(content, b).skills.nose - reporterOf(content, a).skills.nose)[0];
+  startInvestigation(s, content, r, 'workers');
 }
 
 const strategies: Record<string, Strategy> = {
   mixed,
-  honest: () => ({ distortion: 'none', framing: 0, harmfulOnly: false }),
-  liar: () => ({ distortion: 'max', framing: 2, harmfulOnly: true }),
-  moderate: () => ({ distortion: 'half', framing: 1, harmfulOnly: true }),
+  honest: () => ({ distortion: 'none', placement: 0, harmfulOnly: false }),
+  liar: () => ({ distortion: 'max', placement: 2, harmfulOnly: true }),
+  moderate: () => ({ distortion: 'half', placement: 1, harmfulOnly: true }),
   trustThenLie: (s) =>
     averageTrust(s, content) >= 50
-      ? { distortion: 'max', framing: 2, harmfulOnly: true }
-      : { distortion: 'none', framing: 0, harmfulOnly: false },
+      ? { distortion: 'max', placement: 2, harmfulOnly: true }
+      : { distortion: 'none', placement: 0, harmfulOnly: false },
   random: () => 'random',
 };
 
@@ -108,11 +110,14 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
   const publish: Publication[] = [];
 
   if (choice === 'random') {
-    const cards = [...s.hand].sort(() => next(rng) - 0.5).slice(0, mods.publishPerTurn);
-    for (const card of cards) {
+    let front = 0;
+    for (const card of s.hand) {
+      if (next(rng) < 0.3) continue;
       const distortion = Math.floor(next(rng) * (maxDistortion(card) + 1));
-      const harmful = isHarmful(templateOf(content, card.templateId).effects[cardTruth(card, distortion)]);
-      publish.push({ cardUid: card.uid, framing: Math.floor(next(rng) * (harmful ? 3 : 2)) as Framing, distortion });
+      let placement = Math.floor(next(rng) * 3) as Placement;
+      if (placement === 2 && front >= mods.frontPageSlots) placement = 1;
+      if (placement === 2) front++;
+      publish.push({ cardUid: card.uid, placement, distortion });
     }
     return { publish };
   }
@@ -120,13 +125,14 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
   const candidates = s.hand
     .filter((card) => choice.distortion !== 'none' || card.baseTruth === 0)
     .map((card) => {
-      const pub: Publication = { cardUid: card.uid, framing: choice.framing, distortion: distortionFor(card, choice.distortion) };
+      const pub: Publication = { cardUid: card.uid, placement: choice.placement, distortion: distortionFor(card, choice.distortion) };
       return { pub, preview: previewPublication(s, content, mods, pub) };
     })
     .filter((x) => !choice.harmfulOnly || isHarmful(x.preview.effect))
     .sort((a, b) => b.preview.impact - a.preview.impact);
 
-  for (const x of candidates.slice(0, mods.publishPerTurn)) publish.push(x.pub);
+  // Everything goes out; only the strongest story keeps a front-page placement.
+  candidates.forEach((x, i) => publish.push({ ...x.pub, placement: x.pub.placement === 2 && i >= mods.frontPageSlots ? 1 : x.pub.placement }));
   return { publish };
 }
 
@@ -155,11 +161,12 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
   const s = createGame(content, seed);
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
+    if (strategy === mixed && !noInvestigations) manageInvestigations(s);
     const r = playTurn(s, content, decide(s, strategy, rng));
     if (!s.outcome) shop(s);
     if (trace) {
       const m = r.metricsAfter;
-      const trust = `${averageTrust(s, content).toFixed(0)} hype ${s.hype.toFixed(0)} readers ${r.readers.after} (-${r.readers.lost} +${r.readers.gained}) [${s.ownedChannels.join(',')}]`;
+      const trust = `${averageTrust(s, content).toFixed(0)} published ${r.publications.length} readers ${r.readers.after} (-${r.readers.lost} +${r.readers.gained}) [${s.ownedChannels.join(',')}]`;
       console.log(
         `T${r.turn} index ${m.cityIndex.toFixed(0)} | pop ${m.activeResidents} emp ${m.employment.toFixed(2)} ` +
           `eco ${m.economy.toFixed(2)} mood ${m.mood.toFixed(2)} order ${m.order.toFixed(2)} | ` +
@@ -167,7 +174,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
       );
       for (const p of r.publications) {
         console.log(
-          `    ${p.title} (truth ${p.truth}, framing ${p.framing}) reached ${p.reached} believed ${p.believed} ` +
+          `    ${p.title} (truth ${p.truth}, placement ${p.placement}) reached ${p.reached} believed ${p.believed} ` +
             `${JSON.stringify(p.effects)}${p.exposed ? ' EXPOSED' : ''}`,
         );
       }
@@ -184,6 +191,8 @@ function arg(name: string, fallback: number): number {
 }
 
 const games = arg('games', 200);
+// --no-investigations: measure how much investigations add to the thoughtful bot.
+const noInvestigations = process.argv.includes('--no-investigations');
 const baseSeed = arg('seed', 1);
 
 // --trace <strategy>: print one game turn by turn instead of the summary table.

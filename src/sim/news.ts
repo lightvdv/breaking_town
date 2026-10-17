@@ -8,7 +8,7 @@ import type {
   CardTemplate,
   ChannelId,
   Content,
-  Framing,
+  Placement,
   GameState,
   NewsTier,
   Publication,
@@ -23,18 +23,14 @@ export interface PublicationPreview {
   title: string;
   truth: TruthLevel;
   effect: CardEffect | null;
-  /** How strongly viewers react: tier, framing, scope, topic fatigue (1 = normal). */
+  /** How strongly viewers react: tier, placement, scope, topic fatigue (1 = normal). */
   impact: number;
   /** The card's tier after distortion. */
   tier: NewsTier;
-  /** Expected share of the city that sees the story; depends only on the outlet, not on the story. */
+  /** Expected share of the city that notices the story: the outlet's readers × placement. */
   reachChance: number;
   /** Fact-check chance assuming the news reaches a quarter of the city. */
   exposureRisk: number;
-  /** Belief multiplier from the outlet's hype (1 = undamaged). */
-  credibility: number;
-  /** The outlet's current hype, 0..100. */
-  hype: number;
 }
 
 export function cardTruth(card: CardInstance, distortion: number): TruthLevel {
@@ -50,14 +46,9 @@ export function effectiveTier(card: CardInstance, distortion: number): NewsTier 
   return Math.min(3, card.tier + distortion) as NewsTier;
 }
 
-/** Panic framing is only allowed for stories that harm the city. */
+/** Stories that hurt the city (everything except good news). */
 export function isHarmful(effect: CardEffect | null): boolean {
   return effect !== null && effect.type !== 'moodUp';
-}
-
-/** Loud framing works less the more the outlet has already shouted (CONCEPT.md §4.2). */
-function loudBonus(multiplier: number, hype: number): number {
-  return 1 + (multiplier - 1) * (1 - hype / 100);
 }
 
 /**
@@ -69,8 +60,8 @@ function impactOf(state: GameState, c: Content, card: CardInstance, tpl: CardTem
   const streak = (state.topicStreak[tpl.topic] ?? 0) + repeatsThisTurn;
   const fatigue = Math.pow(1 - b.fatiguePerRepeat, streak);
   const scope = card.scope === 'global' ? b.globalEffectMul : 1;
-  const framing = loudBonus(b.framingInterest[pub.framing], state.hype);
-  return (tpl.interest * b.tierInterest[effectiveTier(card, pub.distortion)] * scope * framing * fatigue) / b.impactNorm;
+  const placement = b.placementImpact[pub.placement];
+  return (tpl.interest * b.tierInterest[effectiveTier(card, pub.distortion)] * scope * placement * fatigue) / b.impactNorm;
 }
 
 /** Owned channels a resident follows; only followers see the issue (CONCEPT.md §5.2). */
@@ -78,12 +69,12 @@ function followedChannels(state: GameState, r: Resident): ChannelId[] {
   return r.follows.filter((ch) => state.ownedChannels.includes(ch));
 }
 
-/** Expected share of active residents that read this turn's issue — the same for every story. */
-export function outletReach(state: GameState, c: Content): number {
+/** Expected share of active residents that notice a story with this placement. */
+export function outletReach(state: GameState, c: Content, placement: Placement = 1): number {
   const active = state.residents.filter((r) => r.status === 'active');
   if (!active.length) return 0;
   const readers = active.filter((r) => followedChannels(state, r).length > 0).length;
-  return (readers / active.length) * c.balance.readChance;
+  return (readers / active.length) * c.balance.placementRead[placement];
 }
 
 /** The story's audience reacts more strongly, everyone else less. */
@@ -108,7 +99,7 @@ export function exposureRiskOf(
   c: Content,
   mods: Modifiers,
   truth: TruthLevel,
-  framing: Framing,
+  placement: Placement,
   reachShare: number,
 ): number {
   const b = c.balance;
@@ -119,7 +110,7 @@ export function exposureRiskOf(
     base *
       b.truthRisk[truth] *
       outletExposureRisk(state, c) *
-      b.framingExposureRisk[framing] *
+      b.placementExposureRisk[placement] *
       (0.5 + reachShare) *
       mods.checkerMul *
       defense,
@@ -145,18 +136,9 @@ export function previewPublication(
     effect: tpl.effects[truth],
     impact: impactOf(state, c, card, tpl, pub, repeatsThisTurn),
     tier: effectiveTier(card, pub.distortion),
-    reachChance: outletReach(state, c),
-    exposureRisk: exposureRiskOf(state, c, mods, truth, pub.framing, 0.25),
-    credibility: hypeCredibility(state, c, pub),
-    hype: state.hype,
+    reachChance: outletReach(state, c, pub.placement),
+    exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25),
   };
-}
-
-/** How much the outlet's shouting undermines belief in this publication (1 = not at all). */
-function hypeCredibility(state: GameState, c: Content, pub: Publication): number {
-  const h = state.hype / 100;
-  const all = 1 - c.balance.hypeBeliefPenalty * h;
-  return pub.framing > 0 ? all * (1 - c.balance.hypeLoudPenalty * h) : all;
 }
 
 function beliefChance(
@@ -166,20 +148,17 @@ function beliefChance(
   r: Resident,
   tpl: CardTemplate,
   truth: TruthLevel,
-  pub: Publication,
 ): number {
   const b = c.balance;
   let plausibility = b.plausibility[truth] + mods.plausibilityAdd;
   if (tpl.witness && r.job !== null && state.buildings[r.job].type === tpl.witness) {
     plausibility *= b.witness[truth];
   }
+  // People do not believe dirt about their own group.
+  if (tpl.target === r.group) plausibility *= b.witness[truth];
   const trust = (r.trust + mods.trustBonus) / 100;
   const skepticism = groupOf(c, r.group).skepticism;
-  return clamp(
-    b.beliefScale * trust * plausibility * (1 - skepticism) * b.framingBelief[pub.framing] * hypeCredibility(state, c, pub),
-    0,
-    b.maxBelief,
-  );
+  return clamp(b.beliefScale * trust * plausibility * (1 - skepticism), 0, b.maxBelief);
 }
 
 function applyEffect(
@@ -190,9 +169,19 @@ function applyEffect(
   e: CardEffect,
   /** Impact × audience × global effect scale. */
   mult: number,
+  target?: string,
 ): boolean {
   const b = c.balance;
   switch (e.type) {
+    case 'stigma':
+      // Believers from other groups turn on the target group (CONCEPT.md §3.3а).
+      if (r.group === target) return false;
+      r.mood = clamp(r.mood - e.strength * mult);
+      if (chance(rng, e.strength * b.stigmaProtest * mult)) {
+        r.protestTurns = Math.max(r.protestTurns, e.duration ?? 2);
+        r.mood = clamp(r.mood - b.protestMoodPenalty);
+      }
+      return true;
     case 'moodUp':
       r.mood = clamp(r.mood + e.strength * mult);
       return true;
@@ -269,7 +258,7 @@ export function publish(
     cardUid: card.uid,
     title,
     truth,
-    framing: pub.framing,
+    placement: pub.placement,
     reached: 0,
     byChannel: Object.fromEntries(state.ownedChannels.map((ch) => [ch, 0])),
     believed: 0,
@@ -284,7 +273,7 @@ export function publish(
 
   const consider = (r: Resident, factor: number): boolean => {
     heard.add(r.id);
-    if (!chance(rng, beliefChance(state, c, mods, r, tpl, truth, pub) * factor)) {
+    if (!chance(rng, beliefChance(state, c, mods, r, tpl, truth) * factor)) {
       setReaction(state, r.id, 'doubted');
       report.doubted++;
       return false;
@@ -299,7 +288,7 @@ export function publish(
       const delta = effect.type === 'moodUp' ? b.hopePerBelief : -b.fearPerBelief;
       r.outlook = clamp(r.outlook + delta * hit);
     }
-    if (effect && applyEffect(state, c, rng, r, effect, b.effectScale * hit)) {
+    if (effect && applyEffect(state, c, rng, r, effect, b.effectScale * hit, tpl.target)) {
       report.effects[effect.type] = (report.effects[effect.type] ?? 0) + 1;
     }
     return true;
@@ -308,7 +297,7 @@ export function publish(
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
     const channels = followedChannels(state, r);
-    if (channels.length === 0 || !chance(rng, b.readChance)) continue;
+    if (channels.length === 0 || !chance(rng, b.placementRead[pub.placement])) continue;
     for (const ch of channels) report.byChannel[ch]++;
     viewers.push(r.id);
     if (consider(r, 1)) believers.push(r);
@@ -325,6 +314,24 @@ export function publish(
     consider(candidate, b.wordOfMouthFactor);
   }
 
+  // The target group of an investigation feels hunted, readers or not (CONCEPT.md §3.3а).
+  if (effect?.type === 'stigma' && tpl.target) {
+    const active = state.residents.filter((r) => r.status === 'active');
+    const accusers = believers.filter((r) => r.group !== tpl.target).length + report.wordOfMouth;
+    const pressure = clamp(accusers / Math.max(1, active.length));
+    let left = 0;
+    for (const r of active) {
+      if (r.group !== tpl.target) continue;
+      r.outlook = clamp(r.outlook - b.stigmaOutlook * pressure * impact);
+      if (chance(rng, b.stigmaLeave * pressure * impact)) {
+        leaveCity(r);
+        left++;
+      }
+    }
+    report.stigma = { target: tpl.target, pressure, left };
+    if (left) report.effects.leaveCity = (report.effects.leaveCity ?? 0) + left;
+  }
+
   return { pub, truth, impact, viewers, report };
 }
 
@@ -333,7 +340,7 @@ export function exposeNews(
   c: Content,
   mods: Modifiers,
   cardUid: number,
-  framing: Framing,
+  placement: Placement,
   viewers: number[],
 ): void {
   const b = c.balance;
@@ -347,7 +354,7 @@ export function exposeNews(
     } else r.trust = clamp(r.trust - penalty * b.trustPenaltyBystanderShare, 0, 100);
     r.beliefs = r.beliefs.filter((x) => x.cardUid !== cardUid);
   }
-  state.exposure += b.exposurePerScandal * b.framingExposureGain[framing] * mods.exposureGainMul;
+  state.exposure += b.exposurePerScandal * b.placementExposureGain[placement] * mods.exposureGainMul;
   state.scandal = b.scandalAdMul;
 }
 
@@ -360,15 +367,15 @@ export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Mo
       for (const id of n.viewers) state.residents[id].trust = clamp(state.residents[id].trust + b.trustGain, 0, 100);
       continue;
     }
-    const risk = exposureRiskOf(state, c, mods, n.truth, n.pub.framing, n.viewers.length / active);
+    const risk = exposureRiskOf(state, c, mods, n.truth, n.pub.placement, n.viewers.length / active);
     if (chance(rng, risk)) {
       n.report.exposed = true;
-      exposeNews(state, c, mods, n.pub.cardUid, n.pub.framing, n.viewers);
+      exposeNews(state, c, mods, n.pub.cardUid, n.pub.placement, n.viewers);
     } else {
       state.pendingLies.push({
         cardUid: n.pub.cardUid,
         title: n.report.title,
-        framing: n.pub.framing,
+        placement: n.pub.placement,
         viewers: n.viewers,
         risk: risk * b.lateExposureFactor,
         turnsLeft: b.lateExposureTurns,
@@ -383,7 +390,7 @@ export function processLateExposures(state: GameState, c: Content, rng: RngState
   const keep = [];
   for (const lie of state.pendingLies) {
     if (chance(rng, lie.risk)) {
-      exposeNews(state, c, mods, lie.cardUid, lie.framing, lie.viewers);
+      exposeNews(state, c, mods, lie.cardUid, lie.placement, lie.viewers);
       exposed.push(lie.title);
     } else if (--lie.turnsLeft > 0) keep.push(lie);
   }

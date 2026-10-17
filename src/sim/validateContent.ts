@@ -56,7 +56,25 @@ export function validateContent(c: Content): string[] {
       if (e?.building && !buildingTypes.has(e.building)) errors.push(`card ${t.id}: unknown building ${e.building}`);
     }
     if (t.source === 'event' && t.baseTruth !== 0) errors.push(`card ${t.id}: events must be true`);
+    if (t.scope === 'global' && (t.witness || t.cityEffect)) errors.push(`card ${t.id}: global news cannot have witnesses or city effects`);
+    if (t.scope && t.scope !== 'local' && t.scope !== 'global') errors.push(`card ${t.id}: unknown scope ${t.scope}`);
     if (t.source === 'rumor' && t.baseTruth === 0) errors.push(`card ${t.id}: rumors cannot be fully true`);
   }
+  unique('reporter', c.reporters.map((x) => x.id));
+  const topics = new Set(c.cards.map((t) => t.topic));
+  for (const r of c.reporters) {
+    const s = r.skills;
+    if (s.luck <= 0 || s.luck > 1) errors.push(`reporter ${r.id}: luck must be in (0, 1]`);
+    if (s.nose < 0 || s.nose > 3) errors.push(`reporter ${r.id}: nose must be 0..3`);
+    if (!['local', 'global', 'any'].includes(s.scope)) errors.push(`reporter ${r.id}: unknown scope ${s.scope}`);
+    for (const t of s.topics) if (!topics.has(t)) errors.push(`reporter ${r.id}: unknown topic ${t}`);
+  }
+  const b = c.balance;
+  for (const id of b.startReporters) if (!c.reporters.some((r) => r.id === id)) errors.push(`unknown start reporter ${id}`);
+  if (b.startReporters.length < 1) errors.push('at least one start reporter is needed');
+  if (b.startReporters.length > b.maxReporters) errors.push('more start reporters than maxReporters');
+  if (b.maxReporters > c.reporters.length) errors.push('maxReporters exceeds the number of reporters');
+  if (b.minFinds < 1) errors.push('minFinds must be at least 1');
+  if (!c.cards.some((t) => t.scope === 'global')) errors.push('no global news');
   return errors;
 }

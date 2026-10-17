@@ -73,11 +73,11 @@
   },
   {
     "id": "editorial_1",
-    "name": "Сильные журналисты",
-    "description": "+1 карта в руке.",
+    "name": "Опытный редактор",
+    "description": "+10% к шансу находок у всех репортёров.",
     "cost": 300,
     "requires": null,
-    "effects": { "handSize": 1 }
+    "effects": { "reporterLuck": 0.1 }
   },
   {
     "id": "editorial_2",

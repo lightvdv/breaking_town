@@ -50,13 +50,35 @@ function interestOf(
   const streak = (state.topicStreak[tpl.topic] ?? 0) + repeatsThisTurn;
   const fatigue = Math.pow(1 - b.fatiguePerRepeat, streak);
   const stale = Math.max(b.minStaleInterest, 1 - b.staleInterestPerTurn * (state.turn - card.createdTurn));
-  return tpl.interest * b.framingInterest[pub.framing] * mods.channels[pub.channel].interestMul * fatigue * stale;
+  const scope = card.scope === 'global' ? b.globalInterestMul : 1;
+  return (
+    tpl.interest *
+    b.tierInterest[card.tier] *
+    scope *
+    b.framingInterest[pub.framing] *
+    mods.channels[pub.channel].interestMul *
+    fatigue *
+    stale
+  );
 }
 
-function reachChanceOf(c: Content, mods: Modifiers, tpl: CardTemplate, channel: ChannelId, interest: number): number {
+function reachChanceOf(
+  c: Content,
+  mods: Modifiers,
+  card: CardInstance,
+  tpl: CardTemplate,
+  channel: ChannelId,
+  interest: number,
+): number {
   const ch = channelOf(c, channel);
   const base = ch.baseReach + mods.channels[channel].reachAdd;
-  return clamp(base * interest * (1 + tpl.engagement * ch.virality));
+  const engagement = tpl.engagement * c.balance.tierEngagement[card.tier];
+  return clamp(base * interest * (1 + engagement * ch.virality));
+}
+
+/** Tier and scope scale how strongly believers act on a story. */
+function effectMulOf(c: Content, card: CardInstance): number {
+  return c.balance.tierEffect[card.tier] * (card.scope === 'global' ? c.balance.globalEffectMul : 1);
 }
 
 export function exposureRiskOf(
@@ -102,7 +124,7 @@ export function previewPublication(
     truth,
     effect: tpl.effects[truth],
     interest,
-    reachChance: reachChanceOf(c, mods, tpl, pub.channel, interest),
+    reachChance: reachChanceOf(c, mods, card, tpl, pub.channel, interest),
     exposureRisk: exposureRiskOf(state, c, mods, truth, pub.channel, pub.framing, 0.25),
   };
 }
@@ -137,9 +159,10 @@ function applyEffect(
   r: Resident,
   e: CardEffect,
   framing: Framing,
+  cardMul: number,
 ): boolean {
   const b = c.balance;
-  const mult = b.framingEffect[framing] * b.effectScale;
+  const mult = b.framingEffect[framing] * b.effectScale * cardMul;
   switch (e.type) {
     case 'moodUp':
       r.mood = clamp(r.mood + e.strength * mult);
@@ -204,7 +227,8 @@ export function publish(
   const title = tpl.titles[truth] ?? '';
   const effect = tpl.effects[truth];
   const interest = interestOf(state, c, mods, card, tpl, pub, repeatsThisTurn);
-  const reachChance = reachChanceOf(c, mods, tpl, pub.channel, interest);
+  const reachChance = reachChanceOf(c, mods, card, tpl, pub.channel, interest);
+  const cardMul = effectMulOf(c, card);
 
   const report: PublicationReport = {
     cardUid: card.uid,
@@ -236,9 +260,9 @@ export function publish(
     if (r.beliefs.length > b.maxBeliefs) r.beliefs.shift();
     if (effect) {
       const delta = effect.type === 'moodUp' ? b.hopePerBelief : -b.fearPerBelief;
-      r.outlook = clamp(r.outlook + delta * b.framingEffect[pub.framing]);
+      r.outlook = clamp(r.outlook + delta * b.framingEffect[pub.framing] * cardMul);
     }
-    if (effect && applyEffect(state, c, rng, r, effect, pub.framing)) {
+    if (effect && applyEffect(state, c, rng, r, effect, pub.framing, cardMul)) {
       report.effects[effect.type] = (report.effects[effect.type] ?? 0) + 1;
     }
     return true;

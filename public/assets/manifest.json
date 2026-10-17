@@ -80,5 +80,17 @@
     "doubted",
     "talk",
     "exposed"
+  ],
+  "reporters": [
+    "petrova",
+    "sokolov",
+    "volkova",
+    "lebedev",
+    "kim",
+    "orlova",
+    "zaitsev",
+    "morozova",
+    "gusev",
+    "belov"
   ]
 }

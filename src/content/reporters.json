@@ -1,0 +1,92 @@
+[
+  {
+    "id": "petrova",
+    "name": "Анна Петрова",
+    "bio": "Начинающий репортёр. Берётся за всё подряд.",
+    "hireCost": 0,
+    "salary": 10,
+    "skills": { "luck": 0.75, "nose": 0, "scope": "any", "topics": [] },
+    "portrait": { "bg": "blue", "skin": "skin", "hair": "amber", "hairStyle": "bob", "clothes": "white", "accessory": "none" }
+  },
+  {
+    "id": "sokolov",
+    "name": "Игорь Соколов",
+    "bio": "Бывший рабочий. Знает о заводе всё.",
+    "hireCost": 120,
+    "salary": 12,
+    "skills": { "luck": 0.6, "nose": 1, "scope": "local", "topics": ["factory"] },
+    "portrait": { "bg": "darkGrey", "skin": "skinDark", "hair": "ink", "hairStyle": "short", "clothes": "orange", "accessory": "helmet" }
+  },
+  {
+    "id": "volkova",
+    "name": "Марина Волкова",
+    "bio": "Светская хроника и городские сплетни.",
+    "hireCost": 150,
+    "salary": 14,
+    "skills": { "luck": 0.7, "nose": 1, "scope": "local", "topics": ["fun", "food"] },
+    "portrait": { "bg": "magenta", "skin": "skin", "hair": "darkRed", "hairStyle": "long", "clothes": "plum", "accessory": "earrings" }
+  },
+  {
+    "id": "lebedev",
+    "name": "Олег Лебедев",
+    "bio": "Политический обозреватель. Следит за мэрией.",
+    "hireCost": 200,
+    "salary": 18,
+    "skills": { "luck": 0.55, "nose": 2, "scope": "local", "topics": ["power"] },
+    "portrait": { "bg": "navyBlue", "skin": "skin", "hair": "silver", "hairStyle": "short", "clothes": "slate", "accessory": "glasses" }
+  },
+  {
+    "id": "kim",
+    "name": "Виктор Ким",
+    "bio": "Криминальный репортёр. Ездит на все вызовы.",
+    "hireCost": 180,
+    "salary": 16,
+    "skills": { "luck": 0.65, "nose": 1, "scope": "local", "topics": ["crime"] },
+    "portrait": { "bg": "darkRed", "skin": "skinDark", "hair": "ink", "hairStyle": "slick", "clothes": "ink", "accessory": "fedora" }
+  },
+  {
+    "id": "orlova",
+    "name": "Дарья Орлова",
+    "bio": "Медицинский журналист. Пишет о больнице и здоровье.",
+    "hireCost": 170,
+    "salary": 15,
+    "skills": { "luck": 0.65, "nose": 1, "scope": "any", "topics": ["health"] },
+    "portrait": { "bg": "green", "skin": "skin", "hair": "brown", "hairStyle": "bun", "clothes": "white", "accessory": "glasses" }
+  },
+  {
+    "id": "zaitsev",
+    "name": "Павел Зайцев",
+    "bio": "Международник. Пересказывает новости со всего мира.",
+    "hireCost": 220,
+    "salary": 18,
+    "skills": { "luck": 0.7, "nose": 1, "scope": "global", "topics": [] },
+    "portrait": { "bg": "cyan", "skin": "skin", "hair": "brown", "hairStyle": "curly", "clothes": "navyBlue", "accessory": "headphones" }
+  },
+  {
+    "id": "morozova",
+    "name": "Елена Морозова",
+    "bio": "Звезда журналистики. Чует сенсацию за версту.",
+    "hireCost": 450,
+    "salary": 35,
+    "skills": { "luck": 0.6, "nose": 3, "scope": "any", "topics": [] },
+    "portrait": { "bg": "amber", "skin": "skin", "hair": "ink", "hairStyle": "long", "clothes": "red", "accessory": "camera" }
+  },
+  {
+    "id": "gusev",
+    "name": "Степан Гусев",
+    "bio": "Блогер. Находит много, но в основном ерунду.",
+    "hireCost": 90,
+    "salary": 8,
+    "skills": { "luck": 0.9, "nose": 0, "scope": "any", "topics": ["fun"] },
+    "portrait": { "bg": "pink", "skin": "skinDark", "hair": "green", "hairStyle": "mohawk", "clothes": "magenta", "accessory": "none" }
+  },
+  {
+    "id": "belov",
+    "name": "Аркадий Белов",
+    "bio": "Ветеран редакции. Медленный, но надёжный аналитик.",
+    "hireCost": 300,
+    "salary": 24,
+    "skills": { "luck": 0.5, "nose": 2, "scope": "global", "topics": ["power", "food"] },
+    "portrait": { "bg": "wood", "skin": "skin", "hair": "white", "hairStyle": "bald", "clothes": "brown", "accessory": "beard" }
+  }
+]

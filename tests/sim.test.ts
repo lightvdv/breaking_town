@@ -4,8 +4,11 @@ import {
   averageTrust,
   createGame,
   createRng,
+  fireReporter,
   isRoadTile,
   listPurchases,
+  tierWeights,
+  totalUpkeep,
   maxDistortion,
   playTurn,
   purchase,
@@ -76,10 +79,12 @@ describe('rng', () => {
 });
 
 describe('game', () => {
-  it('starts on turn 1 with a full hand and only the newspaper', () => {
+  it('starts on turn 1 with the start reporter, at least one story and only the newspaper', () => {
     const s = createGame(content, 1);
     expect(s.turn).toBe(1);
-    expect(s.hand.length).toBe(content.balance.handSize);
+    expect(s.reporters).toEqual(content.balance.startReporters);
+    expect(s.hand.length).toBeGreaterThanOrEqual(1);
+    expect(s.lastFinds.length).toBe(s.reporters.length);
     expect(s.ownedChannels).toEqual(['newspaper']);
     expect(s.outcome).toBeNull();
   });
@@ -100,9 +105,10 @@ describe('game', () => {
   });
 
   it('rejects publishing more cards than allowed', () => {
-    const s = createGame(content, 1);
+    const c0 = withBalance({ publishPerTurn: 0 });
+    const s = createGame(c0, 1);
     const d: Decision = {
-      publish: s.hand.slice(0, 3).map((c) => ({
+      publish: s.hand.slice(0, 1).map((c) => ({
         cardUid: c.uid,
         channel: 'newspaper',
         targetGroup: null,
@@ -111,7 +117,7 @@ describe('game', () => {
       })),
       hold: [],
     };
-    expect(() => playTurn(s, content, d)).toThrow();
+    expect(() => playTurn(s, c0, d)).toThrow(/at most/);
   });
 
   it('rejects channels the player does not own', () => {
@@ -154,6 +160,62 @@ describe('trust', () => {
     expect(averageTrust(s, c, 'newspaper')).toBeLessThan(before);
     expect(s.exposure).toBeGreaterThan(0);
     expect(s.scandal.newspaper).toBeLessThan(1);
+  });
+});
+
+describe('reporters', () => {
+  it('always bring between minFinds and the number of hired reporters stories', () => {
+    const unlucky: Content = {
+      ...content,
+      reporters: content.reporters.map((r) => ({ ...r, skills: { ...r.skills, luck: 0.01 } })),
+    };
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const s = createGame(unlucky, seed);
+      for (let i = 0; i < 5; i++) {
+        const found = s.lastFinds.filter((f) => f.cardUid !== null).length;
+        expect(found).toBeGreaterThanOrEqual(unlucky.balance.minFinds);
+        expect(found).toBeLessThanOrEqual(s.reporters.length);
+        playTurn(s, unlucky, { publish: [], hold: [] });
+      }
+    }
+  });
+
+  it('a forced story is boring, and every card names a hired reporter', () => {
+    const s = createGame(content, 9);
+    s.money = 10_000;
+    for (const id of ['gusev', 'volkova', 'kim', 'zaitsev']) purchase(s, content, id);
+    expect(s.reporters.length).toBe(content.balance.maxReporters);
+    playTurn(s, content, { publish: [], hold: [] });
+    for (const f of s.lastFinds.filter((x) => x.forced)) expect(f.tier).toBe(0);
+    for (const card of s.hand) expect(s.reporters).toContain(card.reporterId);
+    expect(s.hand.length).toBeLessThanOrEqual(content.balance.maxReporters);
+  });
+
+  it('cannot hire more than maxReporters or fire the last one', () => {
+    const s = createGame(content, 1);
+    s.money = 100_000;
+    for (const r of content.reporters) {
+      if (s.reporters.length < content.balance.maxReporters && !s.reporters.includes(r.id)) purchase(s, content, r.id);
+    }
+    const spare = content.reporters.find((r) => !s.reporters.includes(r.id))!;
+    expect(() => purchase(s, content, spare.id)).toThrow();
+    while (s.reporters.length > 1) fireReporter(s, s.reporters[0]);
+    expect(() => fireReporter(s, s.reporters[0])).toThrow();
+  });
+
+  it('salaries are part of the upkeep', () => {
+    const s = createGame(content, 1);
+    const before = totalUpkeep(s, content);
+    s.money = 1000;
+    purchase(s, content, 'kim');
+    expect(totalUpkeep(s, content)).toBe(before + content.reporters.find((r) => r.id === 'kim')!.salary);
+  });
+
+  it('nose shifts the odds towards sensations', () => {
+    const plain = content.reporters.find((r) => r.skills.nose === 0)!;
+    const star = content.reporters.find((r) => r.skills.nose === 3)!;
+    const share = (w: number[]) => w[3] / w.reduce((a, b) => a + b, 0);
+    expect(share(tierWeights(content, star))).toBeGreaterThan(share(tierWeights(content, plain)) * 2);
   });
 });
 

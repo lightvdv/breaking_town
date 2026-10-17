@@ -4,7 +4,8 @@
  *
  *   npm run art
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { portrait, type PortraitSpec } from './portraits';
 import { dirname, join } from 'node:path';
 import { buildingArts, FRAMES } from './buildings';
 import { looks, residentSheet, ROWS } from './characters';
@@ -117,6 +118,12 @@ for (const [name, frames] of Object.entries(decor)) {
 // Reaction icons.
 for (const name of Object.keys(fxIcons)) write(`sprites/fx/${name}.png`, fxIcon(name).toPng());
 
+// Reporter portraits, described in the content file.
+const reporters: { id: string; portrait: PortraitSpec }[] = JSON.parse(
+  readFileSync(join(process.cwd(), 'src', 'content', 'reporters.json'), 'utf8'),
+);
+reporters.forEach((r, i) => write(`sprites/reporters/${r.id}.png`, portrait(r.portrait, i).toPng()));
+
 // What exists, so the game does not hard-code variant counts.
 write(
   'manifest.json',
@@ -127,6 +134,7 @@ write(
       grass: 3,
       decor: Object.keys(decor),
       fx: Object.keys(fxIcons),
+      reporters: reporters.map((r) => r.id),
     },
     null,
     2,

@@ -1,9 +1,10 @@
 import { channelOf } from './lookup';
+import { reporterOf } from './reporters';
 import type { ChannelId, Content, GameState, Requirement } from './types';
 
 export interface PurchaseOption {
   id: string;
-  kind: 'channel' | 'upgrade';
+  kind: 'channel' | 'upgrade' | 'reporter';
   name: string;
   description: string;
   cost: number;
@@ -49,7 +50,28 @@ export function listPurchases(state: GameState, c: Content): PurchaseOption[] {
       affordable: unlocked && state.money >= u.cost,
     });
   }
+  const roomForReporter = state.reporters.length < c.balance.maxReporters;
+  for (const r of c.reporters) {
+    if (state.reporters.includes(r.id)) continue;
+    out.push({
+      id: r.id,
+      kind: 'reporter',
+      name: r.name,
+      description: r.bio,
+      cost: r.hireCost,
+      unlocked: roomForReporter,
+      affordable: roomForReporter && state.money >= r.hireCost,
+    });
+  }
   return out;
+}
+
+/** Fires a hired reporter; the last one cannot be fired. */
+export function fireReporter(state: GameState, id: string): void {
+  if (state.outcome) throw new Error('Game is over');
+  if (!state.reporters.includes(id)) throw new Error(`Reporter ${id} is not hired`);
+  if (state.reporters.length <= 1) throw new Error('The last reporter cannot be fired');
+  state.reporters = state.reporters.filter((x) => x !== id);
 }
 
 export function purchase(state: GameState, c: Content, id: string): void {
@@ -61,11 +83,15 @@ export function purchase(state: GameState, c: Content, id: string): void {
   if (option.kind === 'channel') {
     state.ownedChannels.push(id);
     state.scandal[id] = 1;
-  } else state.upgrades.push(id);
+  } else if (option.kind === 'reporter') state.reporters.push(id);
+  else state.upgrades.push(id);
 }
 
+/** Channel upkeep plus reporter salaries, paid every turn. */
 export function totalUpkeep(state: GameState, c: Content): number {
-  return state.ownedChannels.reduce((s, ch) => s + channelOf(c, ch).upkeep, 0);
+  const channels = state.ownedChannels.reduce((s, ch) => s + channelOf(c, ch).upkeep, 0);
+  const salaries = state.reporters.reduce((s, id) => s + reporterOf(c, id).salary, 0);
+  return channels + salaries;
 }
 
 /** Ad income for this turn's views minus channel upkeep. */

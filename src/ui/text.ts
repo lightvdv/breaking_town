@@ -1,4 +1,13 @@
-import { buildingDefOf, type CardEffect, type Content, type EffectType, type Outcome, type Reaction, type Topic } from '../sim';
+import {
+  buildingDefOf,
+  type CardEffect,
+  type Content,
+  type EffectType,
+  type NewsScope,
+  type Outcome,
+  type Reaction,
+  type Topic,
+} from '../sim';
 
 export const reactionLabels: Record<Reaction, string> = {
   scared: 'поверил плохому',
@@ -9,6 +18,8 @@ export const reactionLabels: Record<Reaction, string> = {
 };
 
 export const truthLabels = ['Правда', 'Полуправда', 'Ложь'];
+export const tierLabels = ['Скучная', 'Обычная', 'Интересная', 'Сенсация'];
+export const scopeLabels: Record<NewsScope | 'any', string> = { local: 'Город', global: 'Мир', any: 'Город и мир' };
 export const framingLabels = ['Нейтрально', 'Сенсация', 'Паника'];
 export const distortionLabels = ['Как есть', 'Додумать', 'Исказить'];
 

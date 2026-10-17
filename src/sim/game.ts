@@ -12,8 +12,8 @@ import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf, trustSnapshot } from './lookup';
 import { getModifiers, type Modifiers } from './modifiers';
 import { maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
+import { findNews, scopeOf } from './reporters';
 import type {
-  CardInstance,
   CardTemplate,
   ChannelId,
   Content,
@@ -50,6 +50,8 @@ export function createGame(c: Content, seed: number): GameState {
     nextResidentId: residents.length,
     ownedChannels: c.channels.filter((ch) => ch.cost === 0 && ch.requires === null).map((ch) => ch.id),
     upgrades: [],
+    reporters: [...c.balance.startReporters],
+    lastFinds: [],
     scandal,
     topicStreak: {},
     pendingLies: [],
@@ -65,47 +67,34 @@ export function createGame(c: Content, seed: number): GameState {
   return state;
 }
 
-function newCard(state: GameState, tpl: CardTemplate): CardInstance {
-  return { uid: state.nextUid++, templateId: tpl.id, baseTruth: tpl.baseTruth, createdTurn: state.turn };
-}
-
 function cardAvailable(state: GameState, tpl: CardTemplate): boolean {
   return !tpl.requires || state.buildings.some((x) => x.type === tpl.requires && x.open);
 }
 
-/** Real events happen in the city and turn into true cards. */
-function generateEvents(state: GameState, c: Content, rng: RngState): CardInstance[] {
+/** Real events happen in the city; reporters may turn them into true cards. */
+function generateEvents(state: GameState, c: Content, rng: RngState): CardTemplate[] {
   const b = c.balance;
-  const pool = c.cards.filter((t) => t.source === 'event' && cardAvailable(state, t));
+  const pool = c.cards.filter((t) => t.source === 'event' && scopeOf(t) === 'local' && cardAvailable(state, t));
   const count = b.eventsMin + int(rng, b.eventsMax - b.eventsMin + 1);
-  const out: CardInstance[] = [];
+  const out: CardTemplate[] = [];
   for (let i = 0; i < count && pool.length; i++) {
     const tpl = weightedPick(rng, pool);
     pool.splice(pool.indexOf(tpl), 1);
     if (tpl.cityEffect) applyCityEffect(state, rng, tpl.cityEffect);
     state.todayEvents.push(tpl.titles[0] ?? tpl.id);
-    out.push(newCard(state, tpl));
+    out.push(tpl);
   }
   return out;
-}
-
-function dealHand(state: GameState, c: Content, rng: RngState, fresh: CardInstance[], handSize: number): void {
-  const hand = [...state.hand, ...fresh];
-  const rumors = c.cards.filter((t) => t.source === 'rumor' && cardAvailable(state, t));
-  while (hand.length < handSize) {
-    const options = rumors.filter((t) => !hand.some((x) => x.templateId === t.id));
-    if (options.length === 0) break;
-    hand.push(newCard(state, weightedPick(rng, options)));
-  }
-  state.hand = hand;
 }
 
 function startTurn(state: GameState, c: Content): string[] {
   state.turn++;
   state.todayEvents = [];
   const notes = advanceCity(state, c, state.rng);
-  const fresh = generateEvents(state, c, state.rng);
-  dealHand(state, c, state.rng, fresh, getModifiers(state, c).handSize);
+  const events = generateEvents(state, c, state.rng);
+  const { cards, finds } = findNews(state, c, state.rng, getModifiers(state, c), events);
+  state.hand = [...state.hand, ...cards];
+  state.lastFinds = finds;
   state.metrics = computeMetrics(state, c);
   return notes;
 }

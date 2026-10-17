@@ -18,6 +18,29 @@ export type TruthLevel = 0 | 1 | 2;
 /** 0 = нейтральная, 1 = сенсационная, 2 = паническая подача */
 export type Framing = 0 | 1 | 2;
 export type Triple<T> = [T, T, T];
+/** 0 = скучная, 1 = обычная, 2 = интересная, 3 = сенсация */
+export type NewsTier = 0 | 1 | 2 | 3;
+export type Quad<T> = [T, T, T, T];
+export type NewsScope = 'local' | 'global';
+
+export interface ReporterDef {
+  id: string;
+  name: string;
+  bio: string;
+  hireCost: number;
+  /** Paid every turn while hired. */
+  salary: number;
+  skills: {
+    /** Chance to find a story each turn. */
+    luck: number;
+    /** 0..3, shifts the odds towards higher tiers. */
+    nose: number;
+    scope: NewsScope | 'any';
+    topics: Topic[];
+  };
+  /** Appearance for the placeholder portrait generator (palette color names). */
+  portrait: Record<string, string>;
+}
 
 export interface GroupDef {
   id: GroupId;
@@ -57,7 +80,8 @@ export interface UpgradeEffects {
   reachAdd?: number;
   interestMul?: number;
   trustBonus?: number;
-  handSize?: number;
+  /** Added to every reporter's luck. */
+  reporterLuck?: number;
   publishPerTurn?: number;
   exposureGainMul?: number;
   checkerMul?: number;
@@ -91,8 +115,10 @@ export interface CityEffect {
 
 export interface CardTemplate {
   id: string;
-  /** event = real city event (true card), rumor = made-up or exaggerated story. */
+  /** event = real event (true card), rumor = made-up or exaggerated story. */
   source: 'event' | 'rumor';
+  /** local = about this city (default), global = about the country or the world. */
+  scope?: NewsScope;
   topic: Topic;
   /** Title per truth level; null where that level is impossible (below baseTruth). */
   titles: Triple<string | null>;
@@ -125,8 +151,26 @@ export interface Balance {
   turnLimit: number;
   winCityIndex: number;
   startMoney: number;
-  handSize: number;
   publishPerTurn: number;
+
+  maxReporters: number;
+  startReporters: string[];
+  /** Stories guaranteed per turn even if every reporter fails. */
+  minFinds: number;
+  tierWeights: Quad<number>;
+  tierInterest: Quad<number>;
+  tierEngagement: Quad<number>;
+  tierEffect: Quad<number>;
+  /** Per point of nose, weight of tier i is multiplied by (1 + nose · bonus · i). */
+  noseTierBonus: number;
+  /** Chance a local/global reporter brings news of his own scope. */
+  scopeFocus: number;
+  /** Chance a reporter with topics brings news on one of them. */
+  topicFocus: number;
+  /** Chance a local find is one of today's real events, when there is one. */
+  eventPreference: number;
+  globalInterestMul: number;
+  globalEffectMul: number;
   maxHold: number;
   /** City blocks per side; each block is a 2×2 lot surrounded by roads. */
   mapBlocks: number;
@@ -214,6 +258,7 @@ export interface Content {
   upgrades: UpgradeDef[];
   cards: CardTemplate[];
   buildings: BuildingDef[];
+  reporters: ReporterDef[];
   balance: Balance;
 }
 
@@ -262,6 +307,19 @@ export interface CardInstance {
   templateId: string;
   baseTruth: TruthLevel;
   createdTurn: number;
+  tier: NewsTier;
+  scope: NewsScope;
+  /** Who found the story. */
+  reporterId: string;
+}
+
+/** One reporter's search result this turn (drives the start-of-turn animation). */
+export interface Find {
+  reporterId: string;
+  cardUid: number | null;
+  tier: NewsTier | null;
+  /** True when the story was given by the minimum-finds rule after everyone failed. */
+  forced: boolean;
 }
 
 export interface Publication {
@@ -324,6 +382,9 @@ export interface GameState {
   nextResidentId: number;
   ownedChannels: ChannelId[];
   upgrades: string[];
+  /** Hired reporter ids, in hiring order. */
+  reporters: string[];
+  lastFinds: Find[];
   /** Ad-rate multiplier per channel, drops after a scandal. */
   scandal: Record<ChannelId, number>;
   /** Consecutive turns each topic was published, ending last turn. */

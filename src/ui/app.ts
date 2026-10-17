@@ -4,6 +4,7 @@ import {
   buildingDefOf,
   channelOf,
   createGame,
+  fireReporter,
   getModifiers,
   groupOf,
   listPurchases,
@@ -11,6 +12,7 @@ import {
   playTurn,
   previewPublication,
   purchase,
+  reporterOf,
   templateOf,
   totalUpkeep,
   type CardInstance,
@@ -23,6 +25,7 @@ import {
   type TurnReport,
 } from '../sim';
 import { h, pct, select } from './dom';
+import { portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
   distortionLabels,
   effectLabels,
@@ -30,6 +33,8 @@ import {
   framingLabels,
   outcomeText,
   reactionLabels,
+  scopeLabels,
+  tierLabels,
   topicLabels,
   truthLabels,
 } from './text';
@@ -65,9 +70,29 @@ export function mountApp(root: HTMLElement, c: Content): void {
   let error = '';
   let busy = false;
   let scene: CityScene | null = null;
+  // Start-of-turn search animation.
+  let repStatus = new Map<string, RepStatus>();
+  let searching = false;
+  let skipSearch = false;
+  let wake: (() => void) | null = null;
+  let newCards = new Set<number>();
+  let searchRun = 0;
 
   // Persistent shell: the city canvas is created once and never re-rendered by the DOM.
   const hud = h('header', { class: 'hud' });
+  const reporterBar = new ReporterBar(
+    c,
+    () => {
+      tab = 'shop';
+      render();
+      document.getElementById('hire')?.scrollIntoView({ block: 'start' });
+    },
+    () => {
+      if (!searching) return;
+      skipSearch = true;
+      wake?.();
+    },
+  );
   const cityHost = h('div', { class: 'city-host' });
   const cityEvents = h('div', { class: 'city-events' });
   const loading = h('div', { class: 'city-loading' }, 'Строим город…');
@@ -90,6 +115,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const modal = h('div', { class: 'modal-layer' });
   root.replaceChildren(
     hud,
+    reporterBar.el,
     h('div', { class: 'layout' }, h('section', { class: 'city' }, cityHost, cityEvents, tools, legend, loading), sidebar),
     tooltip,
     modal,
@@ -103,6 +129,58 @@ export function mountApp(root: HTMLElement, c: Content): void {
     .catch((e) => {
       loading.textContent = `Не удалось загрузить графику: ${e instanceof Error ? e.message : e}`;
     });
+
+  // ---------- Start-of-turn search ----------
+
+  const pause = (ms: number) =>
+    new Promise<void>((resolve) => {
+      if (skipSearch) return resolve();
+      const t = window.setTimeout(done, ms);
+      function done() {
+        window.clearTimeout(t);
+        wake = null;
+        resolve();
+      }
+      wake = done;
+    });
+
+  /** Reporters show one by one what they found; higher tiers get a longer, louder reveal. */
+  async function runSearch(): Promise<void> {
+    const run = ++searchRun;
+    const finds = [...state.lastFinds];
+    const titleOf = (uid: number | null) => {
+      const card = uid === null ? undefined : state.hand.find((x) => x.uid === uid);
+      return card ? templateOf(c, card.templateId).titles[card.baseTruth] : null;
+    };
+    searching = true;
+    skipSearch = false;
+    repStatus = new Map();
+    newCards = new Set();
+    render();
+    for (const f of finds) {
+      if (run !== searchRun || skipSearch) break;
+      repStatus.set(f.reporterId, { phase: 'searching' });
+      render();
+      await pause(650);
+      if (run !== searchRun) return;
+      repStatus.set(f.reporterId, { phase: 'done', find: f, title: titleOf(f.cardUid) });
+      render();
+      await pause(f.tier === 3 ? 1500 : f.tier === 2 ? 1050 : 750);
+    }
+    if (run !== searchRun) return;
+    for (const f of finds) repStatus.set(f.reporterId, { phase: 'done', find: f, title: titleOf(f.cardUid) });
+    searching = false;
+    busy = false;
+    newCards = new Set(finds.flatMap((f) => (f.cardUid === null ? [] : [f.cardUid])));
+    render();
+    // New cards play their entrance once; result badges stay a little longer.
+    window.setTimeout(() => run === searchRun && (newCards = new Set()), 1600);
+    window.setTimeout(() => {
+      if (run !== searchRun) return;
+      repStatus = new Map();
+      render();
+    }, 3000);
+  }
 
   // ---------- Actions ----------
 
@@ -122,9 +200,20 @@ export function mountApp(root: HTMLElement, c: Content): void {
     report = null;
     tab = 'issue';
     error = '';
-    busy = false;
+    busy = true;
     scene?.setState(state, false);
     scene?.resetView();
+    render();
+    void runSearch();
+  };
+
+  const fire = (id: string) => {
+    try {
+      fireReporter(state, id);
+      error = '';
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
     render();
   };
 
@@ -153,9 +242,11 @@ export function mountApp(root: HTMLElement, c: Content): void {
       render();
       // Let the city react first (CONCEPT.md §7.3), then show the report.
       window.setTimeout(() => {
-        busy = false;
         tab = 'report';
-        render();
+        if (state.outcome) {
+          busy = false;
+          render();
+        } else void runSearch();
       }, REACTION_SECONDS * 1000);
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
@@ -297,14 +388,33 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const stat = (label: string, v: number, cls: string) =>
       h('div', { class: 'card-stat' }, h('span', {}, label), meter(v, cls), h('em', {}, pct(v)));
 
+    const reporter = reporterOf(c, card.reporterId);
+    const classes = [
+      'card',
+      `truth-${p.truth}`,
+      `tier-${card.tier}`,
+      `scope-${card.scope}`,
+      d.publish ? 'selected' : '',
+      d.hold ? 'held' : '',
+      newCards.has(card.uid) ? 'entering' : '',
+    ];
     return h(
       'article',
-      { class: `card truth-${p.truth}${d.publish ? ' selected' : ''}${d.hold ? ' held' : ''}` },
+      { class: classes.filter(Boolean).join(' ') },
+      card.tier === 3 ? h('div', { class: 'ribbon' }, 'СЕНСАЦИЯ') : null,
+      card.tier === 2 ? h('div', { class: 'stamp' }, 'Интересно') : null,
       h(
         'div',
         { class: 'card-band' },
         h('b', {}, truthLabels[p.truth].toUpperCase()),
         h('span', {}, `${topicLabels[tpl.topic]} · ${tpl.source === 'event' ? 'событие' : 'слух'}`),
+      ),
+      h(
+        'div',
+        { class: 'card-meta' },
+        h('span', { class: `tier-tag t${card.tier}` }, tierLabels[card.tier]),
+        h('span', { class: `scope-tag ${card.scope}` }, scopeLabels[card.scope]),
+        h('span', { class: 'by' }, portrait(reporter.id, 'mini-portrait'), reporter.name),
       ),
       h('h3', {}, p.title),
       h('p', { class: 'effect' }, effectText(c, p.effect)),
@@ -370,13 +480,53 @@ export function mountApp(root: HTMLElement, c: Content): void {
   function issueTab(): HTMLElement[] {
     const mods = getModifiers(state, c);
     const publishedCount = state.hand.filter((x) => drafts.get(x.uid)?.publish).length;
+    const found = state.lastFinds.filter((f) => f.cardUid !== null).length;
+    if (searching) return [h('p', { class: 'hint' }, 'Репортёры ищут новости…')];
     return [
       h(
         'p',
         { class: 'hint' },
-        `Выберите до ${mods.publishPerTurn} новостей для выпуска. Неиспользованные карты сгорят, придержать можно ${c.balance.maxHold}.`,
+        `Репортёры принесли новостей: ${found}. В выпуск — до ${mods.publishPerTurn}, придержать можно ${c.balance.maxHold}, остальные сгорят.`,
       ),
       ...state.hand.map((card) => cardView(card, mods, publishedCount)),
+    ];
+  }
+
+  function reportersSection(): HTMLElement[] {
+    const max = c.balance.maxReporters;
+    const options = listPurchases(state, c).filter((o) => o.kind === 'reporter');
+    const row = (id: string, action: HTMLElement) => {
+      const r = reporterOf(c, id);
+      return h(
+        'div',
+        { class: 'shop-item reporter-item' },
+        portrait(id),
+        h(
+          'div',
+          {},
+          h('strong', {}, r.name),
+          h('p', {}, r.bio),
+          h('p', {}, skillLine(c, state, r)),
+          h('p', {}, `${topicLine(r)} · зарплата ${r.salary}/ход`),
+        ),
+        action,
+      );
+    };
+    return [
+      h('h3', { class: 'section', id: 'hire' }, `Репортёры (${state.reporters.length} / ${max})`),
+      ...state.reporters.map((id) =>
+        row(
+          id,
+          h('button', { class: 'ghost', disabled: state.reporters.length <= 1 || !!state.outcome, onclick: () => fire(id) }, 'Уволить'),
+        ),
+      ),
+      ...(state.reporters.length >= max ? [h('p', { class: 'hint' }, 'Редакция полная. Чтобы нанять другого, кого-то придётся уволить.')] : []),
+      ...options.map((o) =>
+        row(
+          o.id,
+          h('button', { class: o.affordable ? 'primary' : '', disabled: !o.affordable || !!state.outcome, onclick: () => buy(o.id) }, `${o.cost}`),
+        ),
+      ),
     ];
   }
 
@@ -410,7 +560,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const channels = options.filter((o) => o.kind === 'channel');
     const upgrades = options.filter((o) => o.kind === 'upgrade').sort((a, b) => Number(b.unlocked) - Number(a.unlocked));
     return [
-      h('p', { class: 'hint' }, `У вас ${state.money}. Содержание каналов: ${totalUpkeep(state, c)} за ход.`),
+      h('p', { class: 'hint' }, `У вас ${state.money}. Расходы (каналы и зарплаты): ${totalUpkeep(state, c)} за ход.`),
+      ...reportersSection(),
       ...(channels.length ? [h('h3', { class: 'section' }, 'Каналы'), ...channels.map(item)] : []),
       h('h3', { class: 'section' }, 'Улучшения'),
       ...upgrades.map(item),
@@ -516,7 +667,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h(
           'button',
           { class: 'primary big', onclick: endTurn, disabled: busy || !!state.outcome },
-          busy ? 'Город реагирует…' : 'Опубликовать и завершить ход',
+          searching ? 'Репортёры ищут…' : busy ? 'Город реагирует…' : 'Опубликовать и завершить ход',
         ),
       ),
     );
@@ -542,10 +693,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
 
   function render(): void {
     renderHud();
+    reporterBar.render(state, repStatus, searching);
     renderCityEvents();
     renderSidebar();
     renderModal();
   }
 
+  busy = true;
   render();
+  void runSearch();
 }

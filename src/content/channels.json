@@ -8,7 +8,7 @@
     "baseReach": 0.6,
     "baseTrust": 45,
     "virality": 0.1,
-    "adRate": 2.5,
+    "adRate": 3.5,
     "exposureRisk": 0.8,
     "requires": null
   },
@@ -21,7 +21,7 @@
     "baseReach": 0.6,
     "baseTrust": 40,
     "virality": 0.2,
-    "adRate": 1.5,
+    "adRate": 2.2,
     "exposureRisk": 1,
     "requires": { "upgrade": "newspaper_quality_1" }
   },
@@ -34,7 +34,7 @@
     "baseReach": 0.8,
     "baseTrust": 50,
     "virality": 0.3,
-    "adRate": 2,
+    "adRate": 2.8,
     "exposureRisk": 1,
     "requires": { "channel": "radio" }
   },
@@ -47,7 +47,7 @@
     "baseReach": 0.4,
     "baseTrust": 30,
     "virality": 1.2,
-    "adRate": 1,
+    "adRate": 1.4,
     "exposureRisk": 1.5,
     "requires": { "channel": "tv" }
   }

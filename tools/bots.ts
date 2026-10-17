@@ -156,14 +156,15 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
 }
 
 /** Buys in priority order and saves up for the next priority item instead of spending on cheap extras. */
-const buyOrder = ['newspaper_quality_1', 'radio', 'editorial_1', 'tv', 'social', 'editorial_2', 'lawyers'];
+const buyOrder = ['gusev', 'newspaper_quality_1', 'radio', 'volkova', 'editorial_1', 'tv', 'sokolov', 'social', 'editorial_2', 'lawyers'];
 
 function shop(s: GameState): void {
   for (;;) {
     const reserve = totalUpkeep(s, content) * 3;
     const options = listPurchases(s, content).filter((p) => p.unlocked);
     const priority = buyOrder.map((id) => options.find((p) => p.id === id)).find((p) => p !== undefined);
-    const option = priority ?? [...options].sort((a, b) => a.cost - b.cost)[0];
+    // Extra reporters cost salary every turn, so only planned hires are made.
+    const option = priority ?? [...options].filter((p) => p.kind !== 'reporter').sort((a, b) => a.cost - b.cost)[0];
     if (!option || !option.affordable || s.money - option.cost < reserve) return;
     purchase(s, content, option.id);
   }

@@ -305,5 +305,122 @@
     "interest": 0.9,
     "engagement": 0.8,
     "weight": 1
+  },
+  {
+    "id": "global_recession",
+    "source": "event",
+    "scope": "global",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": ["В стране начался экономический спад", "Кризис ударит по каждой семье", "Страна на грани дефолта, сбережения сгорят"],
+    "effects": [
+      { "type": "moodDown", "strength": 0.04 },
+      { "type": "moodDown", "strength": 0.1 },
+      { "type": "leaveCity", "strength": 0.08 }
+    ],
+    "interest": 0.55,
+    "engagement": 0.4,
+    "weight": 2
+  },
+  {
+    "id": "global_grain",
+    "source": "event",
+    "scope": "global",
+    "topic": "food",
+    "baseTruth": 0,
+    "titles": ["В мире дорожает зерно", "Скоро хлеб станет роскошью", "Продукты исчезнут с полок по всей стране"],
+    "effects": [
+      { "type": "moodDown", "strength": 0.03 },
+      { "type": "avoid", "building": "shop", "strength": 0.15, "duration": 2 },
+      { "type": "leaveCity", "strength": 0.06 }
+    ],
+    "interest": 0.45,
+    "engagement": 0.35,
+    "weight": 2
+  },
+  {
+    "id": "global_star",
+    "source": "event",
+    "scope": "global",
+    "topic": "fun",
+    "baseTruth": 0,
+    "titles": ["Звезда эстрады выпустила новый альбом", "Звезда эстрады попала в больницу", "Звезда эстрады погибла при загадочных обстоятельствах"],
+    "effects": [
+      { "type": "moodUp", "strength": 0.04 },
+      { "type": "moodDown", "strength": 0.04 },
+      { "type": "moodDown", "strength": 0.08 }
+    ],
+    "interest": 0.8,
+    "engagement": 0.8,
+    "weight": 2
+  },
+  {
+    "id": "global_cup",
+    "source": "event",
+    "scope": "global",
+    "topic": "fun",
+    "baseTruth": 0,
+    "titles": ["Сборная выиграла чемпионат", "Победа сборной куплена", "Сборную дисквалифицировали за допинг"],
+    "effects": [
+      { "type": "moodUp", "strength": 0.07 },
+      { "type": "moodDown", "strength": 0.03 },
+      { "type": "moodDown", "strength": 0.06 }
+    ],
+    "interest": 0.75,
+    "engagement": 0.7,
+    "weight": 2
+  },
+  {
+    "id": "global_flu",
+    "source": "rumor",
+    "scope": "global",
+    "topic": "health",
+    "baseTruth": 1,
+    "titles": [null, "В соседней стране вспышка гриппа", "Смертельный вирус уже движется к нам"],
+    "effects": [null, { "type": "moodDown", "strength": 0.06 }, { "type": "leaveCity", "strength": 0.1 }],
+    "interest": 0.65,
+    "engagement": 0.55,
+    "weight": 2
+  },
+  {
+    "id": "global_plants",
+    "source": "rumor",
+    "scope": "global",
+    "topic": "factory",
+    "baseTruth": 1,
+    "titles": [null, "В стране закрывают заводы", "Наш завод — следующий в списке на закрытие"],
+    "effects": [
+      null,
+      { "type": "quitJob", "building": "factory", "strength": 0.08 },
+      { "type": "quitJob", "building": "factory", "strength": 0.2 }
+    ],
+    "interest": 0.5,
+    "engagement": 0.4,
+    "weight": 2,
+    "requires": "factory"
+  },
+  {
+    "id": "global_taxes",
+    "source": "rumor",
+    "scope": "global",
+    "topic": "power",
+    "baseTruth": 1,
+    "titles": [null, "Правительство готовит новые налоги", "Налоги вырастут вдвое уже в этом месяце"],
+    "effects": [null, { "type": "moodDown", "strength": 0.07 }, { "type": "protest", "strength": 0.15, "duration": 3 }],
+    "interest": 0.55,
+    "engagement": 0.5,
+    "weight": 2
+  },
+  {
+    "id": "global_aliens",
+    "source": "rumor",
+    "scope": "global",
+    "topic": "crime",
+    "baseTruth": 2,
+    "titles": [null, null, "Учёные подтвердили: пришельцы среди нас"],
+    "effects": [null, null, { "type": "moodDown", "strength": 0.04 }],
+    "interest": 0.95,
+    "engagement": 0.9,
+    "weight": 1
   }
 ]

@@ -1,7 +1,8 @@
 export * from './types';
 export { createRng, type RngState } from './rng';
 export { createGame, playTurn, checkOutcome } from './game';
-export { listPurchases, purchase, totalUpkeep, type PurchaseOption } from './economy';
+export { fireReporter, listPurchases, purchase, totalUpkeep, type PurchaseOption } from './economy';
+export { reporterLuck, reporterOf, tierWeights } from './reporters';
 export { getModifiers, type Modifiers } from './modifiers';
 export { previewPublication, cardTruth, maxDistortion, type PublicationPreview } from './news';
 export { averageTrust, buildingDefOf, channelOf, groupOf, templateOf } from './lookup';

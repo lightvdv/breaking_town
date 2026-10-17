@@ -69,12 +69,10 @@ export function outcomeText(o: Outcome): string {
   switch (o.reason) {
     case 'cityDestroyed':
       return 'Победа! Город разрушен вашими новостями.';
-    case 'exposure':
-      return 'Поражение: шкала разоблачений заполнена, власти закрыли ваше СМИ.';
     case 'bankrupt':
       return 'Поражение: вы обанкротились.';
     case 'trustCollapse':
-      return 'Поражение: вам больше никто не верит.';
+      return 'Поражение: репутация упала до нуля — вам больше никто не верит.';
     case 'turnLimit':
       return 'Поражение: время вышло, а город выстоял.';
   }

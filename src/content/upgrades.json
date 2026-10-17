@@ -2,7 +2,7 @@
   {
     "id": "newspaper_quality_1",
     "name": "Цветная печать",
-    "description": "Газета: +20% охвата этого канала, +5 к доверию к СМИ.",
+    "description": "Газета: +20% охвата этого канала, +5 к репутации.",
     "cost": 150,
     "requires": null,
     "effects": {
@@ -25,7 +25,7 @@
   {
     "id": "newspaper_quality_2",
     "name": "Колумнист с именем",
-    "description": "Газета: +20% охвата этого канала, +5 к доверию к СМИ.",
+    "description": "Газета: +20% охвата этого канала, +5 к репутации.",
     "cost": 400,
     "requires": {
       "upgrade": "newspaper_quality_1"
@@ -50,7 +50,7 @@
   {
     "id": "radio_quality_1",
     "name": "Харизматичный ведущий",
-    "description": "Радио: +25% охвата этого канала, +5 к доверию к СМИ.",
+    "description": "Радио: +25% охвата этого канала, +5 к репутации.",
     "cost": 450,
     "requires": null,
     "effects": {
@@ -62,7 +62,7 @@
   {
     "id": "tv_studio",
     "name": "Новая студия",
-    "description": "ТВ: +20% охвата этого канала, +5 к доверию к СМИ.",
+    "description": "ТВ: +20% охвата этого канала, +5 к репутации.",
     "cost": 900,
     "requires": null,
     "effects": {
@@ -129,11 +129,11 @@
   {
     "id": "lawyers",
     "name": "Юристы",
-    "description": "Шкала разоблачений растёт на 30% медленнее.",
+    "description": "Разоблачения бьют по репутации на 30% слабее.",
     "cost": 500,
     "requires": null,
     "effects": {
-      "exposureGainMul": 0.7
+      "exposurePenaltyMul": 0.7
     }
   },
   {

@@ -12,6 +12,7 @@ import { buildingArts, FRAMES } from './buildings';
 import { looks, residentSheet, ROWS } from './characters';
 import { gimpPalette, PALETTE, type Color } from './palette';
 import { Raster } from './raster';
+import { uiIcons } from './ui';
 import { bench, bush, flowers, fountain, fxIcon, fxIcons, grass, lamp, road, tree } from './tiles';
 
 const OUT = join(process.cwd(), 'public', 'assets');
@@ -119,6 +120,9 @@ for (const [name, frames] of Object.entries(decor)) {
 // Reaction icons.
 for (const name of Object.keys(fxIcons)) write(`sprites/fx/${name}.png`, fxIcon(name).toPng());
 
+// Interface icons.
+for (const [name, draw] of Object.entries(uiIcons)) write(`sprites/ui/${name}.png`, draw().toPng());
+
 // Reporter portraits, described in the content file.
 const reporters: { id: string; portrait: PortraitSpec }[] = JSON.parse(
   readFileSync(join(process.cwd(), 'src', 'content', 'reporters.json'), 'utf8'),
@@ -141,6 +145,7 @@ write(
       grass: 3,
       decor: Object.keys(decor),
       fx: Object.keys(fxIcons),
+      ui: Object.keys(uiIcons),
       reporters: reporters.map((r) => r.id),
       news: cards.map((c) => c.id),
     },

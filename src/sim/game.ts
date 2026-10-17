@@ -38,7 +38,6 @@ export function createGame(c: Content, seed: number): GameState {
     rng,
     turn: 0,
     money: c.balance.startMoney,
-    exposure: 0,
     brokeTurns: 0,
     residents,
     buildings,
@@ -120,7 +119,6 @@ export function validateDecision(state: GameState, _c: Content, d: Decision, mod
 export function checkOutcome(state: GameState, c: Content): Outcome | null {
   const b = c.balance;
   if (state.metrics.cityIndex < b.winCityIndex) return { result: 'win', reason: 'cityDestroyed' };
-  if (state.exposure >= b.exposureLimit) return { result: 'lose', reason: 'exposure' };
   if (state.brokeTurns >= b.brokeTurnsLimit) return { result: 'lose', reason: 'bankrupt' };
   if (averageTrust(state, c) < b.trustCollapse) return { result: 'lose', reason: 'trustCollapse' };
   if (state.turn > b.turnLimit) return { result: 'lose', reason: 'turnLimit' };
@@ -139,7 +137,6 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const metricsBefore = state.metrics;
   const trustBefore = averageTrust(state, c);
   const moneyBefore = state.money;
-  const exposureBefore = state.exposure;
 
   // Last turn's readers buy this issue (CONCEPT.md §5.2, §5.4).
   const buyers: Record<ChannelId, number> = {};
@@ -147,7 +144,6 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const readersBefore = readerCount(state);
 
   state.lastReactions = {};
-  state.exposure = Math.max(0, state.exposure - b.exposureDecay);
   state.scandal = Math.min(1, state.scandal + b.scandalRecovery);
 
   const lateExposures = processLateExposures(state, c, rng, mods);
@@ -160,7 +156,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     published.push(publish(state, c, rng, mods, p, topicsThisTurn[topic] ?? 0));
     topicsThisTurn[topic] = (topicsThisTurn[topic] ?? 0) + 1;
   }
-  verifyNews(state, c, rng, mods, published);
+  const exposures = [...lateExposures, ...verifyNews(state, c, rng, mods, published)];
 
   const { income, upkeep } = collectIncome(state, c, buyers);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
@@ -183,12 +179,11 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   return {
     turn,
     publications: published.map((n) => n.report),
-    lateExposures,
+    exposures,
     buyers,
     income,
     upkeep,
     moneyDelta: state.money - moneyBefore,
-    exposureDelta: state.exposure - exposureBefore,
     readers: { before: readersBefore, ...readers, after: readerCount(state) },
     trustBefore,
     trustAfter: averageTrust(state, c),

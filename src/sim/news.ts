@@ -1,6 +1,6 @@
 import { chance, int, type RngState } from './rng';
 import { leaveCity } from './city';
-import { channelOf, clamp, groupOf, templateOf } from './lookup';
+import { averageTrust, channelOf, clamp, groupOf, templateOf } from './lookup';
 import type { Modifiers } from './modifiers';
 import type {
   CardEffect,
@@ -8,6 +8,7 @@ import type {
   CardTemplate,
   ChannelId,
   Content,
+  ExposedStory,
   Placement,
   GameState,
   NewsTier,
@@ -106,6 +107,8 @@ export function exposureRiskOf(
   const defense = state.metrics.cityIndex < b.defenseCityIndex ? 1 + b.defenseCheckerBoost : 1;
   const checkersOpen = state.buildings.some((x) => x.type === 'factCheckers' && x.open);
   const base = checkersOpen ? b.checkerBase : b.checkerBase * 0.5;
+  // A trusted outlet is checked less (CONCEPT.md §4.1).
+  const shield = 1 - b.trustShield * clamp(averageTrust(state, c) / 100);
   return clamp(
     base *
       b.truthRisk[truth] *
@@ -113,7 +116,8 @@ export function exposureRiskOf(
       b.placementExposureRisk[placement] *
       (0.5 + reachShare) *
       mods.checkerMul *
-      defense,
+      defense *
+      shield,
     0,
     0.95,
   );
@@ -335,16 +339,17 @@ export function publish(
   return { pub, truth, impact, viewers, report };
 }
 
+/** A caught story costs reputation and ad income (CONCEPT.md §4.1); returns it for the exposure popup. */
 export function exposeNews(
   state: GameState,
   c: Content,
   mods: Modifiers,
-  cardUid: number,
-  placement: Placement,
+  story: Omit<ExposedStory, 'trustLoss'>,
   viewers: number[],
-): void {
+): ExposedStory {
   const b = c.balance;
-  const penalty = b.trustGain * b.trustPenaltyMul;
+  const before = averageTrust(state, c);
+  const penalty = b.trustGain * b.trustPenaltyMul * b.placementExposurePenalty[story.placement] * mods.exposurePenaltyMul;
   const viewerSet = new Set(viewers);
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
@@ -352,47 +357,50 @@ export function exposeNews(
       r.trust = clamp(r.trust - penalty, 0, 100);
       setReaction(state, r.id, 'outraged');
     } else r.trust = clamp(r.trust - penalty * b.trustPenaltyBystanderShare, 0, 100);
-    r.beliefs = r.beliefs.filter((x) => x.cardUid !== cardUid);
+    r.beliefs = r.beliefs.filter((x) => x.cardUid !== story.cardUid);
   }
-  state.exposure += b.exposurePerScandal * b.placementExposureGain[placement] * mods.exposureGainMul;
   state.scandal = b.scandalAdMul;
+  return { ...story, trustLoss: before - averageTrust(state, c) };
 }
 
 /** Fact-checkers look at this turn's news; true news builds trust, caught lies destroy it. */
-export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Modifiers, news: PublishedNews[]): void {
+export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Modifiers, news: PublishedNews[]): ExposedStory[] {
   const b = c.balance;
   const active = Math.max(1, state.residents.filter((r) => r.status === 'active').length);
+  const exposed: ExposedStory[] = [];
   for (const n of news) {
     if (n.truth === 0) {
       for (const id of n.viewers) state.residents[id].trust = clamp(state.residents[id].trust + b.trustGain, 0, 100);
       continue;
     }
+    const card = state.hand.find((x) => x.uid === n.pub.cardUid)!;
+    const story = {
+      cardUid: card.uid,
+      templateId: card.templateId,
+      title: n.report.title,
+      truth: n.truth,
+      tier: effectiveTier(card, n.pub.distortion),
+      placement: n.pub.placement,
+      turn: state.turn,
+    };
     const risk = exposureRiskOf(state, c, mods, n.truth, n.pub.placement, n.viewers.length / active);
     if (chance(rng, risk)) {
       n.report.exposed = true;
-      exposeNews(state, c, mods, n.pub.cardUid, n.pub.placement, n.viewers);
+      exposed.push(exposeNews(state, c, mods, story, n.viewers));
     } else {
-      state.pendingLies.push({
-        cardUid: n.pub.cardUid,
-        title: n.report.title,
-        placement: n.pub.placement,
-        viewers: n.viewers,
-        risk: risk * b.lateExposureFactor,
-        turnsLeft: b.lateExposureTurns,
-      });
+      state.pendingLies.push({ story, viewers: n.viewers, risk: risk * b.lateExposureFactor, turnsLeft: b.lateExposureTurns });
     }
   }
+  return exposed;
 }
 
-/** Old lies can still surface. Returns titles of lies exposed this turn. */
-export function processLateExposures(state: GameState, c: Content, rng: RngState, mods: Modifiers): string[] {
-  const exposed: string[] = [];
+/** Old lies can still surface. Returns the lies exposed this turn. */
+export function processLateExposures(state: GameState, c: Content, rng: RngState, mods: Modifiers): ExposedStory[] {
+  const exposed: ExposedStory[] = [];
   const keep = [];
   for (const lie of state.pendingLies) {
-    if (chance(rng, lie.risk)) {
-      exposeNews(state, c, mods, lie.cardUid, lie.placement, lie.viewers);
-      exposed.push(lie.title);
-    } else if (--lie.turnsLeft > 0) keep.push(lie);
+    if (chance(rng, lie.risk)) exposed.push(exposeNews(state, c, mods, lie.story, lie.viewers));
+    else if (--lie.turnsLeft > 0) keep.push(lie);
   }
   state.pendingLies = keep;
   return exposed;

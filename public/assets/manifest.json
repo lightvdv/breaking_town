@@ -81,6 +81,18 @@
     "talk",
     "exposed"
   ],
+  "ui": [
+    "money",
+    "readers",
+    "reputation",
+    "residents",
+    "truth_0",
+    "truth_1",
+    "truth_2",
+    "place_0",
+    "place_1",
+    "place_2"
+  ],
   "reporters": [
     "petrova",
     "sokolov",

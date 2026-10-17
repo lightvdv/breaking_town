@@ -39,7 +39,7 @@ type Strategy = (state: GameState, rng: RngState) => Choice | 'random' | Decisio
 
 /**
  * Closest to a thoughtful player: targeted half-truths backed by true news. The number of
- * half-truths depends on the exposure meter; good news is published only to rebuild trust.
+ * half-truths depends on reputation; good news is published only to rebuild it.
  */
 function mixed(s: GameState): Decision {
   const mods = getModifiers(s, content);
@@ -50,7 +50,7 @@ function mixed(s: GameState): Decision {
     return isHarmful(p.effect) ? p.impact : -1;
   };
   const trust = averageTrust(s, content);
-  const lieSlots = trust < 35 || s.exposure > 60 ? 0 : s.exposure > 30 ? 1 : 2;
+  const lieSlots = trust < 35 ? 0 : trust < 45 ? 1 : 2;
   const publish: Publication[] = [];
   const used = new Set<number>();
 
@@ -62,7 +62,7 @@ function mixed(s: GameState): Decision {
     .sort((a, b) => b.score - a.score)
     .slice(0, lieSlots);
   for (const lie of lies) {
-    publish.push({ cardUid: lie.c.uid, placement: s.exposure > 30 ? 0 : 1, distortion: lie.d });
+    publish.push({ cardUid: lie.c.uid, placement: trust < 45 ? 0 : 1, distortion: lie.d });
     used.add(lie.c.uid);
   }
   // Every harmful truth goes out; good news only to rebuild trust.
@@ -170,7 +170,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
       console.log(
         `T${r.turn} index ${m.cityIndex.toFixed(0)} | pop ${m.activeResidents} emp ${m.employment.toFixed(2)} ` +
           `eco ${m.economy.toFixed(2)} mood ${m.mood.toFixed(2)} order ${m.order.toFixed(2)} | ` +
-          `money ${s.money} exposure ${s.exposure.toFixed(0)} | trust ${trust}`,
+          `money ${s.money} | trust ${trust}`,
       );
       for (const p of r.publications) {
         console.log(
@@ -178,7 +178,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
             `${JSON.stringify(p.effects)}${p.exposed ? ' EXPOSED' : ''}`,
         );
       }
-      for (const n of [...r.notes, ...r.lateExposures.map((t) => `late exposure: ${t}`)]) console.log(`    * ${n}`);
+      for (const n of [...r.notes, ...r.exposures.map((x) => `exposed (turn ${x.turn}): ${x.title} -${x.trustLoss.toFixed(1)} trust`)]) console.log(`    * ${n}`);
     }
   }
   if (trace) console.log(s.outcome, 'upgrades:', s.upgrades.join(', '));

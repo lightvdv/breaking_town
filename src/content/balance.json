@@ -87,7 +87,7 @@
     1,
     1.4
   ],
-  "placementExposureGain": [
+  "placementExposurePenalty": [
     0.8,
     1,
     1.3
@@ -110,7 +110,7 @@
   "audienceOthers": 0.6,
   "fatiguePerRepeat": 0.3,
   "trustGain": 3,
-  "trustPenaltyMul": 3,
+  "trustPenaltyMul": 4,
   "trustPenaltyBystanderShare": 0.33,
   "checkerBase": 0.18,
   "truthRisk": [
@@ -120,13 +120,11 @@
   ],
   "lateExposureFactor": 0.3,
   "lateExposureTurns": 5,
-  "exposurePerScandal": 8,
-  "exposureDecay": 2,
-  "exposureLimit": 100,
+  "trustShield": 0.4,
   "scandalAdMul": 0.5,
   "scandalRecovery": 0.1,
   "brokeTurnsLimit": 3,
-  "trustCollapse": 2,
+  "trustCollapse": 1,
   "eventsMin": 1,
   "eventsMax": 2,
   "maxBeliefs": 5,

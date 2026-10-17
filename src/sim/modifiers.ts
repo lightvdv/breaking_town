@@ -9,7 +9,7 @@ export interface ChannelMods {
 export interface Modifiers {
   reporterLuck: number;
   frontPageSlots: number;
-  exposureGainMul: number;
+  exposurePenaltyMul: number;
   checkerMul: number;
   plausibilityAdd: number;
   /** Added to every resident's trust in the outlet. */
@@ -21,7 +21,7 @@ export function getModifiers(state: GameState, c: Content): Modifiers {
   const m: Modifiers = {
     reporterLuck: 0,
     frontPageSlots: c.balance.frontPageSlots,
-    exposureGainMul: 1,
+    exposurePenaltyMul: 1,
     checkerMul: 1,
     plausibilityAdd: 0,
     trustBonus: 0,
@@ -35,7 +35,7 @@ export function getModifiers(state: GameState, c: Content): Modifiers {
     const e = u.effects;
     m.reporterLuck += e.reporterLuck ?? 0;
     m.frontPageSlots += e.frontPageSlots ?? 0;
-    m.exposureGainMul *= e.exposureGainMul ?? 1;
+    m.exposurePenaltyMul *= e.exposurePenaltyMul ?? 1;
     m.checkerMul *= e.checkerMul ?? 1;
     m.plausibilityAdd += e.plausibilityAdd ?? 0;
     m.trustBonus += e.trustBonus ?? 0;

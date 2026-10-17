@@ -205,10 +205,27 @@ describe('trust', () => {
       expect(report.publications.every((p) => !p.exposed)).toBe(true);
     }
     expect(averageTrust(s, content)).toBeGreaterThan(before);
-    expect(s.exposure).toBe(0);
   });
 
-  it('caught lies cost trust, ad income and fill the exposure meter', () => {
+  it('high reputation lowers the fact-check risk', () => {
+    const s = createGame(content, 11);
+    const mods = getModifiers(s, content);
+    const pub = { cardUid: s.hand[0].uid, placement: 1 as const, distortion: maxDistortion(s.hand[0]) };
+    for (const r of s.residents) r.trust = 10;
+    const distrusted = previewPublication(s, content, mods, pub).exposureRisk;
+    for (const r of s.residents) r.trust = 90;
+    const trusted = previewPublication(s, content, mods, pub).exposureRisk;
+    expect(trusted).toBeLessThan(distrusted);
+  });
+
+  it('the game is lost when reputation falls to zero', () => {
+    const s = createGame(content, 11);
+    for (const r of s.residents) r.trust = 0;
+    playTurn(s, content, { publish: [] });
+    expect(s.outcome).toEqual({ result: 'lose', reason: 'trustCollapse' });
+  });
+
+  it('caught lies cost reputation and ad income and are reported', () => {
     const c = withBalance({ checkerBase: 10 });
     // Fact-check chance is capped at 95%, so look at the first game where a lie got caught.
     for (let seed = 11; seed < 31; seed++) {
@@ -217,7 +234,8 @@ describe('trust', () => {
       const report = playTurn(s, c, simpleDecision(s, 'max', 2));
       if (!report.publications.some((p) => p.exposed)) continue;
       expect(averageTrust(s, c)).toBeLessThan(before);
-      expect(s.exposure).toBeGreaterThan(0);
+      expect(report.exposures.length).toBeGreaterThan(0);
+      expect(report.exposures[0].turn).toBe(report.turn);
       expect(s.scandal).toBeLessThan(1);
       return;
     }

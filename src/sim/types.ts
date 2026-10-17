@@ -86,7 +86,8 @@ export interface UpgradeEffects {
   reporterLuck?: number;
   /** Extra front-page slots. */
   frontPageSlots?: number;
-  exposureGainMul?: number;
+  /** Multiplies the reputation lost when a story is exposed. */
+  exposurePenaltyMul?: number;
   checkerMul?: number;
   plausibilityAdd?: number;
 }
@@ -233,11 +234,11 @@ export interface Balance {
   defenseDebunkChance: number;
   defenseRehireBonus: number;
 
-  /** By placement (brief, article, front page): impact, share of readers who notice, fact-check risk, exposure meter growth. */
+  /** By placement (brief, article, front page): impact, share of readers who notice, fact-check risk, reputation loss when exposed. */
   placementImpact: Triple<number>;
   placementRead: Triple<number>;
   placementExposureRisk: Triple<number>;
-  placementExposureGain: Triple<number>;
+  placementExposurePenalty: Triple<number>;
   frontPageSlots: number;
   /** Global multiplier on card effect strength. */
   effectScale: number;
@@ -276,12 +277,12 @@ export interface Balance {
   truthRisk: Triple<number>;
   lateExposureFactor: number;
   lateExposureTurns: number;
-  exposurePerScandal: number;
-  exposureDecay: number;
-  exposureLimit: number;
+  /** Fact-check risk × (1 − trustShield × reputation / 100): a trusted outlet is checked less. */
+  trustShield: number;
   scandalAdMul: number;
   scandalRecovery: number;
   brokeTurnsLimit: number;
+  /** The game is lost when the average reputation falls below this. */
   trustCollapse: number;
 
   eventsMin: number;
@@ -393,10 +394,22 @@ export interface Decision {
   publish: Publication[];
 }
 
-export interface PendingLie {
+/** A published story as the exposure popup shows it (CONCEPT.md §7.3). */
+export interface ExposedStory {
   cardUid: number;
+  templateId: string;
   title: string;
+  truth: TruthLevel;
+  tier: NewsTier;
   placement: Placement;
+  /** Turn of the issue it was published in. */
+  turn: number;
+  /** Average reputation lost because of it. */
+  trustLoss: number;
+}
+
+export interface PendingLie {
+  story: Omit<ExposedStory, 'trustLoss'>;
   viewers: number[];
   risk: number;
   turnsLeft: number;
@@ -417,7 +430,7 @@ export type Reaction = 'scared' | 'happy' | 'doubted' | 'talk' | 'outraged';
 
 export interface Outcome {
   result: 'win' | 'lose';
-  reason: 'cityDestroyed' | 'exposure' | 'bankrupt' | 'trustCollapse' | 'turnLimit';
+  reason: 'cityDestroyed' | 'bankrupt' | 'trustCollapse' | 'turnLimit';
 }
 
 export interface GameState {
@@ -426,7 +439,6 @@ export interface GameState {
   rng: RngState;
   turn: number;
   money: number;
-  exposure: number;
   brokeTurns: number;
   residents: Resident[];
   buildings: Building[];
@@ -478,13 +490,13 @@ export interface PublicationReport {
 export interface TurnReport {
   turn: number;
   publications: PublicationReport[];
-  lateExposures: string[];
+  /** Stories exposed during this turn: this issue's and old lies that surfaced. */
+  exposures: ExposedStory[];
   /** Readers per channel who bought this turn's issue. */
   buyers: Record<ChannelId, number>;
   income: Record<ChannelId, number>;
   upkeep: number;
   moneyDelta: number;
-  exposureDelta: number;
   /** Followers of at least one channel: at the start of the turn, lost and gained after it. */
   readers: { before: number; lost: number; gained: number; after: number };
   trustBefore: number;

@@ -143,54 +143,182 @@ select {
   letter-spacing: 1px;
 }
 
-.stats {
+/* Four resources with pixel icons (CONCEPT.md §7.3). */
+.resources {
+  flex: 1;
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.res {
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 8px 22px;
-  flex: 1;
+  gap: 8px;
+  min-width: 132px;
+  padding: 4px 22px 4px 6px;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.18),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.28);
+  cursor: default;
 }
 
-.stat {
-  display: grid;
-  grid-auto-flow: column;
-  align-items: center;
-  gap: 6px;
+.res-icon {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
 }
 
-.stat span {
-  color: var(--muted);
-  font-size: 12px;
+.res b {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
 }
 
-.stat b {
-  font-size: 20px;
-}
-
-.stat small {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.stat.bad b,
-.stat.bad small {
+.res.bad b {
   color: var(--danger);
 }
 
-.stat .meter {
-  width: 90px;
+.trend {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  text-shadow: 1px 1px 0 var(--ink);
+  animation: trend-pop 0.5s ease-out both;
 }
 
-.stat.trust {
-  grid-auto-flow: row;
+.trend.up {
+  color: var(--ok);
+}
+
+.trend.down {
+  color: var(--danger);
+}
+
+@keyframes trend-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(2);
+  }
+}
+
+.hud-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.debug-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.debug-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.debug-row span {
+  color: var(--muted);
+}
+
+/* ---------- Exposure notice (CONCEPT.md §7.3) ---------- */
+.exposure-toast {
+  position: absolute;
+  z-index: 25;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 120px);
+  background: var(--panel);
+  border: 2px solid var(--danger);
+  box-shadow: 0 0 0 2px var(--ink), 0 0 18px rgba(228, 59, 68, 0.5);
+  animation: toast-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+}
+
+.toast-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 8px;
+  cursor: help;
+}
+
+.toast-head img {
+  image-rendering: pixelated;
+}
+
+.toast-head .icon-btn {
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+  margin-left: 6px;
+}
+
+/* The exposed clippings unfold on hover. */
+.toast-cards {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 6px;
+  border-top: 2px solid var(--ink);
+}
+
+.exposure-toast:hover .toast-cards,
+.exposure-toast:focus-within .toast-cards {
+  display: flex;
+}
+
+.exposed-card {
+  display: grid;
+  grid-template-columns: 128px 1fr;
+  gap: 8px;
+  width: 400px;
+  max-width: 100%;
+  padding: 6px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border-left: 6px solid var(--truth-1);
+  font-size: 12px;
+}
+
+.exposed-card.truth-2 {
+  border-left-color: var(--truth-2);
+}
+
+.exposed-card img {
+  width: 128px;
+  height: 72px;
+  image-rendering: pixelated;
+  border: 2px solid var(--ink);
+  filter: grayscale(0.6);
+}
+
+.exposed-card div {
+  display: flex;
+  flex-direction: column;
   gap: 2px;
 }
 
-.trust-row {
-  display: grid;
-  grid-template-columns: 76px 70px 34px;
-  align-items: center;
-  gap: 6px;
+.exposed-card .headline {
+  font-size: 14px;
+  text-decoration: line-through;
+  text-decoration-color: var(--danger);
 }
 
 .meter {
@@ -382,34 +510,6 @@ select {
   font-size: 15px;
 }
 
-.issue-foot .counter {
-  color: var(--muted);
-}
-
-/* ---------- Bottom bar ---------- */
-.bottom-bar {
-  flex: none;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  padding: 8px 16px;
-  background: var(--bg);
-  border-top: 2px solid var(--ink);
-}
-
-.bottom-bar .summary {
-  flex: 1;
-  min-width: 240px;
-  font-size: 14px;
-}
-
-.bottom-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
 /* ---------- Windows ---------- */
 .modal.window {
   width: min(620px, calc(100% - 32px));
@@ -557,44 +657,80 @@ select {
   text-align: right;
 }
 
+/* Distortion and placement as two rows of three icon buttons. */
 .controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
   margin-top: 2px;
-  font-size: 12px;
 }
 
-.controls label {
+.icon-row {
+  display: flex;
+  gap: 2px;
+}
+
+.icon-choice {
+  width: 40px;
+  height: 40px;
+  padding: 2px;
+  display: grid;
+  place-items: center;
+  background: #d9c08f;
+  border: 2px solid var(--paper-muted);
+  box-shadow: none;
+}
+
+.icon-choice img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.icon-choice.on {
+  background: #fff6e0;
+  border-color: var(--ink);
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+  transform: translateY(1px);
+}
+
+.icon-choice:disabled img {
+  filter: grayscale(1);
+  opacity: 0.35;
+}
+
+.info-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin-left: 2px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  font-style: italic;
+  background: transparent;
+  color: var(--paper-ink);
+  border: 2px solid var(--paper-ink);
+  box-shadow: none;
+}
+
+.info-btn.on {
+  background: var(--paper-ink);
+  color: var(--paper);
+}
+
+.card-details {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  color: var(--paper-muted);
-}
-
-.controls label.wide {
-  grid-column: 1 / -1;
+  gap: 4px;
+  padding: 6px;
+  background: rgba(62, 39, 49, 0.08);
+  border: 1px dashed var(--paper-muted);
 }
 
 .card .audience {
   margin: 0;
-  font-size: 12px;
-  color: var(--paper-muted);
-}
-
-.channels-note {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--paper-muted);
-}
-
-.stat.channels {
-  grid-auto-flow: row;
-  gap: 2px;
-}
-
-.place-note {
-  margin: 2px 0 0;
   font-size: 12px;
   color: var(--paper-muted);
 }
@@ -1367,26 +1503,49 @@ select {
     font-size: 16px;
   }
 
-  .stats {
+  .resources {
+    order: 3;
+    flex-basis: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px 10px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
   }
 
-  .stat b {
-    font-size: 16px;
+  .res {
+    min-width: 0;
+    gap: 4px;
+    padding: 2px 16px 2px 3px;
   }
 
-  .stat .meter {
-    width: 60px;
+  .res-icon {
+    width: 24px;
+    height: 24px;
   }
 
-  .stat.channels {
-    display: none;
+  .res b {
+    font-size: 15px;
   }
 
-  .trust-row {
-    grid-template-columns: 70px 50px 30px;
+  .trend {
+    right: 3px;
+    font-size: 11px;
+  }
+
+  .hud {
+    justify-content: space-between;
+  }
+
+  .exposure-toast {
+    max-width: calc(100% - 64px);
+  }
+
+  .exposed-card {
+    grid-template-columns: 96px 1fr;
+  }
+
+  .exposed-card img {
+    width: 96px;
+    height: 54px;
   }
 
   .reporter-bar {
@@ -1414,19 +1573,6 @@ select {
 
   .rep-status {
     inset: 4px 4px 4px 58px;
-  }
-
-  .bottom-bar {
-    padding: 6px 10px;
-  }
-
-  .bottom-bar .summary {
-    font-size: 12px;
-  }
-
-  .bottom-buttons button {
-    font-size: 13px;
-    padding: 4px 8px;
   }
 
   .city-events {

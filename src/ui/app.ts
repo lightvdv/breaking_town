@@ -22,6 +22,7 @@ import {
   type CardInstance,
   type Content,
   type Decision,
+  type ExposedStory,
   type Placement,
   type GameState,
   type NewsTier,
@@ -29,7 +30,7 @@ import {
   type Requirement,
   type TurnReport,
 } from '../sim';
-import { h, pct, select } from './dom';
+import { h, pct } from './dom';
 import { portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
   distortionLabels,
@@ -50,7 +51,7 @@ interface Draft {
   distortion: number;
 }
 
-type Modal = 'report' | 'city' | 'shop' | 'investigate' | null;
+type Modal = 'report' | 'debug' | 'shop' | 'investigate' | null;
 
 const REACTION_SECONDS = 2.6;
 const assetBase = `${import.meta.env.BASE_URL}assets/`;
@@ -127,6 +128,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
   /** Cards already shown in the issue, and those that still have to fly in. */
   let revealed = new Set<number>();
   let flyQueue = new Set<number>();
+  /** Cards whose impact / reach / risk details are unfolded. */
+  const details = new Set<number>();
+  /** The exposure notice of the last report was closed. */
+  let exposuresSeen = false;
 
   // ---------- Persistent shell ----------
   const hud = h('header', { class: 'hud' });
@@ -168,15 +173,15 @@ export function mountApp(root: HTMLElement, c: Content): void {
     if (searching) skip();
     else if (e.target === issue) closeIssue();
   });
-  const bottomBar = h('footer', { class: 'bottom-bar' });
+  // Start-of-turn notice about exposed stories; hovering it shows the cards (CONCEPT.md §7.3).
+  const exposureToast = h('div', { class: 'exposure-toast', hidden: true });
   const tooltip = h('div', { class: 'tooltip', hidden: true });
   const modalLayer = h('div', { class: 'modal-layer' });
   const outcomeLayer = h('div', { class: 'modal-layer' });
   root.replaceChildren(
     hud,
     reporterBar.el,
-    h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, issue),
-    bottomBar,
+    h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, issue, exposureToast),
     tooltip,
     modalLayer,
     outcomeLayer,
@@ -224,6 +229,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     searching = true;
     skipSearch = false;
     issueOpen = true;
+    exposuresSeen = false;
     repStatus = new Map();
     revealed = new Set();
     flyQueue = new Set();
@@ -333,6 +339,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
       report = playTurn(state, c, decision);
       error = '';
       drafts = new Map();
+      details.clear();
+      // The exposure notice waits for the start of the next turn.
+      exposuresSeen = true;
       issueOpen = false;
       busy = true;
       scene?.setState(state, true);
@@ -365,7 +374,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h('strong', {}, groupOf(c, r.group).name),
         h('span', {}, `Настроение: ${pct(r.mood)} · настрой: ${pct(r.outlook)}`),
         h('span', {}, `Работа: ${r.job === null ? 'нет' : buildingDefOf(c, state.buildings[r.job].type).name}`),
-        h('span', {}, `Доверие к вам: ${Math.round(r.trust)}`),
+        h('span', {}, `Ваша репутация: ${Math.round(r.trust)}`),
       );
       if (r.status === 'left') lines.push(h('span', { class: 'bad' }, 'Уезжает из города'));
       if (r.protestTurns > 0) lines.push(h('span', { class: 'bad' }, 'Протестует'));
@@ -399,47 +408,64 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const bar = (label: string, v: number, cls = 'ok') =>
     h('div', { class: 'card-stat' }, h('span', {}, label), meter(v, cls), h('em', {}, pct(v)));
 
+  /** Green arrow up / red arrow down next to a resource after a turn; nothing when it did not change. */
+  function trend(delta: number | null, unit = ''): HTMLElement | null {
+    if (delta === null || delta === 0) return null;
+    const up = delta > 0;
+    return h('span', { class: `trend ${up ? 'up' : 'down'}`, title: `${up ? '+' : ''}${delta}${unit} за ход` }, up ? '▲' : '▼');
+  }
+
+  function resource(icon: string, label: string, value: string, delta: number | null, hint: string, cls = '', unit = ''): HTMLElement {
+    return h(
+      'div',
+      { class: `res ${cls}`, title: `${label}. ${hint}` },
+      h('img', { class: 'res-icon', src: `${assetBase}sprites/ui/${icon}.png`, alt: label, width: 32, height: 32 }),
+      h('b', {}, value),
+      trend(delta, unit),
+    );
+  }
+
+  /** Top panel: four resources with icons (CONCEPT.md §7.3); everything else lives in the debug menu. */
   function renderHud(): void {
-    const b = c.balance;
-    const m = state.metrics;
-    const exposureShare = state.exposure / b.exposureLimit;
     const trust = averageTrust(state, c);
+    const r = report;
     hud.replaceChildren(
       h('div', { class: 'brand' }, 'NEWS FIGHTS'),
       h(
         'div',
-        { class: 'stats' },
-        h('div', { class: 'stat' }, h('span', {}, 'Ход'), h('b', {}, `${Math.min(state.turn, b.turnLimit)} / ${b.turnLimit}`)),
-        h(
-          'div',
-          { class: `stat ${state.money < 0 ? 'bad' : ''}` },
-          h('span', {}, 'Деньги'),
-          h('b', {}, `${state.money}`),
-          h('small', {}, `−${totalUpkeep(state, c)}/ход`),
+        { class: 'resources' },
+        resource('money', 'Деньги', `${state.money}`, r ? r.moneyDelta : null, `Расходы: ${totalUpkeep(state, c)} за ход.`, state.money < 0 ? 'bad' : ''),
+        resource(
+          'readers',
+          'Читатели',
+          `${readerCount(state)}`,
+          r ? r.readers.after - r.readers.before : null,
+          'Постоянные читатели покупают каждый выпуск и приносят доход.',
         ),
-        h(
-          'div',
-          { class: `stat ${exposureShare > 0.6 ? 'bad' : ''}` },
-          h('span', {}, 'Разоблачения'),
-          meter(exposureShare, exposureShare > 0.6 ? 'danger' : 'warn'),
-          h('small', {}, `${Math.round(state.exposure)} / ${b.exposureLimit}`),
+        resource(
+          'reputation',
+          'Репутация',
+          `${Math.round(trust)}%`,
+          r ? Math.round(r.trustAfter - r.trustBefore) : null,
+          'Чем выше, тем больше верят и реже проверяют. Упадёт до нуля — игра проиграна.',
+          trust < 20 ? 'bad' : '',
+          '%',
         ),
-        h('div', { class: 'stat' }, h('span', {}, 'Индекс города'), h('b', {}, `${Math.round(m.cityIndex)}`), h('small', {}, `цель < ${b.winCityIndex}`)),
-        h(
-          'div',
-          { class: 'stat', title: 'Постоянные читатели: покупают каждый выпуск и приносят доход' },
-          h('span', {}, 'Читатели'),
-          h('b', {}, `${readerCount(state)}`),
-          report ? h('small', {}, `−${report.readers.lost} / +${report.readers.gained}`) : null,
+        resource(
+          'residents',
+          'Жители',
+          `${state.metrics.activeResidents}`,
+          r ? r.metricsAfter.activeResidents - r.metricsBefore.activeResidents : null,
+          'Сколько людей ещё живёт в городе.',
         ),
-        h(
-          'div',
-          { class: 'stat trust' },
-          h('div', { class: 'trust-row' }, h('small', {}, 'Доверие'), meter(trust / 100, 'ok'), h('small', {}, `${Math.round(trust)}%`)),
-        ),
-        h('div', { class: 'stat channels' }, h('span', {}, 'Каналы'), h('small', {}, state.ownedChannels.map((ch) => channelOf(c, ch).name).join(', '))),
       ),
-      h('button', { class: 'ghost small', onclick: newGame }, 'Новая игра'),
+      h(
+        'div',
+        { class: 'hud-buttons' },
+        !issueOpen ? h('button', { class: 'primary', onclick: () => ((issueOpen = true), render()) }, 'Выпуск') : null,
+        h('button', { onclick: () => openModal('shop') }, 'Покупки'),
+        h('button', { class: 'icon-btn', title: 'Меню отладки', onclick: () => openModal('debug') }, '☰'),
+      ),
     );
   }
 
@@ -473,9 +499,43 @@ export function mountApp(root: HTMLElement, c: Content): void {
       Object.assign(d, patch);
       render();
     };
-    const distortions = Array.from({ length: maxDistortion(card) + 1 }, (_, i) => ({
-      value: String(i),
-      label: `${distortionLabels[i === 0 ? 0 : card.baseTruth + i]} → ${truthLabels[card.baseTruth + i]}`,
+    const open = details.has(card.uid);
+    /** Row of three icon buttons; the chosen one is pressed. */
+    const iconRow = (label: string, buttons: { icon: string; title: string; on: boolean; disabled: boolean; pick: () => void }[]) =>
+      h(
+        'div',
+        { class: 'icon-row', role: 'group', 'aria-label': label },
+        ...buttons.map((x) =>
+          h(
+            'button',
+            {
+              class: `icon-choice${x.on ? ' on' : ''}`,
+              title: x.title,
+              'aria-pressed': String(x.on),
+              disabled: x.disabled || busy,
+              onclick: x.pick,
+            },
+            h('img', { src: `${assetBase}sprites/ui/${x.icon}.png`, alt: x.title, width: 32, height: 32 }),
+          ),
+        ),
+      );
+    // Distortion as the truth level it leads to: a story can only be made less true.
+    const truthButtons = ([0, 1, 2] as const).map((t) => {
+      const dist = t - card.baseTruth;
+      return {
+        icon: `truth_${t}`,
+        title: `${truthLabels[t]} — ${dist <= 0 ? distortionLabels[0].toLowerCase() : distortionLabels[t].toLowerCase()}`,
+        on: d.distortion === dist,
+        disabled: dist < 0 || dist > maxDistortion(card),
+        pick: () => update({ distortion: dist }),
+      };
+    });
+    const placeButtons = ([0, 1, 2] as const).map((i) => ({
+      icon: `place_${i}`,
+      title: i === 2 && frontFull ? `${placementLabels[i]}: занята другой новостью` : `${placementLabels[i]}. ${placementNote(i)}`,
+      on: d.placement === i,
+      disabled: i === 2 && frontFull,
+      pick: () => update({ placement: i }),
     }));
     const reporter = reporterOf(c, card.reporterId);
     // Distortion raises the tier, and the card restyles itself at once (CONCEPT.md §3.1).
@@ -518,38 +578,40 @@ export function mountApp(root: HTMLElement, c: Content): void {
         ),
         h('span', { class: `scope-tag ${card.scope}` }, scopeLabels[card.scope]),
         h('span', { class: 'by' }, portrait(reporter.id, 'mini-portrait'), reporter.name),
-      ),
-      h('h3', { class: 'headline' }, p.title),
-      h('p', { class: 'effect' }, `${effectText(c, p.effect, tpl.target)}. Аудитория: ${audience}.`),
-      h(
-        'div',
-        { class: 'card-stat', title: 'Насколько сильно поверившие отреагируют: уровень, место в газете, масштаб, аудитория' },
-        h('span', {}, 'Воздействие'),
-        meter(p.impact / 2.5, p.impact >= 1.4 ? 'danger' : 'ok'),
-        h('em', {}, `×${p.impact.toFixed(1)}`),
-      ),
-      bar('Охват города', p.reachChance),
-      bar('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
-      h(
-        'div',
-        { class: 'controls' },
-        h('label', {}, 'Искажение', select(distortions, String(d.distortion), (v) => update({ distortion: Number(v) }))),
         h(
-          'label',
-          {},
-          'Подача',
-          select(
-            placementLabels.map((l, i) => ({
-              value: String(i),
-              label: i === 2 && frontFull ? `${l} (занята)` : l,
-              disabled: i === 2 && frontFull,
-            })),
-            String(d.placement),
-            (v) => update({ placement: Number(v) as Placement }),
-          ),
+          'button',
+          {
+            class: `info-btn${open ? ' on' : ''}`,
+            title: 'Воздействие, охват и риск разоблачения',
+            'aria-expanded': String(open),
+            onclick: () => {
+              if (open) details.delete(card.uid);
+              else details.add(card.uid);
+              render();
+            },
+          },
+          'i',
         ),
       ),
-      h('p', { class: 'place-note' }, placementNote(d.placement)),
+      h('h3', { class: 'headline' }, p.title),
+      h('p', { class: 'effect' }, effectText(c, p.effect, tpl.target)),
+      open
+        ? h(
+            'div',
+            { class: 'card-details' },
+            h('p', { class: 'audience' }, `Аудитория: ${audience}`),
+            h(
+              'div',
+              { class: 'card-stat', title: 'Насколько сильно поверившие отреагируют: уровень, место в газете, масштаб, аудитория' },
+              h('span', {}, 'Воздействие'),
+              meter(p.impact / 2.5, p.impact >= 1.4 ? 'danger' : 'ok'),
+              h('em', {}, `×${p.impact.toFixed(1)}`),
+            ),
+            bar('Охват города', p.reachChance),
+            bar('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
+          )
+        : null,
+      h('div', { class: 'controls' }, iconRow('Искажение', truthButtons), iconRow('Подача', placeButtons)),
       h(
         'button',
         { class: `pick${d.publish ? ' primary' : ''}`, disabled: busy, onclick: () => update({ publish: !d.publish }) },
@@ -578,22 +640,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
     issue.classList.toggle('open', issueOpen);
     issue.classList.toggle('searching', searching);
     const mods = getModifiers(state, c);
-    const publishedCount = state.hand.filter((x) => drafts.get(x.uid)?.publish).length;
     const frontTaken = state.hand.filter((x) => drafts.get(x.uid)?.placement === 2).length;
     const visible = state.hand.filter((card) => revealed.has(card.uid));
-    const found = state.lastFinds.filter((f) => f.cardUid !== null).length;
     const isInvestigation = (card: CardInstance) => templateOf(c, card.templateId).source === 'investigation';
 
-    issueHead.replaceChildren(
-      h('h2', {}, `Выпуск дня ${state.turn}`),
-      h(
-        'p',
-        {},
-        searching
-          ? 'Репортёры ищут новости… (щёлкните, чтобы пропустить)'
-          : `Репортёры принесли новостей: ${found}. Печатайте сколько угодно: главное — на первую полосу (мест: ${mods.frontPageSlots}), остальное статьями или заметками. Неопубликованное сгорит. Скучный или неубедительный выпуск распугивает читателей.`,
-      ),
-    );
+    const note = searching ? 'Репортёры ищут новости… (щёлкните, чтобы пропустить)' : !visible.length ? 'Сегодня новостей нет.' : '';
+    issueHead.replaceChildren(h('h2', {}, `Выпуск дня ${state.turn}`), ...(note ? [h('p', {}, note)] : []));
     invBlock.hidden = !visible.some(isInvestigation);
 
     for (const [uid, el] of cardEls) {
@@ -621,44 +673,54 @@ export function mountApp(root: HTMLElement, c: Content): void {
     }
 
     issueFoot.replaceChildren(
-      error ? h('span', { class: 'bad' }, error) : h(
-            'span',
-            { class: 'counter' },
-            `В выпуске ${publishedCount} · первая полоса ${state.hand.filter((x) => drafts.get(x.uid)?.publish && drafts.get(x.uid)?.placement === 2).length} / ${mods.frontPageSlots}`,
-          ),
+      ...(error ? [h('span', { class: 'bad' }, error)] : []),
       h('button', { class: 'ghost', onclick: closeIssue }, 'Свернуть'),
       h('button', { class: 'primary big', onclick: endTurn, disabled: busy || !!state.outcome }, searching ? 'Репортёры ищут…' : 'Опубликовать и завершить ход'),
     );
   }
 
-  function summaryText(): string {
-    if (!report) return `Ход ${state.turn}. Выберите новости для выпуска и опубликуйте их.`;
-    const r = report;
-    const parts = [
-      `Индекс ${signed(Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex))}`,
-      `жителей ${signed(r.metricsAfter.activeResidents - r.metricsBefore.activeResidents)}`,
-      `читателей ${signed(r.readers.after - r.readers.before)}`,
-      `деньги ${signed(r.moneyDelta)}`,
-      `доверие ${signed(Math.round(r.trustAfter - r.trustBefore))}`,
-    ];
-    const exposed = r.publications.filter((p) => p.exposed).length + r.lateExposures.length;
-    if (exposed) parts.push(`разоблачено: ${exposed}`);
-    const believed = r.publications.reduce((s, p) => s + p.believed, 0);
-    return `Итоги хода ${r.turn}: поверили ${believed} · ${parts.join(' · ')}`;
-  }
-
-  function renderBottom(): void {
-    const publishedCount = state.hand.filter((x) => drafts.get(x.uid)?.publish).length;
-    bottomBar.replaceChildren(
-      h('div', { class: 'summary' }, summaryText()),
+  /** Mini clipping of an exposed story: which issue it was in and what it cost. */
+  function exposedCard(x: ExposedStory): HTMLElement {
+    return h(
+      'div',
+      { class: `exposed-card truth-${x.truth}` },
+      h('img', { src: `${assetBase}sprites/news/${x.templateId}.png`, alt: '', width: 128, height: 72 }),
       h(
         'div',
-        { class: 'bottom-buttons' },
-        h('button', { class: issueOpen ? 'primary' : '', onclick: () => ((issueOpen = !issueOpen), render()) }, `Выпуск (${publishedCount}/${state.hand.length})`),
-        h('button', { disabled: !report, onclick: () => openModal('report') }, 'Итоги хода'),
-        h('button', { onclick: () => openModal('city') }, 'Состояние города'),
-        h('button', { onclick: () => openModal('shop') }, 'Покупки'),
+        {},
+        h('b', { class: 'headline' }, x.title),
+        h('span', {}, `${truthLabels[x.truth]} · Выпуск дня ${x.turn}, ${placementLabels[x.placement].toLowerCase()}`),
+        h('span', { class: 'bad' }, `Репутация −${x.trustLoss.toFixed(1)}%`),
       ),
+    );
+  }
+
+  function renderExposures(): void {
+    const list = report?.exposures ?? [];
+    exposureToast.hidden = !list.length || exposuresSeen;
+    if (exposureToast.hidden) return;
+    const loss = list.reduce((s, x) => s + x.trustLoss, 0);
+    exposureToast.replaceChildren(
+      h(
+        'div',
+        { class: 'toast-head' },
+        h('img', { src: `${assetBase}sprites/fx/exposed.png`, alt: '', width: 24, height: 24 }),
+        h('b', {}, list.length === 1 ? 'Новость разоблачили!' : `Разоблачили новостей: ${list.length}`),
+        h('span', { class: 'bad' }, `−${loss.toFixed(1)}%`),
+        h(
+          'button',
+          {
+            class: 'icon-btn',
+            title: 'Закрыть',
+            onclick: () => {
+              exposuresSeen = true;
+              render();
+            },
+          },
+          '×',
+        ),
+      ),
+      h('div', { class: 'toast-cards' }, ...list.map(exposedCard)),
     );
   }
 
@@ -722,15 +784,33 @@ export function mountApp(root: HTMLElement, c: Content): void {
     ];
   }
 
-  function cityContent(): HTMLElement[] {
+  /** Debug menu: every parameter hidden from the top panel, the turn report and a new game. */
+  function debugContent(): HTMLElement[] {
     const m = state.metrics;
+    const b = c.balance;
+    const row = (label: string, value: string) => h('div', { class: 'debug-row' }, h('span', {}, label), h('b', {}, value));
     return [
+      h(
+        'div',
+        { class: 'debug-actions' },
+        h('button', { disabled: !report, onclick: () => openModal('report') }, 'Итоги хода'),
+        h('button', { onclick: newGame }, 'Новая игра'),
+      ),
+      h('h3', { class: 'section' }, 'Игра'),
+      row('Ход', `${Math.min(state.turn, b.turnLimit)} / ${b.turnLimit}`),
+      row('Сид города', `${state.seed}`),
+      row('Индекс города', `${Math.round(m.cityIndex)} (победа < ${b.winCityIndex})`),
+      row('Каналы', state.ownedChannels.map((ch) => channelOf(c, ch).name).join(', ')),
+      row('Расходы за ход', `${totalUpkeep(state, c)}`),
+      row('Реклама после скандала', `×${state.scandal.toFixed(2)}`),
+      row('Неразоблачённая ложь', `${state.pendingLies.length}`),
+      row('Ходов в минусе', `${state.brokeTurns} / ${b.brokeTurnsLimit}`),
+      h('h3', { class: 'section' }, 'Город'),
       bar('Население', m.population),
       bar('Занятость', m.employment),
       bar('Экономика', m.economy),
       bar('Настроение', m.mood),
       bar('Порядок', m.order),
-      h('p', { class: 'hint' }, `Жителей: ${m.activeResidents}. Индекс города ${Math.round(m.cityIndex)}, для победы нужно меньше ${c.balance.winCityIndex}.`),
     ];
   }
 
@@ -755,11 +835,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
                 `Город ополчился на группу «${groupOf(c, p.stigma.target).name}»: травля ${pct(p.stigma.pressure)}, уехали ${p.stigma.left}.`,
               )
             : null,
-          p.exposed ? h('p', { class: 'bad' }, 'Разоблачено! Доверие и реклама упали.') : null,
+          p.exposed ? h('p', { class: 'bad' }, 'Разоблачено! Репутация и реклама упали.') : null,
         ),
       ),
       ...(r.publications.length === 0 ? [h('p', { class: 'hint' }, 'В этот ход ничего не опубликовано.')] : []),
-      ...r.lateExposures.map((t) => h('div', { class: 'report-item exposed' }, h('p', { class: 'bad' }, `Всплыла старая ложь: «${t}»`))),
+      ...r.exposures
+        .filter((x) => x.turn !== r.turn)
+        .map((x) => h('div', { class: 'report-item exposed' }, h('p', { class: 'bad' }, `Всплыла старая ложь из выпуска дня ${x.turn}: «${x.title}»`))),
       h(
         'div',
         { class: 'report-item' },
@@ -775,7 +857,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
           {},
           `Индекс города ${signed(Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex))}, жителей ${signed(
             r.metricsAfter.activeResidents - r.metricsBefore.activeResidents,
-          )}, разоблачения ${signed(Math.round(r.exposureDelta))}, доверие ${signed(Math.round(r.trustAfter - r.trustBefore))}`,
+          )}, разоблачено ${r.exposures.length}, репутация ${signed(Math.round(r.trustAfter - r.trustBefore))}`,
         ),
       ),
       ...(r.events.length || r.notes.length
@@ -851,12 +933,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
     }
     const titles: Record<Exclude<Modal, null>, string> = {
       report: report ? `Итоги хода ${report.turn}` : 'Итоги хода',
-      city: 'Состояние города',
+      debug: 'Отладка',
       shop: 'Покупки',
       investigate: 'Расследование',
     };
     const body =
-      modal === 'report' ? reportContent() : modal === 'city' ? cityContent() : modal === 'investigate' ? investigateContent() : shopContent();
+      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'investigate' ? investigateContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
     const panel = h(
       'div',
@@ -894,7 +976,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     reporterBar.render(state, repStatus, searching);
     renderCityEvents();
     renderIssue();
-    renderBottom();
+    renderExposures();
     renderModal();
     renderOutcome();
   }

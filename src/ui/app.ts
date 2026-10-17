@@ -14,6 +14,8 @@ import {
   playTurn,
   previewPublication,
   purchase,
+  placementSlots,
+  rankedPlacements,
   readerCount,
   reporterOf,
   startInvestigation,
@@ -22,6 +24,7 @@ import {
   type CardInstance,
   type Content,
   type Decision,
+  type Modifiers,
   type ExposedStory,
   type Placement,
   type GameState,
@@ -51,7 +54,7 @@ interface Draft {
   distortion: number;
 }
 
-type Modal = 'report' | 'debug' | 'shop' | 'investigate' | null;
+type Modal = 'report' | 'debug' | 'city' | 'shop' | 'investigate' | null;
 
 const REACTION_SECONDS = 2.6;
 const assetBase = `${import.meta.env.BASE_URL}assets/`;
@@ -265,19 +268,37 @@ export function mountApp(root: HTMLElement, c: Content): void {
 
   // ---------- Actions ----------
 
+  const impactOf = (card: CardInstance, mods: Modifiers) =>
+    previewPublication(state, c, mods, { cardUid: card.uid, placement: 2, distortion: drafts.get(card.uid)?.distortion ?? 0 }).impact;
+
   /**
-   * Default layout of a new issue (CONCEPT.md §7.3): every story goes in, the highest-tier ones take
-   * the front page, boring ones become briefs, the rest are articles.
+   * Default layout of a new issue (CONCEPT.md §7.3): every story goes in; the best one (tier, then
+   * impact) takes the front page, the next the article slot, the rest are briefs.
    */
   function layOutIssue(): void {
     const fresh = state.hand.filter((card) => !drafts.has(card.uid));
     if (!fresh.length) return;
-    for (const card of fresh) drafts.set(card.uid, { publish: true, placement: card.tier === 0 ? 0 : 1, distortion: 0 });
     const mods = getModifiers(state, c);
-    const free = mods.frontPageSlots - state.hand.filter((x) => drafts.get(x.uid)!.placement === 2).length;
-    const impact = (card: CardInstance) => previewPublication(state, c, mods, { cardUid: card.uid, placement: 2, distortion: 0 }).impact;
-    const best = [...fresh].sort((a, b) => b.tier - a.tier || impact(b) - impact(a)).slice(0, Math.max(0, free));
-    for (const card of best) drafts.get(card.uid)!.placement = 2;
+    const ranked = [...fresh].sort((a, b) => b.tier - a.tier || impactOf(b, mods) - impactOf(a, mods));
+    const places = rankedPlacements(ranked.length, mods);
+    ranked.forEach((card, i) => drafts.set(card.uid, { publish: true, placement: places[i], distortion: 0 }));
+  }
+
+  /**
+   * Puts a card at a placement. When that placement is full, the card holding it (the weakest one
+   * if there are several) moves to this card's old place.
+   */
+  function place(card: CardInstance, to: Placement): void {
+    const d = draftOf(card);
+    if (d.placement === to) return;
+    const mods = getModifiers(state, c);
+    const holders = state.hand.filter((x) => x.uid !== card.uid && drafts.get(x.uid)?.publish && drafts.get(x.uid)!.placement === to);
+    if (holders.length >= placementSlots(mods)[to]) {
+      const weakest = holders.sort((a, b) => impactOf(a, mods) - impactOf(b, mods))[0];
+      drafts.get(weakest.uid)!.placement = d.placement;
+    }
+    d.placement = to;
+    d.publish = true;
   }
 
   const draftOf = (card: CardInstance): Draft => {
@@ -415,10 +436,19 @@ export function mountApp(root: HTMLElement, c: Content): void {
     return h('span', { class: `trend ${up ? 'up' : 'down'}`, title: `${up ? '+' : ''}${delta}${unit} за ход` }, up ? '▲' : '▼');
   }
 
-  function resource(icon: string, label: string, value: string, delta: number | null, hint: string, cls = '', unit = ''): HTMLElement {
+  function resource(
+    icon: string,
+    label: string,
+    value: string,
+    delta: number | null,
+    hint: string,
+    cls = '',
+    unit = '',
+    onclick?: () => void,
+  ): HTMLElement {
     return h(
-      'div',
-      { class: `res ${cls}`, title: `${label}. ${hint}` },
+      onclick ? 'button' : 'div',
+      { class: `res ${cls}${onclick ? ' clickable' : ''}`, title: `${label}. ${hint}`, onclick },
       h('img', { class: 'res-icon', src: `${assetBase}sprites/ui/${icon}.png`, alt: label, width: 32, height: 32 }),
       h('b', {}, value),
       trend(delta, unit),
@@ -452,11 +482,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
           '%',
         ),
         resource(
-          'residents',
-          'Жители',
-          `${state.metrics.activeResidents}`,
-          r ? r.metricsAfter.activeResidents - r.metricsBefore.activeResidents : null,
-          'Сколько людей ещё живёт в городе.',
+          'city',
+          'Индекс города',
+          `${Math.round(state.metrics.cityIndex)}`,
+          r ? Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex) : null,
+          `Насколько город жив. Для победы опустите ниже ${c.balance.winCityIndex}. Нажмите — подробности.`,
+          '',
+          '',
+          () => openModal('city'),
         ),
       ),
       h(
@@ -486,13 +519,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
   }
 
   /** Builds the content of a news card; the root element is reused between renders. */
-  function cardContent(card: CardInstance, mods: ReturnType<typeof getModifiers>, frontTaken: number): { cls: string; children: Node[] } {
+  function cardContent(card: CardInstance, mods: Modifiers): { cls: string; children: Node[] } {
     const tpl = templateOf(c, card.templateId);
     const d = draftOf(card);
     const p = previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: d.distortion });
     const audience = tpl.audience?.length ? tpl.audience.map((g) => groupOf(c, g).name.toLowerCase()).join(', ') : 'все жители';
-    // The front page has limited room; other published stories already hold it.
-    const frontFull = d.placement !== 2 && frontTaken >= mods.frontPageSlots;
+    // Who holds the limited places now: picking one moves that story to this card's old place.
+    const holderOf = (to: Placement) =>
+      state.hand.find((x) => x.uid !== card.uid && drafts.get(x.uid)?.publish && drafts.get(x.uid)!.placement === to);
     const investigation = tpl.source === 'investigation';
     const target = tpl.target ? groupOf(c, tpl.target).name : '';
     const update = (patch: Partial<Draft>) => {
@@ -530,13 +564,20 @@ export function mountApp(root: HTMLElement, c: Content): void {
         pick: () => update({ distortion: dist }),
       };
     });
-    const placeButtons = ([0, 1, 2] as const).map((i) => ({
-      icon: `place_${i}`,
-      title: i === 2 && frontFull ? `${placementLabels[i]}: занята другой новостью` : `${placementLabels[i]}. ${placementNote(i)}`,
-      on: d.placement === i,
-      disabled: i === 2 && frontFull,
-      pick: () => update({ placement: i }),
-    }));
+    const placeButtons = ([0, 1, 2] as const).map((i) => {
+      const holder = i > 0 && d.placement !== i ? holderOf(i) : undefined;
+      const moved = holder ? ` Сейчас там «${templateOf(c, holder.templateId).titles[holder.baseTruth]}» — она перейдёт на место этой.` : '';
+      return {
+        icon: `place_${i}`,
+        title: `${placementLabels[i]}. ${placementNote(i)}${moved}`,
+        on: d.placement === i,
+        disabled: false,
+        pick: () => {
+          place(card, i);
+          render();
+        },
+      };
+    });
     const reporter = reporterOf(c, card.reporterId);
     // Distortion raises the tier, and the card restyles itself at once (CONCEPT.md §3.1).
     const tier = p.tier;
@@ -567,6 +608,23 @@ export function mountApp(root: HTMLElement, c: Content): void {
         { class: 'card-art' },
         h('img', { src: `${assetBase}sprites/news/${tpl.id}.png`, alt: '', width: 256, height: 144 }),
         investigation ? h('div', { class: 'stamp exclusive' }, 'ЭКСКЛЮЗИВ') : tier === 2 ? h('div', { class: 'stamp' }, 'Интересно') : null,
+        // Details cover the illustration so the card keeps its size (CONCEPT.md §7.3).
+        open
+          ? h(
+              'div',
+              { class: 'card-details' },
+              h('p', { class: 'audience' }, `Аудитория: ${audience}`),
+              h(
+                'div',
+                { class: 'card-stat', title: 'Насколько сильно поверившие отреагируют: уровень, место в газете, масштаб, аудитория' },
+                h('span', {}, 'Воздействие'),
+                meter(p.impact / 2.5, p.impact >= 1.4 ? 'danger' : 'ok'),
+                h('em', {}, `×${p.impact.toFixed(1)}`),
+              ),
+              bar('Охват города', p.reachChance),
+              bar('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
+            )
+          : null,
       ),
       h(
         'div',
@@ -595,26 +653,18 @@ export function mountApp(root: HTMLElement, c: Content): void {
       ),
       h('h3', { class: 'headline' }, p.title),
       h('p', { class: 'effect' }, effectText(c, p.effect, tpl.target)),
-      open
-        ? h(
-            'div',
-            { class: 'card-details' },
-            h('p', { class: 'audience' }, `Аудитория: ${audience}`),
-            h(
-              'div',
-              { class: 'card-stat', title: 'Насколько сильно поверившие отреагируют: уровень, место в газете, масштаб, аудитория' },
-              h('span', {}, 'Воздействие'),
-              meter(p.impact / 2.5, p.impact >= 1.4 ? 'danger' : 'ok'),
-              h('em', {}, `×${p.impact.toFixed(1)}`),
-            ),
-            bar('Охват города', p.reachChance),
-            bar('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
-          )
-        : null,
       h('div', { class: 'controls' }, iconRow('Искажение', truthButtons), iconRow('Подача', placeButtons)),
       h(
         'button',
-        { class: `pick${d.publish ? ' primary' : ''}`, disabled: busy, onclick: () => update({ publish: !d.publish }) },
+        {
+          class: `pick${d.publish ? ' primary' : ''}`,
+          disabled: busy,
+          onclick: () => {
+            // A story taken back into the issue does not push anyone out: if its place is taken, it becomes a brief.
+            const taken = !d.publish && d.placement > 0 && holderOf(d.placement) !== undefined;
+            update({ publish: !d.publish, ...(taken ? { placement: 0 as Placement } : {}) });
+          },
+        },
         d.publish ? 'В выпуске ✓' : 'В выпуск',
       ),
     ];
@@ -640,7 +690,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
     issue.classList.toggle('open', issueOpen);
     issue.classList.toggle('searching', searching);
     const mods = getModifiers(state, c);
-    const frontTaken = state.hand.filter((x) => drafts.get(x.uid)?.placement === 2).length;
     const visible = state.hand.filter((card) => revealed.has(card.uid));
     const isInvestigation = (card: CardInstance) => templateOf(c, card.templateId).source === 'investigation';
 
@@ -655,7 +704,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       }
     }
     for (const card of visible) {
-      const { cls, children } = cardContent(card, mods, frontTaken);
+      const { cls, children } = cardContent(card, mods);
       let el = cardEls.get(card.uid);
       const isNew = !el;
       if (!el) {
@@ -805,12 +854,43 @@ export function mountApp(root: HTMLElement, c: Content): void {
       row('Реклама после скандала', `×${state.scandal.toFixed(2)}`),
       row('Неразоблачённая ложь', `${state.pendingLies.length}`),
       row('Ходов в минусе', `${state.brokeTurns} / ${b.brokeTurnsLimit}`),
-      h('h3', { class: 'section' }, 'Город'),
-      bar('Население', m.population),
-      bar('Занятость', m.employment),
-      bar('Экономика', m.economy),
-      bar('Настроение', m.mood),
-      bar('Порядок', m.order),
+    ];
+  }
+
+  /** City window behind the city index tile: what the index is made of. */
+  function cityContent(): HTMLElement[] {
+    const m = state.metrics;
+    const b = c.balance;
+    const r = report;
+    const delta = (after: number, before: number) => trend(Math.round((after - before) * 100), '%');
+    const metric = (label: string, key: 'population' | 'employment' | 'economy' | 'mood' | 'order') =>
+      h('div', { class: 'city-metric' }, bar(label, m[key]), r ? delta(r.metricsAfter[key], r.metricsBefore[key]) : null);
+    return [
+      h(
+        'div',
+        { class: 'city-index' },
+        h('img', { src: `${assetBase}sprites/ui/city.png`, alt: '', width: 48, height: 48 }),
+        h('div', {}, h('b', {}, `${Math.round(m.cityIndex)}`), h('span', {}, `Индекс города · победа ниже ${b.winCityIndex}`)),
+      ),
+      meter(m.cityIndex / 100, m.cityIndex < b.winCityIndex + 10 ? 'danger' : 'warn'),
+      h(
+        'div',
+        { class: 'city-index' },
+        h('img', { src: `${assetBase}sprites/ui/residents.png`, alt: '', width: 32, height: 32 }),
+        h(
+          'div',
+          {},
+          h('b', {}, `${m.activeResidents}`),
+          h('span', {}, `жителей из ${state.initialPopulation}`),
+        ),
+        r ? trend(r.metricsAfter.activeResidents - r.metricsBefore.activeResidents) : null,
+      ),
+      h('h3', { class: 'section' }, 'Из чего складывается индекс'),
+      metric('Население', 'population'),
+      metric('Занятость', 'employment'),
+      metric('Экономика', 'economy'),
+      metric('Настроение', 'mood'),
+      metric('Порядок', 'order'),
     ];
   }
 
@@ -934,11 +1014,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const titles: Record<Exclude<Modal, null>, string> = {
       report: report ? `Итоги хода ${report.turn}` : 'Итоги хода',
       debug: 'Отладка',
+      city: 'Город',
       shop: 'Покупки',
       investigate: 'Расследование',
     };
     const body =
-      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'investigate' ? investigateContent() : shopContent();
+      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'investigate' ? investigateContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
     const panel = h(
       'div',

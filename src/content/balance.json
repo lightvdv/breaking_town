@@ -81,6 +81,7 @@
     1
   ],
   "frontPageSlots": 1,
+  "articleSlots": 1,
   "effectScale": 2,
   "placementExposureRisk": [
     0.6,
@@ -110,7 +111,7 @@
   "audienceOthers": 0.6,
   "fatiguePerRepeat": 0.3,
   "trustGain": 3,
-  "trustPenaltyMul": 4,
+  "trustPenaltyMul": 5,
   "trustPenaltyBystanderShare": 0.33,
   "checkerBase": 0.18,
   "truthRisk": [

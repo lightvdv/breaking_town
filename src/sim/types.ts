@@ -84,8 +84,9 @@ export interface UpgradeEffects {
   trustBonus?: number;
   /** Added to every reporter's luck. */
   reporterLuck?: number;
-  /** Extra front-page slots. */
+  /** Extra front-page and article slots. */
   frontPageSlots?: number;
+  articleSlots?: number;
   /** Multiplies the reputation lost when a story is exposed. */
   exposurePenaltyMul?: number;
   checkerMul?: number;
@@ -239,7 +240,9 @@ export interface Balance {
   placementRead: Triple<number>;
   placementExposureRisk: Triple<number>;
   placementExposurePenalty: Triple<number>;
+  /** Room on the front page and for articles; briefs are unlimited. */
   frontPageSlots: number;
+  articleSlots: number;
   /** Global multiplier on card effect strength. */
   effectScale: number;
 
@@ -383,7 +386,7 @@ export interface Investigation {
 /** A story goes out on every owned channel at once (CONCEPT.md §3.2). */
 export interface Publication {
   cardUid: number;
-  /** Only `frontPageSlots` stories may go on the front page. */
+  /** Front page and articles have limited room (`placementSlots`); briefs do not. */
   placement: Placement;
   /** Added to the card's baseTruth to get the published truth level. */
   distortion: number;

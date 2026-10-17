@@ -10,7 +10,7 @@ import {
 import { collectIncome } from './economy';
 import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf } from './lookup';
-import { getModifiers, type Modifiers } from './modifiers';
+import { getModifiers, placementSlots, type Modifiers } from './modifiers';
 import { maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
 import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
 import { advanceInvestigations, findNews, scopeOf } from './reporters';
@@ -100,9 +100,14 @@ function startTurn(state: GameState, c: Content): string[] {
 }
 
 export function validateDecision(state: GameState, _c: Content, d: Decision, mods: Modifiers): void {
-  // Any number of stories, but the front page has limited room (CONCEPT.md §4.2).
-  const front = d.publish.filter((p) => p.placement === 2).length;
-  if (front > mods.frontPageSlots) throw new Error(`Only ${mods.frontPageSlots} story fits on the front page`);
+  // Any number of stories, but the front page and articles have limited room (CONCEPT.md §4.2).
+  const slots = placementSlots(mods);
+  const names = ['brief', 'article', 'front page'];
+  for (const place of [1, 2] as const) {
+    if (d.publish.filter((p) => p.placement === place).length > slots[place]) {
+      throw new Error(`Only ${slots[place]} ${names[place]} slot(s) this turn`);
+    }
+  }
   const used = new Set<number>();
   for (const p of d.publish) {
     const card = state.hand.find((x) => x.uid === p.cardUid);

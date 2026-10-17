@@ -38,7 +38,8 @@ function simpleDecision(state: GameState, distortion: 'none' | 'max', placement:
   return {
     publish: cards.map((c, i) => ({
       cardUid: c.uid,
-      placement: i > 0 && placement === 2 ? 1 : placement,
+      // The first card gets the placement; the second takes the next free slot below it.
+      placement: (i === 0 ? placement : Math.max(0, Math.min(1, placement - 1))) as 0 | 1 | 2,
       distortion: distortion === 'max' ? maxDistortion(c) : 0,
     })),
   };
@@ -108,12 +109,14 @@ describe('game', () => {
     expect(JSON.parse(JSON.stringify(s))).toEqual(s);
   });
 
-  it('allows any number of stories but only frontPageSlots on the front page', () => {
+  it('allows any number of stories but limits the front page and articles', () => {
     const s = createGame(content, 1);
     const tpl = templateOf(content, 'factory_sold');
     s.hand = [0, 1, 2, 3].map((i) => ({ uid: 700 + i, templateId: tpl.id, baseTruth: 1, createdTurn: s.turn, tier: 1, scope: 'local', reporterId: s.reporters[0] }));
     const two = { publish: [0, 1].map((i) => ({ cardUid: 700 + i, placement: 2 as const, distortion: 0 })) };
     expect(() => playTurn(s, content, two)).toThrow(/front page/);
+    const articles = { publish: [0, 1].map((i) => ({ cardUid: 700 + i, placement: 1 as const, distortion: 0 })) };
+    expect(() => playTurn(s, content, articles)).toThrow(/article/);
     const all = { publish: [0, 1, 2, 3].map((i) => ({ cardUid: 700 + i, placement: (i === 0 ? 2 : i === 1 ? 1 : 0) as 0 | 1 | 2, distortion: 0 })) };
     expect(playTurn(s, content, all).publications.length).toBe(4);
   });

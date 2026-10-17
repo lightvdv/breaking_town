@@ -182,6 +182,48 @@ select {
   color: var(--danger);
 }
 
+button.res {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.res:hover {
+  border-color: var(--accent);
+}
+
+/* City window. */
+.city-index {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 24px;
+}
+
+.city-index img {
+  image-rendering: pixelated;
+}
+
+.city-index div {
+  display: flex;
+  flex-direction: column;
+}
+
+.city-index b {
+  font-size: 28px;
+}
+
+.city-index span {
+  color: var(--muted);
+}
+
+.city-metric {
+  position: relative;
+  padding-right: 22px;
+}
+
 .trend {
   position: absolute;
   right: 6px;
@@ -493,8 +535,30 @@ select {
   gap: 16px;
 }
 
+/* Every card has the same size; long headlines are clamped, the button sits at the bottom. */
 .issue-cards .card {
   width: 276px;
+  height: 460px;
+}
+
+.issue-cards .card .headline {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.issue-cards .card .effect {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.issue-cards .card .controls {
+  margin-top: auto;
 }
 
 .issue-foot {
@@ -721,12 +785,20 @@ select {
 }
 
 .card-details {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px;
-  background: rgba(62, 39, 49, 0.08);
-  border: 1px dashed var(--paper-muted);
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(234, 212, 170, 0.96);
+  line-height: normal;
+}
+
+.card-details .card-stat {
+  grid-template-columns: 112px 1fr 36px;
 }
 
 .card .audience {
@@ -1482,6 +1554,7 @@ select {
 
   .issue-cards .card {
     width: min(100%, 360px);
+    height: auto;
   }
 
   .issue-foot {

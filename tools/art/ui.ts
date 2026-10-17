@@ -88,6 +88,30 @@ function residents(): Raster {
   return outline(r);
 }
 
+/** City index: a skyline of three buildings with lit windows. */
+function city(): Raster {
+  const r = new Raster(16, 16);
+  r.rect(1, 7, 4, 8, 'grey');
+  r.rect(5, 2, 5, 13, 'silver');
+  r.rect(10, 5, 5, 10, 'darkGrey');
+  r.rect(7, 0, 1, 2, 'silver');
+  for (const [x, y] of [
+    [2, 9],
+    [2, 12],
+    [6, 4],
+    [8, 4],
+    [6, 7],
+    [8, 10],
+    [6, 13],
+    [11, 7],
+    [13, 10],
+    [11, 12],
+  ]) {
+    r.set(x, y, 'yellow');
+  }
+  return outline(r);
+}
+
 const truthArt: Record<number, string[]> = {
   0: [
     '................',
@@ -165,6 +189,7 @@ export const uiIcons: Record<string, () => Raster> = {
   readers,
   reputation,
   residents,
+  city,
   truth_0: () => truth(0),
   truth_1: () => truth(1),
   truth_2: () => truth(2),

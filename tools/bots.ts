@@ -15,9 +15,11 @@ import {
   reporterOf,
   startInvestigation,
   maxDistortion,
+  placementSlots,
   playTurn,
   previewPublication,
   purchase,
+  rankedPlacements,
   totalUpkeep,
   type CardInstance,
   type Decision,
@@ -62,19 +64,20 @@ function mixed(s: GameState): Decision {
     .sort((a, b) => b.score - a.score)
     .slice(0, lieSlots);
   for (const lie of lies) {
-    publish.push({ cardUid: lie.c.uid, placement: trust < 45 ? 0 : 1, distortion: lie.d });
+    publish.push({ cardUid: lie.c.uid, placement: 0, distortion: lie.d });
     used.add(lie.c.uid);
   }
   // Every harmful truth goes out; good news only to rebuild trust.
   for (const c of s.hand.filter((x) => !used.has(x.uid) && (harm(x, 0) > 0 || trust < 45))) {
-    publish.push({ cardUid: c.uid, placement: 1, distortion: 0 });
+    publish.push({ cardUid: c.uid, placement: 0, distortion: 0 });
   }
-  // The strongest harmful story takes the front page.
-  const best = publish
-    .map((p) => ({ p, impact: harm(s.hand.find((x) => x.uid === p.cardUid)!, p.distortion) }))
-    .sort((a, b) => b.impact - a.impact)
-    .slice(0, mods.frontPageSlots);
-  for (const { p, impact } of best) if (impact > 0) p.placement = 2;
+  // The strongest harmful stories take the front page and the article slots; risky lies stay briefs.
+  const ranked = publish
+    .map((p) => ({ p, impact: harm(s.hand.find((x) => x.uid === p.cardUid)!, p.distortion), lie: p.distortion > 0 }))
+    .filter((x) => x.impact > 0 && !(x.lie && trust < 45))
+    .sort((a, b) => b.impact - a.impact);
+  const places = rankedPlacements(ranked.length, mods);
+  ranked.forEach((x, i) => (x.p.placement = places[i]));
   return { publish };
 }
 
@@ -110,13 +113,14 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
   const publish: Publication[] = [];
 
   if (choice === 'random') {
-    let front = 0;
+    const slots = placementSlots(mods);
+    const used = [0, 0, 0];
     for (const card of s.hand) {
       if (next(rng) < 0.3) continue;
       const distortion = Math.floor(next(rng) * (maxDistortion(card) + 1));
       let placement = Math.floor(next(rng) * 3) as Placement;
-      if (placement === 2 && front >= mods.frontPageSlots) placement = 1;
-      if (placement === 2) front++;
+      if (used[placement] >= slots[placement]) placement = 0;
+      used[placement]++;
       publish.push({ cardUid: card.uid, placement, distortion });
     }
     return { publish };
@@ -131,8 +135,12 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
     .filter((x) => !choice.harmfulOnly || isHarmful(x.preview.effect))
     .sort((a, b) => b.preview.impact - a.preview.impact);
 
-  // Everything goes out; only the strongest story keeps a front-page placement.
-  candidates.forEach((x, i) => publish.push({ ...x.pub, placement: x.pub.placement === 2 && i >= mods.frontPageSlots ? 1 : x.pub.placement }));
+  // Everything goes out; the strongest stories take the slots up to the strategy's placement.
+  const places =
+    choice.placement === 0
+      ? candidates.map(() => 0 as Placement)
+      : rankedPlacements(candidates.length, choice.placement === 2 ? mods : { ...mods, frontPageSlots: 0 });
+  candidates.forEach((x, i) => publish.push({ ...x.pub, placement: places[i] }));
   return { publish };
 }
 

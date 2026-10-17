@@ -64,8 +64,8 @@ function mixed(s: GameState): Decision {
   // Loud framing only for stories worth it, so the outlet does not "cry wolf".
   const framingFor = (card: CardInstance, distortion: number): Framing => {
     if (s.hype > 40) return 0;
-    const harmful = isHarmful(preview(card, distortion).effect);
-    return card.tier >= 3 && harmful ? 2 : card.tier >= 2 ? 1 : 0;
+    const p = preview(card, distortion);
+    return p.tier >= 3 && isHarmful(p.effect) ? 2 : p.tier >= 2 ? 1 : 0;
   };
   for (const lie of lies) {
     publish.push({ cardUid: lie.c.uid, framing: framingFor(lie.c, lie.d), distortion: lie.d });

@@ -73,7 +73,7 @@ function flightFrames(tier: NewsTier, dx: number, dy: number): { frames: Keyfram
     case 0:
       return {
         frames: [{ transform: from(0.25), opacity: 0 }, { transform: 'none', opacity: 1 }],
-        options: { duration: 800, easing: 'ease-out' },
+        options: { duration: 450, easing: 'ease-out' },
       };
     case 1:
       return {
@@ -82,7 +82,7 @@ function flightFrames(tier: NewsTier, dx: number, dy: number): { frames: Keyfram
           { transform: mid(0.4, 60, 0.8), opacity: 1, offset: 0.55 },
           { transform: 'none', opacity: 1 },
         ],
-        options: { duration: 750, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1.2)' },
+        options: { duration: 450, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1.2)' },
       };
     case 2:
       return {
@@ -91,7 +91,7 @@ function flightFrames(tier: NewsTier, dx: number, dy: number): { frames: Keyfram
           { transform: mid(0.4, 80, 1.05, 15), opacity: 1, offset: 0.6 },
           { transform: 'none', opacity: 1 },
         ],
-        options: { duration: 950, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.15)' },
+        options: { duration: 550, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.15)' },
       };
     case 3:
       return {
@@ -101,7 +101,7 @@ function flightFrames(tier: NewsTier, dx: number, dy: number): { frames: Keyfram
           { transform: 'scale(0.95)', opacity: 1, offset: 0.85 },
           { transform: 'none', opacity: 1 },
         ],
-        options: { duration: 1150, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' },
+        options: { duration: 700, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' },
       };
   }
 }
@@ -221,7 +221,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       if (run !== searchRun || skipSearch) break;
       repStatus.set(f.reporterId, { phase: 'searching' });
       render();
-      await pause(650);
+      await pause(300);
       if (run !== searchRun) return;
       repStatus.set(f.reporterId, { phase: 'done', find: f, title: titleOf(f.cardUid) });
       if (f.cardUid !== null && !skipSearch) {
@@ -229,7 +229,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
         flyQueue.add(f.cardUid);
       }
       render();
-      await pause(f.tier === 3 ? 1500 : f.tier === 2 ? 1150 : 850);
+      await pause(f.tier === 3 ? 800 : f.tier === 2 ? 600 : 400);
     }
     if (run !== searchRun) return;
     for (const f of finds) {
@@ -243,7 +243,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       if (run !== searchRun) return;
       repStatus = new Map();
       render();
-    }, 3000);
+    }, 1800);
   }
 
   // ---------- Actions ----------
@@ -454,9 +454,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
       label: `${distortionLabels[i === 0 ? 0 : card.baseTruth + i]} → ${truthLabels[card.baseTruth + i]}`,
     }));
     const reporter = reporterOf(c, card.reporterId);
-    const cls = ['card', `truth-${p.truth}`, `tier-${card.tier}`, `scope-${card.scope}`, d.publish ? 'selected' : ''].filter(Boolean).join(' ');
+    // Distortion raises the tier, and the card restyles itself at once (CONCEPT.md §3.1).
+    const tier = p.tier;
+    const raised = tier > card.tier;
+    const cls = ['card', `truth-${p.truth}`, `tier-${tier}`, `scope-${card.scope}`, d.publish ? 'selected' : ''].filter(Boolean).join(' ');
     const children: (HTMLElement | null)[] = [
-      card.tier === 3 ? h('div', { class: 'ribbon' }, 'СЕНСАЦИЯ') : null,
+      tier === 3 ? h('div', { class: 'ribbon' }, 'СЕНСАЦИЯ') : null,
       h(
         'div',
         { class: 'card-band' },
@@ -467,12 +470,16 @@ export function mountApp(root: HTMLElement, c: Content): void {
         'div',
         { class: 'card-art' },
         h('img', { src: `${assetBase}sprites/news/${tpl.id}.png`, alt: '', width: 256, height: 144 }),
-        card.tier === 2 ? h('div', { class: 'stamp' }, 'Интересно') : null,
+        tier === 2 ? h('div', { class: 'stamp' }, 'Интересно') : null,
       ),
       h(
         'div',
         { class: 'card-meta' },
-        h('span', { class: `tier-tag t${card.tier}` }, tierLabels[card.tier]),
+        h(
+          'span',
+          { class: `tier-tag t${tier}`, title: raised ? `Было: ${tierLabels[card.tier].toLowerCase()} — уровень поднят искажением` : '' },
+          raised ? `${tierLabels[tier]} ↑` : tierLabels[tier],
+        ),
         h('span', { class: `scope-tag ${card.scope}` }, scopeLabels[card.scope]),
         h('span', { class: 'by' }, portrait(reporter.id, 'mini-portrait'), reporter.name),
       ),

@@ -60,6 +60,8 @@ export function validateContent(c: Content): string[] {
     if (t.scope && t.scope !== 'local' && t.scope !== 'global') errors.push(`card ${t.id}: unknown scope ${t.scope}`);
     for (const g of t.audience ?? []) if (!c.groups.some((x) => x.id === g)) errors.push(`card ${t.id}: unknown audience ${g}`);
     if (t.source === 'rumor' && t.baseTruth === 0) errors.push(`card ${t.id}: rumors cannot be fully true`);
+    // Reporters bring only truth or half-truth; outright lies are the player's doing.
+    if (t.baseTruth > 1) errors.push(`card ${t.id}: reporters never bring outright lies (baseTruth must be 0 or 1)`);
   }
   unique('reporter', c.reporters.map((x) => x.id));
   const topics = new Set(c.cards.map((t) => t.topic));

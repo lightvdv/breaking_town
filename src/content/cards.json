@@ -352,15 +352,18 @@
     "id": "water_poison",
     "source": "rumor",
     "topic": "health",
-    "baseTruth": 2,
+    "baseTruth": 1,
     "titles": [
       null,
-      null,
+      "Вода из-под крана странно пахнет",
       "В водопроводе нашли яд"
     ],
     "effects": [
       null,
-      null,
+      {
+        "type": "moodDown",
+        "strength": 0.06
+      },
       {
         "type": "leaveCity",
         "strength": 0.12
@@ -442,15 +445,18 @@
     "id": "mayor_flee",
     "source": "rumor",
     "topic": "power",
-    "baseTruth": 2,
+    "baseTruth": 1,
     "titles": [
       null,
-      null,
+      "Мэра видели с чемоданами у вокзала",
       "Мэр готовится сбежать из города с казной"
     ],
     "effects": [
       null,
-      null,
+      {
+        "type": "moodDown",
+        "strength": 0.06
+      },
       {
         "type": "protest",
         "strength": 0.25,
@@ -628,15 +634,18 @@
     "id": "celebrity",
     "source": "rumor",
     "topic": "fun",
-    "baseTruth": 2,
+    "baseTruth": 1,
     "titles": [
       null,
-      null,
+      "Говорят, в город приезжает звезда",
       "В город тайно приехала звезда"
     ],
     "effects": [
       null,
-      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      },
       {
         "type": "moodUp",
         "strength": 0.04
@@ -877,15 +886,18 @@
     "source": "rumor",
     "scope": "global",
     "topic": "crime",
-    "baseTruth": 2,
+    "baseTruth": 1,
     "titles": [
       null,
-      null,
+      "Над соседним городом видели странные огни",
       "Учёные подтвердили: пришельцы среди нас"
     ],
     "effects": [
       null,
-      null,
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
       {
         "type": "moodDown",
         "strength": 0.04

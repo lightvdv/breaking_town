@@ -142,6 +142,32 @@ describe('reach vs impact', () => {
   });
 });
 
+describe('distortion', () => {
+  it('raises the tier one step per level, up to a sensation, and with it the impact', () => {
+    const s = createGame(content, 8);
+    const tpl = templateOf(content, 'factory_accident');
+    s.hand = [{ uid: 950, templateId: tpl.id, baseTruth: 0, createdTurn: s.turn, tier: 0, scope: 'local', reporterId: s.reporters[0] }];
+    const mods = getModifiers(s, content);
+    const at = (distortion: number) => previewPublication(s, content, mods, { cardUid: 950, framing: 0, distortion });
+    expect([0, 1, 2].map((d) => at(d).tier)).toEqual([0, 1, 2]);
+    expect(at(2).impact).toBeGreaterThan(at(0).impact);
+    s.hand[0].tier = 3;
+    expect(at(2).tier).toBe(3);
+  });
+
+  it('reporters never bring outright lies', () => {
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const s = createGame(content, seed);
+      s.money = 10_000;
+      for (const id of ['gusev', 'volkova', 'kim', 'zaitsev']) purchase(s, content, id);
+      for (let i = 0; i < 4; i++) {
+        playTurn(s, content, { publish: [] });
+        for (const card of s.hand) expect(card.baseTruth).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+});
+
 describe('readers', () => {
   it('the newspaper starts with readers and a new channel builds its audience over turns', () => {
     const s = createGame(content, 6);

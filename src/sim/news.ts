@@ -10,6 +10,7 @@ import type {
   Content,
   Framing,
   GameState,
+  NewsTier,
   Publication,
   PublicationReport,
   Reaction,
@@ -24,6 +25,8 @@ export interface PublicationPreview {
   effect: CardEffect | null;
   /** How strongly viewers react: tier, framing, scope, topic fatigue (1 = normal). */
   impact: number;
+  /** The card's tier after distortion. */
+  tier: NewsTier;
   /** Expected share of the city that sees the story; depends only on the outlet, not on the story. */
   reachChance: number;
   /** Fact-check chance assuming the news reaches a quarter of the city. */
@@ -40,6 +43,11 @@ export function cardTruth(card: CardInstance, distortion: number): TruthLevel {
 
 export function maxDistortion(card: CardInstance): number {
   return 2 - card.baseTruth;
+}
+
+/** Each step of distortion raises the story one tier, up to a sensation (CONCEPT.md §3.1). */
+export function effectiveTier(card: CardInstance, distortion: number): NewsTier {
+  return Math.min(3, card.tier + distortion) as NewsTier;
 }
 
 /** Panic framing is only allowed for stories that harm the city. */
@@ -62,7 +70,7 @@ function impactOf(state: GameState, c: Content, card: CardInstance, tpl: CardTem
   const fatigue = Math.pow(1 - b.fatiguePerRepeat, streak);
   const scope = card.scope === 'global' ? b.globalEffectMul : 1;
   const framing = loudBonus(b.framingInterest[pub.framing], state.hype);
-  return (tpl.interest * b.tierInterest[card.tier] * scope * framing * fatigue) / b.impactNorm;
+  return (tpl.interest * b.tierInterest[effectiveTier(card, pub.distortion)] * scope * framing * fatigue) / b.impactNorm;
 }
 
 /** Owned channels a resident follows; only followers see the issue (CONCEPT.md §5.2). */
@@ -136,6 +144,7 @@ export function previewPublication(
     truth,
     effect: tpl.effects[truth],
     impact: impactOf(state, c, card, tpl, pub, repeatsThisTurn),
+    tier: effectiveTier(card, pub.distortion),
     reachChance: outletReach(state, c),
     exposureRisk: exposureRiskOf(state, c, mods, truth, pub.framing, 0.25),
     credibility: hypeCredibility(state, c, pub),
@@ -251,7 +260,7 @@ export function publish(
   const impact = impactOf(state, c, card, tpl, pub, repeatsThisTurn);
   // Interesting stories are retold more, and viral channels spread them further.
   const retell = clamp(
-    b.wordOfMouthChance * (0.5 + tpl.engagement * b.tierEngagement[card.tier]) * (1 + outletVirality(state, c)),
+    b.wordOfMouthChance * (0.5 + tpl.engagement * b.tierEngagement[effectiveTier(card, pub.distortion)]) * (1 + outletVirality(state, c)),
     0,
     0.9,
   );

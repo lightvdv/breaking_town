@@ -50,6 +50,17 @@ export class Raster {
     }
   }
 
+  crop(x: number, y: number, w: number, h: number): Raster {
+    const out = new Raster(w, h);
+    for (let j = 0; j < h; j++) {
+      for (let i = 0; i < w; i++) {
+        const c = this.get(x + i, y + j);
+        if (c) out.set(i, j, c);
+      }
+    }
+    return out;
+  }
+
   /** Adds a 1px outline around opaque pixels (4-neighbourhood). */
   outline(c: Color): void {
     const add: number[] = [];

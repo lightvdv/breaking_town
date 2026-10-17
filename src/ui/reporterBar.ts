@@ -41,6 +41,11 @@ export class ReporterBar {
     this.el.addEventListener('click', () => this.onSkip());
   }
 
+  /** Screen rectangle of a hired reporter's card (cards fly out of it). */
+  rectOf(id: string): DOMRect | null {
+    return this.cards.get(id)?.root.getBoundingClientRect() ?? null;
+  }
+
   render(state: GameState, statuses: Map<string, RepStatus>, animating: boolean): void {
     const max = this.c.balance.maxReporters;
     const key = `${state.reporters.join(',')}|${max}`;

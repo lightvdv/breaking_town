@@ -25,6 +25,7 @@
   --city-1: #193c3e;
   --city-2: #181425;
   --font-pixel: 'Pixelify Sans', system-ui, sans-serif;
+  --font-headline: 'PT Serif', Georgia, 'Times New Roman', serif;
   --font-text: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --sidebar: 420px;
 }
@@ -226,16 +227,11 @@ select {
   flex: none;
 }
 
-.layout {
+/* The city takes all the space between the reporter bar and the bottom bar. */
+.stage {
+  position: relative;
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--sidebar);
-  grid-template-rows: minmax(0, 1fr);
-}
-
-.city {
-  position: relative;
   overflow: hidden;
   background: radial-gradient(ellipse at 50% 55%, var(--city-1), var(--city-2) 75%);
   touch-action: none;
@@ -322,53 +318,139 @@ select {
   margin-right: 4px;
 }
 
-/* ---------- Sidebar ---------- */
-.sidebar {
+/* ---------- Issue of the day (centre overlay) ---------- */
+.issue {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  overflow-y: auto;
+  padding: 16px;
+  background: rgba(24, 20, 37, 0.62);
+}
+
+.issue.open {
+  display: block;
+}
+
+.issue.searching {
+  cursor: pointer;
+}
+
+.issue-panel {
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  gap: 14px;
+  min-height: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.issue-head {
+  text-align: center;
+  color: #fff;
+  text-shadow: 2px 2px 0 var(--ink);
+}
+
+.issue-head h2 {
+  margin: 0;
+  font-family: var(--font-headline);
+  font-size: 30px;
+  color: var(--accent);
+}
+
+.issue-head p {
+  margin: 4px 0 0;
+}
+
+.issue-cards {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.issue-cards .card {
+  width: 276px;
+}
+
+.issue-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
   background: var(--bg);
-  border-width: 0 0 0 2px;
+  border: 2px solid var(--ink);
+  font-family: var(--font-pixel);
+  font-size: 15px;
 }
 
-.tabs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  padding: 8px 8px 0;
-}
-
-.tab {
-  background: var(--panel-2);
+.issue-foot .counter {
   color: var(--muted);
-  border-bottom: 0;
 }
 
-.tab.active {
+/* ---------- Bottom bar ---------- */
+.bottom-bar {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 16px;
+  background: var(--bg);
+  border-top: 2px solid var(--ink);
+}
+
+.bottom-bar .summary {
+  flex: 1;
+  min-width: 240px;
+  font-size: 14px;
+}
+
+.bottom-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---------- Windows ---------- */
+.modal.window {
+  width: min(620px, calc(100% - 32px));
+  max-height: calc(100% - 48px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  text-align: left;
   background: var(--panel);
   color: var(--text);
 }
 
-.tab-body {
-  flex: 1;
+.modal-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--bg);
+}
+
+.modal.window .modal-title h2 {
+  margin: 0;
+  font-size: 22px;
+  color: var(--accent);
+}
+
+.modal-body {
   overflow-y: auto;
-  padding: 10px;
-  background: var(--panel);
-  margin: 0 8px;
-  border: 2px solid var(--ink);
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.turn-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px;
-  font-family: var(--font-pixel);
-  font-size: 15px;
 }
 
 .hint {
@@ -431,11 +513,37 @@ select {
   background: var(--truth-2);
 }
 
+/* Readable newspaper headlines (CONCEPT.md §7.3). */
+.headline,
 .card h3 {
-  margin: 4px 0 0;
-  font-family: var(--font-pixel);
-  font-size: 18px;
-  line-height: 1.15;
+  margin: 2px 0 0;
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+}
+
+.card-art {
+  position: relative;
+  margin: 0 -2px;
+  border: 2px solid var(--ink);
+  line-height: 0;
+}
+
+.card-art img {
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.card .pick {
+  margin-top: 4px;
+}
+
+.card.flying {
+  z-index: 10;
+  pointer-events: none;
 }
 
 .card .effect {
@@ -915,8 +1023,11 @@ select {
   filter: grayscale(0.55);
 }
 
-.card.tier-2 h3 {
-  padding-right: 92px;
+.card-art .stamp {
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  line-height: 1.3;
 }
 
 .card.tier-3 .card-band span {
@@ -1139,37 +1250,124 @@ select {
   }
 }
 
+/* Landing effects after a card's flight, by tier. */
+.card.landed.tier-2 {
+  animation: glow-blue 0.9s ease-in-out 2;
+}
+
+.card.landed.tier-3 {
+  animation:
+    card-flash 0.7s ease-out,
+    shake 0.5s steps(6) 0.1s;
+}
+
+@keyframes card-flash {
+  from {
+    box-shadow:
+      0 0 0 3px #a22633,
+      0 0 60px 30px rgba(255, 255, 255, 0.95);
+  }
+}
+
 /* ---------- Phone ---------- */
 @media (max-width: 900px) {
   html,
   body,
   #app {
-    height: auto;
+    height: 100%;
   }
 
-  .layout {
-    display: flex;
-    flex-direction: column;
-    height: auto;
+  /* The issue covers the whole phone screen; "Свернуть" returns to the city. */
+  .issue {
+    position: fixed;
+    z-index: 30;
+    padding: 8px;
+    background: rgba(24, 20, 37, 0.92);
   }
 
-  .city {
-    height: 52vh;
+  .issue-cards .card {
+    width: min(100%, 360px);
   }
 
-  .sidebar {
-    border-width: 2px 0 0;
+  .issue-foot {
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
-  .tab-body {
-    overflow: visible;
+  .issue-foot .big {
+    font-size: 15px;
+    padding: 8px 10px;
   }
 
-  .turn-bar {
-    position: sticky;
-    bottom: 0;
-    background: var(--bg);
-    border-top: 2px solid var(--ink);
+  .hud {
+    padding: 6px 10px;
+    gap: 6px 12px;
+  }
+
+  .brand {
+    font-size: 16px;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 10px;
+  }
+
+  .stat b {
+    font-size: 16px;
+  }
+
+  .stat .meter {
+    width: 60px;
+  }
+
+  .stat.channels {
+    display: none;
+  }
+
+  .trust-row {
+    grid-template-columns: 70px 50px 30px;
+  }
+
+  .reporter-bar {
+    padding: 6px 10px;
+  }
+
+  .rep-title {
+    display: none;
+  }
+
+  .rep-card,
+  .rep-slot {
+    min-height: 56px;
+  }
+
+  .rep-card {
+    grid-template-columns: 48px 1fr;
+  }
+
+  .rep-portrait,
+  .rep-card .portrait {
+    width: 48px;
+    height: 48px;
+  }
+
+  .rep-status {
+    inset: 4px 4px 4px 58px;
+  }
+
+  .bottom-bar {
+    padding: 6px 10px;
+  }
+
+  .bottom-bar .summary {
+    font-size: 12px;
+  }
+
+  .bottom-buttons button {
+    font-size: 13px;
+    padding: 4px 8px;
   }
 
   .city-events {
@@ -1178,5 +1376,9 @@ select {
 
   .city-legend {
     display: none;
+  }
+
+  .reporter-bar .rep-card {
+    width: 200px;
   }
 }

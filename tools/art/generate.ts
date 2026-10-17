@@ -5,6 +5,7 @@
  *   npm run art
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { illustration, scenes } from './illustrations';
 import { portrait, type PortraitSpec } from './portraits';
 import { dirname, join } from 'node:path';
 import { buildingArts, FRAMES } from './buildings';
@@ -124,6 +125,12 @@ const reporters: { id: string; portrait: PortraitSpec }[] = JSON.parse(
 );
 reporters.forEach((r, i) => write(`sprites/reporters/${r.id}.png`, portrait(r.portrait, i).toPng()));
 
+// News illustrations: every card template needs a scene.
+const cards: { id: string }[] = JSON.parse(readFileSync(join(process.cwd(), 'src', 'content', 'cards.json'), 'utf8'));
+const missing = cards.filter((c) => !scenes[c.id]).map((c) => c.id);
+if (missing.length) throw new Error(`No illustration scene for: ${missing.join(', ')}`);
+for (const c of cards) write(`sprites/news/${c.id}.png`, illustration(scenes[c.id]).toPng());
+
 // What exists, so the game does not hard-code variant counts.
 write(
   'manifest.json',
@@ -135,6 +142,7 @@ write(
       decor: Object.keys(decor),
       fx: Object.keys(fxIcons),
       reporters: reporters.map((r) => r.id),
+      news: cards.map((c) => c.id),
     },
     null,
     2,

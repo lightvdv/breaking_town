@@ -9,7 +9,7 @@ import {
 } from './city';
 import { collectIncome } from './economy';
 import { createBuildings } from './map';
-import { averageTrust, groupOf, templateOf, trustSnapshot } from './lookup';
+import { averageTrust, groupOf, templateOf } from './lookup';
 import { getModifiers, type Modifiers } from './modifiers';
 import { cardTruth, isHarmful, maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
 import { findNews, scopeOf } from './reporters';
@@ -31,12 +31,6 @@ export function createGame(c: Content, seed: number): GameState {
   const workers = countWorkers(residents);
   for (const r of residents) tryAssignJob(r, groupOf(c, r.group), buildings, workers);
 
-  const scandal: Record<ChannelId, number> = {};
-  const hype: Record<ChannelId, number> = {};
-  for (const ch of c.channels) {
-    scandal[ch.id] = 1;
-    hype[ch.id] = 0;
-  }
 
   const state: GameState = {
     version: 1,
@@ -56,8 +50,8 @@ export function createGame(c: Content, seed: number): GameState {
     upgrades: [],
     reporters: [...c.balance.startReporters],
     lastFinds: [],
-    scandal,
-    hype,
+    scandal: 1,
+    hype: 0,
     topicStreak: {},
     pendingLies: [],
     initialPopulation: residents.length,
@@ -108,14 +102,12 @@ export function validateDecision(state: GameState, c: Content, d: Decision, mods
   if (d.publish.length > mods.publishPerTurn) {
     throw new Error(`Can publish at most ${mods.publishPerTurn} cards per turn`);
   }
-  if (d.hold.length > c.balance.maxHold) throw new Error(`Can hold at most ${c.balance.maxHold} cards`);
   const used = new Set<number>();
   for (const p of d.publish) {
     const card = state.hand.find((x) => x.uid === p.cardUid);
     if (!card) throw new Error(`Card ${p.cardUid} is not in hand`);
     if (used.has(p.cardUid)) throw new Error(`Card ${p.cardUid} published twice`);
     used.add(p.cardUid);
-    if (!state.ownedChannels.includes(p.channel)) throw new Error(`Channel ${p.channel} is not owned`);
     if (![0, 1, 2].includes(p.framing)) throw new Error(`Bad framing ${p.framing}`);
     if (!Number.isInteger(p.distortion) || p.distortion < 0 || p.distortion > maxDistortion(card)) {
       throw new Error(`Bad distortion ${p.distortion} for card ${p.cardUid}`);
@@ -124,10 +116,6 @@ export function validateDecision(state: GameState, c: Content, d: Decision, mods
       throw new Error(`Panic framing needs a harmful story (card ${p.cardUid})`);
     }
   }
-  for (const uid of d.hold) {
-    if (!state.hand.some((x) => x.uid === uid)) throw new Error(`Card ${uid} is not in hand`);
-    if (used.has(uid)) throw new Error(`Card ${uid} is both published and held`);
-  }
 }
 
 export function checkOutcome(state: GameState, c: Content): Outcome | null {
@@ -135,9 +123,7 @@ export function checkOutcome(state: GameState, c: Content): Outcome | null {
   if (state.metrics.cityIndex < b.winCityIndex) return { result: 'win', reason: 'cityDestroyed' };
   if (state.exposure >= b.exposureLimit) return { result: 'lose', reason: 'exposure' };
   if (state.brokeTurns >= b.brokeTurnsLimit) return { result: 'lose', reason: 'bankrupt' };
-  if (state.ownedChannels.every((ch) => averageTrust(state, c, ch) < b.trustCollapse)) {
-    return { result: 'lose', reason: 'trustCollapse' };
-  }
+  if (averageTrust(state, c) < b.trustCollapse) return { result: 'lose', reason: 'trustCollapse' };
   if (state.turn > b.turnLimit) return { result: 'lose', reason: 'turnLimit' };
   return null;
 }
@@ -152,15 +138,13 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
 
   const turn = state.turn;
   const metricsBefore = state.metrics;
-  const trustBefore = trustSnapshot(state, c);
+  const trustBefore = averageTrust(state, c);
   const moneyBefore = state.money;
   const exposureBefore = state.exposure;
 
   state.lastReactions = {};
   state.exposure = Math.max(0, state.exposure - b.exposureDecay);
-  for (const ch of Object.keys(state.scandal)) {
-    state.scandal[ch] = Math.min(1, state.scandal[ch] + b.scandalRecovery);
-  }
+  state.scandal = Math.min(1, state.scandal + b.scandalRecovery);
 
   const lateExposures = processLateExposures(state, c, rng, mods);
 
@@ -175,16 +159,12 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   verifyNews(state, c, rng, mods, published);
   // Loud framing makes the channel "cry wolf" (CONCEPT.md §4.2); the decay happens now so that
   // next turn's previews show exactly the hype the publications will meet.
-  for (const p of d.publish) state.hype[p.channel] = Math.min(100, (state.hype[p.channel] ?? 0) + b.hypeGain[p.framing]);
-  for (const ch of Object.keys(state.hype)) state.hype[ch] = Math.max(0, state.hype[ch] - b.hypeDecay);
+  const gain = d.publish.reduce((s, p) => s + b.hypeGain[p.framing], 0);
+  state.hype = Math.max(0, Math.min(100, state.hype + gain) - b.hypeDecay);
 
-  const viewSets: Record<ChannelId, Set<number>> = {};
-  for (const n of published) {
-    const set = (viewSets[n.pub.channel] ??= new Set());
-    for (const id of n.viewers) set.add(id);
-  }
+  // Ads pay per view on each channel.
   const views: Record<ChannelId, number> = {};
-  for (const ch of state.ownedChannels) views[ch] = viewSets[ch]?.size ?? 0;
+  for (const ch of state.ownedChannels) views[ch] = published.reduce((s, n) => s + (n.report.byChannel[ch] ?? 0), 0);
   const { income, upkeep } = collectIncome(state, c, views);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
 
@@ -194,8 +174,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   }
   state.topicStreak = streak;
 
-  const held = new Set(d.hold);
-  state.hand = state.hand.filter((x) => held.has(x.uid));
+  state.hand = [];
 
   const notes = startTurn(state, c);
   state.outcome = checkOutcome(state, c);
@@ -209,9 +188,9 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     upkeep,
     moneyDelta: state.money - moneyBefore,
     exposureDelta: state.exposure - exposureBefore,
-    hypeAfter: { ...state.hype },
+    hypeAfter: state.hype,
     trustBefore,
-    trustAfter: trustSnapshot(state, c),
+    trustAfter: averageTrust(state, c),
     metricsBefore,
     metricsAfter: state.metrics,
     events: [...state.todayEvents],

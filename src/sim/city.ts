@@ -12,8 +12,7 @@ import type {
 } from './types';
 
 export function newResident(c: Content, rng: RngState, id: number, group: GroupDef, home: number): Resident {
-  const trust: Record<string, number> = {};
-  for (const ch of c.channels) trust[ch.id] = clamp(ch.baseTrust + (next(rng) - 0.5) * 20, 0, 100);
+  const trust = clamp(c.balance.startTrust + (next(rng) - 0.5) * 20, 0, 100);
   return {
     id,
     group: group.id,

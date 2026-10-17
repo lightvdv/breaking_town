@@ -68,17 +68,19 @@ export interface ChannelDef {
   cost: number;
   upkeep: number;
   baseReach: number;
-  baseTrust: number;
   virality: number;
   adRate: number;
+  /** The highest value among owned channels scales the fact-check risk of every story. */
   exposureRisk: number;
   requires: Requirement | null;
 }
 
 export interface UpgradeEffects {
+  /** reachAdd and interestMul apply to this channel only. */
   channel?: ChannelId;
   reachAdd?: number;
   interestMul?: number;
+  /** Added to every resident's trust in the outlet. */
   trustBonus?: number;
   /** Added to every reporter's luck. */
   reporterLuck?: number;
@@ -173,7 +175,8 @@ export interface Balance {
   eventPreference: number;
   globalInterestMul: number;
   globalEffectMul: number;
-  maxHold: number;
+  /** Initial trust of residents in the outlet (± noise). */
+  startTrust: number;
   /** City blocks per side; each block is a 2×2 lot surrounded by roads. */
   mapBlocks: number;
   /** How many 1×1 buildings share one lot; the rest of the lot is greenery. */
@@ -227,12 +230,10 @@ export interface Balance {
   /** Hype added to a channel per publication, by framing. */
   hypeGain: Triple<number>;
   hypeDecay: number;
-  /** At hype 100: belief drop for all news of the channel / extra drop for loudly framed news. */
+  /** At hype 100: belief drop for all news / extra drop for loudly framed news. */
   hypeBeliefPenalty: number;
   hypeLoudPenalty: number;
   fatiguePerRepeat: number;
-  staleInterestPerTurn: number;
-  minStaleInterest: number;
 
   trustGain: number;
   trustPenaltyMul: number;
@@ -290,7 +291,8 @@ export interface Resident {
   /** Long-term attitude to the city; mood drifts towards it. Bad news people believe lowers it. */
   outlook: number;
   status: 'active' | 'left';
-  trust: Record<ChannelId, number>;
+  /** Trust in the player's outlet, 0..100. */
+  trust: number;
   beliefs: Belief[];
   protestTurns: number;
   /** Building types the resident avoids, with turns remaining. */
@@ -331,9 +333,9 @@ export interface Find {
   forced: boolean;
 }
 
+/** A story goes out on every owned channel at once (CONCEPT.md §3.2). */
 export interface Publication {
   cardUid: number;
-  channel: ChannelId;
   /** Panic (2) is only allowed for stories with a harmful effect. */
   framing: Framing;
   /** Added to the card's baseTruth to get the published truth level. */
@@ -341,15 +343,13 @@ export interface Publication {
 }
 
 export interface Decision {
+  /** Cards not published are discarded at the end of the turn. */
   publish: Publication[];
-  /** Card uids kept for the next turn. Everything else is discarded. */
-  hold: number[];
 }
 
 export interface PendingLie {
   cardUid: number;
   title: string;
-  channel: ChannelId;
   framing: Framing;
   viewers: number[];
   risk: number;
@@ -394,10 +394,10 @@ export interface GameState {
   /** Hired reporter ids, in hiring order. */
   reporters: string[];
   lastFinds: Find[];
-  /** Ad-rate multiplier per channel, drops after a scandal. */
-  scandal: Record<ChannelId, number>;
-  /** "Crying wolf" meter per channel, 0..100: loud framing raises it, it fades over time. */
-  hype: Record<ChannelId, number>;
+  /** Ad-rate multiplier of the outlet, drops after a scandal. */
+  scandal: number;
+  /** "Crying wolf" meter of the outlet, 0..100: loud framing raises it, it fades over time. */
+  hype: number;
   /** Consecutive turns each topic was published, ending last turn. */
   topicStreak: Partial<Record<Topic, number>>;
   pendingLies: PendingLie[];
@@ -415,10 +415,12 @@ export interface GameState {
 export interface PublicationReport {
   cardUid: number;
   title: string;
-  channel: ChannelId;
   truth: TruthLevel;
   framing: Framing;
+  /** Residents who saw the story on at least one channel. */
   reached: number;
+  /** Viewers per channel (a resident may be counted on several channels). */
+  byChannel: Record<ChannelId, number>;
   believed: number;
   doubted: number;
   wordOfMouth: number;
@@ -435,9 +437,9 @@ export interface TurnReport {
   upkeep: number;
   moneyDelta: number;
   exposureDelta: number;
-  hypeAfter: Record<ChannelId, number>;
-  trustBefore: Record<ChannelId, number>;
-  trustAfter: Record<ChannelId, number>;
+  hypeAfter: number;
+  trustBefore: number;
+  trustAfter: number;
   metricsBefore: CityMetrics;
   metricsAfter: CityMetrics;
   events: string[];

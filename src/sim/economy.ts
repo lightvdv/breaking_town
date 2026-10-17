@@ -80,10 +80,8 @@ export function purchase(state: GameState, c: Content, id: string): void {
   if (!option) throw new Error(`Nothing to buy with id ${id}`);
   if (!option.affordable) throw new Error(`Cannot buy ${id} now`);
   state.money -= option.cost;
-  if (option.kind === 'channel') {
-    state.ownedChannels.push(id);
-    state.scandal[id] = 1;
-  } else if (option.kind === 'reporter') state.reporters.push(id);
+  if (option.kind === 'channel') state.ownedChannels.push(id);
+  else if (option.kind === 'reporter') state.reporters.push(id);
   else state.upgrades.push(id);
 }
 
@@ -102,7 +100,7 @@ export function collectIncome(
 ): { income: Record<ChannelId, number>; upkeep: number } {
   const income: Record<ChannelId, number> = {};
   for (const ch of state.ownedChannels) {
-    income[ch] = Math.round((views[ch] ?? 0) * channelOf(c, ch).adRate * state.scandal[ch]);
+    income[ch] = Math.round((views[ch] ?? 0) * channelOf(c, ch).adRate * state.scandal);
   }
   const upkeep = totalUpkeep(state, c);
   state.money += Object.values(income).reduce((s, x) => s + x, 0) - upkeep;

@@ -18,7 +18,7 @@
   "eventPreference": 0.6,
   "globalInterestMul": 1.15,
   "globalEffectMul": 0.6,
-  "maxHold": 2,
+  "startTrust": 45,
   "mapBlocks": 4,
   "smallPerLot": 3,
 
@@ -29,7 +29,7 @@
   "funChance": 0.4,
   "moodBaseline": 0.6,
   "moodRegression": 0.1,
-  "fearPerBelief": 0.27,
+  "fearPerBelief": 0.13,
   "hopePerBelief": 0.015,
   "moodUnemployed": -0.03,
   "moodShop": 0,
@@ -69,8 +69,6 @@
   "hypeBeliefPenalty": 0.3,
   "hypeLoudPenalty": 0.5,
   "fatiguePerRepeat": 0.3,
-  "staleInterestPerTurn": 0.25,
-  "minStaleInterest": 0.25,
 
   "trustGain": 3,
   "trustPenaltyMul": 3,

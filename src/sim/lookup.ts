@@ -3,7 +3,6 @@ import type {
   BuildingType,
   CardTemplate,
   ChannelDef,
-  ChannelId,
   Content,
   GameState,
   GroupDef,
@@ -29,21 +28,22 @@ export function buildingDefOf(c: Content, type: BuildingType): BuildingDef {
   return def;
 }
 
-/** Affinity-weighted average trust of active residents in a channel. */
-export function averageTrust(state: GameState, c: Content, channel: ChannelId): number {
+/** Share of a group that follows at least one owned channel, 0..1. */
+export function coverageOf(state: GameState, group: GroupDef): number {
+  let miss = 1;
+  for (const ch of state.ownedChannels) miss *= 1 - (group.channels[ch] ?? 0);
+  return 1 - miss;
+}
+
+/** Average trust in the outlet, weighted by how much each resident follows the owned channels. */
+export function averageTrust(state: GameState, c: Content): number {
   let sum = 0;
   let weight = 0;
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
-    const w = groupOf(c, r.group).channels[channel] ?? 0;
-    sum += w * r.trust[channel];
+    const w = coverageOf(state, groupOf(c, r.group));
+    sum += w * r.trust;
     weight += w;
   }
   return weight > 0 ? sum / weight : 0;
-}
-
-export function trustSnapshot(state: GameState, c: Content): Record<ChannelId, number> {
-  const out: Record<ChannelId, number> = {};
-  for (const ch of state.ownedChannels) out[ch] = averageTrust(state, c, ch);
-  return out;
 }

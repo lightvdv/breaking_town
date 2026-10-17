@@ -2,11 +2,10 @@
   {
     "id": "newspaper",
     "name": "Газета",
-    "description": "Старт. Пенсионеры и интеллигенция, высокое доверие, медленный охват.",
+    "description": "Старт. Новости читают пенсионеры и интеллигенция.",
     "cost": 0,
     "upkeep": 20,
     "baseReach": 0.6,
-    "baseTrust": 45,
     "virality": 0.1,
     "adRate": 3.5,
     "exposureRisk": 0.8,
@@ -15,40 +14,43 @@
   {
     "id": "radio",
     "name": "Радио",
-    "description": "Рабочие. Средний охват, недорогое содержание.",
+    "description": "Новости начинают слышать рабочие. Недорогое содержание.",
     "cost": 400,
     "upkeep": 40,
     "baseReach": 0.6,
-    "baseTrust": 40,
     "virality": 0.2,
     "adRate": 2.2,
     "exposureRisk": 1,
-    "requires": { "upgrade": "newspaper_quality_1" }
+    "requires": {
+      "upgrade": "newspaper_quality_1"
+    }
   },
   {
     "id": "tv",
     "name": "ТВ",
-    "description": "Все группы. Большой охват, дорогое содержание.",
+    "description": "Новости видят все группы. Большой охват, дорогое содержание.",
     "cost": 1500,
     "upkeep": 120,
     "baseReach": 0.8,
-    "baseTrust": 50,
     "virality": 0.3,
     "adRate": 2.8,
     "exposureRisk": 1,
-    "requires": { "channel": "radio" }
+    "requires": {
+      "channel": "radio"
+    }
   },
   {
     "id": "social",
     "name": "Соцсети",
-    "description": "Молодёжь. Вирусный охват, низкое доверие, высокий риск разоблачения.",
+    "description": "Новости доходят до молодёжи и расходятся вирусно. Повышает риск разоблачения всех новостей.",
     "cost": 1200,
     "upkeep": 60,
     "baseReach": 0.4,
-    "baseTrust": 30,
     "virality": 1.2,
     "adRate": 1.4,
     "exposureRisk": 1.5,
-    "requires": { "channel": "tv" }
+    "requires": {
+      "channel": "tv"
+    }
   }
 ]

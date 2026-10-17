@@ -2,7 +2,7 @@
   {
     "id": "newspaper_quality_1",
     "name": "Цветная печать",
-    "description": "Газета: +20% интересности, +5 к доверию.",
+    "description": "Газета: +20% интересности новостей в этом канале, +5 к доверию к СМИ.",
     "cost": 150,
     "requires": null,
     "effects": { "channel": "newspaper", "interestMul": 1.2, "trustBonus": 5 }
@@ -18,7 +18,7 @@
   {
     "id": "newspaper_quality_2",
     "name": "Колумнист с именем",
-    "description": "Газета: +20% интересности, +5 к доверию.",
+    "description": "Газета: +20% интересности новостей в этом канале, +5 к доверию к СМИ.",
     "cost": 400,
     "requires": { "upgrade": "newspaper_quality_1" },
     "effects": { "channel": "newspaper", "interestMul": 1.2, "trustBonus": 5 }
@@ -34,7 +34,7 @@
   {
     "id": "radio_quality_1",
     "name": "Харизматичный ведущий",
-    "description": "Радио: +25% интересности, +5 к доверию.",
+    "description": "Радио: +25% интересности новостей в этом канале, +5 к доверию к СМИ.",
     "cost": 450,
     "requires": null,
     "effects": { "channel": "radio", "interestMul": 1.25, "trustBonus": 5 }
@@ -42,7 +42,7 @@
   {
     "id": "tv_studio",
     "name": "Новая студия",
-    "description": "ТВ: +20% интересности, +5 к доверию.",
+    "description": "ТВ: +20% интересности новостей в этом канале, +5 к доверию к СМИ.",
     "cost": 900,
     "requires": null,
     "effects": { "channel": "tv", "interestMul": 1.2, "trustBonus": 5 }

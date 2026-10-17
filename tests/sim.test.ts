@@ -38,9 +38,8 @@ function simpleDecision(state: GameState, distortion: 'none' | 'max', framing: 0
       const d = distortion === 'max' ? maxDistortion(c) : 0;
       // Panic is only allowed for harmful stories.
       const harmful = isHarmful(templateOf(content, c.templateId).effects[cardTruth(c, d)]);
-      return { cardUid: c.uid, channel: 'newspaper', framing: framing === 2 && !harmful ? 1 : framing, distortion: d };
+      return { cardUid: c.uid, framing: framing === 2 && !harmful ? 1 : framing, distortion: d };
     }),
-    hold: [],
   };
 }
 
@@ -114,55 +113,63 @@ describe('game', () => {
     const d: Decision = {
       publish: s.hand.slice(0, 1).map((c) => ({
         cardUid: c.uid,
-        channel: 'newspaper',
         framing: 0,
         distortion: 0,
       })),
-      hold: [],
     };
     expect(() => playTurn(s, c0, d)).toThrow(/at most/);
   });
 
-  it('rejects channels the player does not own', () => {
-    const s = createGame(content, 1);
-    const d: Decision = {
-      publish: [{ cardUid: s.hand[0].uid, channel: 'tv', framing: 0, distortion: 0 }],
-      hold: [],
-    };
-    expect(() => playTurn(s, content, d)).toThrow(/not owned/);
-  });
-
-  it('keeps held cards for the next turn', () => {
+  it('discards cards that were not published', () => {
     const s = createGame(content, 5);
-    const keep = s.hand[0].uid;
-    playTurn(s, content, { publish: [], hold: [keep] });
-    expect(s.hand.some((c) => c.uid === keep)).toBe(true);
+    const old = new Set(s.hand.map((c) => c.uid));
+    playTurn(s, content, { publish: [] });
+    expect(s.hand.some((c) => old.has(c.uid))).toBe(false);
+  });
+});
+
+describe('channels', () => {
+  it('a story goes out on every owned channel, so buying one widens the reach', () => {
+    const s = createGame(content, 6);
+    const pub = { cardUid: s.hand[0].uid, framing: 0 as const, distortion: 0 };
+    const before = previewPublication(s, content, getModifiers(s, content), pub).reachChance;
+    s.money = 10_000;
+    purchase(s, content, 'newspaper_quality_1');
+    purchase(s, content, 'radio');
+    const after = previewPublication(s, content, getModifiers(s, content), pub).reachChance;
+    expect(after).toBeGreaterThan(before);
+    const report = playTurn(s, content, { publish: [pub] });
+    expect(Object.keys(report.publications[0].byChannel).sort()).toEqual(['newspaper', 'radio']);
+    expect(report.views.radio).toBeGreaterThanOrEqual(0);
   });
 });
 
 describe('trust', () => {
   it('true news is never exposed and builds trust', () => {
     const s = createGame(content, 11);
-    const before = averageTrust(s, content, 'newspaper');
+    const before = averageTrust(s, content);
     for (let i = 0; i < 6; i++) {
       const report = playTurn(s, content, simpleDecision(s, 'none'));
       expect(report.publications.every((p) => !p.exposed)).toBe(true);
     }
-    expect(averageTrust(s, content, 'newspaper')).toBeGreaterThan(before);
+    expect(averageTrust(s, content)).toBeGreaterThan(before);
     expect(s.exposure).toBe(0);
   });
 
   it('caught lies cost trust, ad income and fill the exposure meter', () => {
     const c = withBalance({ checkerBase: 10 });
-    const s = createGame(c, 11);
-    const before = averageTrust(s, c, 'newspaper');
-    const report = playTurn(s, c, simpleDecision(s, 'max', 2));
-    const lies = report.publications.filter((p) => p.truth > 0);
-    expect(lies.length).toBeGreaterThan(0);
-    expect(lies.every((p) => p.exposed)).toBe(true);
-    expect(averageTrust(s, c, 'newspaper')).toBeLessThan(before);
-    expect(s.exposure).toBeGreaterThan(0);
-    expect(s.scandal.newspaper).toBeLessThan(1);
+    // Fact-check chance is capped at 95%, so look at the first game where a lie got caught.
+    for (let seed = 11; seed < 31; seed++) {
+      const s = createGame(c, seed);
+      const before = averageTrust(s, c);
+      const report = playTurn(s, c, simpleDecision(s, 'max', 2));
+      if (!report.publications.some((p) => p.exposed)) continue;
+      expect(averageTrust(s, c)).toBeLessThan(before);
+      expect(s.exposure).toBeGreaterThan(0);
+      expect(s.scandal).toBeLessThan(1);
+      return;
+    }
+    throw new Error('no lie was ever exposed');
   });
 });
 
@@ -178,7 +185,7 @@ describe('reporters', () => {
         const found = s.lastFinds.filter((f) => f.cardUid !== null).length;
         expect(found).toBeGreaterThanOrEqual(unlucky.balance.minFinds);
         expect(found).toBeLessThanOrEqual(s.reporters.length);
-        playTurn(s, unlucky, { publish: [], hold: [] });
+        playTurn(s, unlucky, { publish: [] });
       }
     }
   });
@@ -188,7 +195,7 @@ describe('reporters', () => {
     s.money = 10_000;
     for (const id of ['gusev', 'volkova', 'kim', 'zaitsev']) purchase(s, content, id);
     expect(s.reporters.length).toBe(content.balance.maxReporters);
-    playTurn(s, content, { publish: [], hold: [] });
+    playTurn(s, content, { publish: [] });
     for (const f of s.lastFinds.filter((x) => x.forced)) expect(f.tier).toBe(0);
     for (const card of s.hand) expect(s.reporters).toContain(card.reporterId);
     expect(s.hand.length).toBeLessThanOrEqual(content.balance.maxReporters);
@@ -233,25 +240,25 @@ describe('framing', () => {
 
   it('rejects panic for a story without a harmful effect', () => {
     const s = gameWith('celebrity');
-    expect(() => playTurn(s, content, { publish: [{ cardUid: 999, channel: 'newspaper', framing: 2, distortion: 0 }], hold: [] })).toThrow(
+    expect(() => playTurn(s, content, { publish: [{ cardUid: 999, framing: 2, distortion: 0 }] })).toThrow(
       /Panic/,
     );
   });
 
   it('loud framing raises hype, and hype fades', () => {
     const s = gameWith('factory_sold');
-    playTurn(s, content, { publish: [{ cardUid: 999, channel: 'newspaper', framing: 2, distortion: 0 }], hold: [] });
+    playTurn(s, content, { publish: [{ cardUid: 999, framing: 2, distortion: 0 }] });
     const { hypeGain, hypeDecay } = content.balance;
-    expect(s.hype.newspaper).toBe(hypeGain[2] - hypeDecay);
-    playTurn(s, content, { publish: [], hold: [] });
-    expect(s.hype.newspaper).toBe(hypeGain[2] - 2 * hypeDecay);
+    expect(s.hype).toBe(hypeGain[2] - hypeDecay);
+    playTurn(s, content, { publish: [] });
+    expect(s.hype).toBe(hypeGain[2] - 2 * hypeDecay);
   });
 
   it('hype weakens loud framing and belief', () => {
     const s = gameWith('factory_sold');
-    const pub = { cardUid: 999, channel: 'newspaper', framing: 2 as const, distortion: 0 };
+    const pub = { cardUid: 999, framing: 2 as const, distortion: 0 };
     const calm = previewPublication(s, content, getModifiers(s, content), pub);
-    s.hype.newspaper = 100;
+    s.hype = 100;
     const hyped = previewPublication(s, content, getModifiers(s, content), pub);
     expect(hyped.interest).toBeLessThan(calm.interest);
     expect(hyped.credibility).toBeLessThan(calm.credibility);
@@ -281,8 +288,8 @@ describe('outcome', () => {
   it('ends the game at the turn limit', () => {
     const c = withBalance({ turnLimit: 3 });
     const s = createGame(c, 2);
-    while (!s.outcome) playTurn(s, c, { publish: [], hold: [] });
+    while (!s.outcome) playTurn(s, c, { publish: [] });
     expect(s.turn).toBeLessThanOrEqual(4);
-    expect(() => playTurn(s, c, { publish: [], hold: [] })).toThrow(/over/);
+    expect(() => playTurn(s, c, { publish: [] })).toThrow(/over/);
   });
 });

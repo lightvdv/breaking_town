@@ -12,6 +12,7 @@ import type {
   GameState,
   Publication,
   PublicationReport,
+  Reaction,
   Resident,
   TruthLevel,
 } from './types';
@@ -171,6 +172,14 @@ function applyEffect(
   }
 }
 
+const reactionPriority: Record<Reaction, number> = { doubted: 1, happy: 2, scared: 2, talk: 3, outraged: 4 };
+
+/** Keeps the most telling reaction when several news reach the same resident in one turn. */
+function setReaction(state: GameState, id: number, reaction: Reaction): void {
+  const current = state.lastReactions[id];
+  if (!current || reactionPriority[reaction] >= reactionPriority[current]) state.lastReactions[id] = reaction;
+}
+
 /** A publication after it went out: who saw it and who believed it. */
 export interface PublishedNews {
   pub: Publication;
@@ -217,11 +226,11 @@ export function publish(
   const consider = (r: Resident, factor: number): boolean => {
     heard.add(r.id);
     if (!chance(rng, beliefChance(state, c, mods, r, tpl, truth, pub) * factor)) {
-      if (state.lastReactions[r.id] !== 'believed') state.lastReactions[r.id] = 'doubted';
+      setReaction(state, r.id, 'doubted');
       report.doubted++;
       return false;
     }
-    state.lastReactions[r.id] = 'believed';
+    setReaction(state, r.id, effect?.type === 'moodUp' ? 'happy' : 'scared');
     report.believed++;
     r.beliefs.push({ cardUid: card.uid, title, turn: state.turn });
     if (r.beliefs.length > b.maxBeliefs) r.beliefs.shift();
@@ -251,6 +260,7 @@ export function publish(
     const candidate = state.residents[int(rng, state.residents.length)];
     if (candidate.status !== 'active' || heard.has(candidate.id)) continue;
     report.wordOfMouth++;
+    setReaction(state, believers[i].id, 'talk');
     consider(candidate, b.wordOfMouthFactor);
   }
 
@@ -271,8 +281,10 @@ export function exposeNews(
   const viewerSet = new Set(viewers);
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
-    if (viewerSet.has(r.id)) r.trust[channel] = clamp(r.trust[channel] - penalty, 0, 100);
-    else if ((groupOf(c, r.group).channels[channel] ?? 0) > 0) {
+    if (viewerSet.has(r.id)) {
+      r.trust[channel] = clamp(r.trust[channel] - penalty, 0, 100);
+      setReaction(state, r.id, 'outraged');
+    } else if ((groupOf(c, r.group).channels[channel] ?? 0) > 0) {
       r.trust[channel] = clamp(r.trust[channel] - penalty * b.trustPenaltyBystanderShare, 0, 100);
     }
     r.beliefs = r.beliefs.filter((x) => x.cardUid !== cardUid);

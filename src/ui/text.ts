@@ -1,4 +1,12 @@
-import { buildingDefOf, type CardEffect, type Content, type EffectType, type Outcome, type Topic } from '../sim';
+import { buildingDefOf, type CardEffect, type Content, type EffectType, type Outcome, type Reaction, type Topic } from '../sim';
+
+export const reactionLabels: Record<Reaction, string> = {
+  scared: 'поверил плохому',
+  happy: 'поверил хорошему',
+  doubted: 'не поверил',
+  talk: 'пересказывает',
+  outraged: 'возмущён разоблачением',
+};
 
 export const truthLabels = ['Правда', 'Полуправда', 'Ложь'];
 export const framingLabels = ['Нейтрально', 'Сенсация', 'Паника'];

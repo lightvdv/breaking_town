@@ -20,12 +20,6 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = 
   return e;
 }
 
-export function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Attrs = {}, ...children: Child[]): SVGElementTagNameMap[K] {
-  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
-  apply(e, attrs, children);
-  return e;
-}
-
 export function select(
   options: { value: string; label: string }[],
   value: string,

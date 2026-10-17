@@ -1,3 +1,4 @@
+import { lotsNeeded } from './map';
 import type { Content } from './types';
 
 /** Returns a list of problems in the content files; empty when everything is consistent. */
@@ -22,6 +23,10 @@ export function validateContent(c: Content): string[] {
   const shares = c.groups.reduce((s, g) => s + g.share, 0);
   if (Math.abs(shares - 1) > 0.01) errors.push(`group shares sum to ${shares}, expected 1`);
   if (!c.channels.some((ch) => ch.cost === 0 && ch.requires === null)) errors.push('no free starting channel');
+  const lots = c.balance.mapBlocks * c.balance.mapBlocks;
+  if (lotsNeeded(c) > lots) errors.push(`buildings need ${lotsNeeded(c)} lots, the map has ${lots}`);
+  for (const b of c.buildings) if (b.size !== 1 && b.size !== 2) errors.push(`building ${b.type}: size must be 1 or 2`);
+  if (c.balance.smallPerLot < 1 || c.balance.smallPerLot > 4) errors.push('smallPerLot must be 1..4');
 
   for (const g of c.groups) {
     for (const ch of Object.keys(g.channels)) if (!channelIds.has(ch)) errors.push(`group ${g.id}: unknown channel ${ch}`);

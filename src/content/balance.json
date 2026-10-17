@@ -7,7 +7,8 @@
   "handSize": 5,
   "publishPerTurn": 2,
   "maxHold": 2,
-  "gridColumns": 7,
+  "mapBlocks": 4,
+  "smallPerLot": 3,
 
   "wage": 10,
   "benefit": 3,

@@ -1,8 +1,11 @@
+import { CityScene, REACTION_ICON, type HoverTarget } from '../render/scene';
 import {
   averageTrust,
+  buildingDefOf,
   channelOf,
   createGame,
   getModifiers,
+  groupOf,
   listPurchases,
   maxDistortion,
   playTurn,
@@ -15,9 +18,10 @@ import {
   type Decision,
   type Framing,
   type GameState,
+  type Reaction,
+  type Requirement,
   type TurnReport,
 } from '../sim';
-import { renderCity } from './cityView';
 import { h, pct, select } from './dom';
 import {
   distortionLabels,
@@ -25,6 +29,7 @@ import {
   effectText,
   framingLabels,
   outcomeText,
+  reactionLabels,
   topicLabels,
   truthLabels,
 } from './text';
@@ -38,16 +43,68 @@ interface Draft {
   distortion: number;
 }
 
+type Tab = 'issue' | 'shop' | 'report';
+
+const REACTION_SECONDS = 2.6;
+const assetBase = `${import.meta.env.BASE_URL}assets/`;
+
 function seedFromUrl(): number {
   const s = Number(new URLSearchParams(location.search).get('seed'));
-  return Number.isFinite(s) && s > 0 ? s : Math.floor(Math.random() * 1_000_000) + 1;
+  return Number.isFinite(s) && s > 0 ? s : randomSeed();
+}
+
+function randomSeed(): number {
+  return Math.floor(Math.random() * 1_000_000) + 1;
 }
 
 export function mountApp(root: HTMLElement, c: Content): void {
   let state: GameState = createGame(c, seedFromUrl());
   let drafts = new Map<number, Draft>();
   let report: TurnReport | null = null;
+  let tab: Tab = 'issue';
   let error = '';
+  let busy = false;
+  let scene: CityScene | null = null;
+
+  // Persistent shell: the city canvas is created once and never re-rendered by the DOM.
+  const hud = h('header', { class: 'hud' });
+  const cityHost = h('div', { class: 'city-host' });
+  const cityEvents = h('div', { class: 'city-events' });
+  const loading = h('div', { class: 'city-loading' }, 'Строим город…');
+  const tools = h(
+    'div',
+    { class: 'city-tools' },
+    h('button', { class: 'icon-btn', title: 'Приблизить', onclick: () => scene?.zoomBy(1) }, '+'),
+    h('button', { class: 'icon-btn', title: 'Отдалить', onclick: () => scene?.zoomBy(-1) }, '−'),
+    h('button', { class: 'icon-btn', title: 'Весь город', onclick: () => scene?.resetView() }, '⌂'),
+  );
+  const legend = h(
+    'div',
+    { class: 'city-legend' },
+    ...(Object.keys(REACTION_ICON) as Reaction[]).map((r) =>
+      h('span', {}, h('img', { src: `${assetBase}sprites/fx/${REACTION_ICON[r]}.png`, alt: '' }), reactionLabels[r]),
+    ),
+  );
+  const sidebar = h('aside', { class: 'sidebar' });
+  const tooltip = h('div', { class: 'tooltip', hidden: true });
+  const modal = h('div', { class: 'modal-layer' });
+  root.replaceChildren(
+    hud,
+    h('div', { class: 'layout' }, h('section', { class: 'city' }, cityHost, cityEvents, tools, legend, loading), sidebar),
+    tooltip,
+    modal,
+  );
+
+  CityScene.create(cityHost, c, state, showTooltip)
+    .then((s) => {
+      scene = s;
+      loading.remove();
+    })
+    .catch((e) => {
+      loading.textContent = `Не удалось загрузить графику: ${e instanceof Error ? e.message : e}`;
+    });
+
+  // ---------- Actions ----------
 
   const draftOf = (card: CardInstance): Draft => {
     let d = drafts.get(card.uid);
@@ -60,10 +117,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
   };
 
   const newGame = () => {
-    state = createGame(c, Math.floor(Math.random() * 1_000_000) + 1);
+    state = createGame(c, randomSeed());
     drafts = new Map();
     report = null;
+    tab = 'issue';
     error = '';
+    busy = false;
+    scene?.setState(state, false);
+    scene?.resetView();
     render();
   };
 
@@ -87,73 +148,127 @@ export function mountApp(root: HTMLElement, c: Content): void {
       const kept = new Set(decision.hold);
       for (const uid of [...drafts.keys()]) if (!kept.has(uid)) drafts.delete(uid);
       for (const uid of kept) drafts.get(uid)!.hold = false;
+      scene?.setState(state, true);
+      busy = true;
+      render();
+      // Let the city react first (CONCEPT.md §7.3), then show the report.
+      window.setTimeout(() => {
+        busy = false;
+        tab = 'report';
+        render();
+      }, REACTION_SECONDS * 1000);
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
+      render();
     }
-    render();
   };
 
   const buy = (id: string) => {
     try {
       purchase(state, c, id);
       error = '';
+      scene?.setState(state, false);
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
     render();
   };
 
-  function header(): HTMLElement {
+  // ---------- Tooltip ----------
+
+  function showTooltip(t: HoverTarget | null): void {
+    if (!t) {
+      tooltip.hidden = true;
+      return;
+    }
+    const lines: (HTMLElement | string)[] = [];
+    if (t.kind === 'resident') {
+      const r = state.residents[t.id];
+      if (!r) return;
+      lines.push(
+        h('strong', {}, groupOf(c, r.group).name),
+        h('span', {}, `Настроение: ${pct(r.mood)} · настрой: ${pct(r.outlook)}`),
+        h('span', {}, `Работа: ${r.job === null ? 'нет' : buildingDefOf(c, state.buildings[r.job].type).name}`),
+        h('span', {}, `Доверие: ${state.ownedChannels.map((ch) => `${channelOf(c, ch).name} ${Math.round(r.trust[ch])}`).join(', ')}`),
+      );
+      if (r.status === 'left') lines.push(h('span', { class: 'bad' }, 'Уезжает из города'));
+      if (r.protestTurns > 0) lines.push(h('span', { class: 'bad' }, 'Протестует'));
+      if (r.beliefs.length) {
+        lines.push(h('span', { class: 'muted' }, 'Верит:'), ...r.beliefs.slice(-3).map((b) => h('span', {}, `• ${b.title}`)));
+      }
+    } else {
+      const b = state.buildings[t.id];
+      const workers = state.residents.filter((r) => r.status === 'active' && r.job === b.id).length;
+      const residents = state.residents.filter((r) => r.status === 'active' && r.home === b.id).length;
+      lines.push(h('strong', {}, buildingDefOf(c, b.type).name));
+      if (b.type === 'home') lines.push(h('span', {}, residents ? `Жильцов: ${residents}` : 'Дом опустел'));
+      else {
+        lines.push(h('span', {}, `Работников: ${workers} из ${b.jobs}`));
+        lines.push(h('span', { class: b.open ? '' : 'bad' }, b.open ? 'Работает' : 'Закрыто'));
+      }
+    }
+    tooltip.replaceChildren(...lines);
+    tooltip.hidden = false;
+    const x = Math.min(t.clientX + 14, window.innerWidth - tooltip.offsetWidth - 8);
+    const y = Math.min(t.clientY + 14, window.innerHeight - tooltip.offsetHeight - 8);
+    tooltip.style.transform = `translate(${x}px, ${y}px)`;
+  }
+
+  // ---------- Rendering ----------
+
+  function meter(value: number, cls = ''): HTMLElement {
+    return h('div', { class: `meter ${cls}` }, h('div', { style: `width:${pct(Math.max(0, Math.min(1, value)))}` }));
+  }
+
+  function renderHud(): void {
     const b = c.balance;
     const m = state.metrics;
-    const stat = (label: string, value: string, warn = false) =>
-      h('div', { class: `stat${warn ? ' warn' : ''}` }, h('span', {}, label), h('strong', {}, value));
-    return h(
-      'header',
-      {},
-      h('h1', {}, 'News Fights'),
+    const exposureShare = state.exposure / b.exposureLimit;
+    const upkeep = totalUpkeep(state, c);
+    hud.replaceChildren(
+      h('div', { class: 'brand' }, 'NEWS FIGHTS'),
       h(
         'div',
         { class: 'stats' },
-        stat('Ход', `${Math.min(state.turn, b.turnLimit)} / ${b.turnLimit}`),
-        stat('Деньги', `${state.money}`, state.money < 0),
-        stat('Расходы за ход', `${totalUpkeep(state, c)}`),
-        stat('Разоблачения', `${Math.round(state.exposure)} / ${b.exposureLimit}`, state.exposure > b.exposureLimit * 0.6),
-        stat('Индекс города', `${Math.round(m.cityIndex)} (цель < ${b.winCityIndex})`),
+        h('div', { class: 'stat' }, h('span', {}, 'Ход'), h('b', {}, `${Math.min(state.turn, b.turnLimit)} / ${b.turnLimit}`)),
+        h(
+          'div',
+          { class: `stat ${state.money < 0 ? 'bad' : ''}` },
+          h('span', {}, 'Деньги'),
+          h('b', {}, `${state.money}`),
+          h('small', {}, `−${upkeep}/ход`),
+        ),
+        h(
+          'div',
+          { class: `stat ${exposureShare > 0.6 ? 'bad' : ''}` },
+          h('span', {}, 'Разоблачения'),
+          meter(exposureShare, exposureShare > 0.6 ? 'danger' : 'warn'),
+          h('small', {}, `${Math.round(state.exposure)} / ${b.exposureLimit}`),
+        ),
+        h(
+          'div',
+          { class: 'stat' },
+          h('span', {}, 'Индекс города'),
+          h('b', {}, `${Math.round(m.cityIndex)}`),
+          h('small', {}, `цель < ${b.winCityIndex}`),
+        ),
+        h(
+          'div',
+          { class: 'stat trust' },
+          h('span', {}, 'Доверие'),
+          ...state.ownedChannels.map((ch) =>
+            h('div', { class: 'trust-row' }, h('small', {}, channelOf(c, ch).name), meter(averageTrust(state, c, ch) / 100, 'ok')),
+          ),
+        ),
       ),
-      h('button', { class: 'ghost', onclick: newGame }, 'Новая игра'),
+      h('button', { class: 'ghost small', onclick: newGame }, 'Новая игра'),
     );
   }
 
-  function cityPanel(): HTMLElement {
-    const m = state.metrics;
-    const bar = (label: string, v: number) =>
-      h('div', { class: 'bar' }, h('span', {}, label), h('div', { class: 'track' }, h('div', { class: 'fill', style: `width:${pct(v)}` })), h('em', {}, pct(v)));
-    const trust = state.ownedChannels.map((ch) => bar(`Доверие: ${channelOf(c, ch).name}`, averageTrust(state, c, ch) / 100));
-    return h(
-      'section',
-      { class: 'panel city-panel' },
-      renderCity(state, c),
-      h(
-        'div',
-        { class: 'legend' },
-        ...c.groups.map((g) => h('span', {}, h('i', { style: `background:${g.color}` }), g.name)),
-        h('span', {}, h('i', { class: 'ring believed' }), 'поверил'),
-        h('span', {}, h('i', { class: 'ring doubted' }), 'не поверил'),
-      ),
-      h(
-        'div',
-        { class: 'bars' },
-        bar('Население', m.population),
-        bar('Занятость', m.employment),
-        bar('Экономика', m.economy),
-        bar('Настроение', m.mood),
-        bar('Порядок', m.order),
-        ...trust,
-      ),
-      state.todayEvents.length
-        ? h('div', { class: 'events' }, h('h3', {}, 'События дня'), h('ul', {}, ...state.todayEvents.map((e) => h('li', {}, e))))
-        : null,
+  function renderCityEvents(): void {
+    cityEvents.replaceChildren(
+      h('div', { class: 'day' }, `День ${state.turn}`),
+      ...state.todayEvents.map((e) => h('div', { class: 'event' }, `• ${e}`)),
     );
   }
 
@@ -179,29 +294,23 @@ export function mountApp(root: HTMLElement, c: Content): void {
       value: String(i),
       label: `${distortionLabels[i === 0 ? 0 : card.baseTruth + i]} → ${truthLabels[card.baseTruth + i]}`,
     }));
+    const stat = (label: string, v: number, cls: string) =>
+      h('div', { class: 'card-stat' }, h('span', {}, label), meter(v, cls), h('em', {}, pct(v)));
 
     return h(
       'article',
-      { class: `card truth-${p.truth}${d.publish ? ' selected' : ''}` },
+      { class: `card truth-${p.truth}${d.publish ? ' selected' : ''}${d.hold ? ' held' : ''}` },
       h(
         'div',
-        { class: 'card-top' },
-        h('span', { class: 'badge' }, truthLabels[p.truth]),
-        h('span', { class: 'topic' }, topicLabels[tpl.topic]),
-        tpl.source === 'event' ? h('span', { class: 'topic' }, 'событие') : h('span', { class: 'topic' }, 'слух'),
+        { class: 'card-band' },
+        h('b', {}, truthLabels[p.truth].toUpperCase()),
+        h('span', {}, `${topicLabels[tpl.topic]} · ${tpl.source === 'event' ? 'событие' : 'слух'}`),
       ),
       h('h3', {}, p.title),
       h('p', { class: 'effect' }, effectText(c, p.effect)),
-      h(
-        'dl',
-        {},
-        h('dt', {}, 'Интерес'),
-        h('dd', {}, pct(p.interest)),
-        h('dt', {}, 'Охват'),
-        h('dd', {}, pct(p.reachChance)),
-        h('dt', {}, 'Риск разоблачения'),
-        h('dd', {}, pct(p.exposureRisk)),
-      ),
+      stat('Интерес', p.interest, 'ok'),
+      stat('Охват', p.reachChance, 'ok'),
+      stat('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
       h(
         'div',
         { class: 'controls' },
@@ -242,14 +351,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
         { class: 'card-actions' },
         h(
           'button',
-          { class: d.publish ? 'primary' : '', disabled: limitReached, onclick: () => update({ publish: !d.publish }) },
+          { class: d.publish ? 'primary' : '', disabled: limitReached || busy, onclick: () => update({ publish: !d.publish }) },
           d.publish ? 'В выпуске ✓' : 'В выпуск',
         ),
         h(
           'button',
           {
             class: d.hold ? 'primary' : 'ghost',
-            disabled: !d.hold && (d.publish || holdCount >= c.balance.maxHold),
+            disabled: busy || (!d.hold && (d.publish || holdCount >= c.balance.maxHold)),
             onclick: () => update({ hold: !d.hold }),
           },
           d.hold ? 'Придержана ✓' : 'Придержать',
@@ -258,106 +367,184 @@ export function mountApp(root: HTMLElement, c: Content): void {
     );
   }
 
-  function handPanel(): HTMLElement {
+  function issueTab(): HTMLElement[] {
     const mods = getModifiers(state, c);
     const publishedCount = state.hand.filter((x) => drafts.get(x.uid)?.publish).length;
-    return h(
-      'section',
-      { class: 'panel' },
+    return [
       h(
-        'div',
-        { class: 'panel-head' },
-        h('h2', {}, 'Новости хода'),
-        h('span', { class: 'muted' }, `В выпуске ${publishedCount} / ${mods.publishPerTurn} · придержать можно ${c.balance.maxHold}`),
-        h('button', { class: 'primary', onclick: endTurn, disabled: !!state.outcome }, 'Опубликовать и завершить ход'),
+        'p',
+        { class: 'hint' },
+        `Выберите до ${mods.publishPerTurn} новостей для выпуска. Неиспользованные карты сгорят, придержать можно ${c.balance.maxHold}.`,
       ),
-      error ? h('p', { class: 'error' }, error) : null,
-      h('div', { class: 'cards' }, ...state.hand.map((card) => cardView(card, mods, publishedCount))),
-    );
+      ...state.hand.map((card) => cardView(card, mods, publishedCount)),
+    ];
   }
 
-  function shopPanel(): HTMLElement {
-    const options = listPurchases(state, c).filter((p) => p.unlocked);
-    return h(
-      'section',
-      { class: 'panel' },
-      h('h2', {}, 'Покупки'),
-      h(
+  function requirementText(req: Requirement | null, channel?: string): string {
+    const parts: string[] = [];
+    if (req?.channel) parts.push(channelOf(c, req.channel).name);
+    if (req?.upgrade) parts.push(c.upgrades.find((u) => u.id === req.upgrade)?.name ?? req.upgrade);
+    if (channel && !state.ownedChannels.includes(channel)) parts.push(channelOf(c, channel).name);
+    return parts.length ? `Нужно: ${parts.join(', ')}` : '';
+  }
+
+  function shopTab(): HTMLElement[] {
+    const options = listPurchases(state, c);
+    const item = (o: (typeof options)[number]) => {
+      const def = o.kind === 'channel' ? c.channels.find((x) => x.id === o.id) : c.upgrades.find((x) => x.id === o.id);
+      const req =
+        o.kind === 'channel'
+          ? requirementText(c.channels.find((x) => x.id === o.id)?.requires ?? null)
+          : requirementText(c.upgrades.find((x) => x.id === o.id)?.requires ?? null, c.upgrades.find((x) => x.id === o.id)?.effects.channel);
+      return h(
         'div',
-        { class: 'shop' },
-        ...options.map((p) =>
-          h(
-            'div',
-            { class: 'shop-item' },
-            h('div', {}, h('strong', {}, `${p.kind === 'channel' ? 'Канал: ' : ''}${p.name}`), h('p', { class: 'muted' }, p.description)),
-            h('button', { disabled: !p.affordable || !!state.outcome, onclick: () => buy(p.id) }, `${p.cost}`),
-          ),
+        { class: `shop-item${o.unlocked ? '' : ' locked'}` },
+        h('div', {}, h('strong', {}, o.name), h('p', {}, def?.description ?? ''), !o.unlocked ? h('p', { class: 'req' }, req) : null),
+        h(
+          'button',
+          { class: o.affordable ? 'primary' : '', disabled: !o.affordable || !!state.outcome, onclick: () => buy(o.id) },
+          `${o.cost}`,
         ),
-      ),
-    );
+      );
+    };
+    const channels = options.filter((o) => o.kind === 'channel');
+    const upgrades = options.filter((o) => o.kind === 'upgrade').sort((a, b) => Number(b.unlocked) - Number(a.unlocked));
+    return [
+      h('p', { class: 'hint' }, `У вас ${state.money}. Содержание каналов: ${totalUpkeep(state, c)} за ход.`),
+      ...(channels.length ? [h('h3', { class: 'section' }, 'Каналы'), ...channels.map(item)] : []),
+      h('h3', { class: 'section' }, 'Улучшения'),
+      ...upgrades.map(item),
+    ];
   }
 
-  function reportPanel(): HTMLElement | null {
-    if (!report) return null;
+  function reportTab(): HTMLElement[] {
+    const m = state.metrics;
+    const bar = (label: string, v: number) => h('div', { class: 'card-stat' }, h('span', {}, label), meter(v, 'ok'), h('em', {}, pct(v)));
+    const out: HTMLElement[] = [
+      h('h3', { class: 'section' }, 'Состояние города'),
+      bar('Население', m.population),
+      bar('Занятость', m.employment),
+      bar('Экономика', m.economy),
+      bar('Настроение', m.mood),
+      bar('Порядок', m.order),
+    ];
+    if (!report) {
+      out.push(h('p', { class: 'hint' }, 'Итоги появятся после первого хода.'));
+      return out;
+    }
     const r = report;
     const delta = (a: number, b: number) => {
       const d = Math.round(b - a);
-      return d === 0 ? '0' : d > 0 ? `+${d}` : `${d}`;
+      return d > 0 ? `+${d}` : `${d}`;
     };
-    const income = Object.entries(r.income)
-      .map(([ch, v]) => `${channelOf(c, ch).name}: ${v} (${r.views[ch] ?? 0} просм.)`)
-      .join(', ');
-    return h(
-      'section',
-      { class: 'panel report' },
-      h('h2', {}, `Итоги хода ${r.turn}`),
-      h(
-        'ul',
-        {},
-        ...r.publications.map((p) =>
-          h(
-            'li',
-            { class: p.exposed ? 'exposed' : '' },
-            h('strong', {}, `«${p.title}»`),
-            ` — ${channelOf(c, p.channel).name}, ${truthLabels[p.truth].toLowerCase()}: увидели ${p.reached}, поверили ${p.believed}, не поверили ${p.doubted}, пересказали ${p.wordOfMouth}. `,
-            Object.entries(p.effects)
-              .map(([k, v]) => `${effectLabels[k as keyof typeof effectLabels]}: ${v}`)
-              .join(', '),
-            p.exposed ? h('b', {}, ' РАЗОБЛАЧЕНО') : null,
-          ),
-        ),
-        ...r.lateExposures.map((t) => h('li', { class: 'exposed' }, `Всплыла старая ложь: «${t}»`)),
-        h('li', {}, `Доход: ${income || 'нет'}; содержание: −${r.upkeep}; итого ${r.moneyDelta >= 0 ? '+' : ''}${r.moneyDelta}`),
+    out.unshift(
+      h('h3', { class: 'section' }, `Итоги хода ${r.turn}`),
+      ...r.publications.map((p) =>
         h(
-          'li',
-          {},
-          `Город: индекс ${delta(r.metricsBefore.cityIndex, r.metricsAfter.cityIndex)}, ` +
-            `жителей ${delta(r.metricsBefore.activeResidents, r.metricsAfter.activeResidents)}, ` +
-            `разоблачения ${r.exposureDelta >= 0 ? '+' : ''}${Math.round(r.exposureDelta)}`,
+          'div',
+          { class: `report-item truth-${p.truth}${p.exposed ? ' exposed' : ''}` },
+          h('strong', {}, `«${p.title}»`),
+          h(
+            'p',
+            {},
+            `${channelOf(c, p.channel).name}, ${truthLabels[p.truth].toLowerCase()}. Увидели ${p.reached}, поверили ${p.believed}, не поверили ${p.doubted}, пересказали ${p.wordOfMouth}.`,
+          ),
+          Object.keys(p.effects).length
+            ? h(
+                'p',
+                {},
+                Object.entries(p.effects)
+                  .map(([k, v]) => `${effectLabels[k as keyof typeof effectLabels]}: ${v}`)
+                  .join(' · '),
+              )
+            : null,
+          p.exposed ? h('p', { class: 'bad' }, 'Разоблачено! Доверие и реклама упали.') : null,
         ),
-        ...r.notes.map((n) => h('li', { class: 'note' }, n)),
       ),
+      ...r.lateExposures.map((t) => h('div', { class: 'report-item exposed' }, h('p', { class: 'bad' }, `Всплыла старая ложь: «${t}»`))),
+      h(
+        'div',
+        { class: 'report-item' },
+        h(
+          'p',
+          {},
+          `Доход: ${
+            Object.entries(r.income)
+              .map(([ch, v]) => `${channelOf(c, ch).name} ${v} (${r.views[ch] ?? 0} просм.)`)
+              .join(', ') || 'нет'
+          }`,
+        ),
+        h('p', {}, `Содержание: −${r.upkeep}. Итого: ${r.moneyDelta >= 0 ? '+' : ''}${r.moneyDelta}`),
+        h(
+          'p',
+          {},
+          `Индекс города ${delta(r.metricsBefore.cityIndex, r.metricsAfter.cityIndex)}, жителей ${delta(
+            r.metricsBefore.activeResidents,
+            r.metricsAfter.activeResidents,
+          )}, разоблачения ${r.exposureDelta >= 0 ? '+' : ''}${Math.round(r.exposureDelta)}`,
+        ),
+      ),
+      ...(r.events.length || r.notes.length
+        ? [
+            h(
+              'div',
+              { class: 'report-item' },
+              h('strong', {}, 'Новый день'),
+              ...r.events.map((e) => h('p', {}, `• ${e}`)),
+              ...r.notes.map((n) => h('p', { class: 'muted' }, n)),
+            ),
+          ]
+        : []),
     );
+    return out;
   }
 
-  function outcomeBanner(): HTMLElement | null {
-    if (!state.outcome) return null;
-    return h(
-      'div',
-      { class: `outcome ${state.outcome.result}` },
-      h('strong', {}, outcomeText(state.outcome)),
-      h('button', { class: 'primary', onclick: newGame }, 'Новая игра'),
+  function renderSidebar(): void {
+    const mods = getModifiers(state, c);
+    const publishedCount = state.hand.filter((x) => drafts.get(x.uid)?.publish).length;
+    const tabButton = (id: Tab, label: string) =>
+      h('button', { class: `tab${tab === id ? ' active' : ''}`, onclick: () => ((tab = id), render()) }, label);
+    const body = tab === 'issue' ? issueTab() : tab === 'shop' ? shopTab() : reportTab();
+    const scroll = sidebar.querySelector('.tab-body')?.scrollTop ?? 0;
+    sidebar.replaceChildren(
+      h('nav', { class: 'tabs' }, tabButton('issue', 'Выпуск'), tabButton('shop', 'Покупки'), tabButton('report', 'Итоги')),
+      h('div', { class: 'tab-body' }, error ? h('p', { class: 'bad' }, error) : null, ...body),
+      h(
+        'footer',
+        { class: 'turn-bar' },
+        h('span', {}, `В выпуске ${publishedCount} / ${mods.publishPerTurn}`),
+        h(
+          'button',
+          { class: 'primary big', onclick: endTurn, disabled: busy || !!state.outcome },
+          busy ? 'Город реагирует…' : 'Опубликовать и завершить ход',
+        ),
+      ),
+    );
+    if (tab !== 'report') sidebar.querySelector('.tab-body')!.scrollTop = scroll;
+  }
+
+  function renderModal(): void {
+    if (!state.outcome || busy) {
+      modal.replaceChildren();
+      return;
+    }
+    modal.replaceChildren(
+      h(
+        'div',
+        { class: `modal ${state.outcome.result}` },
+        h('h2', {}, state.outcome.result === 'win' ? 'Победа' : 'Поражение'),
+        h('p', {}, outcomeText(state.outcome)),
+        h('p', { class: 'muted' }, `Сыграно ходов: ${Math.min(state.turn - 1, c.balance.turnLimit)}. Индекс города: ${Math.round(state.metrics.cityIndex)}.`),
+        h('button', { class: 'primary big', onclick: newGame }, 'Новая игра'),
+      ),
     );
   }
 
   function render(): void {
-    const scroll = window.scrollY;
-    root.replaceChildren(
-      header(),
-      outcomeBanner() ?? '',
-      h('main', {}, cityPanel(), h('div', { class: 'side' }, reportPanel() ?? '', handPanel(), shopPanel())),
-    );
-    window.scrollTo(0, scroll);
+    renderHud();
+    renderCityEvents();
+    renderSidebar();
+    renderModal();
   }
 
   render();

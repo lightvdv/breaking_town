@@ -4,6 +4,7 @@ import {
   averageTrust,
   createGame,
   createRng,
+  isRoadTile,
   listPurchases,
   maxDistortion,
   playTurn,
@@ -39,6 +40,28 @@ function simpleDecision(state: GameState, distortion: 'none' | 'max', framing: 0
 describe('content', () => {
   it('is consistent', () => {
     expect(validateContent(content)).toEqual([]);
+  });
+});
+
+describe('map', () => {
+  it('places every building on lots, inside the map, without overlaps or roads', () => {
+    for (const seed of [1, 2, 3]) {
+      const s = createGame(content, seed);
+      const used = new Set<string>();
+      for (const b of s.buildings) {
+        for (let dx = 0; dx < b.size; dx++) {
+          for (let dy = 0; dy < b.size; dy++) {
+            const x = b.x + dx;
+            const y = b.y + dy;
+            expect(x).toBeLessThan(s.mapSize);
+            expect(y).toBeLessThan(s.mapSize);
+            expect(isRoadTile(x, y)).toBe(false);
+            expect(used.has(`${x},${y}`)).toBe(false);
+            used.add(`${x},${y}`);
+          }
+        }
+      }
+    }
   });
 });
 

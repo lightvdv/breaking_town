@@ -235,9 +235,12 @@
 - **Спрайтшиты PNG + JSON-атлас** в формате, который читает PixiJS. Кадры одного размера в сетке: строки — анимации, столбцы — кадры. Если в анимации меньше кадров, остаток строки пустой.
 - **Имена файлов:** идентификаторы берутся из контента как есть (`src/content/buildings.json`, `src/content/groups.json`), остальная часть — строчными буквами через `_`:
   - `assets/sprites/residents/{group}_{variant}.png` — например `workers_1.png`;
-  - `assets/sprites/buildings/{type}_{state}.png` — например `factory_closed.png`, `cityHall_active.png`; кадры анимации идут по горизонтали;
-  - `assets/sprites/tiles/{name}.png` — например `road.png`, `grass.png`;
+  - `assets/sprites/buildings/{type}_{state}.png` — например `factory_closed.png`, `cityHall_active.png`; кадры анимации идут по горизонтали, варианты внешнего вида (например, цвета жилых домов) — по строкам;
+  - `assets/sprites/tiles/{name}.png` — `grass_1…3`, `road_x`, `road_y` (дорога вдоль осей карты), `road_cross` (перекрёсток);
+  - `assets/sprites/decor/{name}.png` — парки и зелень на свободных участках: деревья, кусты, клумбы, скамейки, фонари, фонтаны;
   - `assets/sprites/fx/{reaction}.png` — `believed_bad`, `believed_good`, `doubted`, `talk`, `exposed`.
+- Рядом со спрайтами лежит `assets/manifest.json` — список файлов и число вариантов, чтобы игра не зашивала их в код.
+- Палитра — ENDESGA 32 (Lospec).
 - **Спрайтшит жителя** — 4 столбца × 17 строк по 16×16 (64×272 px). Порядок строк фиксирован, чтобы ИИ-генерация и дизайнер выдавали совместимые файлы:
 
 | № | Строка | Кадров |

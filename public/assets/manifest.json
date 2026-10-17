@@ -1,0 +1,84 @@
+{
+  "residents": {
+    "pensioners": 2,
+    "workers": 2,
+    "youth": 2,
+    "intelligentsia": 2
+  },
+  "buildings": {
+    "home": {
+      "states": [
+        "active",
+        "abandoned"
+      ],
+      "variants": 3,
+      "size": 1
+    },
+    "shop": {
+      "states": [
+        "active",
+        "closed"
+      ],
+      "variants": 1,
+      "size": 1
+    },
+    "entertainment": {
+      "states": [
+        "active",
+        "closed"
+      ],
+      "variants": 1,
+      "size": 1
+    },
+    "factCheckers": {
+      "states": [
+        "active",
+        "closed"
+      ],
+      "variants": 1,
+      "size": 1
+    },
+    "factory": {
+      "states": [
+        "active",
+        "closed"
+      ],
+      "variants": 1,
+      "size": 2
+    },
+    "hospital": {
+      "states": [
+        "active",
+        "closed"
+      ],
+      "variants": 1,
+      "size": 2
+    },
+    "cityHall": {
+      "states": [
+        "active",
+        "closed"
+      ],
+      "variants": 1,
+      "size": 2
+    }
+  },
+  "grass": 3,
+  "decor": [
+    "tree_1",
+    "tree_2",
+    "tree_3",
+    "bush",
+    "flowers",
+    "bench",
+    "lamp",
+    "fountain"
+  ],
+  "fx": [
+    "believed_bad",
+    "believed_good",
+    "doubted",
+    "talk",
+    "exposed"
+  ]
+}

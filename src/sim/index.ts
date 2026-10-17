@@ -6,3 +6,4 @@ export { getModifiers, type Modifiers } from './modifiers';
 export { previewPublication, cardTruth, maxDistortion, type PublicationPreview } from './news';
 export { averageTrust, buildingDefOf, channelOf, groupOf, templateOf } from './lookup';
 export { validateContent } from './validateContent';
+export { isRoadTile, mapSizeFor } from './map';

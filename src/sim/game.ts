@@ -4,11 +4,11 @@ import {
   applyCityEffect,
   computeMetrics,
   countWorkers,
-  createBuildings,
   createResidents,
   tryAssignJob,
 } from './city';
 import { collectIncome } from './economy';
+import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf, trustSnapshot } from './lookup';
 import { getModifiers, type Modifiers } from './modifiers';
 import { maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
@@ -26,7 +26,7 @@ import type {
 
 export function createGame(c: Content, seed: number): GameState {
   const rng = createRng(seed);
-  const buildings = createBuildings(c);
+  const { buildings, mapSize } = createBuildings(c, rng);
   const residents = createResidents(c, rng, buildings);
   const workers = countWorkers(residents);
   for (const r of residents) tryAssignJob(r, groupOf(c, r.group), buildings, workers);
@@ -44,6 +44,7 @@ export function createGame(c: Content, seed: number): GameState {
     brokeTurns: 0,
     residents,
     buildings,
+    mapSize,
     hand: [],
     nextUid: 1,
     nextResidentId: residents.length,

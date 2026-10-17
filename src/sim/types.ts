@@ -114,6 +114,8 @@ export interface BuildingDef {
   name: string;
   count: number;
   jobs: number;
+  /** Footprint on the isometric map in tiles: 1 = 1×1, 2 = 2×2. */
+  size: 1 | 2;
   color: string;
 }
 
@@ -126,7 +128,10 @@ export interface Balance {
   handSize: number;
   publishPerTurn: number;
   maxHold: number;
-  gridColumns: number;
+  /** City blocks per side; each block is a 2×2 lot surrounded by roads. */
+  mapBlocks: number;
+  /** How many 1×1 buildings share one lot; the rest of the lot is greenery. */
+  smallPerLot: number;
 
   wage: number;
   benefit: number;
@@ -243,8 +248,10 @@ export interface Resident {
 export interface Building {
   id: number;
   type: BuildingType;
+  /** Top tile of the footprint on the isometric map. */
   x: number;
   y: number;
+  size: 1 | 2;
   jobs: number;
   open: boolean;
   turnover: number;
@@ -292,7 +299,8 @@ export interface CityMetrics {
   activeResidents: number;
 }
 
-export type Reaction = 'believed' | 'doubted';
+/** Reaction to this turn's news, shown as an animation above the resident (CONCEPT.md §7.2). */
+export type Reaction = 'scared' | 'happy' | 'doubted' | 'talk' | 'outraged';
 
 export interface Outcome {
   result: 'win' | 'lose';
@@ -309,6 +317,8 @@ export interface GameState {
   brokeTurns: number;
   residents: Resident[];
   buildings: Building[];
+  /** The map is mapSize × mapSize tiles; see map.ts for roads. */
+  mapSize: number;
   hand: CardInstance[];
   nextUid: number;
   nextResidentId: number;

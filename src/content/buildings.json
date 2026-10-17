@@ -1,9 +1,9 @@
 [
-  { "type": "factory", "name": "Завод", "count": 1, "jobs": 100, "color": "#8a8f98" },
-  { "type": "shop", "name": "Магазин", "count": 3, "jobs": 8, "color": "#e0a458" },
-  { "type": "entertainment", "name": "Бар", "count": 2, "jobs": 6, "color": "#c77dff" },
-  { "type": "hospital", "name": "Больница", "count": 1, "jobs": 12, "color": "#ef6f6c" },
-  { "type": "cityHall", "name": "Мэрия", "count": 1, "jobs": 8, "color": "#5b8def" },
-  { "type": "factCheckers", "name": "Фактчекеры", "count": 1, "jobs": 6, "color": "#3fb68b" },
-  { "type": "home", "name": "Жилой дом", "count": 12, "jobs": 0, "color": "#b9a38a" }
+  { "type": "factory", "name": "Завод", "count": 1, "jobs": 100, "size": 2, "color": "#8b9bb4" },
+  { "type": "shop", "name": "Магазин", "count": 3, "jobs": 8, "size": 1, "color": "#feae34" },
+  { "type": "entertainment", "name": "Бар", "count": 2, "jobs": 6, "size": 1, "color": "#b55088" },
+  { "type": "hospital", "name": "Больница", "count": 1, "jobs": 12, "size": 2, "color": "#e43b44" },
+  { "type": "cityHall", "name": "Мэрия", "count": 1, "jobs": 8, "size": 2, "color": "#0099db" },
+  { "type": "factCheckers", "name": "Фактчекеры", "count": 1, "jobs": 6, "size": 1, "color": "#63c74d" },
+  { "type": "home", "name": "Жилой дом", "count": 12, "jobs": 0, "size": 1, "color": "#c28569" }
 ]

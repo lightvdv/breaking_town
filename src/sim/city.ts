@@ -11,26 +11,6 @@ import type {
   Resident,
 } from './types';
 
-export function createBuildings(c: Content): Building[] {
-  const out: Building[] = [];
-  const cols = c.balance.gridColumns;
-  for (const def of c.buildings) {
-    for (let i = 0; i < def.count; i++) {
-      const id = out.length;
-      out.push({
-        id,
-        type: def.type,
-        x: id % cols,
-        y: Math.floor(id / cols),
-        jobs: def.jobs,
-        open: true,
-        turnover: 0,
-      });
-    }
-  }
-  return out;
-}
-
 export function newResident(c: Content, rng: RngState, id: number, group: GroupDef, home: number): Resident {
   const trust: Record<string, number> = {};
   for (const ch of c.channels) trust[ch.id] = clamp(ch.baseTrust + (next(rng) - 0.5) * 20, 0, 100);

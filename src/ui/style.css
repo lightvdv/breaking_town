@@ -219,6 +219,45 @@ button.res:hover {
   color: var(--muted);
 }
 
+/* Money / readers / reputation breakdowns. */
+.ledger-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.ledger-row small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ledger-row b {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ledger-row .gain {
+  color: var(--ok);
+}
+
+.ledger-row .loss {
+  color: var(--danger);
+}
+
+.ledger-row.sub {
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ledger-row.total {
+  padding-top: 4px;
+  border-top: 2px solid var(--ink);
+  font-weight: 700;
+}
+
 .city-metric {
   position: relative;
   padding-right: 22px;

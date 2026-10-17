@@ -1,7 +1,7 @@
 import { chance, type RngState } from './rng';
 import { channelOf, clamp, groupOf } from './lookup';
 import type { Modifiers } from './modifiers';
-import type { ChannelId, Content, GameState, Resident } from './types';
+import type { ChannelId, ChurnReason, Content, GameState, ReadersChange, Resident } from './types';
 
 /**
  * Regular readers of each channel (CONCEPT.md §5.2): last turn's buyers buy again, some leave
@@ -39,18 +39,22 @@ export function seedFollowers(state: GameState, c: Content, rng: RngState, mods:
   }
 }
 
-/** Why a reader leaves after this turn, given what they experienced. */
-function churnChance(state: GameState, c: Content, r: Resident, issueSize: number, boring: boolean): number {
-  const b = c.balance;
-  if (issueSize === 0) return b.churnEmpty;
+/** Why a reader might leave after this turn, given what they experienced; null when they stay. */
+function churnReason(state: GameState, r: Resident, issueSize: number, boring: boolean): ChurnReason | null {
+  if (issueSize === 0) return 'empty';
   const reaction = state.lastReactions[r.id];
-  if (reaction === 'outraged') return b.churnExposed;
-  if (reaction === 'scared' || reaction === 'happy' || reaction === 'talk') return 0;
-  if (reaction === 'doubted') return b.churnDoubt;
-  return boring ? b.churnBoring : 0;
+  if (reaction === 'outraged') return 'exposed';
+  if (reaction === 'scared' || reaction === 'happy' || reaction === 'talk') return null;
+  if (reaction === 'doubted') return 'doubted';
+  return boring ? 'boring' : null;
 }
 
-/** Applies churn and acquisition after an issue; returns how many readers were lost and gained. */
+function churnChance(c: Content, reason: ChurnReason): number {
+  const b = c.balance;
+  return { empty: b.churnEmpty, exposed: b.churnExposed, doubted: b.churnDoubt, boring: b.churnBoring }[reason];
+}
+
+/** Applies churn and acquisition after an issue; returns who was lost and gained, and why. */
 export function updateReaders(
   state: GameState,
   c: Content,
@@ -58,24 +62,35 @@ export function updateReaders(
   mods: Modifiers,
   issueSize: number,
   boring: boolean,
-): { lost: number; gained: number } {
-  let lost = 0;
-  let gained = 0;
+): ReadersChange {
+  const out: ReadersChange = {
+    lost: 0,
+    gained: 0,
+    lostBy: { exposed: 0, doubted: 0, boring: 0, empty: 0 },
+    movedAway: 0,
+    gainedBy: Object.fromEntries(state.ownedChannels.map((ch) => [ch, 0])),
+  };
   for (const r of state.residents) {
     if (r.status !== 'active') {
+      if (r.follows.length > 0) out.movedAway++;
       r.follows = [];
       continue;
     }
     const wasReader = r.follows.length > 0;
-    if (wasReader && chance(rng, churnChance(state, c, r, issueSize, boring))) {
+    const reason = wasReader ? churnReason(state, r, issueSize, boring) : null;
+    if (reason && chance(rng, churnChance(c, reason))) {
       r.follows = [];
-      lost++;
+      out.lost++;
+      out.lostBy[reason]++;
       continue;
     }
     for (const ch of state.ownedChannels) {
-      if (!r.follows.includes(ch) && chance(rng, joinChance(c, mods, r, ch, c.balance.acquisitionRate))) r.follows.push(ch);
+      if (!r.follows.includes(ch) && chance(rng, joinChance(c, mods, r, ch, c.balance.acquisitionRate))) {
+        r.follows.push(ch);
+        out.gainedBy[ch]++;
+      }
     }
-    if (!wasReader && r.follows.length > 0) gained++;
+    if (!wasReader && r.follows.length > 0) out.gained++;
   }
-  return { lost, gained };
+  return out;
 }

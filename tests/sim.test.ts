@@ -246,6 +246,20 @@ describe('trust', () => {
   });
 });
 
+describe('turn report breakdowns', () => {
+  it('money and readers breakdowns add up to the totals', () => {
+    const s = createGame(content, 4);
+    for (let i = 0; i < 6; i++) {
+      const r = playTurn(s, content, simpleDecision(s, i % 2 ? 'max' : 'none'));
+      expect(r.upkeepItems.reduce((sum, x) => sum + x.amount, 0)).toBe(r.upkeep);
+      const income = Object.values(r.income).reduce((sum, x) => sum + x, 0);
+      expect(income - r.upkeep).toBe(r.moneyDelta);
+      expect(Object.values(r.readers.lostBy).reduce((sum, x) => sum + x, 0)).toBe(r.readers.lost);
+      expect(r.readers.before - r.readers.lost - r.readers.movedAway + r.readers.gained).toBe(r.readers.after);
+    }
+  });
+});
+
 describe('reporters', () => {
   it('always bring between minFinds and the number of hired reporters stories', () => {
     const unlucky: Content = {

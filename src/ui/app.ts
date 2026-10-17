@@ -17,13 +17,18 @@ import {
   placementSlots,
   rankedPlacements,
   readerCount,
+  salesOf,
+  upkeepItems,
+  followersOf,
   reporterOf,
   startInvestigation,
   templateOf,
   totalUpkeep,
   type CardInstance,
   type Content,
+  type ChurnReason,
   type Decision,
+  type UpkeepItem,
   type Modifiers,
   type ExposedStory,
   type Placement,
@@ -54,7 +59,7 @@ interface Draft {
   distortion: number;
 }
 
-type Modal = 'report' | 'debug' | 'city' | 'shop' | 'investigate' | null;
+type Modal = 'report' | 'debug' | 'city' | 'money' | 'readers' | 'reputation' | 'shop' | 'investigate' | null;
 
 const REACTION_SECONDS = 2.6;
 const assetBase = `${import.meta.env.BASE_URL}assets/`;
@@ -464,22 +469,35 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h(
         'div',
         { class: 'resources' },
-        resource('money', 'Деньги', `${state.money}`, r ? r.moneyDelta : null, `Расходы: ${totalUpkeep(state, c)} за ход.`, state.money < 0 ? 'bad' : ''),
+        resource(
+          'money',
+          'Деньги',
+          `${state.money}`,
+          r ? r.moneyDelta : null,
+          `Расходы: ${totalUpkeep(state, c)} за ход. Нажмите — доходы и расходы.`,
+          state.money < 0 ? 'bad' : '',
+          '',
+          () => openModal('money'),
+        ),
         resource(
           'readers',
           'Читатели',
           `${readerCount(state)}`,
           r ? r.readers.after - r.readers.before : null,
-          'Постоянные читатели покупают каждый выпуск и приносят доход.',
+          'Постоянные читатели покупают каждый выпуск и приносят доход. Нажмите — кто пришёл и ушёл.',
+          '',
+          '',
+          () => openModal('readers'),
         ),
         resource(
           'reputation',
           'Репутация',
           `${Math.round(trust)}%`,
           r ? Math.round(r.trustAfter - r.trustBefore) : null,
-          'Чем выше, тем больше верят и реже проверяют. Упадёт до нуля — игра проиграна.',
+          'Чем выше, тем больше верят и реже проверяют. Упадёт до нуля — игра проиграна. Нажмите — подробности.',
           trust < 20 ? 'bad' : '',
           '%',
+          () => openModal('reputation'),
         ),
         resource(
           'city',
@@ -857,6 +875,122 @@ export function mountApp(root: HTMLElement, c: Content): void {
     ];
   }
 
+  /** A line of a breakdown: label, optional detail, amount with sign and color. */
+  function ledgerRow(label: string, amount: number, detail = '', unit = ''): HTMLElement {
+    return h(
+      'div',
+      { class: 'ledger-row' },
+      h('span', {}, label, detail ? h('small', {}, ` ${detail}`) : null),
+      h('b', { class: amount > 0 ? 'gain' : amount < 0 ? 'loss' : '' }, `${signed(amount)}${unit}`),
+    );
+  }
+
+  /** A line with a plain count (no sign). */
+  function countRow(label: string, value: number, detail = ''): HTMLElement {
+    return h('div', { class: 'ledger-row' }, h('span', {}, label, detail ? h('small', {}, ` ${detail}`) : null), h('b', {}, `${value}`));
+  }
+
+  function ledgerTotal(label: string, amount: number, unit = ''): HTMLElement {
+    return h('div', { class: 'ledger-row total' }, h('span', {}, label), h('b', { class: amount >= 0 ? 'gain' : 'loss' }, `${signed(amount)}${unit}`));
+  }
+
+  function upkeepLabel(x: UpkeepItem): string {
+    if (x.kind === 'channel') return `Содержание: ${channelOf(c, x.id).name}`;
+    if (x.kind === 'salary') return `Зарплата: ${reporterOf(c, x.id).name}`;
+    return `Расследование: ${reporterOf(c, x.id).name}`;
+  }
+
+  /** Money window: last turn's income and expenses line by line, and what to expect this turn. */
+  function moneyContent(): HTMLElement[] {
+    const b = c.balance;
+    const r = report;
+    const scandalNext = Math.min(1, state.scandal + b.scandalRecovery);
+    const forecastIncome = state.ownedChannels.map((ch) => ({ ch, buyers: followersOf(state, ch), sum: salesOf(state, c, ch, followersOf(state, ch), scandalNext) }));
+    const items = upkeepItems(state, c);
+    const net = forecastIncome.reduce((s, x) => s + x.sum, 0) - items.reduce((s, x) => s + x.amount, 0);
+    const out: (HTMLElement | null)[] = [
+      h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/money.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${state.money}`), h('span', {}, 'денег в кассе'))),
+      state.brokeTurns > 0 ? h('p', { class: 'bad' }, `Касса в минусе ${state.brokeTurns} ход(а) из ${b.brokeTurnsLimit} допустимых — потом банкротство.`) : null,
+      h('h3', { class: 'section' }, 'Ожидается в этом ходу'),
+      ...forecastIncome.map((x) => ledgerRow(`Продажи: ${channelOf(c, x.ch).name}`, x.sum, `${x.buyers} чит. × ${channelOf(c, x.ch).adRate}`)),
+      scandalNext < 1 ? h('p', { class: 'hint' }, `После скандала реклама приносит ×${scandalNext.toFixed(1)}, восстанавливается на ${b.scandalRecovery} за ход.`) : null,
+      ...items.map((x) => ledgerRow(upkeepLabel(x), -x.amount)),
+      ledgerTotal('Итого за ход', net),
+    ];
+    if (r) {
+      out.push(
+        h('h3', { class: 'section' }, `Прошлый ход (${r.turn})`),
+        ...Object.entries(r.income).map(([ch, v]) => ledgerRow(`Продажи: ${channelOf(c, ch).name}`, v, `${r.buyers[ch] ?? 0} чит.`)),
+        ...r.upkeepItems.map((x) => ledgerRow(upkeepLabel(x), -x.amount)),
+        ledgerTotal('Итого', r.moneyDelta),
+      );
+    }
+    out.push(h('p', { class: 'hint' }, 'Доход приносят постоянные читатели: каждый покупает выпуск. Покупки в магазине оплачиваются сразу.'));
+    return out.filter((x): x is HTMLElement => x !== null);
+  }
+
+  /** Readers window: readers per channel, who left last turn and why, who came. */
+  function readersContent(): HTMLElement[] {
+    const r = report;
+    const reasons: Record<ChurnReason, string> = {
+      exposed: 'увидели разоблачённую ложь',
+      doubted: 'не поверили новости',
+      boring: 'выпуск показался скучным',
+      empty: 'выпуска не было',
+    };
+    const out: HTMLElement[] = [
+      h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${readerCount(state)}`), h('span', {}, 'постоянных читателей'))),
+      h('h3', { class: 'section' }, 'По каналам'),
+      ...state.ownedChannels.map((ch) => countRow(channelOf(c, ch).name, followersOf(state, ch), `· ${channelOf(c, ch).adRate} денег с читателя`)),
+    ];
+    if (r) {
+      const rd = r.readers;
+      out.push(
+        h('h3', { class: 'section' }, `Прошлый ход (${r.turn})`),
+        countRow('Было', rd.before),
+        ...(Object.keys(reasons) as ChurnReason[]).filter((k) => rd.lostBy[k] > 0).map((k) => ledgerRow(`Ушли: ${reasons[k]}`, -rd.lostBy[k])),
+        ...(rd.movedAway ? [ledgerRow('Уехали из города', -rd.movedAway)] : []),
+        ledgerRow('Пришли новые', rd.gained),
+        ...Object.entries(rd.gainedBy)
+          .filter(([, v]) => v > 0)
+          .map(([ch, v]) => h('div', { class: 'ledger-row sub' }, h('span', {}, `подписались: ${channelOf(c, ch).name}`), h('b', {}, `${v}`))),
+        ledgerTotal('Итого', rd.after - rd.before),
+      );
+    }
+    out.push(
+      h(
+        'p',
+        { class: 'hint' },
+        'Поверившие новости остаются. Уходят те, кто не поверил, заскучал или увидел разоблачение. Новых приводят каналы, улучшения охвата и репутация.',
+      ),
+    );
+    return out;
+  }
+
+  /** Reputation window: the average, last turn's change and what changed it, the fact-check shield. */
+  function reputationContent(): HTMLElement[] {
+    const b = c.balance;
+    const r = report;
+    const trust = averageTrust(state, c);
+    const out: HTMLElement[] = [
+      h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/reputation.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${Math.round(trust)}%`), h('span', {}, 'средняя репутация у жителей'))),
+      meter(trust / 100, trust < 20 ? 'danger' : 'ok'),
+      h('div', { class: 'ledger-row' }, h('span', {}, 'Фактчекеры проверяют вас реже на'), h('b', {}, `${Math.round(b.trustShield * trust)}%`)),
+    ];
+    if (r) {
+      const loss = r.exposures.reduce((s, x) => s + x.trustLoss, 0);
+      const delta = r.trustAfter - r.trustBefore;
+      out.push(
+        h('h3', { class: 'section' }, `Прошлый ход (${r.turn})`),
+        ...r.exposures.map((x) => ledgerRow(`Разоблачено: «${x.title}»`, -Math.round(x.trustLoss * 10) / 10, `выпуск дня ${x.turn}`, '%')),
+        ledgerRow('Правдивые новости и прочее', Math.round((delta + loss) * 10) / 10, '', '%'),
+        ledgerTotal('Итого', Math.round(delta * 10) / 10, '%'),
+      );
+    }
+    out.push(h('p', { class: 'hint' }, 'Правда понемногу поднимает репутацию у тех, кто её видел; разоблачённая ложь резко роняет. Ноль — поражение.'));
+    return out;
+  }
+
   /** City window behind the city index tile: what the index is made of. */
   function cityContent(): HTMLElement[] {
     const m = state.metrics;
@@ -1015,11 +1149,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
       report: report ? `Итоги хода ${report.turn}` : 'Итоги хода',
       debug: 'Отладка',
       city: 'Город',
+      money: 'Деньги',
+      readers: 'Читатели',
+      reputation: 'Репутация',
       shop: 'Покупки',
       investigate: 'Расследование',
     };
     const body =
-      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'investigate' ? investigateContent() : shopContent();
+      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
     const panel = h(
       'div',

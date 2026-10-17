@@ -1,6 +1,6 @@
 import { channelOf } from './lookup';
 import { reporterOf } from './reporters';
-import type { ChannelId, Content, GameState, Requirement } from './types';
+import type { ChannelId, Content, GameState, Requirement, UpkeepItem } from './types';
 
 export interface PurchaseOption {
   id: string;
@@ -87,12 +87,22 @@ export function purchase(state: GameState, c: Content, id: string): void {
 }
 
 /** Channel upkeep, reporter salaries and running investigations, paid every turn. */
+export function upkeepItems(state: GameState, c: Content): UpkeepItem[] {
+  return [
+    ...state.ownedChannels.map((id) => ({ kind: 'channel' as const, id, amount: channelOf(c, id).upkeep })),
+    ...state.reporters.map((id) => ({ kind: 'salary' as const, id, amount: reporterOf(c, id).salary })),
+    // Digging dirt costs money every turn: sources, bribes, stakeouts (CONCEPT.md §3.3а).
+    ...state.investigations.map((x) => ({ kind: 'investigation' as const, id: x.reporterId, amount: c.balance.investigationCost })),
+  ];
+}
+
 export function totalUpkeep(state: GameState, c: Content): number {
-  const channels = state.ownedChannels.reduce((s, ch) => s + channelOf(c, ch).upkeep, 0);
-  const salaries = state.reporters.reduce((s, id) => s + reporterOf(c, id).salary, 0);
-  // Digging dirt costs money every turn: sources, bribes, stakeouts (CONCEPT.md §3.3а).
-  const investigations = state.investigations.length * c.balance.investigationCost;
-  return channels + salaries + investigations;
+  return upkeepItems(state, c).reduce((s, x) => s + x.amount, 0);
+}
+
+/** Sales of one channel: its buyers × ad rate × the scandal multiplier. */
+export function salesOf(state: GameState, c: Content, channel: ChannelId, buyers: number, scandal = state.scandal): number {
+  return Math.round(buyers * channelOf(c, channel).adRate * scandal);
 }
 
 /** Sales to this turn's regular readers of each channel, minus upkeep (CONCEPT.md §5.4). */
@@ -100,12 +110,11 @@ export function collectIncome(
   state: GameState,
   c: Content,
   buyers: Record<ChannelId, number>,
-): { income: Record<ChannelId, number>; upkeep: number } {
+): { income: Record<ChannelId, number>; upkeep: number; upkeepItems: UpkeepItem[] } {
   const income: Record<ChannelId, number> = {};
-  for (const ch of state.ownedChannels) {
-    income[ch] = Math.round((buyers[ch] ?? 0) * channelOf(c, ch).adRate * state.scandal);
-  }
-  const upkeep = totalUpkeep(state, c);
+  for (const ch of state.ownedChannels) income[ch] = salesOf(state, c, ch, buyers[ch] ?? 0);
+  const items = upkeepItems(state, c);
+  const upkeep = items.reduce((s, x) => s + x.amount, 0);
   state.money += Object.values(income).reduce((s, x) => s + x, 0) - upkeep;
-  return { income, upkeep };
+  return { income, upkeep, upkeepItems: items };
 }

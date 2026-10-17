@@ -490,6 +490,27 @@ export interface PublicationReport {
   stigma?: { target: GroupId; pressure: number; left: number };
 }
 
+/** One line of the per-turn expenses: a channel, a reporter's salary or a running investigation. */
+export interface UpkeepItem {
+  kind: 'channel' | 'salary' | 'investigation';
+  /** Channel id or reporter id. */
+  id: string;
+  amount: number;
+}
+
+/** Why readers stopped buying (CONCEPT.md §5.2). */
+export type ChurnReason = 'exposed' | 'doubted' | 'boring' | 'empty';
+
+export interface ReadersChange {
+  lost: number;
+  gained: number;
+  lostBy: Record<ChurnReason, number>;
+  /** Readers who left the city this turn. */
+  movedAway: number;
+  /** New followers per channel (a newcomer may start following several). */
+  gainedBy: Record<ChannelId, number>;
+}
+
 export interface TurnReport {
   turn: number;
   publications: PublicationReport[];
@@ -499,9 +520,11 @@ export interface TurnReport {
   buyers: Record<ChannelId, number>;
   income: Record<ChannelId, number>;
   upkeep: number;
+  /** What the upkeep was paid for (money window, CONCEPT.md §7.3). */
+  upkeepItems: UpkeepItem[];
   moneyDelta: number;
   /** Followers of at least one channel: at the start of the turn, lost and gained after it. */
-  readers: { before: number; lost: number; gained: number; after: number };
+  readers: ReadersChange & { before: number; after: number };
   trustBefore: number;
   trustAfter: number;
   metricsBefore: CityMetrics;

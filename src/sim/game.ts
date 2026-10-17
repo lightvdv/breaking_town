@@ -163,7 +163,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   }
   const exposures = [...lateExposures, ...verifyNews(state, c, rng, mods, published)];
 
-  const { income, upkeep } = collectIncome(state, c, buyers);
+  const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
 
   // Readers who disliked the issue may leave; new ones arrive for the next turn.
@@ -188,6 +188,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     buyers,
     income,
     upkeep,
+    upkeepItems,
     moneyDelta: state.money - moneyBefore,
     readers: { before: readersBefore, ...readers, after: readerCount(state) },
     trustBefore,

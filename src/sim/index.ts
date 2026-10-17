@@ -1,7 +1,7 @@
 export * from './types';
 export { createRng, type RngState } from './rng';
 export { createGame, playTurn, checkOutcome } from './game';
-export { fireReporter, listPurchases, purchase, totalUpkeep, type PurchaseOption } from './economy';
+export { fireReporter, listPurchases, purchase, salesOf, totalUpkeep, upkeepItems, type PurchaseOption } from './economy';
 export { cancelInvestigation, investigationTurns, reporterLuck, reporterOf, startInvestigation, tierWeights } from './reporters';
 export { followersOf, readerCount } from './readers';
 export { getModifiers, placementSlots, rankedPlacements, type Modifiers } from './modifiers';

@@ -23,6 +23,7 @@ export function newResident(c: Content, rng: RngState, id: number, group: GroupD
     outlook: c.balance.moodBaseline,
     status: 'active',
     trust,
+    follows: [],
     beliefs: [],
     protestTurns: 0,
     avoid: {},
@@ -71,6 +72,7 @@ export function tryAssignJob(
 export function leaveCity(r: Resident): void {
   r.status = 'left';
   r.job = null;
+  r.follows = [];
   r.protestTurns = 0;
 }
 

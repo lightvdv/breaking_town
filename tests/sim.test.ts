@@ -6,6 +6,7 @@ import {
   createGame,
   createRng,
   fireReporter,
+  followersOf,
   isHarmful,
   previewPublication,
   getModifiers,
@@ -138,24 +139,37 @@ describe('reach vs impact', () => {
     const loud = previewPublication(s, content, mods, { cardUid: 901, framing: 2, distortion: 0 });
     expect(loud.reachChance).toBe(dull.reachChance);
     expect(loud.impact).toBeGreaterThan(dull.impact * 2);
-    for (const r of s.residents) r.trust = 100;
-    expect(previewPublication(s, content, mods, { cardUid: 900, framing: 0, distortion: 0 }).reachChance).toBeGreaterThan(dull.reachChance);
   });
 });
 
-describe('channels', () => {
-  it('a story goes out on every owned channel, so buying one widens the reach', () => {
+describe('readers', () => {
+  it('the newspaper starts with readers and a new channel builds its audience over turns', () => {
     const s = createGame(content, 6);
-    const pub = { cardUid: s.hand[0].uid, framing: 0 as const, distortion: 0 };
-    const before = previewPublication(s, content, getModifiers(s, content), pub).reachChance;
+    expect(followersOf(s, 'newspaper')).toBeGreaterThan(0);
     s.money = 10_000;
     purchase(s, content, 'newspaper_quality_1');
     purchase(s, content, 'radio');
-    const after = previewPublication(s, content, getModifiers(s, content), pub).reachChance;
-    expect(after).toBeGreaterThan(before);
-    const report = playTurn(s, content, { publish: [pub] });
-    expect(Object.keys(report.publications[0].byChannel).sort()).toEqual(['newspaper', 'radio']);
-    expect(report.views.radio).toBeGreaterThanOrEqual(0);
+    expect(followersOf(s, 'radio')).toBe(0);
+    for (let i = 0; i < 3; i++) playTurn(s, content, simpleDecision(s, 'none'));
+    expect(followersOf(s, 'radio')).toBeGreaterThan(0);
+    const report = playTurn(s, content, simpleDecision(s, 'none'));
+    expect(report.buyers.radio).toBeGreaterThan(0);
+    expect(report.income.radio).toBe(Math.round(report.buyers.radio * content.channels.find((x) => x.id === 'radio')!.adRate * 1));
+  });
+
+  it('an empty issue drives readers away, and exposed lies drive away even more', () => {
+    const lost = (c: Content, decide: (s: GameState) => Decision) => {
+      let total = 0;
+      for (const seed of [1, 2, 3, 4, 5]) {
+        const s = createGame(c, seed);
+        total += playTurn(s, c, decide(s)).readers.lost;
+      }
+      return total;
+    };
+    const quiet = withBalance({ acquisitionRate: 0 });
+    expect(lost(quiet, () => ({ publish: [] }))).toBeGreaterThan(0);
+    const harsh = withBalance({ acquisitionRate: 0, checkerBase: 10, churnEmpty: 0 });
+    expect(lost(harsh, (s) => simpleDecision(s, 'max'))).toBeGreaterThan(lost(quiet, (s) => simpleDecision(s, 'none')));
   });
 });
 

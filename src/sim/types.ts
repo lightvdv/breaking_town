@@ -178,8 +178,21 @@ export interface Balance {
   globalEffectMul: number;
   /** Initial trust of residents in the outlet (± noise). */
   startTrust: number;
-  /** Reach multiplier at trust 0; it grows linearly to 1 at trust 100. */
+  /** Acquisition multiplier at trust 0; it grows linearly to 1 at trust 100. */
   reachTrustMin: number;
+  /** Chance a follower actually reads a given issue. */
+  readChance: number;
+  /** Share of the potential audience that already follows the starting channels. */
+  startFollowShare: number;
+  /** Scales how fast non-followers start following a channel each turn. */
+  acquisitionRate: number;
+  /** Churn chances after an issue (see CONCEPT.md §5.2). */
+  churnDoubt: number;
+  churnBoring: number;
+  churnEmpty: number;
+  churnExposed: number;
+  /** An issue is boring if every story's impact is below this. */
+  boringImpact: number;
   /** Impact that counts as ×1 effect strength. */
   impactNorm: number;
   /** City blocks per side; each block is a 2×2 lot surrounded by roads. */
@@ -298,6 +311,8 @@ export interface Resident {
   status: 'active' | 'left';
   /** Trust in the player's outlet, 0..100. */
   trust: number;
+  /** Owned channels this resident regularly buys / follows (CONCEPT.md §5.2). */
+  follows: ChannelId[];
   beliefs: Belief[];
   protestTurns: number;
   /** Building types the resident avoids, with turns remaining. */
@@ -437,12 +452,15 @@ export interface TurnReport {
   turn: number;
   publications: PublicationReport[];
   lateExposures: string[];
-  views: Record<ChannelId, number>;
+  /** Readers per channel who bought this turn's issue. */
+  buyers: Record<ChannelId, number>;
   income: Record<ChannelId, number>;
   upkeep: number;
   moneyDelta: number;
   exposureDelta: number;
   hypeAfter: number;
+  /** Followers of at least one channel: at the start of the turn, lost and gained after it. */
+  readers: { before: number; lost: number; gained: number; after: number };
   trustBefore: number;
   trustAfter: number;
   metricsBefore: CityMetrics;

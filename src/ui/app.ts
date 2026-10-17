@@ -14,6 +14,7 @@ import {
   playTurn,
   previewPublication,
   purchase,
+  readerCount,
   reporterOf,
   templateOf,
   totalUpkeep,
@@ -404,6 +405,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h('div', { class: 'stat' }, h('span', {}, 'Индекс города'), h('b', {}, `${Math.round(m.cityIndex)}`), h('small', {}, `цель < ${b.winCityIndex}`)),
         h(
           'div',
+          { class: 'stat', title: 'Постоянные читатели: покупают каждый выпуск и приносят доход' },
+          h('span', {}, 'Читатели'),
+          h('b', {}, `${readerCount(state)}`),
+          report ? h('small', {}, `−${report.readers.lost} / +${report.readers.gained}`) : null,
+        ),
+        h(
+          'div',
           { class: 'stat trust' },
           h('div', { class: 'trust-row' }, h('small', {}, 'Доверие'), meter(trust / 100, 'ok'), h('small', {}, `${Math.round(trust)}%`)),
           h(
@@ -544,7 +552,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
         {},
         searching
           ? 'Репортёры ищут новости… (щёлкните, чтобы пропустить)'
-          : `Репортёры принесли новостей: ${found}. Выберите до ${mods.publishPerTurn} — остальные сгорят.`,
+          : `Репортёры принесли новостей: ${found}. Выберите до ${mods.publishPerTurn} — остальные сгорят. Пустой, скучный или неубедительный выпуск распугивает читателей.`,
       ),
     );
 
@@ -585,6 +593,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const parts = [
       `Индекс ${signed(Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex))}`,
       `жителей ${signed(r.metricsAfter.activeResidents - r.metricsBefore.activeResidents)}`,
+      `читателей ${signed(r.readers.after - r.readers.before)}`,
       `деньги ${signed(r.moneyDelta)}`,
       `доверие ${signed(Math.round(r.trustAfter - r.trustBefore))}`,
     ];
@@ -703,7 +712,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h(
         'div',
         { class: 'report-item' },
-        h('p', {}, `Доход: ${Object.entries(r.income).map(([ch, v]) => `${channelOf(c, ch).name} ${v} (${r.views[ch] ?? 0} просм.)`).join(', ') || 'нет'}`),
+        h(
+          'p',
+          {},
+          `Читатели: было ${r.readers.before}, ушли ${r.readers.lost}, пришли ${r.readers.gained}, теперь ${r.readers.after}.`,
+        ),
+        h('p', {}, `Продажи: ${Object.entries(r.income).map(([ch, v]) => `${channelOf(c, ch).name} ${v} (${r.buyers[ch] ?? 0} читателей)`).join(', ') || 'нет'}`),
         h('p', {}, `Расходы: −${r.upkeep}. Итого: ${signed(r.moneyDelta)}`),
         h(
           'p',

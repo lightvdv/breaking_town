@@ -3,6 +3,7 @@ export { createRng, type RngState } from './rng';
 export { createGame, playTurn, checkOutcome } from './game';
 export { fireReporter, listPurchases, purchase, totalUpkeep, type PurchaseOption } from './economy';
 export { reporterLuck, reporterOf, tierWeights } from './reporters';
+export { followersOf, readerCount } from './readers';
 export { getModifiers, type Modifiers } from './modifiers';
 export { previewPublication, cardTruth, isHarmful, maxDistortion, outletReach, type PublicationPreview } from './news';
 export { averageTrust, buildingDefOf, channelOf, groupOf, templateOf } from './lookup';

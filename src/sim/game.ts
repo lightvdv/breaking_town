@@ -12,6 +12,7 @@ import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf } from './lookup';
 import { getModifiers, type Modifiers } from './modifiers';
 import { cardTruth, isHarmful, maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
+import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
 import { findNews, scopeOf } from './reporters';
 import type {
   CardTemplate,
@@ -30,7 +31,6 @@ export function createGame(c: Content, seed: number): GameState {
   const residents = createResidents(c, rng, buildings);
   const workers = countWorkers(residents);
   for (const r of residents) tryAssignJob(r, groupOf(c, r.group), buildings, workers);
-
 
   const state: GameState = {
     version: 1,
@@ -62,6 +62,7 @@ export function createGame(c: Content, seed: number): GameState {
     outcome: null,
   };
   state.metrics = computeMetrics(state, c);
+  seedFollowers(state, c, rng, getModifiers(state, c));
   startTurn(state, c);
   return state;
 }
@@ -142,6 +143,11 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const moneyBefore = state.money;
   const exposureBefore = state.exposure;
 
+  // Last turn's readers buy this issue (CONCEPT.md §5.2, §5.4).
+  const buyers: Record<ChannelId, number> = {};
+  for (const ch of state.ownedChannels) buyers[ch] = followersOf(state, ch);
+  const readersBefore = readerCount(state);
+
   state.lastReactions = {};
   state.exposure = Math.max(0, state.exposure - b.exposureDecay);
   state.scandal = Math.min(1, state.scandal + b.scandalRecovery);
@@ -162,11 +168,12 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const gain = d.publish.reduce((s, p) => s + b.hypeGain[p.framing], 0);
   state.hype = Math.max(0, Math.min(100, state.hype + gain) - b.hypeDecay);
 
-  // Ads pay per view on each channel.
-  const views: Record<ChannelId, number> = {};
-  for (const ch of state.ownedChannels) views[ch] = published.reduce((s, n) => s + (n.report.byChannel[ch] ?? 0), 0);
-  const { income, upkeep } = collectIncome(state, c, views);
+  const { income, upkeep } = collectIncome(state, c, buyers);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
+
+  // Readers who disliked the issue may leave; new ones arrive for the next turn.
+  const boring = published.length > 0 && published.every((n) => n.impact < b.boringImpact);
+  const readers = updateReaders(state, c, rng, mods, published.length, boring);
 
   const streak: Partial<Record<Topic, number>> = {};
   for (const [topic, n] of Object.entries(topicsThisTurn) as [Topic, number][]) {
@@ -183,12 +190,13 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     turn,
     publications: published.map((n) => n.report),
     lateExposures,
-    views,
+    buyers,
     income,
     upkeep,
     moneyDelta: state.money - moneyBefore,
     exposureDelta: state.exposure - exposureBefore,
     hypeAfter: state.hype,
+    readers: { before: readersBefore, ...readers, after: readerCount(state) },
     trustBefore,
     trustAfter: averageTrust(state, c),
     metricsBefore,

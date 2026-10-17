@@ -65,35 +65,17 @@ function impactOf(state: GameState, c: Content, card: CardInstance, tpl: CardTem
   return (tpl.interest * b.tierInterest[card.tier] * scope * framing * fatigue) / b.impactNorm;
 }
 
-/** Chance that a resident who fully follows `channel` and fully trusts the outlet sees a story there. */
-function channelReach(c: Content, mods: Modifiers, channel: ChannelId): number {
-  const ch = channelOf(c, channel);
-  return clamp((ch.baseReach + mods.channels[channel].reachAdd) * mods.channels[channel].reachMul);
+/** Owned channels a resident follows; only followers see the issue (CONCEPT.md §5.2). */
+function followedChannels(state: GameState, r: Resident): ChannelId[] {
+  return r.follows.filter((ch) => state.ownedChannels.includes(ch));
 }
 
-/** People who distrust the outlet read it less (CONCEPT.md §5.2). */
-function trustReach(c: Content, mods: Modifiers, r: Resident): number {
-  const min = c.balance.reachTrustMin;
-  return min + (1 - min) * clamp((r.trust + mods.trustBonus) / 100);
-}
-
-/** Chance that a resident sees a story on a channel — the same for every story. */
-function seeChance(c: Content, mods: Modifiers, r: Resident, channel: ChannelId): number {
-  return clamp((groupOf(c, r.group).channels[channel] ?? 0) * channelReach(c, mods, channel) * trustReach(c, mods, r));
-}
-
-/** Expected share of active residents that see a story on at least one owned channel. */
-export function outletReach(state: GameState, c: Content, mods: Modifiers): number {
-  let seen = 0;
-  let active = 0;
-  for (const r of state.residents) {
-    if (r.status !== 'active') continue;
-    active++;
-    let miss = 1;
-    for (const ch of state.ownedChannels) miss *= 1 - seeChance(c, mods, r, ch);
-    seen += 1 - miss;
-  }
-  return active ? seen / active : 0;
+/** Expected share of active residents that read this turn's issue — the same for every story. */
+export function outletReach(state: GameState, c: Content): number {
+  const active = state.residents.filter((r) => r.status === 'active');
+  if (!active.length) return 0;
+  const readers = active.filter((r) => followedChannels(state, r).length > 0).length;
+  return (readers / active.length) * c.balance.readChance;
 }
 
 /** The story's audience reacts more strongly, everyone else less. */
@@ -154,7 +136,7 @@ export function previewPublication(
     truth,
     effect: tpl.effects[truth],
     impact: impactOf(state, c, card, tpl, pub, repeatsThisTurn),
-    reachChance: outletReach(state, c, mods),
+    reachChance: outletReach(state, c),
     exposureRisk: exposureRiskOf(state, c, mods, truth, pub.framing, 0.25),
     credibility: hypeCredibility(state, c, pub),
     hype: state.hype,
@@ -245,6 +227,7 @@ function setReaction(state: GameState, id: number, reaction: Reaction): void {
 export interface PublishedNews {
   pub: Publication;
   truth: TruthLevel;
+  impact: number;
   viewers: number[];
   report: PublicationReport;
 }
@@ -315,13 +298,9 @@ export function publish(
 
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
-    let saw = false;
-    for (const ch of state.ownedChannels) {
-      if (!chance(rng, seeChance(c, mods, r, ch))) continue;
-      report.byChannel[ch]++;
-      saw = true;
-    }
-    if (!saw) continue;
+    const channels = followedChannels(state, r);
+    if (channels.length === 0 || !chance(rng, b.readChance)) continue;
+    for (const ch of channels) report.byChannel[ch]++;
     viewers.push(r.id);
     if (consider(r, 1)) believers.push(r);
   }
@@ -337,7 +316,7 @@ export function publish(
     consider(candidate, b.wordOfMouthFactor);
   }
 
-  return { pub, truth, viewers, report };
+  return { pub, truth, impact, viewers, report };
 }
 
 export function exposeNews(

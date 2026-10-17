@@ -92,15 +92,15 @@ export function totalUpkeep(state: GameState, c: Content): number {
   return channels + salaries;
 }
 
-/** Ad income for this turn's views minus channel upkeep. */
+/** Sales to this turn's regular readers of each channel, minus upkeep (CONCEPT.md §5.4). */
 export function collectIncome(
   state: GameState,
   c: Content,
-  views: Record<ChannelId, number>,
+  buyers: Record<ChannelId, number>,
 ): { income: Record<ChannelId, number>; upkeep: number } {
   const income: Record<ChannelId, number> = {};
   for (const ch of state.ownedChannels) {
-    income[ch] = Math.round((views[ch] ?? 0) * channelOf(c, ch).adRate * state.scandal);
+    income[ch] = Math.round((buyers[ch] ?? 0) * channelOf(c, ch).adRate * state.scandal);
   }
   const upkeep = totalUpkeep(state, c);
   state.money += Object.values(income).reduce((s, x) => s + x, 0) - upkeep;

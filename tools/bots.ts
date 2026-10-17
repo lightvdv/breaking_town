@@ -159,7 +159,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
     if (!s.outcome) shop(s);
     if (trace) {
       const m = r.metricsAfter;
-      const trust = `${averageTrust(s, content).toFixed(0)} hype ${s.hype.toFixed(0)} [${s.ownedChannels.join(',')}]`;
+      const trust = `${averageTrust(s, content).toFixed(0)} hype ${s.hype.toFixed(0)} readers ${r.readers.after} (-${r.readers.lost} +${r.readers.gained}) [${s.ownedChannels.join(',')}]`;
       console.log(
         `T${r.turn} index ${m.cityIndex.toFixed(0)} | pop ${m.activeResidents} emp ${m.employment.toFixed(2)} ` +
           `eco ${m.economy.toFixed(2)} mood ${m.mood.toFixed(2)} order ${m.order.toFixed(2)} | ` +

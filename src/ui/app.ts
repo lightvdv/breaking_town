@@ -470,7 +470,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
       ),
       h('h3', { class: 'headline' }, p.title),
       h('p', { class: 'effect' }, `${effectText(c, p.effect)}. Аудитория: ${audience}.`),
-      bar('Интерес', p.interest),
+      h(
+        'div',
+        { class: 'card-stat', title: 'Насколько сильно поверившие отреагируют: уровень, подача, масштаб, аудитория' },
+        h('span', {}, 'Воздействие'),
+        meter(p.impact / 2.5, p.impact >= 1.4 ? 'danger' : 'ok'),
+        h('em', {}, `×${p.impact.toFixed(1)}`),
+      ),
       bar('Охват города', p.reachChance),
       bar('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
       h(

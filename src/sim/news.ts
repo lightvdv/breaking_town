@@ -22,8 +22,9 @@ export interface PublicationPreview {
   title: string;
   truth: TruthLevel;
   effect: CardEffect | null;
-  interest: number;
-  /** Expected share of the city that sees the story on at least one owned channel. */
+  /** How strongly viewers react: tier, framing, scope, topic fatigue (1 = normal). */
+  impact: number;
+  /** Expected share of the city that sees the story; depends only on the outlet, not on the story. */
   reachChance: number;
   /** Fact-check chance assuming the news reaches a quarter of the city. */
   exposureRisk: number;
@@ -51,40 +52,60 @@ function loudBonus(multiplier: number, hype: number): number {
   return 1 + (multiplier - 1) * (1 - hype / 100);
 }
 
-/** Interest of a story before channel-specific upgrades. */
-function interestOf(
-  state: GameState,
-  c: Content,
-  card: CardInstance,
-  tpl: CardTemplate,
-  pub: Publication,
-  repeatsThisTurn: number,
-): number {
+/**
+ * Impact of a story — how strongly viewers react (CONCEPT.md §5.2а). It never changes reach.
+ * 1 means a normal story; divided by impactNorm so content `interest` values stay readable.
+ */
+function impactOf(state: GameState, c: Content, card: CardInstance, tpl: CardTemplate, pub: Publication, repeatsThisTurn: number): number {
   const b = c.balance;
   const streak = (state.topicStreak[tpl.topic] ?? 0) + repeatsThisTurn;
   const fatigue = Math.pow(1 - b.fatiguePerRepeat, streak);
-  const scope = card.scope === 'global' ? b.globalInterestMul : 1;
-  return tpl.interest * b.tierInterest[card.tier] * scope * loudBonus(b.framingInterest[pub.framing], state.hype) * fatigue;
+  const scope = card.scope === 'global' ? b.globalEffectMul : 1;
+  const framing = loudBonus(b.framingInterest[pub.framing], state.hype);
+  return (tpl.interest * b.tierInterest[card.tier] * scope * framing * fatigue) / b.impactNorm;
 }
 
-/** Chance that a resident who fully follows `channel` sees the story there. */
-function channelReach(c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, channel: ChannelId, interest: number): number {
+/** Chance that a resident who fully follows `channel` and fully trusts the outlet sees a story there. */
+function channelReach(c: Content, mods: Modifiers, channel: ChannelId): number {
   const ch = channelOf(c, channel);
-  const base = ch.baseReach + mods.channels[channel].reachAdd;
-  const engagement = tpl.engagement * c.balance.tierEngagement[card.tier];
-  return clamp(base * interest * mods.channels[channel].interestMul * (1 + engagement * ch.virality));
+  return clamp((ch.baseReach + mods.channels[channel].reachAdd) * mods.channels[channel].reachMul);
 }
 
-/** Per-group interest in a story: its audience reads it more, others less. */
+/** People who distrust the outlet read it less (CONCEPT.md §5.2). */
+function trustReach(c: Content, mods: Modifiers, r: Resident): number {
+  const min = c.balance.reachTrustMin;
+  return min + (1 - min) * clamp((r.trust + mods.trustBonus) / 100);
+}
+
+/** Chance that a resident sees a story on a channel — the same for every story. */
+function seeChance(c: Content, mods: Modifiers, r: Resident, channel: ChannelId): number {
+  return clamp((groupOf(c, r.group).channels[channel] ?? 0) * channelReach(c, mods, channel) * trustReach(c, mods, r));
+}
+
+/** Expected share of active residents that see a story on at least one owned channel. */
+export function outletReach(state: GameState, c: Content, mods: Modifiers): number {
+  let seen = 0;
+  let active = 0;
+  for (const r of state.residents) {
+    if (r.status !== 'active') continue;
+    active++;
+    let miss = 1;
+    for (const ch of state.ownedChannels) miss *= 1 - seeChance(c, mods, r, ch);
+    seen += 1 - miss;
+  }
+  return active ? seen / active : 0;
+}
+
+/** The story's audience reacts more strongly, everyone else less. */
 function audienceMul(c: Content, tpl: CardTemplate, group: string): number {
   const audience = tpl.audience ?? [];
   if (audience.length === 0) return 1;
   return audience.includes(group) ? c.balance.audienceBoost : c.balance.audienceOthers;
 }
 
-/** Tier and scope scale how strongly believers act on a story. */
-function effectMulOf(c: Content, card: CardInstance): number {
-  return c.balance.tierEffect[card.tier] * (card.scope === 'global' ? c.balance.globalEffectMul : 1);
+/** The most viral owned channel makes stories spread by word of mouth. */
+function outletVirality(state: GameState, c: Content): number {
+  return Math.max(...state.ownedChannels.map((ch) => channelOf(c, ch).virality));
 }
 
 /** The riskiest owned channel sets the fact-check pressure on every story. */
@@ -128,25 +149,12 @@ export function previewPublication(
   if (!card) throw new Error(`Card ${pub.cardUid} is not in hand`);
   const tpl = templateOf(c, card.templateId);
   const truth = cardTruth(card, pub.distortion);
-  const interest = interestOf(state, c, card, tpl, pub, repeatsThisTurn);
-  const reach = Object.fromEntries(state.ownedChannels.map((ch) => [ch, channelReach(c, mods, card, tpl, ch, interest)]));
-  let seen = 0;
-  let active = 0;
-  for (const r of state.residents) {
-    if (r.status !== 'active') continue;
-    active++;
-    const g = groupOf(c, r.group);
-    const want = audienceMul(c, tpl, g.id);
-    let miss = 1;
-    for (const ch of state.ownedChannels) miss *= 1 - clamp((g.channels[ch] ?? 0) * reach[ch] * want);
-    seen += 1 - miss;
-  }
   return {
     title: tpl.titles[truth] ?? '',
     truth,
     effect: tpl.effects[truth],
-    interest,
-    reachChance: active ? seen / active : 0,
+    impact: impactOf(state, c, card, tpl, pub, repeatsThisTurn),
+    reachChance: outletReach(state, c, mods),
     exposureRisk: exposureRiskOf(state, c, mods, truth, pub.framing, 0.25),
     credibility: hypeCredibility(state, c, pub),
     hype: state.hype,
@@ -189,7 +197,7 @@ function applyEffect(
   rng: RngState,
   r: Resident,
   e: CardEffect,
-  /** Framing (already weakened by hype) × tier × scope × global scale. */
+  /** Impact × audience × global effect scale. */
   mult: number,
 ): boolean {
   const b = c.balance;
@@ -257,10 +265,13 @@ export function publish(
   const truth = cardTruth(card, pub.distortion);
   const title = tpl.titles[truth] ?? '';
   const effect = tpl.effects[truth];
-  const interest = interestOf(state, c, card, tpl, pub, repeatsThisTurn);
-  const reach = Object.fromEntries(state.ownedChannels.map((ch) => [ch, channelReach(c, mods, card, tpl, ch, interest)]));
-  const framingMul = loudBonus(b.framingEffect[pub.framing], state.hype);
-  const cardMul = effectMulOf(c, card) * framingMul;
+  const impact = impactOf(state, c, card, tpl, pub, repeatsThisTurn);
+  // Interesting stories are retold more, and viral channels spread them further.
+  const retell = clamp(
+    b.wordOfMouthChance * (0.5 + tpl.engagement * b.tierEngagement[card.tier]) * (1 + outletVirality(state, c)),
+    0,
+    0.9,
+  );
 
   const report: PublicationReport = {
     cardUid: card.uid,
@@ -290,11 +301,13 @@ export function publish(
     report.believed++;
     r.beliefs.push({ cardUid: card.uid, title, turn: state.turn });
     if (r.beliefs.length > b.maxBeliefs) r.beliefs.shift();
+    // Impact, not reach, decides how hard the story hits this resident.
+    const hit = impact * audienceMul(c, tpl, r.group);
     if (effect) {
       const delta = effect.type === 'moodUp' ? b.hopePerBelief : -b.fearPerBelief;
-      r.outlook = clamp(r.outlook + delta * cardMul);
+      r.outlook = clamp(r.outlook + delta * hit);
     }
-    if (effect && applyEffect(state, c, rng, r, effect, b.effectScale * cardMul)) {
+    if (effect && applyEffect(state, c, rng, r, effect, b.effectScale * hit)) {
       report.effects[effect.type] = (report.effects[effect.type] ?? 0) + 1;
     }
     return true;
@@ -302,11 +315,9 @@ export function publish(
 
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
-    const g = groupOf(c, r.group);
-    const want = audienceMul(c, tpl, g.id);
     let saw = false;
     for (const ch of state.ownedChannels) {
-      if (!chance(rng, clamp((g.channels[ch] ?? 0) * reach[ch] * want))) continue;
+      if (!chance(rng, seeChance(c, mods, r, ch))) continue;
       report.byChannel[ch]++;
       saw = true;
     }
@@ -318,7 +329,7 @@ export function publish(
 
   // Word of mouth: believers retell the story to someone who has not heard it yet.
   for (let i = 0; i < believers.length; i++) {
-    if (!chance(rng, b.wordOfMouthChance)) continue;
+    if (!chance(rng, retell)) continue;
     const candidate = state.residents[int(rng, state.residents.length)];
     if (candidate.status !== 'active' || heard.has(candidate.id)) continue;
     report.wordOfMouth++;

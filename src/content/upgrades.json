@@ -2,10 +2,10 @@
   {
     "id": "newspaper_quality_1",
     "name": "Цветная печать",
-    "description": "Газета: +20% интересности новостей в этом канале, +5 к доверию к СМИ.",
+    "description": "Газета: +20% охвата этого канала, +5 к доверию к СМИ.",
     "cost": 150,
     "requires": null,
-    "effects": { "channel": "newspaper", "interestMul": 1.2, "trustBonus": 5 }
+    "effects": { "channel": "newspaper", "reachMul": 1.2, "trustBonus": 5 }
   },
   {
     "id": "newspaper_reach_1",
@@ -18,10 +18,10 @@
   {
     "id": "newspaper_quality_2",
     "name": "Колумнист с именем",
-    "description": "Газета: +20% интересности новостей в этом канале, +5 к доверию к СМИ.",
+    "description": "Газета: +20% охвата этого канала, +5 к доверию к СМИ.",
     "cost": 400,
     "requires": { "upgrade": "newspaper_quality_1" },
-    "effects": { "channel": "newspaper", "interestMul": 1.2, "trustBonus": 5 }
+    "effects": { "channel": "newspaper", "reachMul": 1.2, "trustBonus": 5 }
   },
   {
     "id": "radio_reach_1",
@@ -34,18 +34,18 @@
   {
     "id": "radio_quality_1",
     "name": "Харизматичный ведущий",
-    "description": "Радио: +25% интересности новостей в этом канале, +5 к доверию к СМИ.",
+    "description": "Радио: +25% охвата этого канала, +5 к доверию к СМИ.",
     "cost": 450,
     "requires": null,
-    "effects": { "channel": "radio", "interestMul": 1.25, "trustBonus": 5 }
+    "effects": { "channel": "radio", "reachMul": 1.25, "trustBonus": 5 }
   },
   {
     "id": "tv_studio",
     "name": "Новая студия",
-    "description": "ТВ: +20% интересности новостей в этом канале, +5 к доверию к СМИ.",
+    "description": "ТВ: +20% охвата этого канала, +5 к доверию к СМИ.",
     "cost": 900,
     "requires": null,
-    "effects": { "channel": "tv", "interestMul": 1.2, "trustBonus": 5 }
+    "effects": { "channel": "tv", "reachMul": 1.2, "trustBonus": 5 }
   },
   {
     "id": "tv_reach_1",
@@ -66,10 +66,10 @@
   {
     "id": "social_bots",
     "name": "Сеть ботов",
-    "description": "Соцсети: +30% интересности.",
+    "description": "Соцсети: +30% охвата.",
     "cost": 900,
     "requires": null,
-    "effects": { "channel": "social", "interestMul": 1.3 }
+    "effects": { "channel": "social", "reachMul": 1.3 }
   },
   {
     "id": "editorial_1",

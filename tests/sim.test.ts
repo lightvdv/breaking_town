@@ -128,6 +128,21 @@ describe('game', () => {
   });
 });
 
+describe('reach vs impact', () => {
+  it('reach depends on the outlet and trust, not on the story or framing; impact does the opposite', () => {
+    const s = createGame(content, 8);
+    const mods = getModifiers(s, content);
+    const tpl = templateOf(content, 'factory_sold');
+    s.hand = [0, 3].map((tier, i) => ({ uid: 900 + i, templateId: tpl.id, baseTruth: tpl.baseTruth, createdTurn: s.turn, tier: tier as 0 | 3, scope: 'local' as const, reporterId: s.reporters[0] }));
+    const dull = previewPublication(s, content, mods, { cardUid: 900, framing: 0, distortion: 0 });
+    const loud = previewPublication(s, content, mods, { cardUid: 901, framing: 2, distortion: 0 });
+    expect(loud.reachChance).toBe(dull.reachChance);
+    expect(loud.impact).toBeGreaterThan(dull.impact * 2);
+    for (const r of s.residents) r.trust = 100;
+    expect(previewPublication(s, content, mods, { cardUid: 900, framing: 0, distortion: 0 }).reachChance).toBeGreaterThan(dull.reachChance);
+  });
+});
+
 describe('channels', () => {
   it('a story goes out on every owned channel, so buying one widens the reach', () => {
     const s = createGame(content, 6);
@@ -260,7 +275,7 @@ describe('framing', () => {
     const calm = previewPublication(s, content, getModifiers(s, content), pub);
     s.hype = 100;
     const hyped = previewPublication(s, content, getModifiers(s, content), pub);
-    expect(hyped.interest).toBeLessThan(calm.interest);
+    expect(hyped.impact).toBeLessThan(calm.impact);
     expect(hyped.credibility).toBeLessThan(calm.credibility);
     expect(calm.credibility).toBe(1);
   });

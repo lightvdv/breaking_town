@@ -76,10 +76,10 @@ export interface ChannelDef {
 }
 
 export interface UpgradeEffects {
-  /** reachAdd and interestMul apply to this channel only. */
+  /** reachAdd and reachMul apply to this channel only. */
   channel?: ChannelId;
   reachAdd?: number;
-  interestMul?: number;
+  reachMul?: number;
   /** Added to every resident's trust in the outlet. */
   trustBonus?: number;
   /** Added to every reporter's luck. */
@@ -162,9 +162,10 @@ export interface Balance {
   /** Stories guaranteed per turn even if every reporter fails. */
   minFinds: number;
   tierWeights: Quad<number>;
+  /** Impact (how strongly viewers react) by tier. Tiers never change reach. */
   tierInterest: Quad<number>;
+  /** Word-of-mouth multiplier by tier. */
   tierEngagement: Quad<number>;
-  tierEffect: Quad<number>;
   /** Per point of nose, weight of tier i is multiplied by (1 + nose · bonus · i). */
   noseTierBonus: number;
   /** Chance a local/global reporter brings news of his own scope. */
@@ -173,10 +174,14 @@ export interface Balance {
   topicFocus: number;
   /** Chance a local find is one of today's real events, when there is one. */
   eventPreference: number;
-  globalInterestMul: number;
+  /** Impact multiplier for global news. */
   globalEffectMul: number;
   /** Initial trust of residents in the outlet (± noise). */
   startTrust: number;
+  /** Reach multiplier at trust 0; it grows linearly to 1 at trust 100. */
+  reachTrustMin: number;
+  /** Impact that counts as ×1 effect strength. */
+  impactNorm: number;
   /** City blocks per side; each block is a 2×2 lot surrounded by roads. */
   mapBlocks: number;
   /** How many 1×1 buildings share one lot; the rest of the lot is greenery. */
@@ -211,9 +216,9 @@ export interface Balance {
   defenseDebunkChance: number;
   defenseRehireBonus: number;
 
+  /** Impact multiplier by framing (weakened by hype). */
   framingInterest: Triple<number>;
   framingBelief: Triple<number>;
-  framingEffect: Triple<number>;
   /** Global multiplier on card effect strength. */
   effectScale: number;
   framingExposureRisk: Triple<number>;
@@ -224,7 +229,7 @@ export interface Balance {
   maxBelief: number;
   wordOfMouthChance: number;
   wordOfMouthFactor: number;
-  /** Reach multiplier for the story's audience and for everyone else. */
+  /** Impact multiplier for the story's audience and for everyone else. */
   audienceBoost: number;
   audienceOthers: number;
   /** Hype added to a channel per publication, by framing. */

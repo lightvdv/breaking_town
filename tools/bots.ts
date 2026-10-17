@@ -47,7 +47,7 @@ function mixed(s: GameState): Decision {
     previewPublication(s, content, mods, { cardUid: card.uid, framing: 1, distortion });
   const harm = (card: CardInstance, distortion: number) => {
     const p = preview(card, distortion);
-    return isHarmful(p.effect) ? p.interest : -1;
+    return isHarmful(p.effect) ? p.impact : -1;
   };
   const trust = averageTrust(s, content);
   const lieSlots =
@@ -124,7 +124,7 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
       return { pub, preview: previewPublication(s, content, mods, pub) };
     })
     .filter((x) => !choice.harmfulOnly || isHarmful(x.preview.effect))
-    .sort((a, b) => b.preview.interest - a.preview.interest);
+    .sort((a, b) => b.preview.impact - a.preview.impact);
 
   for (const x of candidates.slice(0, mods.publishPerTurn)) publish.push(x.pub);
   return { publish };

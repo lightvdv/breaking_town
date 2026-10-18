@@ -67,7 +67,7 @@ interface Draft {
   distortion: number;
 }
 
-type Modal = 'report' | 'debug' | 'city' | 'money' | 'readers' | 'reputation' | 'shop' | 'investigate' | null;
+type Modal = 'report' | 'debug' | 'city' | 'population' | 'money' | 'readers' | 'reputation' | 'shop' | 'investigate' | null;
 
 const REACTION_SECONDS = 2.6;
 const assetBase = `${import.meta.env.BASE_URL}assets/`;
@@ -130,6 +130,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const saved = new URLSearchParams(location.search).has('new') ? null : loadSave<Draft>(c);
   let state: GameState = saved?.state ?? createGame(c, seedFromUrl());
   let drafts = new Map<number, Draft>(saved?.drafts ?? []);
+  // A saved layout that no longer fits the slots (e.g. two front pages from a removed upgrade) is laid out anew.
+  {
+    const slots = placementSlots(getModifiers(state, c));
+    const used = [0, 0, 0];
+    for (const d of drafts.values()) if (d.publish) used[d.placement]++;
+    if (used.some((n, i) => n > slots[i])) drafts = new Map();
+  }
   let report: TurnReport | null = saved?.report ?? null;
   let error = '';
   let busy = false;
@@ -1039,8 +1046,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
 
   /** Level of the issue being composed: published stories' tiers after distortion (CONCEPT.md §4.2а). */
   function currentIssueLevel(): IssueLevel {
-    const tiers = state.hand.filter((x) => drafts.get(x.uid)?.publish).map((x) => effectiveTier(x, drafts.get(x.uid)!.distortion));
-    return issueLevel(c, tiers);
+    const stories = state.hand
+      .filter((x) => drafts.get(x.uid)?.publish)
+      .map((x) => ({ tier: effectiveTier(x, drafts.get(x.uid)!.distortion), placement: drafts.get(x.uid)!.placement }));
+    return issueLevel(c, stories);
   }
 
   /** Mini clipping of an exposed story: which issue it was in and what it cost. */
@@ -1323,6 +1332,64 @@ export function mountApp(root: HTMLElement, c: Content): void {
       metric('Экономика', 'economy'),
       metric('Настроение', 'mood'),
       metric('Порядок', 'order'),
+      h('button', { class: 'primary', onclick: () => openModal('population') }, 'Жители по группам →'),
+    ];
+  }
+
+  /** Who lives in the city and how (CONCEPT.md §7.3): every group's size, work, mood, protests, readers. */
+  function populationContent(): HTMLElement[] {
+    const all = state.residents;
+    const active = all.filter((x) => x.status === 'active');
+    const avg = (list: typeof all, f: (x: (typeof all)[number]) => number) => (list.length ? list.reduce((s, x) => s + f(x), 0) / list.length : 0);
+    const rows = c.groups.map((g) => {
+      const here = active.filter((x) => x.group === g.id);
+      const left = all.filter((x) => x.group === g.id && x.status === 'left').length;
+      const working = here.filter((x) => x.job !== null);
+      // Where they work: number of workers per building type.
+      const jobs = new Map<string, number>();
+      for (const x of working) {
+        const name = buildingDefOf(c, state.buildings[x.job!].type).name.toLowerCase();
+        jobs.set(name, (jobs.get(name) ?? 0) + 1);
+      }
+      const work = g.jobs.length
+        ? [...[...jobs].sort((a, b) => b[1] - a[1]).map(([name, n]) => `${name} ${n}`), `без работы ${here.length - working.length}`].join(' · ')
+        : `на пенсии · пенсия ${g.pension} в день`;
+      const protesting = here.filter((x) => x.protestTurns > 0).length;
+      const readersHere = here.filter((x) => x.follows.length > 0).length;
+      const believers = here.filter((x) => x.beliefs.length > 0).length;
+      return h(
+        'div',
+        { class: 'group-card' },
+        h(
+          'div',
+          { class: 'group-head' },
+          h('span', { class: 'group-dot', style: `background:${g.color}` }),
+          h('b', {}, g.name),
+          h('span', {}, `${here.length} · ${active.length ? pct(here.length / active.length) : '0%'} города`),
+          left ? h('span', { class: 'bad' }, `уехали ${left}`) : null,
+        ),
+        bar('Настроение', avg(here, (x) => x.mood), avg(here, (x) => x.mood) < 0.35 ? 'danger' : 'ok'),
+        bar('Настрой к городу', avg(here, (x) => x.outlook), avg(here, (x) => x.outlook) < 0.35 ? 'danger' : 'ok'),
+        g.jobs.length ? bar('Работают', here.length ? working.length / here.length : 0) : null,
+        bar('Ваша репутация', avg(here, (x) => x.trust) / 100, 'warn'),
+        h('p', { class: 'group-line' }, `Работа: ${work}`),
+        h(
+          'p',
+          { class: 'group-line' },
+          `Читают вас: ${readersHere} · верят вашим новостям: ${believers} · сбережения ≈ ${Math.round(avg(here, (x) => x.money))}`,
+          protesting ? h('span', { class: 'bad' }, ` · протестуют: ${protesting}`) : '',
+        ),
+      );
+    });
+    return [
+      h(
+        'div',
+        { class: 'city-index' },
+        h('img', { src: `${assetBase}sprites/ui/residents.png`, alt: '', width: 32, height: 32 }),
+        h('div', {}, h('b', {}, `${active.length}`), h('span', {}, `жителей сейчас · всего уехали ${all.length - active.length}`)),
+      ),
+      ...rows,
+      h('button', { onclick: () => openModal('city') }, '← Город'),
     ];
   }
 
@@ -1480,6 +1547,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       report: report ? `Итоги хода ${report.turn}` : 'Итоги хода',
       debug: 'Отладка',
       city: 'Город',
+      population: 'Жители',
       money: 'Деньги',
       readers: 'Читатели',
       reputation: 'Репутация',
@@ -1487,7 +1555,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       investigate: 'Репортёр',
     };
     const body =
-      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : shopContent();
+      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
     const panel = h(
       'div',

@@ -115,18 +115,6 @@
     }
   },
   {
-    "id": "editorial_2",
-    "name": "Вкладка-приложение",
-    "description": "+1 место на первой полосе.",
-    "cost": 800,
-    "requires": {
-      "upgrade": "editorial_1"
-    },
-    "effects": {
-      "frontPageSlots": 1
-    }
-  },
-  {
     "id": "lawyers",
     "name": "Юристы",
     "description": "Разоблачения бьют по репутации на 30% слабее.",

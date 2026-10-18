@@ -411,15 +411,24 @@ export function processLateExposures(state: GameState, c: Content, rng: RngState
   return exposed;
 }
 
-/** Points of an issue: every published story adds points by its tier after distortion (CONCEPT.md §4.2а). */
-export function issueScore(c: Content, tiers: NewsTier[]): number {
-  return tiers.reduce<number>((s, t) => s + c.balance.issueTierPoints[t], 0);
+/** A published story as the issue level sees it: its tier after distortion and its place in the paper. */
+export interface IssueStory {
+  tier: NewsTier;
+  placement: Placement;
 }
 
-/** Level of an issue from its stories' tiers; a sensational issue needs at least one sensation. */
-export function issueLevel(c: Content, tiers: NewsTier[]): IssueLevel {
+/**
+ * Points of an issue: every published story adds points by its tier after distortion, scaled by its
+ * place — a sensation hidden in the briefs counts for little (CONCEPT.md §4.2а).
+ */
+export function issueScore(c: Content, stories: IssueStory[]): number {
+  return stories.reduce<number>((s, x) => s + c.balance.issueTierPoints[x.tier] * c.balance.issuePlacementPoints[x.placement], 0);
+}
+
+/** Level of an issue; a sensational issue needs a sensation on the front page. */
+export function issueLevel(c: Content, stories: IssueStory[]): IssueLevel {
   const [ordinary, interesting, sensational] = c.balance.issueThresholds;
-  const score = issueScore(c, tiers);
+  const score = issueScore(c, stories);
   const level: IssueLevel = score >= sensational ? 3 : score >= interesting ? 2 : score >= ordinary ? 1 : 0;
-  return level === 3 && !tiers.includes(3) ? 2 : level;
+  return level === 3 && !stories.some((x) => x.tier === 3 && x.placement === 2) ? 2 : level;
 }

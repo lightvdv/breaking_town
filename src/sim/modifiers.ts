@@ -36,8 +36,6 @@ export function getModifiers(state: GameState, c: Content): Modifiers {
     if (!u) continue;
     const e = u.effects;
     m.reporterLuck += e.reporterLuck ?? 0;
-    m.frontPageSlots += e.frontPageSlots ?? 0;
-    m.articleSlots += e.articleSlots ?? 0;
     m.exposurePenaltyMul *= e.exposurePenaltyMul ?? 1;
     m.checkerMul *= e.checkerMul ?? 1;
     m.plausibilityAdd += e.plausibilityAdd ?? 0;

@@ -5,7 +5,7 @@ export { fireReporter, listPurchases, purchase, salesOf, totalUpkeep, upkeepItem
 export { cancelInvestigation, investigationTurns, onSpecialty, reporterLuck, reporterOf, searchLuck, setReporterTopics, startInvestigation, tierWeights } from './reporters';
 export { followersOf, readerCount } from './readers';
 export { getModifiers, placementSlots, rankedPlacements, type Modifiers } from './modifiers';
-export { previewPublication, cardTruth, effectiveTier, isHarmful, issueLevel, issueScore, maxDistortion, outletReach, type PublicationPreview } from './news';
+export { previewPublication, cardTruth, effectiveTier, isHarmful, issueLevel, issueScore, maxDistortion, outletReach, type IssueStory, type PublicationPreview } from './news';
 export { averageTrust, buildingDefOf, channelOf, groupOf, templateOf } from './lookup';
 export { validateContent } from './validateContent';
 export { isRoadTile, mapSizeFor } from './map';

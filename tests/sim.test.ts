@@ -26,6 +26,7 @@ import {
   type Content,
   type Decision,
   type GameState,
+  type NewsTier,
 } from '../src/sim';
 import { next } from '../src/sim/rng';
 
@@ -254,14 +255,23 @@ describe('trust', () => {
 });
 
 describe('issue level', () => {
-  it('sums story points: one boring story is boring, four make an ordinary issue', () => {
-    expect(issueLevel(content, [0])).toBe(0);
-    expect(issueLevel(content, [0, 0, 0, 0])).toBe(1);
-    expect(issueLevel(content, [3])).toBe(2);
-    expect(issueLevel(content, [3, 2])).toBe(3);
-    // Enough points but no sensation: interesting, not sensational.
-    expect(issueScore(content, [1, 1, 1, 1])).toBeGreaterThanOrEqual(content.balance.issueThresholds[2]);
-    expect(issueLevel(content, [1, 1, 1, 1])).toBe(2);
+  it('sums story points by tier and placement', () => {
+    const front = (tier: NewsTier) => ({ tier, placement: 2 as const });
+    const article = (tier: NewsTier) => ({ tier, placement: 1 as const });
+    const brief = (tier: NewsTier) => ({ tier, placement: 0 as const });
+    expect(issueLevel(content, [front(0)])).toBe(0);
+    expect(issueLevel(content, [front(1)])).toBe(1);
+    expect(issueLevel(content, [front(2), article(1)])).toBe(2);
+    // A sensation on the front page makes a sensational issue...
+    expect(issueLevel(content, [front(3)])).toBe(3);
+    expect(issueLevel(content, [front(3), brief(0)])).toBe(3);
+    // ...swapped into the briefs it does not, and the issue gets duller.
+    expect(issueLevel(content, [front(0), brief(3)])).toBeLessThan(2);
+    expect(issueLevel(content, [brief(3)])).toBeLessThan(issueLevel(content, [front(3)]));
+    // Enough points but no sensation on the front page: interesting, not sensational.
+    const strong = [front(2), article(3), brief(2), brief(2)];
+    expect(issueScore(content, strong)).toBeGreaterThanOrEqual(content.balance.issueThresholds[2]);
+    expect(issueLevel(content, strong)).toBe(2);
   });
 
   it('a boring issue keeps fewer readers than a sensational one', () => {
@@ -270,8 +280,8 @@ describe('issue level', () => {
       for (const seed of [1, 2, 3, 4, 5, 6]) {
         const s = createGame(content, seed);
         s.hand = s.hand.slice(0, 1).map((card) => ({ ...card, tier }));
-        const r = playTurn(s, content, { publish: [{ cardUid: s.hand[0].uid, placement: 1, distortion: 0 }] });
-        expect(r.issue.level).toBe(tier === 0 ? 0 : 2);
+        const r = playTurn(s, content, { publish: [{ cardUid: s.hand[0].uid, placement: 2, distortion: 0 }] });
+        expect(r.issue.level).toBe(tier === 0 ? 0 : 3);
         sum += r.readers.after - r.readers.before;
       }
       return sum;

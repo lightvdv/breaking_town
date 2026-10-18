@@ -84,9 +84,6 @@ export interface UpgradeEffects {
   trustBonus?: number;
   /** Added to every reporter's luck. */
   reporterLuck?: number;
-  /** Extra front-page and article slots. */
-  frontPageSlots?: number;
-  articleSlots?: number;
   /** Multiplies the reputation lost when a story is exposed. */
   exposurePenaltyMul?: number;
   checkerMul?: number;
@@ -206,10 +203,12 @@ export interface Balance {
   churnEmpty: number;
   churnExposed: number;
   /**
-   * Issue level (CONCEPT.md §4.2а): each published story adds points by its tier; the sum against
-   * the thresholds gives boring / ordinary / interesting / sensational.
+   * Issue level (CONCEPT.md §4.2а): each published story adds points by its tier, scaled by its
+   * placement (brief, article, front page); the sum against the thresholds gives boring / ordinary /
+   * interesting / sensational.
    */
   issueTierPoints: [number, number, number, number];
+  issuePlacementPoints: [number, number, number];
   issueThresholds: [number, number, number];
   /** By issue level: churn of readers the issue did not touch, and the acquisition multiplier. */
   issueChurn: [number, number, number, number];

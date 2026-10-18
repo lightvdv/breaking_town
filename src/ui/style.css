@@ -372,6 +372,40 @@ button.publish.level-3.bump-up {
   padding-right: 22px;
 }
 
+/* Population window: one card per group. */
+.group-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 2px solid var(--ink);
+}
+
+.group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 14px;
+}
+
+.group-head b {
+  font-size: 16px;
+}
+
+.group-dot {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+
+.group-line {
+  margin: 0;
+  font-size: 13px;
+}
+
 .trend {
   position: absolute;
   right: 6px;

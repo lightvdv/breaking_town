@@ -31,6 +31,8 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.reporterTopics ??= {};
     s.investigations ??= [];
     s.pendingLies ??= [];
+    // Upgrades removed from the content (e.g. the extra front page) are dropped.
+    s.upgrades = s.upgrades.filter((id) => c.upgrades.some((u) => u.id === id));
     return { state: s, report: data.report ?? null, drafts: Array.isArray(data.drafts) ? data.drafts : [] };
   } catch {
     return null;

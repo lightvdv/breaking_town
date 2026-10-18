@@ -145,7 +145,7 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
 }
 
 /** Buys in priority order and saves up for the next priority item instead of spending on cheap extras. */
-const buyOrder = ['gusev', 'newspaper_quality_1', 'radio', 'volkova', 'editorial_1', 'tv', 'sokolov', 'social', 'editorial_2', 'lawyers'];
+const buyOrder = ['gusev', 'newspaper_quality_1', 'radio', 'volkova', 'editorial_1', 'tv', 'sokolov', 'social', 'lawyers'];
 
 function shop(s: GameState): void {
   for (;;) {

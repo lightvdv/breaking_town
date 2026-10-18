@@ -272,7 +272,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
   );
   // The tray of stories left out is the last rubric of the page, folded into one line (CONCEPT.md §7.3).
   const paper = h('div', { class: 'paper' }, masthead, h('div', { class: 'paper-grid' }, zones[2].root, zones[1].root, zones[0].root), zones.out.root);
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, paper));
+  // Exposures and the mayor's reconciliation are announced by plaques above the paper (CONCEPT.md §7.3).
+  const exposureNotice = h('section', { class: 'notice notice-exposed', hidden: true, role: 'status' });
+  const reconcileNotice = h('section', { class: 'notice notice-peace', hidden: true, role: 'status' });
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, exposureNotice, reconcileNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -290,10 +293,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
     if (e.key === 'Escape' && selected !== null) pick(null);
   });
   // Start-of-turn notice about exposed stories; hovering it shows the cards (CONCEPT.md §7.3).
-  const exposureToast = h('div', { class: 'exposure-toast', hidden: true });
-  // The mayor's reconciliation is announced the same way (CONCEPT.md §5.5).
-  const reconcileToast = h('div', { class: 'exposure-toast reconcile-toast', hidden: true });
-  const toasts = h('div', { class: 'toasts' }, exposureToast, reconcileToast);
   // City cutscene before the issue: letterbox bars and a caption of the bright moment (CONCEPT.md §7.3).
   const cutsceneCaption = h('div', { class: 'cutscene-caption' });
   const cutscene = h(
@@ -310,7 +309,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const titleLayer = h('div', { class: 'title-screen', hidden: true });
   root.replaceChildren(
     hud,
-    h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, cutscene, issue, toasts),
+    h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, cutscene, issue),
     tooltip,
     titleLayer,
     modalLayer,
@@ -742,12 +741,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
   /** The mayor's reconciliation notice, next to the exposure notice (CONCEPT.md §5.5). */
   function renderReconcile(): void {
     const rec = report?.reconciliationStarted;
-    reconcileToast.hidden = !rec || reconcileSeen;
-    if (!rec) return;
-    reconcileToast.replaceChildren(
+    reconcileNotice.hidden = !rec || reconcileSeen || searching;
+    if (!rec || reconcileNotice.hidden) return;
+    reconcileNotice.replaceChildren(
       h(
         'div',
-        { class: 'toast-head' },
+        { class: 'notice-head' },
         h('img', { src: `${assetBase}sprites/fx/peace.png`, alt: '', width: 24, height: 24 }),
         h('b', {}, `Мэрия объявила примирение: ${pairNames(rec.pair, ' и ')}`),
         h(
@@ -763,7 +762,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
           '×',
         ),
       ),
-      h('p', { class: 'toast-note' }, `${rec.turnsLeft} ${turnsWord(rec.turnsLeft)} их вражда будет остывать, а фактчекеры проверяют прессу строже.`),
+      h('p', { class: 'notice-note' }, `${rec.turnsLeft} ${turnsWord(rec.turnsLeft)} их вражда будет остывать, а фактчекеры проверяют прессу строже.`),
     );
   }
 
@@ -1314,29 +1313,29 @@ export function mountApp(root: HTMLElement, c: Content): void {
     return h(
       'div',
       { class: `exposed-card truth-${x.truth}` },
-      h('img', { src: newsArt(x.templateId, x.conflict), alt: '', width: 128, height: 72 }),
+      h('img', { src: newsArt(x.templateId, x.conflict), alt: '', width: 96, height: 54 }),
       h(
         'div',
-        {},
+        { class: 'exposed-text' },
         h('b', { class: 'headline' }, x.title),
-        h('span', {}, `${truthLabels[x.truth]} · Выпуск дня ${x.turn}, ${placementLabels[x.placement].toLowerCase()}`),
-        h('span', { class: 'bad' }, `Репутация −${x.trustLoss.toFixed(1)}%`),
+        h('span', {}, `${truthLabels[x.truth]} · выпуск дня ${x.turn}, ${placementLabels[x.placement].toLowerCase()}`),
       ),
+      h('b', { class: 'exposed-loss' }, `−${x.trustLoss.toFixed(1)}%`),
     );
   }
 
   function renderExposures(): void {
     const list = report?.exposures ?? [];
-    exposureToast.hidden = !list.length || exposuresSeen;
-    if (exposureToast.hidden) return;
+    exposureNotice.hidden = !list.length || exposuresSeen || searching;
+    if (exposureNotice.hidden) return;
     const loss = list.reduce((s, x) => s + x.trustLoss, 0);
-    exposureToast.replaceChildren(
+    exposureNotice.replaceChildren(
       h(
         'div',
-        { class: 'toast-head' },
+        { class: 'notice-head' },
         h('img', { src: `${assetBase}sprites/fx/exposed.png`, alt: '', width: 24, height: 24 }),
         h('b', {}, list.length === 1 ? 'Новость разоблачили!' : `Разоблачили новостей: ${list.length}`),
-        h('span', { class: 'bad' }, `−${loss.toFixed(1)}%`),
+        h('span', { class: 'notice-loss' }, `репутация −${loss.toFixed(1)}%`),
         h(
           'button',
           {
@@ -1350,7 +1349,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
           '×',
         ),
       ),
-      h('div', { class: 'toast-cards' }, ...list.map(exposedCard)),
+      h('div', { class: 'notice-cards' }, ...list.map(exposedCard)),
     );
   }
 

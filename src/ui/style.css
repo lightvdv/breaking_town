@@ -468,52 +468,76 @@ button.publish.level-3.bump-up {
   color: var(--muted);
 }
 
-/* ---------- Exposure and reconciliation notices (CONCEPT.md §7.3) ---------- */
-.toasts {
-  position: absolute;
-  z-index: 25;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  max-width: calc(100% - 120px);
-  pointer-events: none;
+/* ---------- Exposure and reconciliation plaques above the paper (CONCEPT.md §7.3) ---------- */
+.notice {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border: 2px solid var(--ink);
+  border-left: 8px solid var(--danger);
+  box-shadow: 4px 4px 0 rgba(24, 20, 37, 0.5);
+  animation: notice-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
 
-.toasts > * {
-  pointer-events: auto;
+.notice[hidden] {
+  display: none;
 }
 
-.exposure-toast {
-  position: relative;
-  max-width: 100%;
-  background: var(--panel);
-  border: 2px solid var(--danger);
-  box-shadow: 0 0 0 2px var(--ink), 0 0 18px rgba(228, 59, 68, 0.5);
-  animation: toast-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+.notice-peace {
+  border-left-color: var(--ok);
 }
 
-@keyframes toast-in {
+@keyframes notice-in {
   from {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(-12px);
   }
 }
 
-.reconcile-toast {
-  border-color: var(--ok);
-  box-shadow:
-    0 0 0 2px var(--ink),
-    0 0 18px rgba(99, 199, 77, 0.5);
+.notice-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 10px;
+  font-size: 16px;
 }
 
-.toast-note {
+.notice-head img {
+  flex: none;
+  image-rendering: pixelated;
+}
+
+.notice-head b {
+  flex: 1;
+  min-width: 0;
+}
+
+.notice-loss {
+  flex: none;
+  font-weight: 700;
+  color: #a22633;
+}
+
+.notice-head .icon-btn {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+}
+
+.notice-note {
   margin: 0;
-  padding: 0 10px 6px;
-  font-size: 13px;
+  padding: 0 10px 8px;
+  font-size: 14px;
+}
+
+.notice-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 8px 8px;
 }
 
 /* ---------- Title screen and menus (CONCEPT.md §7.3 «Меню») ---------- */
@@ -535,8 +559,7 @@ button.publish.level-3.bump-up {
 .at-title .hud,
 .at-title .city-events,
 .at-title .city-tools,
-.at-title .city-legend,
-.at-title .toasts {
+.at-title .city-legend {
   visibility: hidden;
 }
 
@@ -754,8 +777,7 @@ button.publish.level-3.bump-up {
 /* ---------- City cutscene before the issue (CONCEPT.md §7.3) ---------- */
 .in-cutscene .city-events,
 .in-cutscene .city-tools,
-.in-cutscene .city-legend,
-.in-cutscene .toasts {
+.in-cutscene .city-legend {
   visibility: hidden;
 }
 
@@ -959,52 +981,15 @@ button.publish.level-3.bump-up {
   color: #a22633;
 }
 
-.toast-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 4px 4px 8px;
-  cursor: help;
-}
-
-.toast-head img {
-  image-rendering: pixelated;
-}
-
-.toast-head .icon-btn {
-  width: 28px;
-  height: 28px;
-  font-size: 16px;
-  margin-left: 6px;
-}
-
-/* The exposed clippings unfold on hover. */
-.toast-cards {
-  display: none;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 60vh;
-  overflow-y: auto;
-  padding: 6px;
-  border-top: 2px solid var(--ink);
-}
-
-.exposure-toast:hover .toast-cards,
-.exposure-toast:focus-within .toast-cards {
-  display: flex;
-}
-
 .exposed-card {
   display: grid;
-  grid-template-columns: 128px 1fr;
-  gap: 8px;
-  width: 400px;
-  max-width: 100%;
-  padding: 6px;
-  background: var(--paper);
-  color: var(--paper-ink);
-  border-left: 6px solid var(--truth-1);
-  font-size: 12px;
+  grid-template-columns: 96px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 4px;
+  background: rgba(115, 62, 57, 0.08);
+  border-left: 4px solid var(--truth-1);
+  font-size: 13px;
 }
 
 .exposed-card.truth-2 {
@@ -1012,23 +997,30 @@ button.publish.level-3.bump-up {
 }
 
 .exposed-card img {
-  width: 128px;
-  height: 72px;
+  width: 96px;
+  height: 54px;
   image-rendering: pixelated;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--paper-ink);
   filter: grayscale(0.6);
 }
 
-.exposed-card div {
+.exposed-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .exposed-card .headline {
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1.2;
   text-decoration: line-through;
   text-decoration-color: var(--danger);
+}
+
+.exposed-loss {
+  color: #a22633;
+  white-space: nowrap;
 }
 
 .meter {
@@ -3017,17 +3009,17 @@ button.publish.level-3.bump-up {
     font-size: 11px;
   }
 
-  .exposure-toast {
-    max-width: calc(100% - 64px);
-  }
-
   .exposed-card {
-    grid-template-columns: 96px 1fr;
+    grid-template-columns: 64px 1fr;
   }
 
   .exposed-card img {
-    width: 96px;
-    height: 54px;
+    width: 64px;
+    height: 36px;
+  }
+
+  .exposed-loss {
+    grid-column: 2;
   }
 
   .rep-card,

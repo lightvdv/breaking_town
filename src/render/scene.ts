@@ -616,8 +616,9 @@ export class CityScene {
     }
     const dpr = this.app.renderer.resolution;
     const fit = this.fitZoom();
-    const level = this.zoomLevel || Math.max(1, Math.floor(fit));
-    const scale = fit < 1 && !this.zoomLevel ? fit / dpr : level / dpr;
+    const level = this.zoomLevel || this.defaultLevel();
+    // A phone where even ×1 does not fit starts at twice the fitting size.
+    const scale = fit < 1 && !this.zoomLevel ? (2 * fit) / dpr : level / dpr;
     const { width, height } = this.app.screen;
     this.world.scale.set(scale);
     const x = (width - this.bounds.w * scale) / 2 - this.bounds.minX * scale + this.pan.x;
@@ -625,8 +626,14 @@ export class CityScene {
     this.world.position.set(Math.round(x * dpr) / dpr, Math.round(y * dpr) / dpr);
   }
 
+  /** The starting zoom: one integer step closer than the whole city (CONCEPT.md §7.3). */
+  private defaultLevel(): number {
+    return Math.max(1, Math.floor(this.fitZoom())) + 1;
+  }
+
   zoomBy(delta: number): void {
-    const current = this.zoomLevel || Math.max(1, Math.floor(this.fitZoom()));
+    const fit = this.fitZoom();
+    const current = this.zoomLevel || (fit < 1 ? Math.max(1, Math.round(2 * fit)) : this.defaultLevel());
     this.zoomLevel = Math.max(1, Math.min(6, current + delta));
     this.layout();
   }

@@ -840,8 +840,8 @@ button.publish.level-3.bump-up {
 
 .cutscene-skip {
   position: absolute;
+  top: calc(9% + 12px);
   right: 16px;
-  bottom: calc(9% + 16px);
   pointer-events: auto;
 }
 
@@ -1375,11 +1375,6 @@ button.publish.level-3.bump-up {
   outline-offset: 2px;
 }
 
-/* Phone only: a thin bar at the bottom with the issue level and «В печать». */
-.issue-dock {
-  display: none;
-}
-
 /* Stories left out of the issue: the last rubric of the page, folded into one line. */
 .zone-out {
   min-height: 0;
@@ -1901,17 +1896,6 @@ button.publish.level-3.bump-up {
 
 .news-info .card-stat {
   grid-template-columns: 112px 1fr 36px;
-}
-
-.issue-foot {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
-  background: var(--bg);
-  border: 2px solid var(--ink);
-  font-size: 15px;
 }
 
 /* ---------- Windows ---------- */
@@ -2947,35 +2931,16 @@ button.publish.level-3.bump-up {
     display: none;
   }
 
-  /* Thin bar at the bottom of the phone issue: level and «В печать» under the thumb. */
-  .issue-dock {
-    position: sticky;
-    bottom: 0;
-    z-index: 20;
-    display: block;
-    margin-top: auto;
-  }
 
-  .issue-foot .publish {
-    flex: 1;
-    justify-content: center;
-    min-height: 40px;
-  }
-
-  .issue-foot {
-    justify-content: space-between;
-    gap: 8px;
-    min-height: 44px;
-    padding: 4px 6px;
-  }
-
-  /* Phone top bar: two thin rows — resources, then reporters and the buttons. */
+  /* Phone top bar: resources; reporters, «Покупки» and ☰; then «В печать» (or «Выпуск») across the
+     width — nothing important sits in the bottom corners, where the host's badge may cover it. */
   .hud {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
       'res res res'
-      'reps actions menu';
+      'reps shop menu'
+      'pub pub pub';
     gap: 4px 8px;
     min-height: 0;
     padding: 4px 8px;
@@ -2998,13 +2963,18 @@ button.publish.level-3.bump-up {
   }
 
   .hud-buttons {
-    grid-area: actions;
-    margin-left: 0;
+    display: contents;
   }
 
-  /* On phones «В печать» with the issue level lives in the bottom bar, under the thumb. */
-  .hud .publish {
-    display: none;
+  .hud .shop-btn {
+    grid-area: shop;
+  }
+
+  .hud .publish,
+  .hud .issue-btn {
+    grid-area: pub;
+    justify-content: center;
+    min-height: 40px;
   }
 
   .masthead {

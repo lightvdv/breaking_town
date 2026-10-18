@@ -272,10 +272,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
   );
   // The tray of stories left out is the last rubric of the page, folded into one line (CONCEPT.md §7.3).
   const paper = h('div', { class: 'paper' }, masthead, h('div', { class: 'paper-grid' }, zones[2].root, zones[1].root, zones[0].root), zones.out.root);
-  // On a phone the issue covers the top bar, so a thin bar at the bottom holds the level and «В печать».
-  const issueFoot = h('div', { class: 'issue-foot' });
-  const dock = h('div', { class: 'issue-dock' }, issueFoot);
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, paper, dock));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -698,8 +695,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
     // While the issue is open: its level and «В печать»; folded: «Выпуск» brings it back.
     const publishing = issueOpen && !state.outcome;
     hudActions.replaceChildren(
-      h('button', { onclick: () => openModal('shop') }, 'Покупки'),
-      publishing ? publishButton() : h('button', { class: 'primary', onclick: () => ((issueOpen = true), render()) }, 'Выпуск'),
+      h('button', { class: 'shop-btn', onclick: () => openModal('shop') }, 'Покупки'),
+      publishing ? publishButton() : h('button', { class: 'primary issue-btn', onclick: () => ((issueOpen = true), render()) }, 'Выпуск'),
     );
   }
 
@@ -1137,10 +1134,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
           navigator.vibrate?.(15);
         }, 280)
       : 0;
-    // Near the top edge or the bottom dock the issue scrolls by itself, so every place is reachable.
+    // Near the top or bottom edge the issue scrolls by itself, so every place is reachable.
     const autoScroll = () => {
       const box = issue.getBoundingClientRect();
-      const bottom = dock.offsetParent ? dock.getBoundingClientRect().top : box.bottom;
+      const bottom = box.bottom;
       const edge = 70;
       const dy = last.y < box.top + edge ? -14 : last.y > bottom - edge && last.y < bottom ? 14 : 0;
       if (dy) issue.scrollTop += dy;
@@ -1302,7 +1299,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
       }
     }
 
-    issueFoot.replaceChildren(publishButton());
   }
 
   /** Level of the issue being composed: published stories' tiers after distortion (CONCEPT.md §4.2а). */

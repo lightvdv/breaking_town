@@ -67,8 +67,6 @@ interface Draft {
   distortion: number;
 }
 
-type MenuKind = 'place' | 'truth';
-
 type Modal = 'report' | 'debug' | 'city' | 'money' | 'readers' | 'reputation' | 'shop' | 'investigate' | null;
 
 const REACTION_SECONDS = 2.6;
@@ -84,6 +82,15 @@ function randomSeed(): number {
 }
 
 const signed = (d: number) => (d > 0 ? `+${d}` : `${d}`);
+
+/** «очко / очка / очков» for a count. */
+function points(n: number): string {
+  const d = n % 10;
+  const dd = n % 100;
+  if (d === 1 && dd !== 11) return 'очко';
+  if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return 'очка';
+  return 'очков';
+}
 
 /** Card flight from the reporter to its place in the issue; louder for higher tiers (CONCEPT.md §7.3). */
 function flightFrames(tier: NewsTier, dx: number, dy: number): { frames: Keyframe[]; options: KeyframeAnimationOptions } {
@@ -153,8 +160,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const details = new Set<number>();
   /** The exposure notice of the last report was closed. */
   let exposuresSeen = false;
-  /** Story and menu (placement or truth) that is open next to its headline. */
-  let menuFor: { uid: number; kind: MenuKind } | null = null;
+  /** Story whose truth menu is open next to its headline. */
+  let truthMenuFor: number | null = null;
+  /** Story picked by a tap; the next tap on a place in the paper moves it there (CONCEPT.md §7.3). */
+  let selected: number | null = null;
+  /** The tray of stories left out is unfolded. */
+  let trayOpen = false;
 
   // ---------- Persistent shell ----------
   const hud = h('header', { class: 'hud' });
@@ -193,28 +204,41 @@ export function mountApp(root: HTMLElement, c: Content): void {
     2: ['Первая полоса', 'Перетащите сюда главную новость'],
     1: ['Статья', 'Перетащите сюда статью'],
     0: ['Заметки', 'Перетащите сюда заметки'],
-    out: ['Не войдёт в выпуск', 'Перетащите сюда новость, чтобы не печатать её — она сгорит'],
+    out: ['Не печатать', 'Перетащите сюда новость, чтобы не печатать её — она сгорит'],
   };
+  const targetTexts: Record<string, string> = { 2: 'На первую полосу', 1: 'Статьёй', 0: 'Заметкой', out: 'Не печатать' };
   const makeZone = (key: ZoneKey) => {
     const items = h('div', { class: 'zone-items' });
     const empty = h('p', { class: 'zone-empty' }, zoneTexts[key][1]);
-    const root = h('section', { class: `zone zone-${key}`, 'data-zone': String(key) }, h('h4', { class: 'zone-label' }, zoneTexts[key][0]), items, empty);
-    return { root, items, empty };
+    const label = h('h4', { class: 'zone-label' }, zoneTexts[key][0]);
+    // While a story is picked, every other place shows a big target; a tap on it moves the story.
+    const target = h('button', { class: 'zone-target', onclick: () => moveSelected(key) }, h('span', {}, `Сюда: ${targetTexts[key]}`));
+    const root = h('section', { class: `zone zone-${key}`, 'data-zone': String(key) }, label, items, empty, target);
+    return { root, items, empty, label, target };
   };
   const zones: Record<string, ReturnType<typeof makeZone>> = { 2: makeZone(2), 1: makeZone(1), 0: makeZone(0), out: makeZone('out') };
   const masthead = h('header', { class: 'masthead' });
   const paper = h('div', { class: 'paper' }, masthead, h('div', { class: 'paper-grid' }, zones[2].root, zones[1].root, zones[0].root));
   const issueFoot = h('div', { class: 'issue-foot' });
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, paper, zones.out.root, issueFoot));
+  // The tray stays at the bottom of the screen, folded into one line above the buttons, so it is
+  // always a drop target (CONCEPT.md §7.3).
+  const dock = h('div', { class: 'issue-dock' }, zones.out.root, issueFoot);
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, paper, dock));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
-    else if (e.target === issue) closeIssue();
+    else if (e.target === issue || e.target === issue.firstElementChild) {
+      if (selected !== null) pick(null);
+      else closeIssue();
+    }
   });
-  // A press anywhere else closes an open story menu.
+  // A press anywhere else closes an open truth menu.
   document.addEventListener('pointerdown', (e) => {
-    if (menuFor === null || (e.target as Element).closest('.place-menu, .place-btn')) return;
-    menuFor = null;
+    if (truthMenuFor === null || (e.target as Element).closest('.place-menu, .place-btn')) return;
+    truthMenuFor = null;
     render();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && selected !== null) pick(null);
   });
   // Start-of-turn notice about exposed stories; hovering it shows the cards (CONCEPT.md §7.3).
   const exposureToast = h('div', { class: 'exposure-toast', hidden: true });
@@ -348,6 +372,24 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const d = draftOf(card);
     d.publish = false;
     d.placement = 0;
+  }
+
+  /** Picks a story for a move by tap (or drops the pick with null). */
+  function pick(uid: number | null): void {
+    selected = uid;
+    truthMenuFor = null;
+    render();
+  }
+
+  /** Moves the picked story to the tapped place. */
+  function moveSelected(key: ZoneKey): void {
+    const card = state.hand.find((x) => x.uid === selected);
+    selected = null;
+    if (card) {
+      if (key === 'out') unpublish(card);
+      else place(card, key);
+    }
+    render();
   }
 
   const draftOf = (card: CardInstance): Draft => {
@@ -613,22 +655,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
     };
 
     const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `компромат на группу «${target}»` }[tpl.source];
-    // Two menu buttons next to the headline: placement (same moves as dragging) and truth (CONCEPT.md §7.3).
-    const isOpen = (kind: MenuKind) => menuFor?.uid === card.uid && menuFor.kind === kind;
-    const menuButton = (kind: MenuKind, cls: string, title: string, content: Node | string) =>
-      h(
-        'button',
-        {
-          class: `${cls}${isOpen(kind) ? ' on' : ''}`,
-          title,
-          'aria-haspopup': 'menu',
-          'aria-expanded': String(isOpen(kind)),
-          disabled: busy,
-          onclick: act(() => (menuFor = isOpen(kind) ? null : { uid: card.uid, kind })),
-        },
-        content,
-      );
-    const menuItem = (current: boolean, disabled: boolean, pick: () => void, ...content: (Node | string)[]) =>
+    // Truth menu next to the headline (CONCEPT.md §7.3); the place is changed by dragging or by a tap
+    // on the story and then on a place in the paper.
+    const menuOpen = truthMenuFor === card.uid;
+    const menuItem = (current: boolean, disabled: boolean, choose: () => void, ...content: (Node | string)[]) =>
       h(
         'button',
         {
@@ -636,31 +666,47 @@ export function mountApp(root: HTMLElement, c: Content): void {
           class: current ? 'current' : '',
           disabled: current || disabled,
           onclick: act(() => {
-            menuFor = null;
-            pick();
+            truthMenuFor = null;
+            choose();
           }),
         },
         h('span', { class: 'check' }, current ? '✓' : ''),
         ...content,
       );
-    const places: [Placement | 'out', string][] = [
-      [2, 'На первую полосу'],
-      [1, 'Статьёй'],
-      [0, 'Заметкой'],
-      ['out', 'Не печатать'],
-    ];
-    const placeButton = menuButton('place', 'place-btn', 'Куда поставить новость', '⇄');
-    const placeMenu = isOpen('place')
-      ? h(
-          'div',
-          { class: 'place-menu', role: 'menu' },
-          ...places.map(([key, label]) => menuItem(where === key, false, () => (key === 'out' ? unpublish(card) : place(card, key)), label)),
-        )
-      : null;
     // Truth: the icon shows the current level; a story can only be made less true.
     const truthIcon = (t: number) => h('img', { src: `${assetBase}sprites/ui/truth_${t}.png`, alt: '', width: 16, height: 16 });
-    const truthButton = menuButton('truth', 'place-btn truth-btn', `${truthLabels[p.truth]} — изменить правдивость`, truthIcon(p.truth));
-    const truthMenu = isOpen('truth')
+    const truthButton = h(
+      'button',
+      {
+        class: `place-btn truth-btn${menuOpen ? ' on' : ''}`,
+        title: `${truthLabels[p.truth]} — изменить правдивость`,
+        'aria-haspopup': 'menu',
+        'aria-expanded': String(menuOpen),
+        disabled: busy,
+        onclick: act(() => {
+          truthMenuFor = menuOpen ? null : card.uid;
+          selected = null;
+        }),
+      },
+      truthIcon(p.truth),
+    );
+    // "✕" takes a story out of the issue; in the tray "↩" brings it back as a brief.
+    const out = where === 'out';
+    const outButton = h(
+      'button',
+      {
+        class: 'out-btn',
+        title: out ? 'Вернуть в выпуск заметкой' : 'Не печатать',
+        disabled: busy,
+        onclick: act(() => {
+          selected = null;
+          if (out) place(card, 0);
+          else unpublish(card);
+        }),
+      },
+      out ? '↩' : '✕',
+    );
+    const truthMenu = menuOpen
       ? h(
           'div',
           { class: 'place-menu truth-menu', role: 'menu' },
@@ -706,16 +752,18 @@ export function mountApp(root: HTMLElement, c: Content): void {
       : null;
 
     const withImage = where === 2 || where === 1;
-    const cls = ['news', `at-${where}`, `truth-${p.truth}`, `tier-${tier}`, investigation ? 'investigation' : ''].filter(Boolean).join(' ');
+    const cls = ['news', `at-${where}`, `truth-${p.truth}`, `tier-${tier}`, investigation ? 'investigation' : '', selected === card.uid ? 'selected' : '']
+      .filter(Boolean)
+      .join(' ');
     const children: (HTMLElement | null)[] = [
       investigation ? h('div', { class: 'kicker' }, `Расследование · эксклюзив · ${target.toLowerCase()}`) : null,
       h(
         'div',
         { class: 'news-head' },
         // The buttons float at the start of the headline, and its text wraps around them.
-        h('span', { class: 'head-tools' }, placeButton, truthButton, tierLabel),
+        h('span', { class: 'head-tools' }, truthButton, tierLabel),
+        outButton,
         h('h3', { class: 'headline' }, p.title),
-        placeMenu,
         truthMenu,
       ),
       h(
@@ -800,11 +848,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
           navigator.vibrate?.(15);
         }, 280)
       : 0;
-    // Near the top or bottom edge the issue scrolls by itself, so the tray is reachable.
+    // Near the top edge or the bottom dock the issue scrolls by itself, so every place is reachable.
     const autoScroll = () => {
       const box = issue.getBoundingClientRect();
+      const bottom = dock.getBoundingClientRect().top;
       const edge = 70;
-      const dy = last.y < box.top + edge ? -14 : last.y > box.bottom - edge ? 14 : 0;
+      const dy = last.y < box.top + edge ? -14 : last.y > bottom - edge && last.y < bottom ? 14 : 0;
       if (dy) issue.scrollTop += dy;
       scrollFrame = requestAnimationFrame(autoScroll);
     };
@@ -816,7 +865,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
       el.classList.remove('lifting');
       el.classList.add('dragging');
       issue.classList.add('drag-active');
-      menuFor = null;
+      truthMenuFor = null;
+      selected = null;
       scrollFrame = requestAnimationFrame(autoScroll);
     };
     const move = (ev: PointerEvent) => {
@@ -851,7 +901,11 @@ export function mountApp(root: HTMLElement, c: Content): void {
     };
     const end = (ev: PointerEvent) => {
       cleanup();
-      if (!ghost) return;
+      if (!ghost) {
+        // A tap without a drag picks the story (or drops the pick); then a tap on a place moves it.
+        if (ev.type === 'pointerup') pick(selected === card.uid ? null : card.uid);
+        return;
+      }
       ghost.remove();
       el.classList.remove('dragging');
       issue.classList.remove('drag-active');
@@ -910,17 +964,45 @@ export function mountApp(root: HTMLElement, c: Content): void {
     };
     // Stronger stories first inside each zone.
     const ordered = [...visible].sort((a, b) => b.tier - a.tier || a.uid - b.uid);
+    const picked = busy ? undefined : visible.find((x) => x.uid === selected);
+    if (!picked) selected = null;
+    issue.classList.toggle('picking', !!picked);
+    const left = ordered.filter((card) => whereOf(card) === 'out').length;
+    zones.out.root.classList.toggle('unfolded', trayOpen && left > 0);
+    zones.out.label.replaceChildren(
+      h(
+        'button',
+        {
+          class: 'tray-toggle',
+          'aria-expanded': String(trayOpen && left > 0),
+          disabled: !left,
+          onclick: () => {
+            trayOpen = !trayOpen;
+            render();
+          },
+        },
+        left ? `Не печатать (${left}) ${trayOpen ? '▴' : '▾'}` : 'Не печатать',
+      ),
+      left ? '' : h('span', { class: 'tray-hint' }, 'перетащите сюда новость или нажмите ✕ — она сгорит'),
+    );
     for (const key of [2, 1, 0, 'out'] as const) {
       const here = ordered.filter((card) => whereOf(card) === key);
-      zones[key].empty.hidden = here.length > 0;
+      zones[key].empty.hidden = here.length > 0 || key === 'out';
+      zones[key].root.classList.toggle('here', !!picked && whereOf(picked) === key);
       for (const card of here) {
         const { cls, children } = newsContent(card, mods, key);
         let el = cardEls.get(card.uid);
         const isNew = !el;
         if (!el) {
-          el = h('article', { 'data-uid': String(card.uid) });
+          el = h('article', { 'data-uid': String(card.uid), tabindex: '0' });
           const self = el;
           el.addEventListener('pointerdown', (e) => startDrag(e, card, self));
+          // From the keyboard: Enter picks the story, then Tab to a place and Enter moves it.
+          el.addEventListener('keydown', (e) => {
+            if (e.target !== self || (e.key !== 'Enter' && e.key !== ' ') || busy) return;
+            e.preventDefault();
+            pick(selected === card.uid ? null : card.uid);
+          });
           cardEls.set(card.uid, el);
         }
         // Appending moves an existing element into its zone, in order.
@@ -958,11 +1040,28 @@ export function mountApp(root: HTMLElement, c: Content): void {
       (b.issueAcquisition[level] > 0 ? ` Новых читателей ×${b.issueAcquisition[level]}` : ' Новых читателей не будет') +
       `, равнодушные уходят с шансом ${pct(b.issueChurn[level])}` +
       (b.issueChurnBelievers[level] > 0 ? `, даже поверившие — ${pct(b.issueChurnBelievers[level])}.` : '.');
+    // A bar from the current level to the next one and how many points are missing (CONCEPT.md §7.3).
+    const from = level > 0 ? b.issueThresholds[level - 1] : 0;
+    const needsSensation = next !== undefined && score >= next;
+    const progress = next === undefined ? 1 : needsSensation ? 1 : (score - from) / (next - from);
+    const missing = next === undefined ? 0 : next - score;
+    const goal =
+      next === undefined
+        ? 'лучше не бывает'
+        : needsSensation
+          ? `нужна сенсация до «${issueLevelLabels[level + 1].toLowerCase()}»`
+          : `ещё ${missing} ${points(missing)} до «${issueLevelLabels[level + 1].toLowerCase()}»`;
     return h(
       'span',
       { class: `issue-badge level-${level}`, title: hint },
       h('img', { src: `${assetBase}sprites/ui/issue_${level}.png`, alt: '', width: 32, height: 32 }),
-      h('b', {}, issueLevelLabels[level]),
+      h(
+        'span',
+        { class: 'issue-progress' },
+        h('span', {}, 'Выпуск: ', h('b', {}, issueLevelLabels[level])),
+        h('span', { class: 'issue-meter' }, h('span', { style: `width:${pct(progress)}` })),
+        h('small', {}, goal),
+      ),
     );
   }
 

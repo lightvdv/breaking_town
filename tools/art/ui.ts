@@ -112,6 +112,29 @@ function city(): Raster {
   return outline(r);
 }
 
+/** World news: a globe with continents. */
+function globe(): Raster {
+  const r = new Raster(16, 16);
+  disc(r, 7.5, 7.5, 6.3, 'blue');
+  r.art(0, 0, [
+    '................',
+    '................',
+    '.....gg.........',
+    '....gggg...g....',
+    '...ggggg..ggg...',
+    '...gggg...gggg..',
+    '....gg.....ggg..',
+    '.....g......g...',
+    '..........gg....',
+    '.....gg..ggg....',
+    '....gggg..g.....',
+    '.....ggg........',
+    '......g.........',
+  ], { g: 'green' });
+  r.set(5, 3, 'white');
+  return outline(r);
+}
+
 /** Issue level: a newspaper that gets louder — grey with "z", plain, with a star, with a red burst. */
 function issue(level: 0 | 1 | 2 | 3): Raster {
   const r = new Raster(16, 16);
@@ -207,6 +230,7 @@ export const uiIcons: Record<string, () => Raster> = {
   reputation,
   residents,
   city,
+  globe,
   issue_0: () => issue(0),
   issue_1: () => issue(1),
   issue_2: () => issue(2),

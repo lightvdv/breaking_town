@@ -178,9 +178,26 @@ export function mountApp(root: HTMLElement, c: Content): void {
     ),
   );
   const issueHead = h('div', { class: 'issue-head' });
-  const issueCards = h('div', { class: 'issue-cards' });
+  // The issue is a newspaper mock-up: front page, the article, columns of briefs, and a tray for
+  // stories left out; stories are dragged between them (CONCEPT.md §7.3).
+  type ZoneKey = Placement | 'out';
+  const zoneTexts: Record<string, [string, string]> = {
+    2: ['Первая полоса', 'Перетащите сюда главную новость'],
+    1: ['Статья', 'Перетащите сюда статью'],
+    0: ['Заметки', 'Перетащите сюда заметки'],
+    out: ['Не войдёт в выпуск', 'Перетащите сюда новость, чтобы не печатать её — она сгорит'],
+  };
+  const makeZone = (key: ZoneKey) => {
+    const items = h('div', { class: 'zone-items' });
+    const empty = h('p', { class: 'zone-empty' }, zoneTexts[key][1]);
+    const root = h('section', { class: `zone zone-${key}`, 'data-zone': String(key) }, h('h4', { class: 'zone-label' }, zoneTexts[key][0]), items, empty);
+    return { root, items, empty };
+  };
+  const zones: Record<string, ReturnType<typeof makeZone>> = { 2: makeZone(2), 1: makeZone(1), 0: makeZone(0), out: makeZone('out') };
+  const masthead = h('header', { class: 'masthead' });
+  const paper = h('div', { class: 'paper' }, masthead, h('div', { class: 'paper-grid' }, zones[2].root, zones[1].root, zones[0].root));
   const issueFoot = h('div', { class: 'issue-foot' });
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, issueCards, issueFoot));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, paper, zones.out.root, issueFoot));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue) closeIssue();
@@ -294,20 +311,29 @@ export function mountApp(root: HTMLElement, c: Content): void {
   }
 
   /**
-   * Puts a card at a placement. When that placement is full, the card holding it (the weakest one
-   * if there are several) moves to this card's old place.
+   * Puts a card at a placement (dragged there, CONCEPT.md §7.3). When that placement is full, the
+   * card dropped on (or the weakest holder) moves to this card's old place; a card brought back from
+   * outside the issue pushes the holder down to the briefs.
    */
-  function place(card: CardInstance, to: Placement): void {
+  function place(card: CardInstance, to: Placement, onto?: CardInstance): void {
     const d = draftOf(card);
-    if (d.placement === to) return;
+    const from: Placement = d.publish ? d.placement : 0;
+    if (d.publish && from === to) return;
     const mods = getModifiers(state, c);
     const holders = state.hand.filter((x) => x.uid !== card.uid && drafts.get(x.uid)?.publish && drafts.get(x.uid)!.placement === to);
     if (holders.length >= placementSlots(mods)[to]) {
-      const weakest = holders.sort((a, b) => impactOf(a, mods) - impactOf(b, mods))[0];
-      drafts.get(weakest.uid)!.placement = d.placement;
+      const target = onto && holders.includes(onto) ? onto : holders.sort((a, b) => impactOf(a, mods) - impactOf(b, mods))[0];
+      drafts.get(target.uid)!.placement = from;
     }
     d.placement = to;
     d.publish = true;
+  }
+
+  /** Takes a card out of the issue (dragged to the tray); it burns at the end of the turn. */
+  function unpublish(card: CardInstance): void {
+    const d = draftOf(card);
+    d.publish = false;
+    d.placement = 0;
   }
 
   const draftOf = (card: CardInstance): Draft => {
@@ -392,7 +418,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
   // ---------- Tooltip ----------
 
   function showTooltip(t: HoverTarget | null): void {
-    if (!t) {
+    // The city is under the issue or a window: no hints over it then (CONCEPT.md §7.3).
+    if (!t || issueOpen || modal) {
       tooltip.hidden = true;
       return;
     }
@@ -540,157 +567,192 @@ export function mountApp(root: HTMLElement, c: Content): void {
     return `${text}: прочтут ${read} читателей, воздействие ×${impact}, риск ×${risk}.`;
   }
 
-  /** Builds the content of a news card; the root element is reused between renders. */
-  function cardContent(card: CardInstance, mods: Modifiers): { cls: string; children: Node[] } {
+  /** Tier as a face next to the headline (CONCEPT.md §7.3). */
+  const tierFaces = ['😴', '🙂', '😮', '🤯'];
+
+  /** Placeholder "text" under a headline: grey lines of varying length, stable per card. */
+  function lorem(uid: number, lines: number): HTMLElement {
+    return h(
+      'div',
+      { class: 'lorem', 'aria-hidden': 'true' },
+      ...Array.from({ length: lines }, (_, i) => {
+        const last = i === lines - 1;
+        const width = last ? 35 + ((uid * 13 + i * 7) % 30) : 72 + ((uid * 37 + i * 53) % 29);
+        return h('span', { style: `width:${width}%` });
+      }),
+    );
+  }
+
+  /** Builds a news item for its place in the newspaper; the root element is reused between renders. */
+  function newsContent(card: CardInstance, mods: Modifiers, where: Placement | 'out'): { cls: string; children: Node[] } {
     const tpl = templateOf(c, card.templateId);
     const d = draftOf(card);
     const p = previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: d.distortion });
     const audience = tpl.audience?.length ? tpl.audience.map((g) => groupOf(c, g).name.toLowerCase()).join(', ') : 'все жители';
-    // Who holds the limited places now: picking one moves that story to this card's old place.
-    const holderOf = (to: Placement) =>
-      state.hand.find((x) => x.uid !== card.uid && drafts.get(x.uid)?.publish && drafts.get(x.uid)!.placement === to);
     const investigation = tpl.source === 'investigation';
     const target = tpl.target ? groupOf(c, tpl.target).name : '';
-    const update = (patch: Partial<Draft>) => {
-      Object.assign(d, patch);
+    const reporter = reporterOf(c, card.reporterId);
+    const open = details.has(card.uid);
+    // Distortion raises the tier, and the item restyles itself at once (CONCEPT.md §3.1).
+    const tier = p.tier;
+    const raised = tier > card.tier;
+    const act = (f: () => void) => () => {
+      f();
       render();
     };
-    const open = details.has(card.uid);
-    /** Row of three icon buttons; the chosen one is pressed. */
-    const iconRow = (label: string, buttons: { icon: string; title: string; on: boolean; disabled: boolean; pick: () => void }[]) =>
+
+    // Truth buttons next to the headline: a story can only be made less true.
+    const truthButtons = h(
+      'span',
+      { class: 'truth-buttons', role: 'group', 'aria-label': 'Искажение' },
+      ...([0, 1, 2] as const).map((t) => {
+        const dist = t - card.baseTruth;
+        const on = d.distortion === dist;
+        const title = `${truthLabels[t]} — ${dist <= 0 ? distortionLabels[0].toLowerCase() : distortionLabels[t].toLowerCase()}`;
+        return h(
+          'button',
+          {
+            class: `truth-btn${on ? ' on' : ''}`,
+            title,
+            'aria-pressed': String(on),
+            disabled: dist < 0 || dist > maxDistortion(card) || busy,
+            onclick: act(() => (d.distortion = dist)),
+          },
+          h('img', { src: `${assetBase}sprites/ui/truth_${t}.png`, alt: title, width: 16, height: 16 }),
+        );
+      }),
+    );
+    const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `компромат на группу «${target}»` }[tpl.source];
+    const moveTo = (label: string, key: Placement | 'out') =>
+      h(
+        'button',
+        { class: 'ghost small', disabled: where === key || busy, onclick: act(() => (key === 'out' ? unpublish(card) : place(card, key))) },
+        label,
+      );
+    const info = open
+      ? h(
+          'div',
+          { class: 'news-info' },
+          h('p', {}, h('b', {}, `${tierFaces[tier]} ${tierLabels[tier]}`), raised ? ` (было: ${tierLabels[card.tier].toLowerCase()}, поднято искажением)` : ''),
+          h('p', {}, `${truthLabels[p.truth]} · ${topicLabels[tpl.topic]} · ${sourceLabel} · ${scopeLabels[card.scope]}`),
+          h('p', { class: 'effect' }, effectText(c, p.effect, tpl.target)),
+          h('p', {}, `Аудитория: ${audience}`),
+          h(
+            'div',
+            { class: 'card-stat', title: 'Насколько сильно поверившие отреагируют: уровень, место в газете, масштаб, аудитория' },
+            h('span', {}, 'Воздействие'),
+            meter(p.impact / 2.5, p.impact >= 1.4 ? 'danger' : 'ok'),
+            h('em', {}, `×${p.impact.toFixed(1)}`),
+          ),
+          bar('Охват города', p.reachChance),
+          bar('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
+          where !== 'out' ? h('p', { class: 'hint' }, placementNote(where)) : null,
+          h('div', { class: 'news-moves' }, moveTo('На первую', 2), moveTo('Статьёй', 1), moveTo('Заметкой', 0), moveTo('Убрать', 'out')),
+        )
+      : null;
+
+    const withImage = where === 2 || where === 1;
+    const cls = ['news', `at-${where}`, `truth-${p.truth}`, `tier-${tier}`, investigation ? 'investigation' : ''].filter(Boolean).join(' ');
+    const children: (HTMLElement | null)[] = [
+      investigation ? h('div', { class: 'kicker' }, `Расследование · эксклюзив · ${target.toLowerCase()}`) : null,
       h(
         'div',
-        { class: 'icon-row', role: 'group', 'aria-label': label },
-        ...buttons.map((x) =>
+        { class: 'news-head' },
+        h('span', { class: 'grip', title: 'Перетащите, чтобы переставить', 'aria-hidden': 'true' }, '⠿'),
+        h('h3', { class: 'headline' }, p.title),
+      ),
+      h(
+        'div',
+        { class: 'news-body' },
+        withImage ? h('img', { class: 'news-art', src: `${assetBase}sprites/news/${tpl.id}.png`, alt: '', width: 256, height: 144 }) : null,
+        lorem(card.uid, where === 2 ? 16 : where === 1 ? 7 : 3),
+      ),
+      // One bottom row: the author, then everything about the story and its controls (CONCEPT.md §7.3).
+      h(
+        'div',
+        { class: 'news-foot' },
+        h('span', { class: 'byline' }, portrait(reporter.id, 'mini-portrait'), reporter.name),
+        h(
+          'span',
+          { class: 'news-tools' },
+          h('span', { class: 'tier-face', title: `${tierLabels[tier]} новость${raised ? ' — уровень поднят искажением' : ''}` }, tierFaces[tier]),
+          h('img', {
+            class: 'scope-icon',
+            src: `${assetBase}sprites/ui/${card.scope === 'global' ? 'globe' : 'city'}.png`,
+            alt: scopeLabels[card.scope],
+            title: card.scope === 'global' ? 'Новость о мире' : 'Новость о городе',
+            width: 16,
+            height: 16,
+          }),
+          truthButtons,
           h(
             'button',
             {
-              class: `icon-choice${x.on ? ' on' : ''}`,
-              title: x.title,
-              'aria-pressed': String(x.on),
-              disabled: x.disabled || busy,
-              onclick: x.pick,
+              class: `info-btn${open ? ' on' : ''}`,
+              title: 'Подробности: эффект, аудитория, воздействие, охват, риск',
+              'aria-expanded': String(open),
+              onclick: act(() => (open ? details.delete(card.uid) : details.add(card.uid))),
             },
-            h('img', { src: `${assetBase}sprites/ui/${x.icon}.png`, alt: x.title, width: 32, height: 32 }),
+            'i',
           ),
         ),
-      );
-    // Distortion as the truth level it leads to: a story can only be made less true.
-    const truthButtons = ([0, 1, 2] as const).map((t) => {
-      const dist = t - card.baseTruth;
-      return {
-        icon: `truth_${t}`,
-        title: `${truthLabels[t]} — ${dist <= 0 ? distortionLabels[0].toLowerCase() : distortionLabels[t].toLowerCase()}`,
-        on: d.distortion === dist,
-        disabled: dist < 0 || dist > maxDistortion(card),
-        pick: () => update({ distortion: dist }),
-      };
-    });
-    const placeButtons = ([0, 1, 2] as const).map((i) => {
-      const holder = i > 0 && d.placement !== i ? holderOf(i) : undefined;
-      const moved = holder ? ` Сейчас там «${templateOf(c, holder.templateId).titles[holder.baseTruth]}» — она перейдёт на место этой.` : '';
-      return {
-        icon: `place_${i}`,
-        title: `${placementLabels[i]}. ${placementNote(i)}${moved}`,
-        on: d.placement === i,
-        disabled: false,
-        pick: () => {
-          place(card, i);
-          render();
-        },
-      };
-    });
-    const reporter = reporterOf(c, card.reporterId);
-    // Distortion raises the tier, and the card restyles itself at once (CONCEPT.md §3.1).
-    const tier = p.tier;
-    const raised = tier > card.tier;
-    const cls = [
-      'card',
-      `truth-${p.truth}`,
-      `tier-${tier}`,
-      `scope-${card.scope}`,
-      `place-${d.placement}`,
-      investigation ? 'investigation' : '',
-      d.publish ? 'selected' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
-    const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `о группе: ${target.toLowerCase()}` }[tpl.source];
-    const children: (HTMLElement | null)[] = [
-      tier === 3 && !investigation ? h('div', { class: 'ribbon' }, 'СЕНСАЦИЯ') : null,
-      investigation ? h('div', { class: 'inv-band' }, 'РАССЛЕДОВАНИЕ', h('span', {}, truthLabels[p.truth].toLowerCase())) : null,
-      h(
-        'div',
-        { class: 'card-band' },
-        h('b', {}, investigation ? `ГРЯЗЬ: ${target.toUpperCase()}` : truthLabels[p.truth].toUpperCase()),
-        h('span', {}, `${topicLabels[tpl.topic]} · ${sourceLabel}`),
-      ),
-      h(
-        'div',
-        { class: 'card-art' },
-        h('img', { src: `${assetBase}sprites/news/${tpl.id}.png`, alt: '', width: 256, height: 144 }),
-        investigation ? h('div', { class: 'stamp exclusive' }, 'ЭКСКЛЮЗИВ') : tier === 2 ? h('div', { class: 'stamp' }, 'Интересно') : null,
-        // Details cover the illustration so the card keeps its size (CONCEPT.md §7.3).
-        open
-          ? h(
-              'div',
-              { class: 'card-details' },
-              h('p', { class: 'audience' }, `Аудитория: ${audience}`),
-              h(
-                'div',
-                { class: 'card-stat', title: 'Насколько сильно поверившие отреагируют: уровень, место в газете, масштаб, аудитория' },
-                h('span', {}, 'Воздействие'),
-                meter(p.impact / 2.5, p.impact >= 1.4 ? 'danger' : 'ok'),
-                h('em', {}, `×${p.impact.toFixed(1)}`),
-              ),
-              bar('Охват города', p.reachChance),
-              bar('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
-            )
-          : null,
-      ),
-      h(
-        'div',
-        { class: 'card-meta' },
-        h(
-          'span',
-          { class: `tier-tag t${tier}`, title: raised ? `Было: ${tierLabels[card.tier].toLowerCase()} — уровень поднят искажением` : '' },
-          raised ? `${tierLabels[tier]} ↑` : tierLabels[tier],
-        ),
-        h('span', { class: `scope-tag ${card.scope}` }, scopeLabels[card.scope]),
-        h('span', { class: 'by' }, portrait(reporter.id, 'mini-portrait'), reporter.name),
-        h(
-          'button',
-          {
-            class: `info-btn${open ? ' on' : ''}`,
-            title: 'Воздействие, охват и риск разоблачения',
-            'aria-expanded': String(open),
-            onclick: () => {
-              if (open) details.delete(card.uid);
-              else details.add(card.uid);
-              render();
-            },
-          },
-          'i',
-        ),
-      ),
-      h('h3', { class: 'headline' }, p.title),
-      h('p', { class: 'effect' }, effectText(c, p.effect, tpl.target)),
-      h('div', { class: 'controls' }, iconRow('Искажение', truthButtons), iconRow('Подача', placeButtons)),
-      h(
-        'button',
-        {
-          class: `pick${d.publish ? ' primary' : ''}`,
-          disabled: busy,
-          onclick: () => {
-            // A story taken back into the issue does not push anyone out: if its place is taken, it becomes a brief.
-            const taken = !d.publish && d.placement > 0 && holderOf(d.placement) !== undefined;
-            update({ publish: !d.publish, ...(taken ? { placement: 0 as Placement } : {}) });
-          },
-        },
-        d.publish ? 'В выпуске ✓' : 'В выпуск',
+        info,
       ),
     ];
     return { cls, children: children.filter((x): x is HTMLElement => x !== null) };
+  }
+
+  /** Drag a story between the front page, the article, the briefs and the tray (CONCEPT.md §7.3). */
+  function startDrag(e: PointerEvent, card: CardInstance, el: HTMLElement): void {
+    const t = e.target as Element;
+    if (busy || e.button !== 0 || t.closest('button, .news-info')) return;
+    // On touch screens only the grip drags, so the issue can still be scrolled.
+    if (e.pointerType === 'touch' && !t.closest('.grip')) return;
+    const rect = el.getBoundingClientRect();
+    const offX = e.clientX - rect.left;
+    const offY = e.clientY - rect.top;
+    let ghost: HTMLElement | null = null;
+    let over: HTMLElement | null = null;
+    const zoneAt = (x: number, y: number) => (document.elementFromPoint(x, y)?.closest('[data-zone]') as HTMLElement | null) ?? null;
+    const move = (ev: PointerEvent) => {
+      if (!ghost) {
+        if (Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 6) return;
+        ghost = el.cloneNode(true) as HTMLElement;
+        ghost.classList.add('drag-ghost');
+        ghost.style.width = `${rect.width}px`;
+        document.body.append(ghost);
+        el.classList.add('dragging');
+        issue.classList.add('drag-active');
+      }
+      ev.preventDefault();
+      ghost.style.transform = `translate(${ev.clientX - offX}px, ${ev.clientY - offY}px) rotate(-2deg)`;
+      const zone = zoneAt(ev.clientX, ev.clientY);
+      if (zone !== over) {
+        over?.classList.remove('drop-over');
+        zone?.classList.add('drop-over');
+        over = zone;
+      }
+    };
+    const end = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      if (!ghost) return;
+      ghost.remove();
+      el.classList.remove('dragging');
+      issue.classList.remove('drag-active');
+      over?.classList.remove('drop-over');
+      const key = ev.type === 'pointerup' ? over?.dataset.zone : undefined;
+      if (key === undefined) return;
+      const ontoEl = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.news') as HTMLElement | null;
+      const onto = state.hand.find((x) => String(x.uid) === ontoEl?.dataset.uid);
+      if (key === 'out') unpublish(card);
+      else place(card, Number(key) as Placement, onto);
+      render();
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
   }
 
   function fly(el: HTMLElement, card: CardInstance): void {
@@ -715,7 +777,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const visible = state.hand.filter((card) => revealed.has(card.uid));
 
     const note = searching ? 'Репортёры ищут новости… (щёлкните, чтобы пропустить)' : !visible.length ? 'Сегодня новостей нет.' : '';
-    issueHead.replaceChildren(h('h2', {}, `Выпуск дня ${state.turn}`), ...(note ? [h('p', {}, note)] : []));
+    issueHead.replaceChildren(...(note ? [h('p', {}, note)] : []));
+    masthead.replaceChildren(
+      h('span', { 'aria-hidden': 'true' }),
+      h('h2', {}, 'Городской Вестник'),
+      h('span', { class: 'masthead-side' }, `Выпуск № ${state.turn}`),
+    );
 
     for (const [uid, el] of cardEls) {
       if (!visible.some((x) => x.uid === uid)) {
@@ -723,21 +790,34 @@ export function mountApp(root: HTMLElement, c: Content): void {
         cardEls.delete(uid);
       }
     }
-    for (const card of visible) {
-      const { cls, children } = cardContent(card, mods);
-      let el = cardEls.get(card.uid);
-      const isNew = !el;
-      if (!el) {
-        el = h('article', {});
-        cardEls.set(card.uid, el);
-        issueCards.append(el);
-      }
-      const extra = [...el.classList].filter((x) => x === 'flying' || x === 'landed');
-      el.className = [cls, ...extra].join(' ');
-      el.replaceChildren(...children);
-      if (isNew) {
-        if (flyQueue.delete(card.uid) && issueOpen) fly(el, card);
-        else el.classList.add('landed');
+    const whereOf = (card: CardInstance): Placement | 'out' => {
+      const d = draftOf(card);
+      return d.publish ? d.placement : 'out';
+    };
+    // Stronger stories first inside each zone.
+    const ordered = [...visible].sort((a, b) => b.tier - a.tier || a.uid - b.uid);
+    for (const key of [2, 1, 0, 'out'] as const) {
+      const here = ordered.filter((card) => whereOf(card) === key);
+      zones[key].empty.hidden = here.length > 0;
+      for (const card of here) {
+        const { cls, children } = newsContent(card, mods, key);
+        let el = cardEls.get(card.uid);
+        const isNew = !el;
+        if (!el) {
+          el = h('article', { 'data-uid': String(card.uid) });
+          const self = el;
+          el.addEventListener('pointerdown', (e) => startDrag(e, card, self));
+          cardEls.set(card.uid, el);
+        }
+        // Appending moves an existing element into its zone, in order.
+        zones[key].items.append(el);
+        const extra = [...el.classList].filter((x) => x === 'flying' || x === 'landed');
+        el.className = [cls, ...extra].join(' ');
+        el.replaceChildren(...children);
+        if (isNew) {
+          if (flyQueue.delete(card.uid) && issueOpen) fly(el, card);
+          else el.classList.add('landed');
+        }
       }
     }
 

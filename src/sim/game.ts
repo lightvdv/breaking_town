@@ -52,6 +52,7 @@ export function createGame(c: Content, seed: number): GameState {
     ownedChannels: c.channels.filter((ch) => ch.cost === 0 && ch.requires === null).map((ch) => ch.id),
     upgrades: [],
     reporters: [...c.balance.startReporters],
+    agencyOffer: [],
     lastFinds: [],
     scandal: 1,
     investigations: [],
@@ -103,6 +104,8 @@ function generateEvents(state: GameState, c: Content, rng: RngState): CardTempla
 
 function startTurn(state: GameState, c: Content): string[] {
   state.turn++;
+  // The agency's candidates take other jobs if nobody hires them the same day.
+  state.agencyOffer = [];
   state.todayEvents = [];
   const notes = advanceCity(state, c, state.rng);
   const relations = advanceRelations(state, c, state.rng);

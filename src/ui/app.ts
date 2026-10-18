@@ -6,6 +6,8 @@ import {
   channelOf,
   createGame,
   fireReporter,
+  callAgency,
+  hireFromAgency,
   getModifiers,
   groupOf,
   investigationTurns,
@@ -216,7 +218,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const hudMenu = h('button', { class: 'icon-btn hud-menu', title: 'Меню', onclick: () => openModal('pause') }, '☰');
   const reporterBar = new ReporterBar(
     c,
-    () => openModal('shop', 'hire'),
+    () => openModal('shop', 'agency'),
     () => skip(),
     (id) => {
       investigator = id;
@@ -1357,7 +1359,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
 
   function reportersSection(): HTMLElement[] {
     const max = c.balance.maxReporters;
-    const options = listPurchases(state, c).filter((o) => o.kind === 'reporter');
     const row = (id: string, action: HTMLElement) => {
       const r = reporterOf(c, id);
       return h(
@@ -1373,9 +1374,44 @@ export function mountApp(root: HTMLElement, c: Content): void {
       ...state.reporters.map((id) =>
         row(id, h('button', { class: 'ghost', disabled: state.reporters.length <= 1 || !!state.outcome, onclick: () => fire(id) }, 'Уволить')),
       ),
-      ...(state.reporters.length >= max ? [h('p', { class: 'hint' }, 'Редакция полная. Чтобы нанять другого, кого-то придётся уволить.')] : []),
-      ...options.map((o) =>
-        row(o.id, h('button', { class: o.affordable ? 'primary' : '', disabled: !o.affordable || !!state.outcome, onclick: () => buy(o.id) }, `${o.cost}`)),
+      ...agencySection(row),
+    ];
+  }
+
+  /**
+   * HR agency (CONCEPT.md §3.3): pay the fee, the agency offers one or two random reporters, hire
+   * whom you like — only their salary follows. The offer lasts until the end of the turn.
+   */
+  function agencySection(row: (id: string, action: HTMLElement) => HTMLElement): HTMLElement[] {
+    const b = c.balance;
+    const full = state.reporters.length >= b.maxReporters;
+    const pool = c.reporters.filter((r) => r.weight > 0 && !state.reporters.includes(r.id)).length;
+    const canCall = !full && pool > 0 && state.money >= b.agencyFee && !state.outcome;
+    const act = (f: () => void) => () => {
+      try {
+        f();
+        error = '';
+      } catch (e) {
+        error = e instanceof Error ? e.message : String(e);
+      }
+      render();
+    };
+    return [
+      h('h3', { class: 'section', id: 'agency' }, 'Кадровое агентство «Перо и Ко»'),
+      h(
+        'p',
+        { class: 'hint' },
+        full
+          ? 'Редакция полная. Чтобы нанять другого, кого-то придётся уволить.'
+          : `Агентство подберёт одного или двух случайных репортёров за ${b.agencyFee}. Нанимать их можно бесплатно — дальше только зарплата. Предложение действует до конца хода.`,
+      ),
+      ...state.agencyOffer.map((id) =>
+        row(id, h('button', { class: 'primary', disabled: full || !!state.outcome, onclick: act(() => hireFromAgency(state, c, id)) }, 'Нанять')),
+      ),
+      h(
+        'button',
+        { class: state.agencyOffer.length ? '' : 'primary', disabled: !canCall, onclick: act(() => callAgency(state, c)) },
+        state.agencyOffer.length ? `Искать других (−${b.agencyFee})` : `Найти репортёров (−${b.agencyFee})`,
       ),
     ];
   }
@@ -1902,7 +1938,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
                 h('small', {}, `День ${Math.min(state.turn, c.balance.turnLimit)} · индекс города ${Math.round(state.metrics.cityIndex)} · ${state.money} монет`),
               )
             : null,
-          item('Новая игра', () => openModal('newgame'), hasGame && !state.outcome ? '' : 'primary'),
+          // A running game is not thrown away without asking.
+          item('Новая игра', () => (hasGame && !state.outcome ? openModal('newgame') : void startGame()), hasGame && !state.outcome ? '' : 'primary'),
           item('Как играть', () => openModal('howto')),
           item('Настройки', () => openModal('settings')),
           item('Об игре', () => openModal('about')),
@@ -1971,25 +2008,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
     ].filter((x): x is HTMLElement => x !== null);
   }
 
-  /** Random town or a town by its number (seed); from the game it warns that the current game is lost. */
+  /** From a running game: a confirmation that the current game will be lost. */
   function newGameContent(): HTMLElement[] {
-    const input = h('input', { type: 'number', min: 1, placeholder: 'например, 7', class: 'seed-input' });
-    const startNumbered = () => {
-      const n = Number(input.value);
-      if (Number.isInteger(n) && n > 0) void startGame(n);
-      else input.focus();
-    };
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') startNumbered();
-    });
-    const out: (HTMLElement | null)[] = [
-      hasGame && !titleOpen && !state.outcome ? h('p', { class: 'bad' }, 'Текущая партия будет потеряна.') : null,
-      h('button', { class: 'primary big', onclick: () => void startGame() }, 'Случайный город'),
-      h('p', { class: 'hint-line' }, 'Или город по номеру — у каждого номера своя карта и свои жители:'),
-      h('div', { class: 'seed-row' }, input, h('button', { onclick: startNumbered }, 'Начать')),
+    return [
+      h('p', {}, 'Начать новую партию в новом городе? Текущая партия будет потеряна.'),
+      h('button', { class: 'primary big', onclick: () => void startGame() }, 'Начать новую партию'),
       h('button', { class: 'ghost', onclick: () => openModal(titleOpen ? null : 'pause') }, '← Назад'),
     ];
-    return out.filter((x): x is HTMLElement => x !== null);
   }
 
   function settingsContent(): HTMLElement[] {

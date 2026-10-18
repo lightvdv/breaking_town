@@ -4,7 +4,7 @@ import type { ChannelId, Content, GameState, Requirement, UpkeepItem } from './t
 
 export interface PurchaseOption {
   id: string;
-  kind: 'channel' | 'upgrade' | 'reporter';
+  kind: 'channel' | 'upgrade';
   name: string;
   description: string;
   cost: number;
@@ -50,19 +50,6 @@ export function listPurchases(state: GameState, c: Content): PurchaseOption[] {
       affordable: unlocked && state.money >= u.cost,
     });
   }
-  const roomForReporter = state.reporters.length < c.balance.maxReporters;
-  for (const r of c.reporters) {
-    if (state.reporters.includes(r.id)) continue;
-    out.push({
-      id: r.id,
-      kind: 'reporter',
-      name: r.name,
-      description: r.bio,
-      cost: r.hireCost,
-      unlocked: roomForReporter,
-      affordable: roomForReporter && state.money >= r.hireCost,
-    });
-  }
   return out;
 }
 
@@ -83,7 +70,6 @@ export function purchase(state: GameState, c: Content, id: string): void {
   if (!option.affordable) throw new Error(`Cannot buy ${id} now`);
   state.money -= option.cost;
   if (option.kind === 'channel') state.ownedChannels.push(id);
-  else if (option.kind === 'reporter') state.reporters.push(id);
   else state.upgrades.push(id);
 }
 

@@ -7,6 +7,8 @@
 import { content } from '../src/content';
 import {
   averageTrust,
+  callAgency,
+  hireFromAgency,
   createGame,
   createRng,
   getModifiers,
@@ -174,20 +176,33 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
   return { publish };
 }
 
-/** Buys in priority order and saves up for the next priority item instead of spending on cheap extras. */
-const buyOrder = ['gusev', 'newspaper_quality_1', 'radio', 'volkova', 'editorial_1', 'tv', 'sokolov', 'social', 'lawyers'];
+/**
+ * Buys in priority order and saves up for the next priority item instead of spending on cheap extras.
+ * A number in the plan means "have this many reporters": the bot pays the HR agency and hires the
+ * best candidate it offers.
+ */
+const buyOrder: (string | number)[] = [2, 'newspaper_quality_1', 'radio', 3, 'editorial_1', 'tv', 4, 'social', 'lawyers'];
 
 function shop(s: GameState): void {
   for (;;) {
     const reserve = totalUpkeep(s, content) * 3;
     const options = listPurchases(s, content).filter((p) => p.unlocked);
-    const priority = buyOrder.map((id) => options.find((p) => p.id === id)).find((p) => p !== undefined);
-    // Extra reporters cost salary every turn, so only planned hires are made.
-    const option = priority ?? [...options].filter((p) => p.kind !== 'reporter').sort((a, b) => a.cost - b.cost)[0];
+    const step = buyOrder.find((x) => (typeof x === 'number' ? s.reporters.length < x : options.some((p) => p.id === x)));
+    if (typeof step === 'number') {
+      if (s.money - content.balance.agencyFee < reserve) return;
+      const offer = callAgency(s, content);
+      const best = [...offer].sort((a, b) => score(b) - score(a))[0];
+      if (best) hireFromAgency(s, content, best);
+      continue;
+    }
+    const option = step !== undefined ? options.find((p) => p.id === step) : [...options].sort((a, b) => a.cost - b.cost)[0];
     if (!option || !option.affordable || s.money - option.cost < reserve) return;
     purchase(s, content, option.id);
   }
 }
+
+/** How good a candidate looks to the bot: luck and nose. */
+const score = (id: string) => reporterOf(content, id).skills.luck + 0.1 * reporterOf(content, id).skills.nose;
 
 interface Result {
   outcome: Outcome;

@@ -4,7 +4,9 @@
   "turnLimit": 40,
   "winCityIndex": 35,
   "startMoney": 100,
-  "maxReporters": 5,
+  "maxReporters": 10,
+  "agencyFee": 120,
+  "agencyMaxOffer": 2,
   "startReporters": [
     "petrova"
   ],

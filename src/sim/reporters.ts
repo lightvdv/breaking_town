@@ -1,4 +1,4 @@
-import { chance, pick, weightedPick, type RngState } from './rng';
+import { chance, int, pick, weightedPick, type RngState } from './rng';
 import { clamp } from './lookup';
 import type { Modifiers } from './modifiers';
 import { pickPair } from './relations';
@@ -218,4 +218,38 @@ export function advanceInvestigations(state: GameState, c: Content, rng: RngStat
   }
   state.investigations = keep;
   return { cards, finds };
+}
+
+// ---------- HR agency (CONCEPT.md §3.3) ----------
+
+/**
+ * Pays the HR agency for a search: it offers one or two random reporters who are not on the staff
+ * (common ones more often, by `weight`). A new search replaces the previous offer.
+ */
+export function callAgency(state: GameState, c: Content): string[] {
+  const b = c.balance;
+  if (state.outcome) throw new Error('Game is over');
+  if (state.reporters.length >= b.maxReporters) throw new Error('The newsroom is full');
+  if (state.money < b.agencyFee) throw new Error('Not enough money for the agency');
+  const pool = c.reporters.filter((r) => r.weight > 0 && !state.reporters.includes(r.id));
+  if (!pool.length) throw new Error('The agency has nobody left to offer');
+  state.money -= b.agencyFee;
+  const count = Math.min(pool.length, 1 + int(state.rng, b.agencyMaxOffer));
+  const offer: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const r = weightedPick(state.rng, pool);
+    pool.splice(pool.indexOf(r), 1);
+    offer.push(r.id);
+  }
+  state.agencyOffer = offer;
+  return offer;
+}
+
+/** Hires one of the agency's candidates; the fee already paid for it, only the salary follows. */
+export function hireFromAgency(state: GameState, c: Content, id: string): void {
+  if (state.outcome) throw new Error('Game is over');
+  if (!state.agencyOffer.includes(id)) throw new Error(`Reporter ${id} was not offered`);
+  if (state.reporters.length >= c.balance.maxReporters) throw new Error('The newsroom is full');
+  state.reporters.push(id);
+  state.agencyOffer = state.agencyOffer.filter((x) => x !== id);
 }

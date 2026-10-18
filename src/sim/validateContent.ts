@@ -101,6 +101,8 @@ export function validateContent(c: Content): string[] {
   if (b.startReporters.length < 1) errors.push('at least one start reporter is needed');
   if (b.startReporters.length > b.maxReporters) errors.push('more start reporters than maxReporters');
   if (b.maxReporters > c.reporters.length) errors.push('maxReporters exceeds the number of reporters');
+  if (b.agencyFee < 0 || b.agencyMaxOffer < 1) errors.push('agencyFee must be ≥ 0 and agencyMaxOffer ≥ 1');
+  for (const r of c.reporters) if (!(r.weight >= 0)) errors.push(`reporter ${r.id}: weight must be ≥ 0`);
   if (b.minFinds < 1) errors.push('minFinds must be at least 1');
   if (!c.cards.some((t) => t.scope === 'global')) errors.push('no global news');
   // Enough stories of each kind that the no-repeat rule can hold (CONCEPT.md §3.3).

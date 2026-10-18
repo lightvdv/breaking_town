@@ -22,6 +22,8 @@ import {
   maxDistortion,
   playTurn,
   purchase,
+  callAgency,
+  hireFromAgency,
   validateContent,
   pairKey,
   pairKeys,
@@ -34,6 +36,11 @@ import {
   type NewsTier,
 } from '../src/sim';
 import { next } from '../src/sim/rng';
+
+/** Puts a reporter on the staff directly (the game hires through the HR agency). */
+function hire(s: GameState, id: string): void {
+  if (!s.reporters.includes(id)) s.reporters.push(id);
+}
 
 function withBalance(patch: Partial<Content['balance']>): Content {
   return { ...content, balance: { ...content.balance, ...patch } };
@@ -169,7 +176,7 @@ describe('distortion', () => {
     for (const seed of [1, 2, 3, 4, 5, 6]) {
       const s = createGame(content, seed);
       s.money = 10_000;
-      for (const id of ['gusev', 'volkova', 'kim', 'zaitsev']) purchase(s, content, id);
+      for (const id of ['gusev', 'volkova', 'kim', 'zaitsev']) hire(s, id);
       for (let i = 0; i < 4; i++) {
         playTurn(s, content, { publish: [] });
         for (const card of s.hand) expect(card.baseTruth).toBeLessThanOrEqual(1);
@@ -433,7 +440,7 @@ describe('reporters', () => {
   it('a forced story is boring, and every card names a hired reporter', () => {
     const s = createGame(content, 9);
     s.money = 10_000;
-    for (const id of ['gusev', 'volkova', 'kim', 'zaitsev']) purchase(s, content, id);
+    for (const r of content.reporters) if (s.reporters.length < content.balance.maxReporters) hire(s, r.id);
     expect(s.reporters.length).toBe(content.balance.maxReporters);
     playTurn(s, content, { publish: [] });
     for (const f of s.lastFinds.filter((x) => x.forced)) expect(f.tier).toBe(0);
@@ -441,14 +448,38 @@ describe('reporters', () => {
     expect(s.hand.length).toBeLessThanOrEqual(content.balance.maxReporters);
   });
 
+  it('the HR agency offers one or two new reporters for a fee; only they can be hired', () => {
+    const b = content.balance;
+    const sizes = new Set<number>();
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const s = createGame(content, seed);
+      s.money = 1000;
+      const offer = callAgency(s, content);
+      sizes.add(offer.length);
+      expect(s.money).toBe(1000 - b.agencyFee);
+      expect(offer.length).toBeGreaterThanOrEqual(1);
+      expect(offer.length).toBeLessThanOrEqual(b.agencyMaxOffer);
+      for (const id of offer) expect(s.reporters).not.toContain(id);
+      const spare = content.reporters.find((r) => !offer.includes(r.id) && !s.reporters.includes(r.id))!;
+      expect(() => hireFromAgency(s, content, spare.id)).toThrow();
+      hireFromAgency(s, content, offer[0]);
+      expect(s.reporters).toContain(offer[0]);
+      expect(s.money).toBe(1000 - b.agencyFee);
+      // The offer lapses at the end of the turn.
+      playTurn(s, content, { publish: [] });
+      expect(s.agencyOffer).toEqual([]);
+    }
+    expect([...sizes].sort()).toEqual([1, 2]);
+  });
+
   it('cannot hire more than maxReporters or fire the last one', () => {
     const s = createGame(content, 1);
     s.money = 100_000;
-    for (const r of content.reporters) {
-      if (s.reporters.length < content.balance.maxReporters && !s.reporters.includes(r.id)) purchase(s, content, r.id);
+    expect(content.balance.maxReporters).toBe(10);
+    while (s.reporters.length < content.balance.maxReporters) {
+      for (const id of callAgency(s, content)) if (s.reporters.length < content.balance.maxReporters) hireFromAgency(s, content, id);
     }
-    const spare = content.reporters.find((r) => !s.reporters.includes(r.id))!;
-    expect(() => purchase(s, content, spare.id)).toThrow();
+    expect(() => callAgency(s, content)).toThrow();
     while (s.reporters.length > 1) fireReporter(s, s.reporters[0]);
     expect(() => fireReporter(s, s.reporters[0])).toThrow();
   });
@@ -456,8 +487,7 @@ describe('reporters', () => {
   it('salaries are part of the upkeep', () => {
     const s = createGame(content, 1);
     const before = totalUpkeep(s, content);
-    s.money = 1000;
-    purchase(s, content, 'kim');
+    hire(s, 'kim');
     expect(totalUpkeep(s, content)).toBe(before + content.reporters.find((r) => r.id === 'kim')!.salary);
   });
 

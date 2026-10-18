@@ -29,6 +29,7 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     // Fields added after the save was made.
     s.lastSeen ??= {};
     s.reporterTopics ??= {};
+    s.agencyOffer ??= [];
     s.investigations ??= [];
     s.pendingLies ??= [];
     s.tension ??= createTension(c);

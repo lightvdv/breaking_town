@@ -631,19 +631,6 @@ button.publish.level-3.bump-up {
   gap: 8px;
 }
 
-.seed-row {
-  display: flex;
-  gap: 8px;
-}
-
-.seed-input {
-  flex: 1;
-  min-width: 0;
-  font: inherit;
-  font-size: 16px;
-  padding: 6px 8px;
-}
-
 .setting {
   display: flex;
   align-items: flex-start;
@@ -2924,15 +2911,15 @@ button.publish.level-3.bump-up {
   }
 
 
-  /* Phone top bar: resources; reporters, «Покупки» and ☰; then «В печать» (or «Выпуск») across the
-     width — nothing important sits in the bottom corners, where the host's badge may cover it. */
+  /* Phone top bar: resources; the reporters; «Покупки», «В печать» (or «Выпуск») and ☰ — nothing
+     important sits in the bottom corners, where the host's badge may cover it. */
   .hud {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
       'res res res'
-      'reps shop menu'
-      'pub pub pub';
+      'reps reps reps'
+      'shop pub menu';
     gap: 4px 8px;
     min-height: 0;
     padding: 4px 8px;
@@ -2949,9 +2936,11 @@ button.publish.level-3.bump-up {
     grid-area: menu;
   }
 
+  /* Up to ten reporters: their own row, wrapping if needed. */
   .reporter-bar {
     grid-area: reps;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 4px;
   }
 
   .hud-buttons {

@@ -2,7 +2,7 @@ export * from './types';
 export { createRng, type RngState } from './rng';
 export { createGame, playTurn, checkOutcome } from './game';
 export { fireReporter, listPurchases, purchase, salesOf, totalUpkeep, upkeepItems, type PurchaseOption } from './economy';
-export { cancelInvestigation, investigationTurns, onSpecialty, reporterLuck, reporterOf, searchLuck, setReporterTopics, startInvestigation, tierWeights } from './reporters';
+export { callAgency, cancelInvestigation, hireFromAgency, investigationTurns, onSpecialty, reporterLuck, reporterOf, searchLuck, setReporterTopics, startInvestigation, tierWeights } from './reporters';
 export { followersOf, readerCount } from './readers';
 export { getModifiers, placementSlots, rankedPlacements, type Modifiers } from './modifiers';
 export { previewPublication, cardTruth, effectiveTier, framingOf, isHarmful, issueLevel, issueScore, maxDistortion, minDistortion, outletReach, storyTitle, type IssueStory, type PublicationPreview } from './news';

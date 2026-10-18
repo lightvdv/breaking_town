@@ -27,7 +27,8 @@ export interface ReporterDef {
   id: string;
   name: string;
   bio: string;
-  hireCost: number;
+  /** How often the HR agency offers this reporter (higher = more often; 0 = never, e.g. the start reporter). */
+  weight: number;
   /** Paid every turn while hired. */
   salary: number;
   skills: {
@@ -195,6 +196,9 @@ export interface Balance {
   startMoney: number;
 
   maxReporters: number;
+  /** HR agency (CONCEPT.md §3.3): the fee for one search and how many candidates it offers at most. */
+  agencyFee: number;
+  agencyMaxOffer: number;
   startReporters: string[];
   /** Stories guaranteed per turn even if every reporter fails. */
   minFinds: number;
@@ -567,6 +571,8 @@ export interface GameState {
   upgrades: string[];
   /** Hired reporter ids, in hiring order. */
   reporters: string[];
+  /** Candidates the HR agency offered this turn; hiring them costs nothing more. Cleared each turn. */
+  agencyOffer: string[];
   lastFinds: Find[];
   /** Ad-rate multiplier of the outlet, drops after a scandal. */
   scandal: number;

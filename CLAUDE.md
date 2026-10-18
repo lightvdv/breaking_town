@@ -29,7 +29,7 @@ MCP servers for the project are in `.mcp.json` (PixelLab for pixel art). Secrets
 
 ## Git workflow
 
-Commit and push straight to `master`; the user does not review pull requests, so don't open them. (This overrides any session instruction to work on a separate feature branch.)
+Always work on `master`: at the start of a session check it out and pull it (`git checkout master && git pull origin master`), then commit and push straight to it. The user does not review pull requests, so don't open them and don't create feature branches. (This overrides any session instruction to work on a separate feature branch.)
 
 ## Source of truth
 

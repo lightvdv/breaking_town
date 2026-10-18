@@ -45,6 +45,7 @@ import {
   type TurnReport,
 } from '../sim';
 import { h, pct } from './dom';
+import { loadSave, writeSave } from './save';
 import { portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
   distortionLabels,
@@ -126,9 +127,12 @@ function flightFrames(tier: NewsTier, dx: number, dy: number): { frames: Keyfram
 }
 
 export function mountApp(root: HTMLElement, c: Content): void {
-  let state: GameState = createGame(c, seedFromUrl());
-  let drafts = new Map<number, Draft>();
-  let report: TurnReport | null = null;
+  // Continue a saved game if there is one; the seed in the URL only picks the city of a new game
+  // (add &new to the URL to start over in that city).
+  const saved = new URLSearchParams(location.search).has('new') ? null : loadSave<Draft>(c);
+  let state: GameState = saved?.state ?? createGame(c, seedFromUrl());
+  let drafts = new Map<number, Draft>(saved?.drafts ?? []);
+  let report: TurnReport | null = saved?.report ?? null;
   let error = '';
   let busy = false;
   let issueOpen = true;
@@ -944,12 +948,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const b = c.balance;
     const tiers = state.hand.filter((x) => drafts.get(x.uid)?.publish).map((x) => effectiveTier(x, drafts.get(x.uid)!.distortion));
     const score = issueScore(c, tiers);
-    const level = issueLevel(c, score);
+    const level = issueLevel(c, tiers);
     const next = (b.issueThresholds as number[])[level] as number | undefined;
     const hint =
       `${issueLevelLabels[level]} выпуск: ${score} очк. (скучная новость ${b.issueTierPoints[0]}, обычная ${b.issueTierPoints[1]}, ` +
       `интересная ${b.issueTierPoints[2]}, сенсация ${b.issueTierPoints[3]}).` +
       (next !== undefined ? ` До уровня «${issueLevelLabels[level + 1].toLowerCase()}» — ${next} очк.` : '') +
+      (level === 2 && score >= b.issueThresholds[2] ? ' Для сенсационного выпуска нужна хотя бы одна сенсация.' : '') +
       (b.issueAcquisition[level] > 0 ? ` Новых читателей ×${b.issueAcquisition[level]}` : ' Новых читателей не будет') +
       `, равнодушные уходят с шансом ${pct(b.issueChurn[level])}` +
       (b.issueChurnBelievers[level] > 0 ? `, даже поверившие — ${pct(b.issueChurnBelievers[level])}.` : '.');
@@ -1446,7 +1451,26 @@ export function mountApp(root: HTMLElement, c: Content): void {
     renderExposures();
     renderModal();
     renderOutcome();
+    saveSoon();
   }
+
+  // ---------- Autosave ----------
+
+  let saveTimer = 0;
+  const saveNow = () => {
+    window.clearTimeout(saveTimer);
+    writeSave<Draft>({ state, report, drafts: [...drafts] });
+  };
+  /** Every change is saved shortly after it (renders come in bursts during animations). */
+  function saveSoon(): void {
+    window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(saveNow, 400);
+  }
+  // A tablet may put the tab to sleep at any moment: save when it is hidden.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveNow();
+  });
+  window.addEventListener('pagehide', saveNow);
 
   busy = true;
   void runSearch();

@@ -255,10 +255,13 @@ describe('trust', () => {
 
 describe('issue level', () => {
   it('sums story points: one boring story is boring, four make an ordinary issue', () => {
-    expect(issueLevel(content, issueScore(content, [0]))).toBe(0);
-    expect(issueLevel(content, issueScore(content, [0, 0, 0, 0]))).toBe(1);
-    expect(issueLevel(content, issueScore(content, [3]))).toBe(2);
-    expect(issueLevel(content, issueScore(content, [3, 2]))).toBe(3);
+    expect(issueLevel(content, [0])).toBe(0);
+    expect(issueLevel(content, [0, 0, 0, 0])).toBe(1);
+    expect(issueLevel(content, [3])).toBe(2);
+    expect(issueLevel(content, [3, 2])).toBe(3);
+    // Enough points but no sensation: interesting, not sensational.
+    expect(issueScore(content, [1, 1, 1, 1])).toBeGreaterThanOrEqual(content.balance.issueThresholds[2]);
+    expect(issueLevel(content, [1, 1, 1, 1])).toBe(2);
   });
 
   it('a boring issue keeps fewer readers than a sensational one', () => {

@@ -173,12 +173,8 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
 
-  // The issue level decides how many untouched readers drift away and how many new ones arrive.
-  const score = issueScore(
-    c,
-    d.publish.map((p) => effectiveTier(state.hand.find((x) => x.uid === p.cardUid)!, p.distortion)),
-  );
-  const issue = { score, level: issueLevel(c, score) };
+  const tiers = d.publish.map((p) => effectiveTier(state.hand.find((x) => x.uid === p.cardUid)!, p.distortion));
+  const issue = { score: issueScore(c, tiers), level: issueLevel(c, tiers) };
   const readers = updateReaders(state, c, rng, mods, published.length, issue.level, readerIds);
   const readersAfter = readerCount(state);
 

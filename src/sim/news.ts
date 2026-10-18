@@ -416,7 +416,10 @@ export function issueScore(c: Content, tiers: NewsTier[]): number {
   return tiers.reduce<number>((s, t) => s + c.balance.issueTierPoints[t], 0);
 }
 
-export function issueLevel(c: Content, score: number): IssueLevel {
+/** Level of an issue from its stories' tiers; a sensational issue needs at least one sensation. */
+export function issueLevel(c: Content, tiers: NewsTier[]): IssueLevel {
   const [ordinary, interesting, sensational] = c.balance.issueThresholds;
-  return score >= sensational ? 3 : score >= interesting ? 2 : score >= ordinary ? 1 : 0;
+  const score = issueScore(c, tiers);
+  const level: IssueLevel = score >= sensational ? 3 : score >= interesting ? 2 : score >= ordinary ? 1 : 0;
+  return level === 3 && !tiers.includes(3) ? 2 : level;
 }

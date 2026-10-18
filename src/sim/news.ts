@@ -401,7 +401,11 @@ export function processLateExposures(state: GameState, c: Content, rng: RngState
   const keep = [];
   for (const lie of state.pendingLies) {
     if (chance(rng, lie.risk)) exposed.push(exposeNews(state, c, mods, lie.story, lie.viewers));
-    else if (--lie.turnsLeft > 0) keep.push(lie);
+    else if (--lie.turnsLeft > 0) {
+      // People forget: every issue the old lie is less likely to surface (CONCEPT.md §5.3).
+      lie.risk *= c.balance.lateExposureDecay;
+      keep.push(lie);
+    }
   }
   state.pendingLies = keep;
   return exposed;

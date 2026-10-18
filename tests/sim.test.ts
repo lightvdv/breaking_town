@@ -179,7 +179,11 @@ describe('readers', () => {
     purchase(s, content, 'newspaper_quality_1');
     purchase(s, content, 'radio');
     expect(followersOf(s, 'radio')).toBe(0);
-    for (let i = 0; i < 3; i++) playTurn(s, content, simpleDecision(s, 'none'));
+    // Boring issues attract nobody, so publish interesting stories.
+    for (let i = 0; i < 3; i++) {
+      for (const card of s.hand) card.tier = 2;
+      playTurn(s, content, simpleDecision(s, 'none'));
+    }
     expect(followersOf(s, 'radio')).toBeGreaterThan(0);
     const report = playTurn(s, content, simpleDecision(s, 'none'));
     expect(report.buyers.radio).toBeGreaterThan(0);
@@ -270,6 +274,38 @@ describe('issue level', () => {
       return sum;
     };
     expect(net(3)).toBeGreaterThan(net(0));
+  });
+});
+
+describe('boring issues and fading lies', () => {
+  it('a boring issue slightly shrinks the readership', () => {
+    let net = 0;
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const s = createGame(content, seed);
+      s.hand = s.hand.slice(0, 1).map((card) => ({ ...card, tier: 0 }));
+      const r = playTurn(s, content, { publish: [{ cardUid: s.hand[0].uid, placement: 0, distortion: 0 }] });
+      expect(r.issue.level).toBe(0);
+      expect(r.readers.gained).toBe(0);
+      net += r.readers.after - r.readers.before;
+    }
+    expect(net).toBeLessThan(0);
+  });
+
+  it('an old lie surfaces with fading odds and is forgotten after lateExposureTurns issues', () => {
+    const b = content.balance;
+    const s = createGame(content, 3);
+    const story = { cardUid: 1, templateId: 'shop_rats', title: 'x', truth: 2 as const, tier: 1 as const, placement: 1 as const, turn: s.turn };
+    s.pendingLies = [{ story, viewers: [], risk: 0, turnsLeft: b.lateExposureTurns }];
+    const risks: number[] = [];
+    for (let i = 0; i < b.lateExposureTurns + 1; i++) {
+      risks.push(s.pendingLies[0]?.risk ?? -1);
+      playTurn(s, content, { publish: [] });
+    }
+    expect(s.pendingLies.length).toBe(0);
+    s.pendingLies = [{ story, viewers: [], risk: 0.4, turnsLeft: b.lateExposureTurns }];
+    playTurn(s, content, { publish: [] });
+    if (s.pendingLies.length) expect(s.pendingLies[0].risk).toBeCloseTo(0.4 * b.lateExposureDecay);
+    expect(risks.filter((x) => x >= 0).length).toBe(b.lateExposureTurns);
   });
 });
 

@@ -760,7 +760,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
       `${issueLevelLabels[level]} выпуск: ${score} очк. (скучная новость ${b.issueTierPoints[0]}, обычная ${b.issueTierPoints[1]}, ` +
       `интересная ${b.issueTierPoints[2]}, сенсация ${b.issueTierPoints[3]}).` +
       (next !== undefined ? ` До уровня «${issueLevelLabels[level + 1].toLowerCase()}» — ${next} очк.` : '') +
-      ` Новых читателей ×${b.issueAcquisition[level]}, равнодушные уходят с шансом ${pct(b.issueChurn[level])}.`;
+      (b.issueAcquisition[level] > 0 ? ` Новых читателей ×${b.issueAcquisition[level]}` : ' Новых читателей не будет') +
+      `, равнодушные уходят с шансом ${pct(b.issueChurn[level])}` +
+      (b.issueChurnBelievers[level] > 0 ? `, даже поверившие — ${pct(b.issueChurnBelievers[level])}.` : '.');
     return h(
       'span',
       { class: `issue-badge level-${level}`, title: hint },
@@ -970,7 +972,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       const rd = r.readers;
       out.push(
         h('h3', { class: 'section' }, `Прошлый ход (${r.turn})`),
-        h('div', { class: 'ledger-row' }, h('span', {}, 'Выпуск'), h('b', {}, `${issueLevelLabels[r.issue.level]} · новых ×${c.balance.issueAcquisition[r.issue.level]}`)),
+        h('div', { class: 'ledger-row' }, h('span', {}, 'Выпуск'), h('b', {}, `${issueLevelLabels[r.issue.level]} · ${c.balance.issueAcquisition[r.issue.level] ? `новых ×${c.balance.issueAcquisition[r.issue.level]}` : 'новых нет'}`)),
         countRow('Было', rd.before),
         ...(Object.keys(reasons) as ChurnReason[]).filter((k) => rd.lostBy[k] > 0).map((k) => ledgerRow(`Ушли: ${reasons[k]}`, -rd.lostBy[k])),
         ...(rd.movedAway ? [ledgerRow('Уехали из города', -rd.movedAway)] : []),

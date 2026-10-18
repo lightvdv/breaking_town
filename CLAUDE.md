@@ -34,7 +34,7 @@ Never edit files through PowerShell `Get-Content`/`Set-Content` pipelines: Windo
 ## Architecture
 
 - `src/sim/` — the whole game: pure TypeScript, deterministic, JSON-serializable `GameState`. Entry points in `index.ts`: `createGame(content, seed)`, `playTurn(state, content, decision)` → `TurnReport`, `listPurchases`/`purchase`, `previewPublication` (what UI and bots show before publishing). `tsconfig.sim.json` enforces no DOM/Node APIs here.
-  - Turn order (`game.ts`): exposure decay → late exposures of old lies → publish each card (`news.ts`: reach → belief → effects → word of mouth) → fact-check → ad income/upkeep (`economy.ts`) → next turn: city day (`city.ts`), real events become true cards, deal hand → outcome check.
+  - Turn order (`game.ts`): scandal recovery → late exposures of old lies (odds fade by `lateExposureDecay` each issue, forgotten after `lateExposureTurns`) → publish each card (`news.ts`: reach → belief → effects → word of mouth) → fact-check → ad income/upkeep (`economy.ts`) → next turn: city day (`city.ts`), real events become true cards, deal hand → outcome check.
   - All randomness goes through `rng.ts` with the state stored in `GameState.rng`; never use `Math.random` in sim.
   - Upgrades never mutate state directly; their effects are recomputed by `getModifiers()` from `state.upgrades`.
   - Resident ids equal their index in `state.residents`, building ids their index in `state.buildings`.

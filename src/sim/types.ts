@@ -213,6 +213,8 @@ export interface Balance {
   issueThresholds: [number, number, number];
   /** By issue level: churn of readers the issue did not touch, and the acquisition multiplier. */
   issueChurn: [number, number, number, number];
+  /** By issue level: churn of readers who believed something (a boring issue bores even them). */
+  issueChurnBelievers: [number, number, number, number];
   issueAcquisition: [number, number, number, number];
   /** Impact that counts as ×1 effect strength. */
   impactNorm: number;
@@ -293,7 +295,9 @@ export interface Balance {
   trustPenaltyBystanderShare: number;
   checkerBase: number;
   truthRisk: Triple<number>;
+  /** Old lies can surface later: first-turn risk = risk × factor, then × decay each turn, for `lateExposureTurns` issues. */
   lateExposureFactor: number;
+  lateExposureDecay: number;
   lateExposureTurns: number;
   /** Fact-check risk × (1 − trustShield × reputation / 100): a trusted outlet is checked less. */
   trustShield: number;

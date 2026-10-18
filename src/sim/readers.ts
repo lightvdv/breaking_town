@@ -39,20 +39,17 @@ export function seedFollowers(state: GameState, c: Content, rng: RngState, mods:
   }
 }
 
-/** Why a reader might leave after this turn, given what they experienced; null when they stay. */
-function churnReason(state: GameState, r: Resident, issueSize: number): ChurnReason | null {
-  if (issueSize === 0) return 'empty';
-  const reaction = state.lastReactions[r.id];
-  if (reaction === 'outraged') return 'exposed';
-  if (reaction === 'scared' || reaction === 'happy' || reaction === 'talk') return null;
-  if (reaction === 'doubted') return 'doubted';
-  // The issue did not touch them: whether they stay depends on how interesting it was.
-  return 'boring';
-}
-
-function churnChance(c: Content, reason: ChurnReason, level: IssueLevel): number {
+/** Why a reader might leave after this turn and how likely it is, given what they experienced; null when they stay. */
+function churnOf(c: Content, state: GameState, r: Resident, issueSize: number, level: IssueLevel): { reason: ChurnReason; chance: number } | null {
   const b = c.balance;
-  return { empty: b.churnEmpty, exposed: b.churnExposed, doubted: b.churnDoubt, boring: b.issueChurn[level] }[reason];
+  if (issueSize === 0) return { reason: 'empty', chance: b.churnEmpty };
+  const reaction = state.lastReactions[r.id];
+  if (reaction === 'outraged') return { reason: 'exposed', chance: b.churnExposed };
+  if (reaction === 'doubted') return { reason: 'doubted', chance: b.churnDoubt };
+  // Believers mostly stay, but a boring issue bores even them a little (CONCEPT.md §4.2а).
+  const touched = reaction === 'scared' || reaction === 'happy' || reaction === 'talk';
+  const chance = touched ? b.issueChurnBelievers[level] : b.issueChurn[level];
+  return chance > 0 ? { reason: 'boring', chance } : null;
 }
 
 /** Applies churn and acquisition after an issue; returns who was lost and gained, and why. */
@@ -82,11 +79,11 @@ export function updateReaders(
       continue;
     }
     const wasReader = r.follows.length > 0;
-    const reason = wasReader ? churnReason(state, r, issueSize) : null;
-    if (reason && chance(rng, churnChance(c, reason, level))) {
+    const churn = wasReader ? churnOf(c, state, r, issueSize, level) : null;
+    if (churn && chance(rng, churn.chance)) {
       r.follows = [];
       out.lost++;
-      out.lostBy[reason]++;
+      out.lostBy[churn.reason]++;
       continue;
     }
     for (const ch of state.ownedChannels) {

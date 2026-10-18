@@ -10,7 +10,6 @@ import {
   groupOf,
   investigationTurns,
   issueLevel,
-  issueScore,
   effectiveTier,
   setReporterTopics,
   onSpecialty,
@@ -40,6 +39,7 @@ import {
   type Placement,
   type GameState,
   type NewsTier,
+  type IssueLevel,
   type Reaction,
   type Requirement,
   type TurnReport,
@@ -82,15 +82,6 @@ function randomSeed(): number {
 }
 
 const signed = (d: number) => (d > 0 ? `+${d}` : `${d}`);
-
-/** «очко / очка / очков» for a count. */
-function points(n: number): string {
-  const d = n % 10;
-  const dd = n % 100;
-  if (d === 1 && dd !== 11) return 'очко';
-  if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return 'очка';
-  return 'очков';
-}
 
 /** Card flight from the reporter to its place in the issue; louder for higher tiers (CONCEPT.md §7.3). */
 function flightFrames(tier: NewsTier, dx: number, dy: number): { frames: Keyframe[]; options: KeyframeAnimationOptions } {
@@ -166,6 +157,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
   let selected: number | null = null;
   /** The tray of stories left out is unfolded. */
   let trayOpen = false;
+  /** Issue level on the publish button at the last render, and its bump animation for this render. */
+  let shownLevel: IssueLevel | null = null;
+  let levelBump = '';
 
   // ---------- Persistent shell ----------
   // One top row (CONCEPT.md §7.3): resources, reporter portraits, the issue level and the buttons.
@@ -605,17 +599,32 @@ export function mountApp(root: HTMLElement, c: Content): void {
     // While the issue is open: its level and «В печать»; folded: «Выпуск» brings it back.
     const publishing = issueOpen && !state.outcome;
     hudActions.replaceChildren(
-      ...(publishing && !searching ? [issueBadge()] : []),
       h('button', { onclick: () => openModal('shop') }, 'Покупки'),
       publishing ? publishButton() : h('button', { class: 'primary', onclick: () => ((issueOpen = true), render()) }, 'Выпуск'),
     );
   }
 
+  /**
+   * «В печать» shows what issue is going out: its icon and level, and the button looks duller or
+   * louder by level, like story tier labels (CONCEPT.md §7.3). It bumps when the level changes.
+   */
   function publishButton(): HTMLElement {
+    const disabled = busy || !!state.outcome;
+    if (searching) return h('button', { class: 'primary publish', disabled: true }, 'Репортёры ищут…');
+    const b = c.balance;
+    const level = currentIssueLevel();
+    const hint =
+      `${issueLevelLabels[level]} выпуск. ` +
+      (b.issueAcquisition[level] > 0 ? `Новых читателей ×${b.issueAcquisition[level]}` : 'Новых читателей не будет') +
+      `, равнодушные уходят с шансом ${pct(b.issueChurn[level])}` +
+      (b.issueChurnBelievers[level] > 0 ? `, даже поверившие — ${pct(b.issueChurnBelievers[level])}.` : '.') +
+      ' Нажмите — опубликовать и завершить ход.';
     return h(
       'button',
-      { class: 'primary publish', title: 'Опубликовать выпуск и завершить ход', onclick: endTurn, disabled: busy || !!state.outcome },
-      searching ? 'Репортёры ищут…' : 'В печать ▸',
+      { class: `publish level-${level}${levelBump ? ` ${levelBump}` : ''}`, title: hint, onclick: endTurn, disabled },
+      h('img', { src: `${assetBase}sprites/ui/issue_${level}.png`, alt: '', width: 24, height: 24 }),
+      h('span', {}, 'В печать · ', h('b', {}, level === 3 ? 'СЕНСАЦИЯ!' : issueLevelLabels[level])),
+      h('span', { 'aria-hidden': 'true' }, '▸'),
     );
   }
 
@@ -1025,47 +1034,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
       }
     }
 
-    issueFoot.replaceChildren(...(searching ? [] : [issueBadge()]), publishButton());
+    issueFoot.replaceChildren(publishButton());
   }
 
-  /** How interesting the issue being composed is: points of published stories against the thresholds (CONCEPT.md §4.2а). */
-  function issueBadge(): HTMLElement {
-    const b = c.balance;
+  /** Level of the issue being composed: published stories' tiers after distortion (CONCEPT.md §4.2а). */
+  function currentIssueLevel(): IssueLevel {
     const tiers = state.hand.filter((x) => drafts.get(x.uid)?.publish).map((x) => effectiveTier(x, drafts.get(x.uid)!.distortion));
-    const score = issueScore(c, tiers);
-    const level = issueLevel(c, tiers);
-    const next = (b.issueThresholds as number[])[level] as number | undefined;
-    const hint =
-      `${issueLevelLabels[level]} выпуск: ${score} очк. (скучная новость ${b.issueTierPoints[0]}, обычная ${b.issueTierPoints[1]}, ` +
-      `интересная ${b.issueTierPoints[2]}, сенсация ${b.issueTierPoints[3]}).` +
-      (next !== undefined ? ` До уровня «${issueLevelLabels[level + 1].toLowerCase()}» — ${next} очк.` : '') +
-      (level === 2 && score >= b.issueThresholds[2] ? ' Для сенсационного выпуска нужна хотя бы одна сенсация.' : '') +
-      (b.issueAcquisition[level] > 0 ? ` Новых читателей ×${b.issueAcquisition[level]}` : ' Новых читателей не будет') +
-      `, равнодушные уходят с шансом ${pct(b.issueChurn[level])}` +
-      (b.issueChurnBelievers[level] > 0 ? `, даже поверившие — ${pct(b.issueChurnBelievers[level])}.` : '.');
-    // A bar from the current level to the next one and how many points are missing (CONCEPT.md §7.3).
-    const from = level > 0 ? b.issueThresholds[level - 1] : 0;
-    const needsSensation = next !== undefined && score >= next;
-    const progress = next === undefined ? 1 : needsSensation ? 1 : (score - from) / (next - from);
-    const missing = next === undefined ? 0 : next - score;
-    const goal =
-      next === undefined
-        ? 'лучше не бывает'
-        : needsSensation
-          ? `нужна сенсация до «${issueLevelLabels[level + 1].toLowerCase()}»`
-          : `ещё ${missing} ${points(missing)} до «${issueLevelLabels[level + 1].toLowerCase()}»`;
-    return h(
-      'span',
-      { class: `issue-badge level-${level}`, title: hint },
-      h('img', { src: `${assetBase}sprites/ui/issue_${level}.png`, alt: '', width: 32, height: 32 }),
-      h(
-        'span',
-        { class: 'issue-progress' },
-        h('span', {}, 'Выпуск: ', h('b', {}, issueLevelLabels[level])),
-        h('span', { class: 'issue-meter' }, h('span', { style: `width:${pct(progress)}` })),
-        h('small', {}, goal),
-      ),
-    );
+    return issueLevel(c, tiers);
   }
 
   /** Mini clipping of an exposed story: which issue it was in and what it cost. */
@@ -1546,6 +1521,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
 
   function render(): void {
     layOutIssue();
+    // The publish button bumps once when a change raises or lowers the issue level.
+    const level = searching ? null : currentIssueLevel();
+    levelBump = level === null || shownLevel === null || level === shownLevel ? '' : level > shownLevel ? 'bump-up' : 'bump-down';
+    shownLevel = level;
     renderHud();
     reporterBar.render(state, repStatus, searching);
     renderCityEvents();

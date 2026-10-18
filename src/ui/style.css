@@ -228,70 +228,104 @@ button.res:hover {
   color: var(--ink);
 }
 
-/* Issue level next to the publish button (CONCEPT.md §4.2а). */
-.issue-badge {
+/* «В печать» shows the level of the issue and looks duller or louder by it, like story tier
+   labels (CONCEPT.md §7.3). */
+button.publish {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 10px 2px 4px;
-  border: 2px solid var(--ink);
-  background: var(--panel);
-  cursor: help;
+  gap: 8px;
+  padding: 4px 12px 4px 6px;
+  font-size: 15px;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
-.issue-badge img {
+button.publish img {
+  width: 24px;
+  height: 24px;
   image-rendering: pixelated;
 }
 
-/* Level name, a bar to the next level and how many points are missing. */
-.issue-progress {
-  display: grid;
-  gap: 2px;
-  min-width: 170px;
-  font-size: 14px;
-  line-height: 1.2;
+/* Boring: grey and flat — publishing it is a shrug. */
+button.publish.level-0 {
+  background: #e4e9f0;
+  color: #5a6988;
+  border-style: dashed;
+  border-color: #5a6988;
+  box-shadow: none;
 }
 
-.issue-progress small {
-  font-size: 12px;
-  color: var(--muted);
+button.publish.level-0 b {
+  font-style: italic;
+  font-weight: 400;
 }
 
-.issue-meter {
-  display: block;
-  height: 8px;
-  background: var(--ink);
-  border: 1px solid var(--muted);
+/* Interesting: blue with a glow. */
+button.publish.level-2 {
+  background: #0099db;
+  color: #fff;
+  border-color: #124e89;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.25),
+    0 0 10px rgba(44, 232, 245, 0.8);
 }
 
-.issue-meter span {
-  display: block;
-  height: 100%;
-  background: var(--accent);
+/* Sensational: red and gold, pulsing and shimmering. */
+button.publish.level-3 {
+  background: linear-gradient(135deg, #a22633, #e43b44 50%, #a22633);
+  color: #fee761;
+  border-color: #feae34;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 0 #3e2731;
+  box-shadow: 0 0 12px rgba(254, 174, 52, 0.9);
+  animation: publish-pulse 0.9s ease-in-out infinite alternate;
 }
 
-.issue-badge.level-2 .issue-meter span {
-  background: #2ce8f5;
+button.publish.level-3::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.5) 50%, transparent 65%);
+  background-size: 250% 100%;
+  animation: shimmer 2s linear infinite;
+  pointer-events: none;
 }
 
-.issue-badge.level-3 .issue-meter span {
-  background: var(--danger);
+/* One bump when a change raises or lowers the level. */
+button.publish.bump-up {
+  animation: publish-up 0.45s cubic-bezier(0.3, 1.8, 0.5, 1);
 }
 
-.issue-badge.level-0 b {
-  color: var(--muted);
+button.publish.bump-down {
+  animation: publish-down 0.4s ease-out;
 }
 
-.issue-badge.level-2 b {
-  color: #2ce8f5;
+button.publish.level-3.bump-up {
+  animation:
+    publish-up 0.45s cubic-bezier(0.3, 1.8, 0.5, 1),
+    publish-pulse 0.9s ease-in-out 0.45s infinite alternate;
 }
 
-.issue-badge.level-3 {
-  border-color: var(--danger);
+@keyframes publish-pulse {
+  to {
+    box-shadow: 0 0 22px rgba(254, 174, 52, 1);
+    filter: brightness(1.15);
+  }
 }
 
-.issue-badge.level-3 b {
-  color: var(--accent);
+@keyframes publish-up {
+  40% {
+    transform: translateY(-4px) scale(1.12);
+  }
+}
+
+@keyframes publish-down {
+  40% {
+    transform: scale(0.9);
+    filter: brightness(0.8);
+  }
 }
 
 /* Money / readers / reputation breakdowns. */
@@ -370,9 +404,6 @@ button.res:hover {
   margin-left: auto;
 }
 
-.hud .issue-badge {
-  padding: 2px 8px 2px 2px;
-}
 
 .debug-actions {
   display: flex;
@@ -2410,15 +2441,17 @@ button.res:hover {
     margin-top: auto;
   }
 
+  .issue-foot .publish {
+    flex: 1;
+    justify-content: center;
+    min-height: 40px;
+  }
+
   .issue-foot {
     justify-content: space-between;
     gap: 8px;
     min-height: 44px;
     padding: 4px 6px;
-  }
-
-  .issue-foot .issue-progress {
-    min-width: 0;
   }
 
   /* Phone top bar: two thin rows — resources, then reporters and the buttons. */
@@ -2455,7 +2488,6 @@ button.res:hover {
   }
 
   /* The phone issue covers the top bar; its level and «В печать» live in the bottom bar. */
-  .hud .issue-badge,
   .hud .publish {
     display: none;
   }

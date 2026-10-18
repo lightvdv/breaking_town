@@ -455,14 +455,28 @@ button.publish.level-3.bump-up {
   color: var(--muted);
 }
 
-/* ---------- Exposure notice (CONCEPT.md §7.3) ---------- */
-.exposure-toast {
+/* ---------- Exposure and reconciliation notices (CONCEPT.md §7.3) ---------- */
+.toasts {
   position: absolute;
   z-index: 25;
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   max-width: calc(100% - 120px);
+  pointer-events: none;
+}
+
+.toasts > * {
+  pointer-events: auto;
+}
+
+.exposure-toast {
+  position: relative;
+  max-width: 100%;
   background: var(--panel);
   border: 2px solid var(--danger);
   box-shadow: 0 0 0 2px var(--ink), 0 0 18px rgba(228, 59, 68, 0.5);
@@ -472,8 +486,232 @@ button.publish.level-3.bump-up {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -20px);
+    transform: translateY(-20px);
   }
+}
+
+.reconcile-toast {
+  border-color: var(--ok);
+  box-shadow:
+    0 0 0 2px var(--ink),
+    0 0 18px rgba(99, 199, 77, 0.5);
+}
+
+.toast-note {
+  margin: 0;
+  padding: 0 10px 6px;
+  font-size: 13px;
+}
+
+/* ---------- City cutscene before the issue (CONCEPT.md §7.3) ---------- */
+.in-cutscene .city-events,
+.in-cutscene .city-tools,
+.in-cutscene .city-legend,
+.in-cutscene .toasts {
+  visibility: hidden;
+}
+
+.cutscene {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.cutscene[hidden] {
+  display: none;
+}
+
+.letterbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 9%;
+  background: #181425;
+  animation: letterbox-in 0.5s ease-out both;
+}
+
+.letterbox.top {
+  top: 0;
+}
+
+.letterbox.bottom {
+  bottom: 0;
+}
+
+@keyframes letterbox-in {
+  from {
+    height: 0;
+  }
+}
+
+.cutscene-caption {
+  position: absolute;
+  left: 50%;
+  bottom: calc(9% + 16px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: min(560px, calc(100% - 32px));
+  padding: 8px 14px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border: 2px solid var(--ink);
+  box-shadow: 5px 5px 0 rgba(24, 20, 37, 0.55);
+  animation: caption-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.cutscene-caption[hidden] {
+  display: none;
+}
+
+@keyframes caption-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+}
+
+.cutscene-caption b {
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.cutscene-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #a22633;
+}
+
+.cutscene-caption.kind-reconcile .cutscene-kicker {
+  color: #3e8948;
+}
+
+.cutscene-skip {
+  position: absolute;
+  right: 16px;
+  bottom: calc(9% + 16px);
+  pointer-events: auto;
+}
+
+/* ---------- Relations between groups (CONCEPT.md §5.5) ---------- */
+.relations-box {
+  background: var(--panel-2);
+  border: 2px solid var(--ink);
+}
+
+.relations {
+  display: block;
+  width: 100%;
+  max-height: 340px;
+}
+
+.rel-line {
+  transition:
+    opacity 0.2s,
+    stroke-width 0.2s;
+}
+
+/* On the brink: the line pulses. */
+.rel-line.level-3 {
+  stroke-dasharray: 10 6;
+  animation: rel-dash 0.8s linear infinite;
+}
+
+@keyframes rel-dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+.rel-line.dim,
+.rel-label.dim {
+  opacity: 0.12;
+}
+
+.rel-label text {
+  font-size: 12px;
+  font-weight: 700;
+  fill: #181425;
+}
+
+.rel-node {
+  cursor: pointer;
+}
+
+.rel-node text {
+  font-size: 15px;
+  font-weight: 700;
+  fill: var(--text);
+  paint-order: stroke;
+  stroke: var(--panel-2);
+  stroke-width: 4px;
+}
+
+.rel-node:hover circle,
+.rel-node:focus-visible circle {
+  stroke: var(--accent);
+}
+
+.rel-node.focus circle {
+  stroke: var(--accent);
+  stroke-width: 5;
+}
+
+.rel-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 13px;
+}
+
+.rel-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  vertical-align: -1px;
+}
+
+.rel-dot.level-0 {
+  background: #63c74d;
+}
+
+.rel-dot.level-1 {
+  background: #feae34;
+}
+
+.rel-dot.level-2 {
+  background: #e43b44;
+}
+
+.rel-row .good {
+  color: var(--ok);
+}
+
+.hint-line {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.city-events .peace {
+  color: #8fe87a;
+}
+
+/* Conflict stories: who against whom, coloured by how tense the pair is. */
+.conflict-kicker {
+  color: #b86f00;
+}
+
+.conflict-kicker.level-2,
+.conflict-kicker.level-3 {
+  color: #a22633;
 }
 
 .toast-head {

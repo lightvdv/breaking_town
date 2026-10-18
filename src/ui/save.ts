@@ -1,4 +1,4 @@
-import type { Content, GameState, TurnReport } from '../sim';
+import { createTension, type Content, type GameState, type TurnReport } from '../sim';
 
 /**
  * Autosave in the browser (CONCEPT.md §7.3): the game state is plain JSON, so it is kept in
@@ -31,6 +31,10 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.reporterTopics ??= {};
     s.investigations ??= [];
     s.pendingLies ??= [];
+    s.tension ??= createTension(c);
+    s.reconciliation ??= null;
+    s.reconcileReadyTurn ??= 0;
+    s.todayIncidents ??= [];
     // Upgrades removed from the content (e.g. the extra front page) are dropped.
     s.upgrades = s.upgrades.filter((id) => c.upgrades.some((u) => u.id === id));
     return { state: s, report: data.report ?? null, drafts: Array.isArray(data.drafts) ? data.drafts : [] };

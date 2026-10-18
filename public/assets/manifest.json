@@ -79,7 +79,9 @@
     "believed_good",
     "doubted",
     "talk",
-    "exposed"
+    "exposed",
+    "fight",
+    "peace"
   ],
   "ui": [
     "money",
@@ -179,6 +181,20 @@
     "investigation_pensioners",
     "investigation_workers",
     "investigation_youth",
-    "investigation_intelligentsia"
+    "investigation_intelligentsia",
+    "conflict_shop_fight",
+    "conflict_bar_brawl",
+    "conflict_graffiti",
+    "conflict_hospital_queue",
+    "conflict_factory_gate",
+    "conflict_hall_meeting",
+    "conflict_bench",
+    "conflict_lecture",
+    "rumor_complaints",
+    "rumor_jobs_taken",
+    "rumor_hoarding",
+    "rumor_gangs",
+    "rumor_budget",
+    "rumor_noise"
   ]
 }

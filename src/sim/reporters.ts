@@ -1,7 +1,8 @@
 import { chance, pick, weightedPick, type RngState } from './rng';
 import { clamp } from './lookup';
 import type { Modifiers } from './modifiers';
-import type { CardInstance, CardTemplate, Content, Find, GameState, NewsScope, NewsTier, ReporterDef, Topic } from './types';
+import { pickPair } from './relations';
+import type { CardInstance, CardTemplate, Content, Find, GameState, GroupId, NewsScope, NewsTier, ReporterDef, Topic } from './types';
 
 export function reporterOf(c: Content, id: string): ReporterDef {
   const r = c.reporters.find((x) => x.id === id);
@@ -63,6 +64,8 @@ export function findNews(
   rng: RngState,
   mods: Modifiers,
   events: CardTemplate[],
+  /** Today's incidents: which pair each one was about. */
+  eventPairs: Map<string, [GroupId, GroupId]> = new Map(),
 ): { cards: CardInstance[]; finds: Find[] } {
   const b = c.balance;
   const cards: CardInstance[] = [];
@@ -123,6 +126,8 @@ export function findNews(
       scope: scopeOf(tpl),
       reporterId: r.id,
     };
+    // Conflict stories are about a pair: today's incident's, the template's, or a tense one.
+    if (tpl.conflict) card.conflict = eventPairs.get(tpl.id) ?? (tpl.conflict === 'any' ? pickPair(state, c, rng) : [...tpl.conflict]);
     cards.push(card);
     return card;
   };

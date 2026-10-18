@@ -15,6 +15,13 @@ import {
   onSpecialty,
   listPurchases,
   maxDistortion,
+  minDistortion,
+  framingOf,
+  storyTitle,
+  pairKey,
+  pairKeys,
+  pairOf,
+  tensionLevel,
   playTurn,
   previewPublication,
   purchase,
@@ -38,17 +45,21 @@ import {
   type ExposedStory,
   type Placement,
   type GameState,
+  type Highlight,
   type NewsTier,
   type IssueLevel,
   type Reaction,
   type Requirement,
   type TurnReport,
 } from '../sim';
-import { h, pct } from './dom';
+import { h, pct, svg } from './dom';
 import { loadSave, writeSave } from './save';
 import { portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
   distortionLabels,
+  framingHints,
+  framingLabels,
+  tensionLabels,
   effectLabels,
   effectText,
   placementLabels,
@@ -158,6 +169,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const details = new Set<number>();
   /** The exposure notice of the last report was closed. */
   let exposuresSeen = false;
+  /** The mayor's reconciliation notice of the last report was closed. */
+  let reconcileSeen = false;
+  /** Group picked on the relations circle: its lines stand out, the rest dim. */
+  let relFocus: string | null = null;
   /** Story whose truth menu is open next to its headline. */
   let truthMenuFor: number | null = null;
   /** Story picked by a tap; the next tap on a place in the paper moves it there (CONCEPT.md §7.3). */
@@ -253,12 +268,25 @@ export function mountApp(root: HTMLElement, c: Content): void {
   });
   // Start-of-turn notice about exposed stories; hovering it shows the cards (CONCEPT.md §7.3).
   const exposureToast = h('div', { class: 'exposure-toast', hidden: true });
+  // The mayor's reconciliation is announced the same way (CONCEPT.md §5.5).
+  const reconcileToast = h('div', { class: 'exposure-toast reconcile-toast', hidden: true });
+  const toasts = h('div', { class: 'toasts' }, exposureToast, reconcileToast);
+  // City cutscene before the issue: letterbox bars and a caption of the bright moment (CONCEPT.md §7.3).
+  const cutsceneCaption = h('div', { class: 'cutscene-caption' });
+  const cutscene = h(
+    'div',
+    { class: 'cutscene', hidden: true },
+    h('div', { class: 'letterbox top' }),
+    h('div', { class: 'letterbox bottom' }),
+    cutsceneCaption,
+    h('button', { class: 'cutscene-skip', onclick: () => scene?.skipCutscene() }, 'Пропустить ▸'),
+  );
   const tooltip = h('div', { class: 'tooltip', hidden: true });
   const modalLayer = h('div', { class: 'modal-layer' });
   const outcomeLayer = h('div', { class: 'modal-layer' });
   root.replaceChildren(
     hud,
-    h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, issue, exposureToast),
+    h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, cutscene, issue, toasts),
     tooltip,
     modalLayer,
     outcomeLayer,
@@ -296,7 +324,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
 
   const titleOf = (uid: number | null) => {
     const card = uid === null ? undefined : state.hand.find((x) => x.uid === uid);
-    return card ? templateOf(c, card.templateId).titles[card.baseTruth] : null;
+    return card ? storyTitle(c, card, 0) : null;
   };
 
   /** Reporters show one by one what they found; each found card flies from its reporter into the issue. */
@@ -307,6 +335,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     skipSearch = false;
     issueOpen = true;
     exposuresSeen = false;
+    reconcileSeen = false;
     repStatus = new Map();
     revealed = new Set();
     flyQueue = new Set();
@@ -462,14 +491,18 @@ export function mountApp(root: HTMLElement, c: Content): void {
       error = '';
       drafts = new Map();
       details.clear();
-      // The exposure notice waits for the start of the next turn.
+      // The exposure and reconciliation notices wait for the start of the next turn.
       exposuresSeen = true;
+      reconcileSeen = true;
       issueOpen = false;
       busy = true;
       scene?.setState(state, true);
       render();
-      // Let the city react first (CONCEPT.md §7.3), then reporters look for the next stories.
-      window.setTimeout(() => {
+      // Let the city react first (CONCEPT.md §7.3), show the day's bright moments if there were
+      // any, then reporters look for the next stories.
+      const highlights = report.highlights;
+      window.setTimeout(async () => {
+        if (highlights.length && scene) await playCutscene(highlights);
         if (state.outcome) {
           busy = false;
           render();
@@ -480,6 +513,30 @@ export function mountApp(root: HTMLElement, c: Content): void {
       render();
     }
   };
+
+  const highlightLabels: Record<Highlight['kind'], string> = {
+    fight: 'Драка',
+    clash: 'Столкновения',
+    protest: 'Протест',
+    exodus: 'Отъезд',
+    closed: 'Закрытие',
+    reconcile: 'Примирение',
+  };
+
+  /** Plays the city cutscene with a caption for each bright moment. */
+  async function playCutscene(highlights: Highlight[]): Promise<void> {
+    cutscene.hidden = false;
+    cutscene.parentElement!.classList.add('in-cutscene');
+    tooltip.hidden = true;
+    await scene!.playHighlights(highlights, (hl) => {
+      cutsceneCaption.hidden = !hl;
+      if (!hl) return;
+      cutsceneCaption.className = `cutscene-caption kind-${hl.kind}`;
+      cutsceneCaption.replaceChildren(h('span', { class: 'cutscene-kicker' }, `Срочно · ${highlightLabels[hl.kind]}`), h('b', {}, hl.title));
+    });
+    cutscene.hidden = true;
+    cutscene.parentElement!.classList.remove('in-cutscene');
+  }
 
   // ---------- Tooltip ----------
 
@@ -636,11 +693,163 @@ export function mountApp(root: HTMLElement, c: Content): void {
   }
 
   function renderCityEvents(): void {
+    const rec = state.reconciliation;
     cityEvents.replaceChildren(
       h('div', { class: 'day' }, `День ${state.turn}`),
       ...state.todayEvents.map((e) => h('div', { class: 'event' }, `• ${e}`)),
+      ...(rec ? [h('div', { class: 'event peace' }, `☮ Примирение: ${pairNames(rec.pair, ' и ')} · ещё ${rec.turnsLeft} ${turnsWord(rec.turnsLeft)}`)] : []),
     );
   }
+
+  const pairNames = (key: string, sep: string) =>
+    pairOf(key)
+      .map((g) => groupOf(c, g).name.toLowerCase())
+      .join(sep);
+  const turnsWord = (n: number) => (n === 1 ? 'ход' : n < 5 ? 'хода' : 'ходов');
+
+  /** The mayor's reconciliation notice, next to the exposure notice (CONCEPT.md §5.5). */
+  function renderReconcile(): void {
+    const rec = report?.reconciliationStarted;
+    reconcileToast.hidden = !rec || reconcileSeen;
+    if (!rec) return;
+    reconcileToast.replaceChildren(
+      h(
+        'div',
+        { class: 'toast-head' },
+        h('img', { src: `${assetBase}sprites/fx/peace.png`, alt: '', width: 24, height: 24 }),
+        h('b', {}, `Мэрия объявила примирение: ${pairNames(rec.pair, ' и ')}`),
+        h(
+          'button',
+          {
+            class: 'icon-btn',
+            title: 'Закрыть',
+            onclick: () => {
+              reconcileSeen = true;
+              render();
+            },
+          },
+          '×',
+        ),
+      ),
+      h('p', { class: 'toast-note' }, `${rec.turnsLeft} ${turnsWord(rec.turnsLeft)} их вражда будет остывать, а фактчекеры проверяют прессу строже.`),
+    );
+  }
+
+  /**
+   * Relations between groups (CONCEPT.md §5.5): groups stand on an invisible circle, every pair is
+   * joined by a line — green in peace, yellow with friction, red on the brink. A click on a group
+   * brings out its lines and dims the rest.
+   */
+  function relationsContent(): HTMLElement[] {
+    const W = 320;
+    const H = 280;
+    const cx = W / 2;
+    const cy = H / 2;
+    const R = 96;
+    const n = c.groups.length;
+    const angle = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / n;
+    const pos = new Map(c.groups.map((g, i) => [g.id, { x: cx + R * Math.cos(angle(i)), y: cy + R * Math.sin(angle(i)) }]));
+    const colorOf = (level: number) => (level === 0 ? '#63c74d' : level === 1 ? '#feae34' : '#e43b44');
+    const focus = (on: string | null) => () => {
+      relFocus = on;
+      render();
+    };
+    const lines: SVGElement[] = [];
+    const labels: SVGElement[] = [];
+    for (const key of pairKeys(c)) {
+      const [a, z] = pairOf(key);
+      const t = state.tension[key] ?? 0;
+      const level = tensionLevel(c, t);
+      const pa = pos.get(a)!;
+      const pz = pos.get(z)!;
+      const touches = relFocus === a || relFocus === z;
+      const dim = relFocus !== null && !touches ? ' dim' : '';
+      lines.push(
+        svg('line', {
+          x1: pa.x,
+          y1: pa.y,
+          x2: pz.x,
+          y2: pz.y,
+          stroke: colorOf(level),
+          'stroke-width': (2 + t / 25 + (touches ? 2 : 0)).toFixed(1),
+          'stroke-linecap': 'round',
+          class: `rel-line level-${level}${dim}`,
+        }),
+      );
+      // The number sits off the middle, so the two diagonals do not cover each other.
+      const lx = pa.x + (pz.x - pa.x) * 0.38;
+      const ly = pa.y + (pz.y - pa.y) * 0.38;
+      labels.push(
+        svg(
+          'g',
+          { class: `rel-label${dim}` },
+          svg('rect', { x: lx - 13, y: ly - 9, width: 26, height: 18, rx: 3, fill: colorOf(level), stroke: '#181425', 'stroke-width': 1.5 }),
+          svg('text', { x: lx, y: ly + 4.5, 'text-anchor': 'middle' }, String(Math.round(t))),
+        ),
+      );
+    }
+    const nodes = c.groups.map((g, i) => {
+      const p = pos.get(g.id)!;
+      const dx = Math.cos(angle(i));
+      const dy = Math.sin(angle(i));
+      const side = Math.abs(dx) > 0.3;
+      const anchor = !side ? 'middle' : dx > 0 ? 'start' : 'end';
+      return svg(
+        'g',
+        { class: `rel-node${relFocus === g.id ? ' focus' : ''}`, tabindex: 0, role: 'button', onclick: focus(relFocus === g.id ? null : g.id) },
+        svg('circle', { cx: p.x, cy: p.y, r: 20, fill: g.color, stroke: '#181425', 'stroke-width': 3 }),
+        svg('text', { x: side ? p.x + dx * 28 : p.x, y: side ? p.y + 5 : p.y + dy * 32 + 5, 'text-anchor': anchor }, g.name),
+      );
+    });
+    const chart = svg(
+      'svg',
+      { class: 'relations', viewBox: `-70 -10 ${W + 140} ${H + 20}`, role: 'img', 'aria-label': 'Отношения между группами' },
+      svg('rect', { x: -70, y: -10, width: W + 140, height: H + 20, fill: 'transparent', onclick: focus(null) }),
+      ...lines,
+      ...labels,
+      ...nodes,
+    );
+    const before = report?.tensionBefore;
+    const rows = pairKeys(c)
+      .filter((key) => !relFocus || pairOf(key).includes(relFocus))
+      .sort((x, y) => (state.tension[y] ?? 0) - (state.tension[x] ?? 0))
+      .map((key) => {
+        const t = state.tension[key] ?? 0;
+        const level = tensionLevel(c, t);
+        const delta = before ? Math.round(t - (before[key] ?? t)) : 0;
+        return h(
+          'div',
+          { class: 'ledger-row rel-row' },
+          h('span', {}, h('span', { class: `rel-dot level-${Math.min(2, level)}` }), pairOf(key).map((g) => groupOf(c, g).name).join(' ↔ ')),
+          h(
+            'b',
+            {},
+            `${Math.round(t)} · ${tensionLabels[level]}`,
+            delta ? h('span', { class: delta > 0 ? 'bad' : 'good' }, ` ${delta > 0 ? '▲' : '▼'}${Math.abs(delta)}`) : '',
+          ),
+        );
+      });
+    const out: (HTMLElement | null)[] = [
+      h('h3', { class: 'section' }, 'Отношения между группами'),
+      h(
+        'p',
+        { class: 'hint-line' },
+        relFocus ? `Связи группы «${groupOf(c, relFocus).name}». Нажмите на неё ещё раз, чтобы увидеть всех.` : 'Нажмите на группу, чтобы выделить её связи.',
+      ),
+      h('div', { class: 'relations-box' }, chart),
+      h(
+        'div',
+        { class: 'rel-legend' },
+        h('span', {}, h('span', { class: 'rel-dot level-0' }), 'мир'),
+        h('span', {}, h('span', { class: 'rel-dot level-1' }), 'трения'),
+        h('span', {}, h('span', { class: 'rel-dot level-2' }), 'вражда, на грани срыва'),
+      ),
+      ...rows,
+      state.reconciliation ? h('p', { class: 'hint-line' }, `☮ Мэрия мирит: ${pairNames(state.reconciliation.pair, ' и ')}.`) : null,
+    ];
+    return out.filter((x): x is HTMLElement => x !== null);
+  }
+
 
   function placementNote(place: Placement): string {
     const b = c.balance;
@@ -703,11 +912,15 @@ export function mountApp(root: HTMLElement, c: Content): void {
       );
     // Truth: the icon shows the current level; a story can only be made less true.
     const truthIcon = (t: number) => h('img', { src: `${assetBase}sprites/ui/truth_${t}.png`, alt: '', width: 16, height: 16 });
+    // Conflict stories: the menu is a framing scale with a calming step below the truth (CONCEPT.md §5.5).
+    const calmIcon = () => h('img', { src: `${assetBase}sprites/fx/peace.png`, alt: '', width: 16, height: 16 });
+    const pair = card.conflict ? pairKey(c, ...card.conflict) : null;
+    const pairNames = card.conflict ? card.conflict.map((g) => groupOf(c, g).name.toLowerCase()).join(' ↔ ') : '';
     const truthButton = h(
       'button',
       {
         class: `place-btn truth-btn${menuOpen ? ' on' : ''}`,
-        title: `${truthLabels[p.truth]} — изменить правдивость`,
+        title: card.conflict ? `${framingLabels[framingOf(card, d.distortion)]} — изменить подачу` : `${truthLabels[p.truth]} — изменить правдивость`,
         'aria-haspopup': 'menu',
         'aria-expanded': String(menuOpen),
         disabled: busy,
@@ -716,7 +929,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
           selected = null;
         }),
       },
-      truthIcon(p.truth),
+      d.distortion < 0 ? calmIcon() : truthIcon(p.truth),
     );
     // "✕" takes a story out of the issue; in the tray "↩" brings it back as a brief.
     const out = where === 'out';
@@ -738,16 +951,21 @@ export function mountApp(root: HTMLElement, c: Content): void {
       ? h(
           'div',
           { class: 'place-menu truth-menu', role: 'menu' },
+          ...(card.conflict
+            ? [
+                menuItem(d.distortion === -1, false, () => (d.distortion = -1), calmIcon(), h('span', {}, framingLabels[0]), h('small', {}, framingHints[0])),
+              ]
+            : []),
           ...([0, 1, 2] as const).map((t) => {
             const dist = t - card.baseTruth;
             const how = dist <= 0 ? distortionLabels[0] : distortionLabels[t];
             return menuItem(
               d.distortion === dist,
-              dist < 0 || dist > maxDistortion(card),
+              dist < minDistortion(card) || dist < 0 || dist > maxDistortion(card),
               () => (d.distortion = dist),
               truthIcon(t),
-              h('span', {}, truthLabels[t]),
-              h('small', {}, dist < 0 ? 'правдивее не сделать' : how.toLowerCase()),
+              h('span', {}, card.conflict ? framingLabels[t + 1] : truthLabels[t]),
+              h('small', {}, dist < 0 ? 'правдивее не сделать' : card.conflict ? framingHints[t + 1] : how.toLowerCase()),
             );
           }),
         )
@@ -775,6 +993,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
           ),
           bar('Охват города', p.reachChance),
           bar('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
+          pair && p.tension
+            ? h(
+                'p',
+                { class: p.tension.delta > 0 ? 'bad' : '' },
+                `Напряжённость ${pairNames}: ${Math.round(state.tension[pair])} (${tensionLabels[tensionLevel(c, state.tension[pair])].toLowerCase()}) → ` +
+                  `${p.tension.delta > 0 ? 'разожжёт' : 'остудит'} примерно на ${Math.abs(Math.round(p.tension.delta))}`,
+              )
+            : null,
           where !== 'out' ? h('p', { class: 'hint' }, placementNote(where)) : null,
         )
       : null;
@@ -785,6 +1011,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       .join(' ');
     const children: (HTMLElement | null)[] = [
       investigation ? h('div', { class: 'kicker' }, `Расследование · эксклюзив · ${target.toLowerCase()}`) : null,
+      pair ? h('div', { class: `kicker conflict-kicker level-${tensionLevel(c, state.tension[pair])}` }, `Конфликт · ${pairNames}`) : null,
       h(
         'div',
         { class: 'news-head' },
@@ -1388,6 +1615,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h('img', { src: `${assetBase}sprites/ui/residents.png`, alt: '', width: 32, height: 32 }),
         h('div', {}, h('b', {}, `${active.length}`), h('span', {}, `жителей сейчас · всего уехали ${all.length - active.length}`)),
       ),
+      ...relationsContent(),
+      h('h3', { class: 'section' }, 'Группы'),
       ...rows,
       h('button', { onclick: () => openModal('city') }, '← Город'),
     ];
@@ -1598,6 +1827,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     renderCityEvents();
     renderIssue();
     renderExposures();
+    renderReconcile();
     renderModal();
     renderOutcome();
     saveSoon();

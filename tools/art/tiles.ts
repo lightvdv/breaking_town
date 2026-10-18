@@ -187,6 +187,15 @@ export const fxIcons: Record<string, { rows: string[]; key: Record<string, Color
     rows: ['kkkkkkkk', 'kwwwwwrk', 'kwkkkrwk', 'kwwwrwwk', 'kwkrkkwk', 'kwrwwwwk', 'krkkkkkk', 'r.......'],
     key: { k: 'ink', w: 'white', r: 'hotRed' },
   },
+  // Cutscenes (CONCEPT.md §7.3): a punch star over a fight, a dove over a reconciliation.
+  fight: {
+    rows: ['k..kk..k', '.kkyyk..', '.kyyyyk.', 'kyyrryyk', 'kyyrryyk', '.kyyyyk.', '..kyykk.', 'k..kk..k'],
+    key: { k: 'ink', y: 'yellow', r: 'red' },
+  },
+  peace: {
+    rows: ['....kk..', '...kwwk.', 'kkkwwwk.', 'kwwwwwwk', '.kwwwwk.', '..kkwkg.', '....kgg.', '.....g..'],
+    key: { k: 'ink', w: 'white', g: 'green' },
+  },
 };
 
 export function fxIcon(name: string): Raster {

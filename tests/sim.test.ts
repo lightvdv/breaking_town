@@ -23,6 +23,11 @@ import {
   playTurn,
   purchase,
   validateContent,
+  pairKey,
+  pairKeys,
+  fillTitle,
+  storyTitle,
+  type CardInstance,
   type Content,
   type Decision,
   type GameState,
@@ -534,5 +539,125 @@ describe('outcome', () => {
     while (!s.outcome) playTurn(s, c, { publish: [] });
     expect(s.turn).toBeLessThanOrEqual(4);
     expect(() => playTurn(s, c, { publish: [] })).toThrow(/over/);
+  });
+});
+
+describe('group relations', () => {
+  const conflictCard = (s: GameState, templateId: string, pair: [string, string], tier: NewsTier = 1): CardInstance => {
+    const tpl = templateOf(content, templateId);
+    const card: CardInstance = { uid: s.nextUid++, templateId, baseTruth: tpl.baseTruth, createdTurn: s.turn, tier, scope: 'local', reporterId: s.reporters[0], conflict: pair };
+    s.hand = [card];
+    return card;
+  };
+  // Many readers among the pair, so the story is actually believed.
+  const allRead = (s: GameState) => {
+    for (const r of s.residents) if (r.status === 'active') r.follows = [...s.ownedChannels];
+  };
+
+  it('starts every one of the six pairs at its start tension', () => {
+    const s = createGame(content, 1);
+    expect(pairKeys(content)).toHaveLength(6);
+    expect(Object.keys(s.tension).sort()).toEqual([...pairKeys(content)].sort());
+    expect(s.tension[pairKey(content, 'youth', 'pensioners')]).toBe(content.balance.tensionStart['pensioners|youth']);
+  });
+
+  it('fills the pair into titles with the right word forms', () => {
+    expect(fillTitle(content, '{a.one} ударил {b.oneAcc}', ['workers', 'intelligentsia'])).toBe('Рабочий ударил интеллигента');
+    expect(fillTitle(content, '{a.many} против {b.manyGen}', ['youth', 'pensioners'])).toBe('Молодые против пенсионеров');
+  });
+
+  it('heating a conflict story raises the pair tension, calming lowers it', () => {
+    const key = pairKey(content, 'workers', 'intelligentsia');
+    const shift = (distortion: number) => {
+      const s = createGame(content, 4);
+      allRead(s);
+      const card = conflictCard(s, 'conflict_shop_fight', ['workers', 'intelligentsia']);
+      s.tension[key] = 50;
+      const r = playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 2, distortion }] });
+      return r.publications[0].tension![key];
+    };
+    expect(shift(-1)).toBeLessThan(0);
+    expect(shift(0)).toBeGreaterThan(0);
+    expect(shift(2)).toBeGreaterThan(shift(1));
+    expect(shift(1)).toBeGreaterThan(shift(0));
+  });
+
+  it('calm framing is true, duller and only allowed on conflict stories', () => {
+    const s = createGame(content, 2);
+    const card = conflictCard(s, 'rumor_gangs', ['youth', 'pensioners'], 2);
+    const calm = previewPublication(s, content, getModifiers(s, content), { cardUid: card.uid, placement: 1, distortion: -1 });
+    expect(calm.truth).toBe(0);
+    expect(calm.tier).toBe(1);
+    expect(calm.title).toBe(storyTitle(content, card, -1));
+    expect(calm.effect).toBeNull();
+    const plain = createGame(content, 2);
+    const other = plain.hand.find((x) => !x.conflict)!;
+    expect(() => playTurn(plain, content, { publish: [{ cardUid: other.uid, placement: 1, distortion: -1 }] })).toThrow();
+  });
+
+  it('tension fades towards its start value', () => {
+    const s = createGame(content, 3);
+    const key = pairKey(content, 'workers', 'youth');
+    s.tension[key] = 70;
+    playTurn(s, content, { publish: [] });
+    expect(s.tension[key]).toBeLessThan(70);
+    expect(s.tension[key]).toBeGreaterThan(content.balance.tensionStart[key]);
+  });
+
+  it('tense pairs breed incidents that become true conflict stories and cutscene highlights', () => {
+    const c = withBalance({ incidentChance: 1 });
+    let incidents = 0;
+    let stories = 0;
+    let fights = 0;
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const s = createGame(c, seed);
+      for (const k of pairKeys(c)) s.tension[k] = 70;
+      const r = playTurn(s, c, { publish: [] });
+      incidents += s.todayIncidents.length;
+      fights += r.highlights.filter((h) => h.kind === 'fight').length;
+      stories += s.hand.filter((x) => x.conflict && templateOf(c, x.templateId).source === 'event').length;
+      for (const i of s.todayIncidents) expect(r.events).toContain(i.title);
+    }
+    expect(incidents).toBeGreaterThan(0);
+    expect(fights).toBe(incidents);
+    expect(stories).toBeGreaterThan(0);
+  });
+
+  it('clashes bring the pair out to protest, but nobody leaves because of relations', () => {
+    const c = withBalance({ clashProtest: 1, reconcileThreshold: 101, despairLeaveChance: 0 });
+    const s = createGame(c, 6);
+    const key = pairKey(c, 'workers', 'intelligentsia');
+    s.tension[key] = 100;
+    const active = s.residents.filter((r) => r.status === 'active').length;
+    playTurn(s, c, { publish: [] });
+    const protesting = s.residents.filter((r) => r.protestTurns > 0 && (r.group === 'workers' || r.group === 'intelligentsia')).length;
+    expect(protesting).toBeGreaterThan(0);
+    expect(s.residents.filter((r) => r.status === 'active').length).toBeGreaterThanOrEqual(active);
+  });
+
+  it('the mayor reconciles the tensest pair, shows it and waits before the next time', () => {
+    const s = createGame(content, 7);
+    const key = pairKey(content, 'youth', 'pensioners');
+    s.tension[key] = 95;
+    const r = playTurn(s, content, { publish: [] });
+    expect(r.reconciliationStarted?.pair).toBe(key);
+    expect(r.highlights.some((h) => h.kind === 'reconcile')).toBe(true);
+    expect(s.tension[key]).toBeLessThan(95 - content.balance.reconcileDrop);
+    // While it runs and during the cooldown, no new reconciliation starts.
+    s.tension[pairKey(content, 'workers', 'intelligentsia')] = 99;
+    const again = playTurn(s, content, { publish: [] });
+    expect(again.reconciliationStarted).toBeNull();
+  });
+
+  it('dirt on a group sets the other groups against it', () => {
+    const s = createGame(content, 8);
+    allRead(s);
+    const tpl = content.cards.find((t) => t.source === 'investigation' && t.target === 'youth')!;
+    const card: CardInstance = { uid: s.nextUid++, templateId: tpl.id, baseTruth: 0, createdTurn: s.turn, tier: 3, scope: 'local', reporterId: s.reporters[0] };
+    s.hand = [card];
+    const before = s.tension[pairKey(content, 'youth', 'workers')];
+    const r = playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 2, distortion: 0 }] });
+    expect(r.publications[0].tension![pairKey(content, 'youth', 'workers')]).toBeGreaterThan(0);
+    expect(r.tensionBefore[pairKey(content, 'youth', 'workers')]).toBe(before);
   });
 });

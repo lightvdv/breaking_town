@@ -54,6 +54,27 @@ export interface GroupDef {
   /** Daily income for groups that never work. */
   pension: number;
   color: string;
+  /** Word forms for conflict story titles ({a.one}, {b.manyGen}…). */
+  forms: GroupForms;
+}
+
+export interface GroupForms {
+  /** «рабочий» */
+  one: string;
+  /** «рабочего» */
+  oneAcc: string;
+  /** «рабочему» */
+  oneDat: string;
+  /** «рабочим» */
+  oneIns: string;
+  /** «рабочие» */
+  many: string;
+  /** «рабочих» */
+  manyGen: string;
+  /** «рабочим» */
+  manyDat: string;
+  /** «рабочими» */
+  manyIns: string;
 }
 
 export interface Requirement {
@@ -144,6 +165,16 @@ export interface CardTemplate {
   requires?: BuildingType;
   /** What the real event does to the city (events only). */
   cityEffect?: CityEffect;
+  /**
+   * Conflict story between two groups (CONCEPT.md §5.5): a fixed pair or 'any' (the pair is chosen
+   * when the story appears). Titles may use the pair's word forms: {a.one}, {b.manyGen}…
+   * Conflict events are incidents: they only happen when the pair's tension is high enough.
+   */
+  conflict?: [GroupId, GroupId] | 'any';
+  /** Conflict stories: the calming title, one step below the truth. */
+  calmTitle?: string;
+  /** Incidents: the kind of building where it happens (the city cutscene flies there). */
+  place?: BuildingType;
 }
 
 export interface BuildingDef {
@@ -278,6 +309,42 @@ export interface Balance {
   stigmaLeave: number;
   /** Money per turn for each running investigation. */
   investigationCost: number;
+
+  /** Group relations (CONCEPT.md §5.5). Start tension by pair key "a|b" (content group order); others get tensionDefault. */
+  tensionStart: Record<string, number>;
+  tensionDefault: number;
+  /** Friction, enmity, clashes. */
+  tensionLevels: Triple<number>;
+  /** Share of the gap to the start value tension closes each turn. */
+  tensionDecay: number;
+  /** Tension shift of a conflict story by framing: calm, as is (true), heat (half-true), inflate (lie). */
+  tensionNews: Quad<number>;
+  /** Shift × impact × (tensionReachBase + share of the pair that believed × tensionShareMul). */
+  tensionReachBase: number;
+  tensionShareMul: number;
+  /** Investigations: tension between the target and every other group, × pressure × impact. */
+  tensionStigma: number;
+  /** Incidents: chance per tense pair per day at full tension, how many a day at most, what they add. */
+  incidentChance: number;
+  incidentsMax: number;
+  tensionIncident: number;
+  incidentMood: number;
+  /** Enmity: daily mood loss (doubled in clashes) and chance to avoid bars; clashes: daily protest chance. */
+  enmityMood: number;
+  enmityAvoid: number;
+  clashProtest: number;
+  /** Mayor's reconciliation: starts at this tension, cools the pair daily for some turns, then waits. */
+  reconcileThreshold: number;
+  reconcileDrop: number;
+  reconcileTurns: number;
+  reconcileCooldown: number;
+  /** While it runs, fact-checkers look harder. */
+  reconcileCheckerBoost: number;
+  /** Reputation gained with the pair's viewers by a calming story. */
+  calmTrust: number;
+  /** A cutscene shows protests and departures only when at least this many people took part. */
+  highlightProtestMin: number;
+  highlightLeaveMin: number;
   plausibility: Triple<number>;
   witness: Triple<number>;
   beliefScale: number;
@@ -380,6 +447,34 @@ export interface CardInstance {
   scope: NewsScope;
   /** Who found the story. */
   reporterId: string;
+  /** Conflict stories: the two groups it is about (CONCEPT.md §5.5). */
+  conflict?: [GroupId, GroupId];
+}
+
+/** An incident between two groups that happened today (it becomes a true story). */
+export interface Incident {
+  templateId: string;
+  pair: [GroupId, GroupId];
+  /** Where it happened, if such a building is open. */
+  building: number | null;
+  title: string;
+}
+
+/** The mayor's reconciliation of the tensest pair (CONCEPT.md §5.5). */
+export interface Reconciliation {
+  pair: string;
+  turnsLeft: number;
+  startedTurn: number;
+}
+
+/** A bright moment of the city day, shown as a short cutscene before the issue (CONCEPT.md §7.3). */
+export interface Highlight {
+  kind: 'fight' | 'clash' | 'protest' | 'exodus' | 'closed' | 'reconcile';
+  title: string;
+  /** Building the camera flies to; null = the whole city. */
+  building: number | null;
+  /** Groups involved (fights, clashes, reconciliation). */
+  groups: GroupId[];
 }
 
 /** One reporter's search result this turn (drives the start-of-turn animation). */
@@ -406,7 +501,7 @@ export interface Publication {
   cardUid: number;
   /** Front page and articles have limited room (`placementSlots`); briefs do not. */
   placement: Placement;
-  /** Added to the card's baseTruth to get the published truth level. */
+  /** Added to the card's baseTruth to get the published truth level; −1 = calm framing of a conflict story. */
   distortion: number;
 }
 
@@ -483,6 +578,13 @@ export interface GameState {
   /** Topics the player sends each reporter after; empty or missing = any topic (CONCEPT.md §3.3). */
   reporterTopics: Record<string, Topic[]>;
   pendingLies: PendingLie[];
+  /** Tension 0..100 by group pair key (CONCEPT.md §5.5). */
+  tension: Record<string, number>;
+  reconciliation: Reconciliation | null;
+  /** The mayor will not start another reconciliation before this turn. */
+  reconcileReadyTurn: number;
+  /** Incidents of the current city day. */
+  todayIncidents: Incident[];
   initialPopulation: number;
   initialEmployed: number;
   metrics: CityMetrics;
@@ -510,6 +612,8 @@ export interface PublicationReport {
   exposed: boolean;
   /** Investigations: who was targeted and what the stigma did to them. */
   stigma?: { target: GroupId; pressure: number; left: number };
+  /** Conflict stories and investigations: how they moved the tension of each pair. */
+  tension?: Record<string, number>;
 }
 
 /** One line of the per-turn expenses: a channel, a reporter's salary or a running investigation. */
@@ -552,6 +656,13 @@ export interface TurnReport {
   readers: ReadersChange & { before: number; after: number };
   /** How interesting the issue was: the points sum and the level it reached. */
   issue: { score: number; level: IssueLevel };
+  /** Tension by pair before the issue and at the start of the next turn. */
+  tensionBefore: Record<string, number>;
+  tensionAfter: Record<string, number>;
+  /** The mayor's reconciliation that started with the new day, if any. */
+  reconciliationStarted: Reconciliation | null;
+  /** Bright moments of the new day for the city cutscene; empty on a quiet day. */
+  highlights: Highlight[];
   trustBefore: number;
   trustAfter: number;
   metricsBefore: CityMetrics;

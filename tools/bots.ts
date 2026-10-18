@@ -21,6 +21,7 @@ import {
   purchase,
   rankedPlacements,
   totalUpkeep,
+  pairKey,
   type CardInstance,
   type Decision,
   type Placement,
@@ -81,6 +82,33 @@ function mixed(s: GameState): Decision {
   return { publish };
 }
 
+/**
+ * The thoughtful bot that also stirs up conflicts (CONCEPT.md §5.5): every story about two groups
+ * is heated (half-truth) and put first; when reputation is low it calms them instead to win it back.
+ */
+function agitator(s: GameState): Decision {
+  const d = mixed(s);
+  const trust = averageTrust(s, content);
+  // Same layout as the thoughtful bot; conflict stories are framed hot (or calm to win back
+  // reputation) and the tensest one swaps onto the front page.
+  const conflicts = s.hand.filter((c) => c.conflict).sort((x, y) => (s.tension[pairKeyOf(y)] ?? 0) - (s.tension[pairKeyOf(x)] ?? 0));
+  for (const c of conflicts) {
+    const distortion = trust < 35 ? -1 : Math.max(0, 1 - c.baseTruth);
+    const p = d.publish.find((x) => x.cardUid === c.uid);
+    if (p) p.distortion = distortion;
+    else d.publish.push({ cardUid: c.uid, placement: 0, distortion });
+  }
+  const top = conflicts[0] && d.publish.find((x) => x.cardUid === conflicts[0].uid);
+  const front = d.publish.find((x) => x.placement === 2);
+  if (top && top !== front) {
+    if (front) front.placement = top.placement;
+    top.placement = 2;
+  }
+  return d;
+}
+
+const pairKeyOf = (c: CardInstance) => pairKey(content, c.conflict![0], c.conflict![1]);
+
 /** The thoughtful bot keeps one reporter digging dirt on the biggest group. */
 function manageInvestigations(s: GameState): void {
   if (s.investigations.length || s.reporters.length < 2) return;
@@ -90,6 +118,7 @@ function manageInvestigations(s: GameState): void {
 
 const strategies: Record<string, Strategy> = {
   mixed,
+  agitator,
   honest: () => ({ distortion: 'none', placement: 0, harmfulOnly: false }),
   liar: () => ({ distortion: 'max', placement: 2, harmfulOnly: true }),
   moderate: () => ({ distortion: 'half', placement: 1, harmfulOnly: true }),
@@ -169,7 +198,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
   const s = createGame(content, seed);
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
-    if (strategy === mixed && !noInvestigations) manageInvestigations(s);
+    if ((strategy === mixed || strategy === agitator) && !noInvestigations) manageInvestigations(s);
     const r = playTurn(s, content, decide(s, strategy, rng));
     if (!s.outcome) shop(s);
     if (trace) {

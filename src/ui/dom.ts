@@ -20,6 +20,13 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = 
   return e;
 }
 
+/** Creates an SVG element (same attribute rules as h). */
+export function svg(tag: string, attrs: Attrs = {}, ...children: Child[]): SVGElement {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  apply(e, attrs, children);
+  return e;
+}
+
 export function select(
   options: { value: string; label: string; disabled?: boolean }[],
   value: string,

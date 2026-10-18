@@ -1,5 +1,5 @@
 import { AnimatedSprite, Application, Container, Sprite, Texture, type Spritesheet } from 'pixi.js';
-import { isRoadTile, type Building, type Content, type GameState, type Reaction, type Resident } from '../sim';
+import { isRoadTile, type Building, type Content, type GameState, type Highlight, type Reaction, type Resident } from '../sim';
 import { loadArt, type ArtAssets } from './assets';
 
 /**
@@ -54,6 +54,21 @@ interface Agent {
   job: number | null;
 }
 
+/** A temporary figure acting out a cutscene (CONCEPT.md §7.3): a fighter, a protester, a peacemaker. */
+interface Actor {
+  sprite: AnimatedSprite;
+  base: Pt;
+  /** fight = sways and jabs towards the other side; cheer = hops in place. */
+  motion: 'fight' | 'cheer' | 'still';
+  phase: number;
+}
+
+interface CameraView {
+  scale: number;
+  x: number;
+  y: number;
+}
+
 export interface HoverTarget {
   kind: 'resident' | 'building';
   id: number;
@@ -81,6 +96,14 @@ export class CityScene {
   private zoomLevel = 0;
   private pan = { x: 0, y: 0 };
   private bounds = { minX: 0, minY: 0, w: 1, h: 1 };
+  // Cutscene: a camera that overrides the player's view, actors and pulsing icons.
+  private camera: CameraView | null = null;
+  private tween: { from: CameraView; to: CameraView; t: number; dur: number } | null = null;
+  private actors: Actor[] = [];
+  private fxSprites: { sprite: Sprite; base: Pt; phase: number }[] = [];
+  private clock = 0;
+  private skipping = false;
+  private wakeCutscene: (() => void) | null = null;
 
   private constructor(
     private app: Application,
@@ -517,6 +540,8 @@ export class CityScene {
   }
 
   private update(dt: number): void {
+    this.clock += dt;
+    this.updateCutscene(dt);
     for (const agent of [...this.agents.values()]) {
       if (agent.pendingReaction) {
         agent.reactDelay -= dt;
@@ -584,6 +609,11 @@ export class CityScene {
 
   /** Integer zoom in device pixels keeps pixel art crisp; below ×1 the city shrinks to fit (phones). */
   layout(): void {
+    if (this.camera) {
+      this.world.scale.set(this.camera.scale);
+      this.world.position.set(this.camera.x, this.camera.y);
+      return;
+    }
     const dpr = this.app.renderer.resolution;
     const fit = this.fitZoom();
     const level = this.zoomLevel || Math.max(1, Math.floor(fit));
@@ -630,5 +660,166 @@ export class CityScene {
       },
       { passive: false },
     );
+  }
+
+  // ---------- Cutscenes (CONCEPT.md §7.3) ----------
+
+  /** The view that puts a world point in the middle of the screen at an integer device-pixel zoom. */
+  private viewAt(world: Pt, zoom: number): CameraView {
+    const dpr = this.app.renderer.resolution;
+    const scale = zoom / dpr;
+    const { width, height } = this.app.screen;
+    return { scale, x: width / 2 - world.x * scale, y: height / 2 - world.y * scale };
+  }
+
+  private currentView(): CameraView {
+    return { scale: this.world.scale.x, x: this.world.position.x, y: this.world.position.y };
+  }
+
+  private flyTo(to: CameraView, seconds: number): Promise<void> {
+    this.camera = this.currentView();
+    this.tween = { from: this.camera, to, t: 0, dur: seconds };
+    return this.wait(seconds * 1000);
+  }
+
+  private wait(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      if (this.skipping) return resolve();
+      const done = () => {
+        window.clearTimeout(timer);
+        this.wakeCutscene = null;
+        resolve();
+      };
+      const timer = window.setTimeout(done, ms);
+      this.wakeCutscene = done;
+    });
+  }
+
+  /** Ends the running cutscene at once. */
+  skipCutscene(): void {
+    this.skipping = true;
+    this.wakeCutscene?.();
+  }
+
+  private updateCutscene(dt: number): void {
+    if (this.tween) {
+      const tw = this.tween;
+      tw.t = Math.min(tw.dur, tw.t + dt);
+      const k = tw.dur ? tw.t / tw.dur : 1;
+      const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      this.camera = {
+        scale: tw.from.scale + (tw.to.scale - tw.from.scale) * e,
+        x: tw.from.x + (tw.to.x - tw.from.x) * e,
+        y: tw.from.y + (tw.to.y - tw.from.y) * e,
+      };
+      if (k >= 1) this.tween = null;
+      this.layout();
+    }
+    for (const a of this.actors) {
+      a.phase += dt;
+      const p = screenOf(a.base.x, a.base.y);
+      let dx = 0;
+      let dy = 0;
+      if (a.motion === 'fight') {
+        // Lunges towards the opponent and back, with a little shake.
+        const facing = a.sprite.scale.x < 0 ? -1 : 1;
+        dx = Math.max(0, Math.sin(a.phase * 9)) * 3 * facing + Math.sin(a.phase * 37) * 0.6;
+      } else if (a.motion === 'cheer') dy = -Math.abs(Math.sin(a.phase * 6)) * 3;
+      a.sprite.position.set(Math.round(p.x + dx), Math.round(p.y + dy));
+      a.sprite.zIndex = p.y + 0.5;
+    }
+    for (const f of this.fxSprites) {
+      f.phase += dt;
+      const p = screenOf(f.base.x, f.base.y);
+      const s = 1.5 + Math.max(0, Math.sin(f.phase * 7)) * 0.8;
+      f.sprite.scale.set(s);
+      f.sprite.position.set(Math.round(p.x), Math.round(p.y - 26 - Math.sin(f.phase * 4) * 2));
+    }
+  }
+
+  private addActor(group: string, at: Pt, anim: string, faceLeft: boolean, motion: Actor['motion'], variant = 0): void {
+    const sheets = this.art.residents[group];
+    if (!sheets) return;
+    const sheet = sheets[variant % sheets.length];
+    const sprite = new AnimatedSprite(sheet.animations[anim] ?? sheet.animations.idle_front);
+    sprite.anchor.set(0.5, 1);
+    sprite.scale.x = faceLeft ? -1 : 1;
+    sprite.animationSpeed = 0.16;
+    sprite.play();
+    this.objects.addChild(sprite);
+    this.actors.push({ sprite, base: at, motion, phase: Math.random() * 3 });
+  }
+
+  private addFx(name: string, at: Pt): void {
+    const tex = this.art.fx[name];
+    if (!tex) return;
+    const sprite = new Sprite(tex);
+    sprite.anchor.set(0.5, 1);
+    this.overlay.addChild(sprite);
+    this.fxSprites.push({ sprite, base: at, phase: Math.random() });
+  }
+
+  private clearActors(): void {
+    for (const a of this.actors) a.sprite.destroy();
+    for (const f of this.fxSprites) f.sprite.destroy();
+    this.actors = [];
+    this.fxSprites = [];
+  }
+
+  /** Where a highlight happens on the map (tile coordinates). */
+  private spotOf(h: Highlight): Pt {
+    if (h.kind === 'exodus') return { ...this.exit };
+    if (h.building !== null && this.doors.has(h.building)) return { ...this.doors.get(h.building)! };
+    const n = this.state.mapSize;
+    return { x: n / 2, y: n / 2 };
+  }
+
+  /**
+   * Plays the day's bright moments one by one (CONCEPT.md §7.3): the camera flies to the place,
+   * figures act it out (a fight, a clash, a reconciliation; real protesters and leavers are already
+   * walking there), then the camera returns to the player's view. Resolves when done or skipped.
+   */
+  async playHighlights(highlights: Highlight[], onShow: (h: Highlight | null) => void): Promise<void> {
+    if (!highlights.length) return;
+    this.skipping = false;
+    const home = this.currentView();
+    // Three integer steps closer than the whole-city view.
+    const zoom = Math.max(3, Math.min(6, Math.floor(Math.max(1, this.fitZoom())) + 3));
+    for (const h of highlights) {
+      if (this.skipping) break;
+      const spot = this.spotOf(h);
+      const center = screenOf(spot.x, spot.y);
+      onShow(h);
+      await this.flyTo(this.viewAt({ x: center.x, y: center.y - 12 }, zoom), 0.9);
+      const [a, z] = h.groups;
+      if (h.kind === 'fight' && a && z) {
+        this.addActor(a, { x: spot.x - 0.18, y: spot.y + 0.1 }, 'react_outraged', false, 'fight');
+        this.addActor(z, { x: spot.x + 0.18, y: spot.y - 0.1 }, 'react_outraged', true, 'fight', 1);
+        this.addActor(a, { x: spot.x - 0.5, y: spot.y + 0.45 }, 'react_scared', false, 'still', 1);
+        this.addFx('fight', spot);
+      } else if (h.kind === 'clash' && a && z) {
+        for (let i = 0; i < 4; i++) {
+          this.addActor(a, { x: spot.x - 0.35, y: spot.y - 0.45 + i * 0.3 }, i % 2 ? 'protest' : 'react_outraged', false, 'fight', i);
+          this.addActor(z, { x: spot.x + 0.35, y: spot.y - 0.45 + i * 0.3 }, i % 2 ? 'react_outraged' : 'protest', true, 'fight', i + 1);
+        }
+        this.addFx('fight', { x: spot.x, y: spot.y - 0.2 });
+        this.addFx('fight', { x: spot.x, y: spot.y + 0.4 });
+      } else if (h.kind === 'reconcile' && a && z) {
+        this.addActor(a, { x: spot.x - 0.2, y: spot.y + 0.1 }, 'react_happy', false, 'cheer');
+        this.addActor(z, { x: spot.x + 0.2, y: spot.y - 0.1 }, 'react_happy', true, 'cheer', 1);
+        this.addFx('peace', spot);
+      } else if (h.kind === 'protest') {
+        this.addFx('exposed', { x: spot.x, y: spot.y - 0.3 });
+      }
+      await this.wait(2300);
+      this.clearActors();
+    }
+    onShow(null);
+    if (!this.skipping) await this.flyTo(home, 0.7);
+    this.skipping = false;
+    this.camera = null;
+    this.tween = null;
+    this.clearActors();
+    this.layout();
   }
 }

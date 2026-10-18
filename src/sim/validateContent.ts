@@ -28,7 +28,9 @@ export function validateContent(c: Content): string[] {
   for (const b of c.buildings) if (b.size !== 1 && b.size !== 2) errors.push(`building ${b.type}: size must be 1 or 2`);
   if (c.balance.smallPerLot < 1 || c.balance.smallPerLot > 4) errors.push('smallPerLot must be 1..4');
 
+  const formKeys = ['one', 'oneAcc', 'oneDat', 'oneIns', 'many', 'manyGen', 'manyDat', 'manyIns'];
   for (const g of c.groups) {
+    for (const k of formKeys) if (!(g.forms as unknown as Record<string, string> | undefined)?.[k]) errors.push(`group ${g.id}: missing word form ${k}`);
     for (const ch of Object.keys(g.channels)) if (!channelIds.has(ch)) errors.push(`group ${g.id}: unknown channel ${ch}`);
     for (const j of g.jobs) if (!buildingTypes.has(j)) errors.push(`group ${g.id}: unknown job building ${j}`);
   }
@@ -70,6 +72,20 @@ export function validateContent(c: Content): string[] {
     if (t.source === 'rumor' && t.baseTruth === 0) errors.push(`card ${t.id}: rumors cannot be fully true`);
     // Reporters bring only truth or half-truth; outright lies are the player's doing.
     if (t.baseTruth > 1) errors.push(`card ${t.id}: reporters never bring outright lies (baseTruth must be 0 or 1)`);
+    // Conflict stories between two groups (CONCEPT.md §5.5).
+    const placeholders = [...t.titles, t.calmTitle].some((x) => x && /\{[ab]\.\w+\}/.test(x));
+    if (t.conflict) {
+      if (!t.calmTitle) errors.push(`card ${t.id}: conflict story needs a calmTitle`);
+      if (t.conflict !== 'any') {
+        const [a, z] = t.conflict;
+        if (a === z || !c.groups.some((g) => g.id === a) || !c.groups.some((g) => g.id === z)) errors.push(`card ${t.id}: conflict needs two different known groups`);
+      }
+      if (t.source === 'event' && (!t.place || !buildingTypes.has(t.place))) errors.push(`card ${t.id}: incident needs a known place building`);
+      if (t.source === 'investigation' || t.scope === 'global') errors.push(`card ${t.id}: conflict stories are local events, facts or rumors`);
+    } else if (placeholders || t.calmTitle) errors.push(`card ${t.id}: group placeholders and calmTitle only in conflict stories`);
+    for (const text of [...t.titles, t.calmTitle]) {
+      for (const m of (text ?? '').matchAll(/\{([ab])\.(\w+)\}/g)) if (!formKeys.includes(m[2])) errors.push(`card ${t.id}: unknown word form ${m[2]}`);
+    }
   }
   unique('reporter', c.reporters.map((x) => x.id));
   const topics = new Set(c.cards.map((t) => t.topic));
@@ -98,6 +114,12 @@ export function validateContent(c: Content): string[] {
   }
   for (const g of c.groups) {
     if (!c.cards.some((t) => t.source === 'investigation' && t.target === g.id)) errors.push(`no investigation story about ${g.id}`);
+  }
+  for (const key of Object.keys(b.tensionStart)) {
+    const [x, y] = key.split('|');
+    const ix = c.groups.findIndex((g) => g.id === x);
+    const iy = c.groups.findIndex((g) => g.id === y);
+    if (ix < 0 || iy < 0 || ix >= iy) errors.push(`tensionStart: bad pair key ${key} (two groups in content order)`);
   }
   return errors;
 }

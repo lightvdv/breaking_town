@@ -1,6 +1,7 @@
 import { chance, int, type RngState } from './rng';
 import { leaveCity } from './city';
 import { averageTrust, channelOf, clamp, groupOf, templateOf } from './lookup';
+import { addTension, fillTitle, pairKey } from './relations';
 import type { Modifiers } from './modifiers';
 import type {
   CardEffect,
@@ -33,9 +34,13 @@ export interface PublicationPreview {
   reachChance: number;
   /** Fact-check chance assuming the news reaches a quarter of the city. */
   exposureRisk: number;
+  /** Conflict stories: the pair and how much its tension would move if a tenth of the pair believed. */
+  tension: { pair: string; delta: number } | null;
 }
 
+/** Calm framing of a conflict story is honest: it tells the truth and takes the heat out (CONCEPT.md §5.5). */
 export function cardTruth(card: CardInstance, distortion: number): TruthLevel {
+  if (distortion < 0) return 0;
   return Math.min(2, card.baseTruth + distortion) as TruthLevel;
 }
 
@@ -43,9 +48,26 @@ export function maxDistortion(card: CardInstance): number {
   return 2 - card.baseTruth;
 }
 
-/** Each step of distortion raises the story one tier, up to a sensation (CONCEPT.md §3.1). */
+/** Conflict stories can also be calmed: one step below the truth. */
+export function minDistortion(card: CardInstance): number {
+  return card.conflict ? -1 : 0;
+}
+
+/** Each step of distortion raises the story one tier, up to a sensation (CONCEPT.md §3.1); calming lowers it. */
 export function effectiveTier(card: CardInstance, distortion: number): NewsTier {
-  return Math.min(3, card.tier + distortion) as NewsTier;
+  return Math.max(0, Math.min(3, card.tier + distortion)) as NewsTier;
+}
+
+/** The headline at this distortion, with the conflict pair's names filled in. */
+export function storyTitle(c: Content, card: CardInstance, distortion: number): string {
+  const tpl = templateOf(c, card.templateId);
+  const raw = distortion < 0 ? tpl.calmTitle ?? '' : tpl.titles[cardTruth(card, distortion)] ?? '';
+  return fillTitle(c, raw, card.conflict);
+}
+
+/** Framing of a conflict story as an index into tensionNews: calm, as is, heat, inflate. */
+export function framingOf(card: CardInstance, distortion: number): 0 | 1 | 2 | 3 {
+  return distortion < 0 ? 0 : ((cardTruth(card, distortion) + 1) as 1 | 2 | 3);
 }
 
 /** Stories that hurt the city (everything except good news). */
@@ -79,9 +101,9 @@ export function outletReach(state: GameState, c: Content, placement: Placement =
   return (readers / active.length) * c.balance.placementRead[placement];
 }
 
-/** The story's audience reacts more strongly, everyone else less. */
-function audienceMul(c: Content, tpl: CardTemplate, group: string): number {
-  const audience = tpl.audience ?? [];
+/** The story's audience reacts more strongly, everyone else less; a conflict story's audience is its pair. */
+function audienceMul(c: Content, tpl: CardTemplate, group: string, card?: CardInstance): number {
+  const audience = card?.conflict ?? tpl.audience ?? [];
   if (audience.length === 0) return 1;
   return audience.includes(group) ? c.balance.audienceBoost : c.balance.audienceOthers;
 }
@@ -110,6 +132,8 @@ export function exposureRiskOf(
   const base = checkersOpen ? b.checkerBase : b.checkerBase * 0.5;
   // A trusted outlet is checked less (CONCEPT.md §4.1).
   const shield = 1 - b.trustShield * clamp(averageTrust(state, c) / 100);
+  // During the mayor's reconciliation the press is watched closely.
+  const reconcile = state.reconciliation ? 1 + b.reconcileCheckerBoost : 1;
   return clamp(
     base *
       b.truthRisk[truth] *
@@ -118,6 +142,7 @@ export function exposureRiskOf(
       (0.5 + reachShare) *
       mods.checkerMul *
       defense *
+      reconcile *
       shield,
     0,
     0.95,
@@ -135,15 +160,23 @@ export function previewPublication(
   if (!card) throw new Error(`Card ${pub.cardUid} is not in hand`);
   const tpl = templateOf(c, card.templateId);
   const truth = cardTruth(card, pub.distortion);
+  const impact = impactOf(state, c, card, tpl, pub, repeatsThisTurn);
   return {
-    title: tpl.titles[truth] ?? '',
+    title: storyTitle(c, card, pub.distortion),
     truth,
-    effect: tpl.effects[truth],
-    impact: impactOf(state, c, card, tpl, pub, repeatsThisTurn),
+    effect: pub.distortion < 0 ? null : tpl.effects[truth],
+    impact,
     tier: effectiveTier(card, pub.distortion),
     reachChance: outletReach(state, c, pub.placement),
     exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25),
+    tension: card.conflict ? { pair: pairKey(c, ...card.conflict), delta: tensionShift(c, card, pub.distortion, impact, 0.1) } : null,
   };
+}
+
+/** How much a conflict story moves its pair's tension, given the share of the pair that believed it. */
+function tensionShift(c: Content, card: CardInstance, distortion: number, impact: number, share: number): number {
+  const b = c.balance;
+  return b.tensionNews[framingOf(card, distortion)] * impact * (b.tensionReachBase + share * b.tensionShareMul);
 }
 
 function beliefChance(
@@ -249,8 +282,9 @@ export function publish(
   if (!card) throw new Error(`Card ${pub.cardUid} is not in hand`);
   const tpl = templateOf(c, card.templateId);
   const truth = cardTruth(card, pub.distortion);
-  const title = tpl.titles[truth] ?? '';
-  const effect = tpl.effects[truth];
+  const title = storyTitle(c, card, pub.distortion);
+  const calm = pub.distortion < 0;
+  const effect = calm ? null : tpl.effects[truth];
   const impact = impactOf(state, c, card, tpl, pub, repeatsThisTurn);
   // Interesting stories are retold more, and viral channels spread them further.
   const retell = clamp(
@@ -283,12 +317,12 @@ export function publish(
       report.doubted++;
       return false;
     }
-    setReaction(state, r.id, effect?.type === 'moodUp' ? 'happy' : 'scared');
+    setReaction(state, r.id, effect?.type === 'moodUp' || calm ? 'happy' : 'scared');
     report.believed++;
     r.beliefs.push({ cardUid: card.uid, title, turn: state.turn });
     if (r.beliefs.length > b.maxBeliefs) r.beliefs.shift();
     // Impact, not reach, decides how hard the story hits this resident.
-    const hit = impact * audienceMul(c, tpl, r.group);
+    const hit = impact * audienceMul(c, tpl, r.group, card);
     if (effect) {
       const delta = effect.type === 'moodUp' ? b.hopePerBelief : -b.fearPerBelief;
       r.outlook = clamp(r.outlook + delta * hit);
@@ -335,6 +369,29 @@ export function publish(
     }
     report.stigma = { target: tpl.target, pressure, left };
     if (left) report.effects.leaveCity = (report.effects.leaveCity ?? 0) + left;
+    // Dirt on a group sets the rest of the city against it (CONCEPT.md §5.5).
+    report.tension = {};
+    for (const g of c.groups) {
+      if (g.id === tpl.target) continue;
+      const key = pairKey(c, tpl.target, g.id);
+      const delta = b.tensionStigma * pressure * impact;
+      addTension(state, key, delta);
+      report.tension[key] = delta;
+    }
+  }
+
+  // A conflict story heats or cools its pair, more so when the pair itself believed it.
+  if (card.conflict) {
+    const [a, z] = card.conflict;
+    const key = pairKey(c, a, z);
+    const members = state.residents.filter((r) => r.status === 'active' && (r.group === a || r.group === z));
+    const memberIds = new Set(members.map((r) => r.id));
+    const believedInPair = state.residents.filter((r) => memberIds.has(r.id) && r.beliefs.some((x) => x.cardUid === card.uid)).length;
+    const delta = tensionShift(c, card, pub.distortion, impact, believedInPair / Math.max(1, members.length));
+    addTension(state, key, delta);
+    report.tension = { [key]: delta };
+    // Calming earns the trust of both groups' readers.
+    if (calm) for (const id of viewers) if (memberIds.has(id)) state.residents[id].trust = clamp(state.residents[id].trust + b.calmTrust, 0, 100);
   }
 
   return { pub, truth, impact, viewers, report };

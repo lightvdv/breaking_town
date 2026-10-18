@@ -7,7 +7,8 @@
     "channels": { "newspaper": 0.8, "radio": 0.5, "tv": 0.9, "social": 0.05 },
     "jobs": [],
     "pension": 8,
-    "color": "#d4a373"
+    "color": "#d4a373",
+    "forms": { "one": "пенсионер", "oneAcc": "пенсионера", "oneDat": "пенсионеру", "oneIns": "пенсионером", "many": "пенсионеры", "manyGen": "пенсионеров", "manyDat": "пенсионерам", "manyIns": "пенсионерами" }
   },
   {
     "id": "workers",
@@ -17,7 +18,8 @@
     "channels": { "newspaper": 0.3, "radio": 0.8, "tv": 0.7, "social": 0.4 },
     "jobs": ["factory", "shop"],
     "pension": 0,
-    "color": "#6c8ead"
+    "color": "#6c8ead",
+    "forms": { "one": "рабочий", "oneAcc": "рабочего", "oneDat": "рабочему", "oneIns": "рабочим", "many": "рабочие", "manyGen": "рабочих", "manyDat": "рабочим", "manyIns": "рабочими" }
   },
   {
     "id": "youth",
@@ -27,7 +29,8 @@
     "channels": { "newspaper": 0.05, "radio": 0.2, "tv": 0.3, "social": 0.95 },
     "jobs": ["shop", "entertainment", "factory"],
     "pension": 0,
-    "color": "#ff7aa2"
+    "color": "#ff7aa2",
+    "forms": { "one": "молодой парень", "oneAcc": "молодого парня", "oneDat": "молодому парню", "oneIns": "молодым парнем", "many": "молодые", "manyGen": "молодых", "manyDat": "молодым", "manyIns": "молодыми" }
   },
   {
     "id": "intelligentsia",
@@ -37,6 +40,7 @@
     "channels": { "newspaper": 0.7, "radio": 0.4, "tv": 0.4, "social": 0.5 },
     "jobs": ["hospital", "cityHall", "factCheckers", "shop"],
     "pension": 0,
-    "color": "#7bd389"
+    "color": "#7bd389",
+    "forms": { "one": "интеллигент", "oneAcc": "интеллигента", "oneDat": "интеллигенту", "oneIns": "интеллигентом", "many": "интеллигенты", "manyGen": "интеллигентов", "manyDat": "интеллигентам", "manyIns": "интеллигентами" }
   }
 ]

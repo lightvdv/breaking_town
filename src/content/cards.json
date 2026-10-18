@@ -2308,5 +2308,435 @@
     "interest": 0.6,
     "engagement": 0.5,
     "weight": 1
+  },
+  {
+    "id": "conflict_shop_fight",
+    "source": "event",
+    "topic": "crime",
+    "baseTruth": 0,
+    "conflict": "any",
+    "place": "shop",
+    "titles": [
+      "{a.one} ударил {b.oneAcc} в очереди у магазина",
+      "{a.many} нападают на {b.manyGen} средь бела дня",
+      "{a.many} устроили охоту на {b.manyGen}"
+    ],
+    "calmTitle": "Ссора у магазина закончилась рукопожатием",
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.01
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 2,
+    "interest": 0.7
+  },
+  {
+    "id": "conflict_bar_brawl",
+    "source": "event",
+    "topic": "fun",
+    "baseTruth": 0,
+    "conflict": "any",
+    "place": "entertainment",
+    "titles": [
+      "В баре {a.one} разбил нос {b.oneDat}",
+      "{a.many} превратили бар в поле боя с {b.manyIns}",
+      "Пьяные {a.many} громят бары и бьют {b.manyGen}"
+    ],
+    "calmTitle": "Драка в баре: зачинщики помирились и оплатили ущерб",
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.01
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 2,
+    "interest": 0.7
+  },
+  {
+    "id": "conflict_graffiti",
+    "source": "event",
+    "topic": "crime",
+    "baseTruth": 0,
+    "conflict": "any",
+    "place": "home",
+    "titles": [
+      "{a.many} разрисовали подъезд, где живут {b.many}",
+      "{a.many} объявили войну {b.manyDat}",
+      "{a.many} поджигают двери {b.manyGen}"
+    ],
+    "calmTitle": "Жильцы вместе отмыли подъезд от надписей",
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.01
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 2,
+    "interest": 0.7
+  },
+  {
+    "id": "conflict_hospital_queue",
+    "source": "event",
+    "topic": "health",
+    "baseTruth": 0,
+    "conflict": "any",
+    "place": "hospital",
+    "titles": [
+      "В очереди в больнице {a.one} оттолкнул {b.oneAcc}",
+      "{a.many} лезут без очереди и унижают {b.manyGen}",
+      "Врачи лечат {a.manyGen} первыми, {b.many} умирают в коридорах"
+    ],
+    "calmTitle": "Очередь в больнице договорилась: первыми пропускают самых слабых",
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.01
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 2,
+    "interest": 0.7
+  },
+  {
+    "id": "conflict_factory_gate",
+    "source": "event",
+    "topic": "factory",
+    "baseTruth": 0,
+    "conflict": "any",
+    "place": "factory",
+    "titles": [
+      "На проходной завода {a.one} поругался с {b.oneIns}",
+      "{a.many} выживают {b.manyGen} с завода",
+      "{a.many} сговорились отнять работу у {b.manyGen}"
+    ],
+    "calmTitle": "Спор на проходной завода уладили за чаем",
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.01
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 2,
+    "interest": 0.7
+  },
+  {
+    "id": "conflict_hall_meeting",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "conflict": "any",
+    "place": "cityHall",
+    "titles": [
+      "На собрании в мэрии {a.many} перекрикивали {b.manyGen}",
+      "{a.many} затыкают рот {b.manyDat}",
+      "{a.many} требуют лишить {b.manyGen} права голоса"
+    ],
+    "calmTitle": "Собрание в мэрии закончилось общим решением",
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.01
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 2,
+    "interest": 0.7
+  },
+  {
+    "id": "conflict_bench",
+    "source": "event",
+    "topic": "fun",
+    "baseTruth": 0,
+    "conflict": [
+      "youth",
+      "pensioners"
+    ],
+    "place": "home",
+    "titles": [
+      "Молодые заняли лавочку у подъезда — пенсионеры вызвали полицию",
+      "Молодёжь выживает стариков из дворов",
+      "Молодые банды грабят пенсионеров у подъездов"
+    ],
+    "calmTitle": "Молодые и пенсионеры договорились сидеть на лавочке по очереди",
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.01
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 2,
+    "interest": 0.7
+  },
+  {
+    "id": "conflict_lecture",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "conflict": [
+      "intelligentsia",
+      "workers"
+    ],
+    "place": "cityHall",
+    "titles": [
+      "Лектор назвал рабочих отсталыми — в зале потасовка",
+      "Интеллигенты презирают рабочих и не скрывают этого",
+      "Интеллигенты требуют закрыть завод и уволить рабочих"
+    ],
+    "calmTitle": "Лектор извинился перед рабочими, зал аплодировал",
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.01
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 2,
+    "interest": 0.7
+  },
+  {
+    "id": "rumor_complaints",
+    "source": "rumor",
+    "topic": "power",
+    "baseTruth": 1,
+    "conflict": "any",
+    "titles": [
+      null,
+      "Говорят, {a.many} строчат жалобы на {b.manyGen}",
+      "{a.many} составили чёрный список {b.manyGen}"
+    ],
+    "calmTitle": "Слухи о доносах не подтвердились: соседи живут мирно",
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 1,
+    "interest": 0.65
+  },
+  {
+    "id": "rumor_jobs_taken",
+    "source": "rumor",
+    "topic": "factory",
+    "baseTruth": 1,
+    "conflict": "any",
+    "titles": [
+      null,
+      "Ходят слухи: {a.many} займут рабочие места {b.manyGen}",
+      "{a.many} отнимут у {b.manyGen} всю работу уже к весне"
+    ],
+    "calmTitle": "Никто ни у кого работу не отнимает: слухи проверили",
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 1,
+    "interest": 0.65
+  },
+  {
+    "id": "rumor_hoarding",
+    "source": "rumor",
+    "topic": "food",
+    "baseTruth": 1,
+    "conflict": "any",
+    "titles": [
+      null,
+      "Говорят, {a.many} скупают продукты, а {b.manyDat} не достаётся",
+      "{a.many} опустошили магазины назло {b.manyDat}"
+    ],
+    "calmTitle": "Продуктов хватает всем: слухи о скупке оказались выдумкой",
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 1,
+    "interest": 0.65
+  },
+  {
+    "id": "rumor_gangs",
+    "source": "rumor",
+    "topic": "crime",
+    "baseTruth": 1,
+    "conflict": "any",
+    "titles": [
+      null,
+      "Соседи шепчутся: {a.many} по ночам задирают {b.manyGen}",
+      "{a.many} вооружаются против {b.manyGen}"
+    ],
+    "calmTitle": "Полиция: никаких ночных стай, город спокоен",
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 1,
+    "interest": 0.65
+  },
+  {
+    "id": "rumor_budget",
+    "source": "rumor",
+    "topic": "power",
+    "baseTruth": 1,
+    "conflict": "any",
+    "titles": [
+      null,
+      "Мэрия якобы помогает {a.manyDat} за счёт {b.manyGen}",
+      "Мэрия отдала {a.manyDat} деньги, отнятые у {b.manyGen}"
+    ],
+    "calmTitle": "Бюджет открыт: ни у кого ничего не отнимали",
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 1,
+    "interest": 0.65
+  },
+  {
+    "id": "rumor_noise",
+    "source": "rumor",
+    "topic": "fun",
+    "baseTruth": 1,
+    "conflict": "any",
+    "titles": [
+      null,
+      "Говорят, {a.many} нарочно шумят под окнами {b.manyGen}",
+      "{a.many} травят {b.manyGen} музыкой по ночам"
+    ],
+    "calmTitle": "Шум во дворе: соседи договорились о тишине после десяти",
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.04,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.7,
+    "weight": 1,
+    "interest": 0.65
   }
 ]

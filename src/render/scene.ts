@@ -766,6 +766,34 @@ export class CityScene {
     this.fxSprites = [];
   }
 
+  private tourRun = 0;
+
+  /** A slow camera drift from building to building behind the menu and the opening story. */
+  startTour(): void {
+    const run = ++this.tourRun;
+    const zoom = Math.max(2, Math.min(5, Math.floor(Math.max(1, this.fitZoom())) + 1));
+    const step = () => {
+      if (run !== this.tourRun) return;
+      const b = pickOne(this.state.buildings);
+      const door = b && this.doors.get(b.id);
+      if (door) {
+        const p = screenOf(door.x, door.y);
+        this.camera ??= this.currentView();
+        this.tween = { from: this.camera, to: this.viewAt({ x: p.x, y: p.y - 16 }, zoom), t: 0, dur: 7 };
+      }
+      window.setTimeout(step, 7000);
+    };
+    step();
+  }
+
+  /** Back to the player's view. */
+  stopTour(): void {
+    this.tourRun++;
+    this.camera = null;
+    this.tween = null;
+    this.layout();
+  }
+
   /** Where a highlight happens on the map (tile coordinates). */
   private spotOf(h: Highlight): Pt {
     if (h.kind === 'exodus') return { ...this.exit };

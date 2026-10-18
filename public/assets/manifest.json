@@ -119,6 +119,14 @@
     "youth",
     "intelligentsia"
   ],
+  "intro": [
+    "town",
+    "board",
+    "editor",
+    "method",
+    "goal",
+    "reward"
+  ],
   "news": [
     "factory_accident",
     "price_rise",

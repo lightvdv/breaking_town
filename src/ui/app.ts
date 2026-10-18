@@ -54,6 +54,8 @@ import {
 } from '../sim';
 import { h, pct, svg } from './dom';
 import { loadSave, writeSave } from './save';
+import { applyTheme, loadSettings, saveSettings } from './settings';
+import { playIntro } from './intro';
 import { portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
   distortionLabels,
@@ -78,7 +80,22 @@ interface Draft {
   distortion: number;
 }
 
-type Modal = 'report' | 'debug' | 'city' | 'population' | 'money' | 'readers' | 'reputation' | 'shop' | 'investigate' | null;
+type Modal =
+  | 'report'
+  | 'debug'
+  | 'city'
+  | 'population'
+  | 'money'
+  | 'readers'
+  | 'reputation'
+  | 'shop'
+  | 'investigate'
+  | 'pause'
+  | 'howto'
+  | 'settings'
+  | 'about'
+  | 'newgame'
+  | null;
 
 const REACTION_SECONDS = 2.6;
 const assetBase = `${import.meta.env.BASE_URL}assets/`;
@@ -138,7 +155,16 @@ function flightFrames(tier: NewsTier, dx: number, dy: number): { frames: Keyfram
 export function mountApp(root: HTMLElement, c: Content): void {
   // Continue a saved game if there is one; the seed in the URL only picks the city of a new game
   // (add &new to the URL to start over in that city).
-  const saved = new URLSearchParams(location.search).has('new') ? null : loadSave<Draft>(c);
+  const params = new URLSearchParams(location.search);
+  const saved = params.has('new') ? null : loadSave<Draft>(c);
+  const settings = loadSettings();
+  applyTheme(settings);
+  // The debug window is a pause menu item only with ?debug in the address.
+  const debugMode = params.has('debug');
+  /** The title screen is up (CONCEPT.md §7.3 «Меню»); &new in the address starts a game at once. */
+  let titleOpen = !params.has('new');
+  /** A game was started or continued in this tab, so «Продолжить» makes sense. */
+  let hasGame = saved !== null;
   let state: GameState = saved?.state ?? createGame(c, seedFromUrl());
   let drafts = new Map<number, Draft>(saved?.drafts ?? []);
   // A saved layout that no longer fits the slots (e.g. two front pages from a removed upgrade) is laid out anew.
@@ -187,7 +213,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
   // One top row (CONCEPT.md §7.3): resources, reporter portraits, the issue level and the buttons.
   const hudRes = h('div', { class: 'resources' });
   const hudActions = h('div', { class: 'hud-buttons' });
-  const hudMenu = h('button', { class: 'icon-btn hud-menu', title: 'Меню отладки', onclick: () => openModal('debug') }, '☰');
+  const hudMenu = h('button', { class: 'icon-btn hud-menu', title: 'Меню', onclick: () => openModal('pause') }, '☰');
   const reporterBar = new ReporterBar(
     c,
     () => openModal('shop', 'hire'),
@@ -284,10 +310,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const tooltip = h('div', { class: 'tooltip', hidden: true });
   const modalLayer = h('div', { class: 'modal-layer' });
   const outcomeLayer = h('div', { class: 'modal-layer' });
+  const titleLayer = h('div', { class: 'title-screen', hidden: true });
   root.replaceChildren(
     hud,
     h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, cutscene, issue, toasts),
     tooltip,
+    titleLayer,
     modalLayer,
     outcomeLayer,
   );
@@ -297,6 +325,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     .then((s) => {
       scene = s;
       loading.remove();
+      if (titleOpen) s.startTour();
     })
     .catch((e) => {
       loading.textContent = `Не удалось загрузить графику: ${e instanceof Error ? e.message : e}`;
@@ -332,7 +361,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const run = ++searchRun;
     const finds = [...state.lastFinds];
     searching = true;
-    skipSearch = false;
+    // «Быстрый поиск» in the settings shows every find at once.
+    skipSearch = settings.fastSearch;
     issueOpen = true;
     exposuresSeen = false;
     reconcileSeen = false;
@@ -447,8 +477,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
     render();
   }
 
-  const newGame = () => {
-    state = createGame(c, randomSeed());
+  const newGame = (seed = randomSeed()) => {
+    hasGame = true;
+    state = createGame(c, seed);
     drafts = new Map();
     report = null;
     error = '';
@@ -502,7 +533,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       // any, then reporters look for the next stories.
       const highlights = report.highlights;
       window.setTimeout(async () => {
-        if (highlights.length && scene) await playCutscene(highlights);
+        if (highlights.length && scene && !settings.skipCutscenes) await playCutscene(highlights);
         if (state.outcome) {
           busy = false;
           render();
@@ -1397,7 +1428,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
         'div',
         { class: 'debug-actions' },
         h('button', { disabled: !report, onclick: () => openModal('report') }, 'Итоги хода'),
-        h('button', { onclick: newGame }, 'Новая игра'),
+        h('button', { onclick: () => newGame() }, 'Новая игра'),
       ),
       h('h3', { class: 'section' }, 'Игра'),
       row('Ход', `${Math.min(state.turn, b.turnLimit)} / ${b.turnLimit}`),
@@ -1785,9 +1816,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
       reputation: 'Репутация',
       shop: 'Покупки',
       investigate: 'Репортёр',
+      pause: 'Меню',
+      howto: 'Как играть',
+      settings: 'Настройки',
+      about: 'Об игре',
+      newgame: 'Новая игра',
     };
     const body =
-      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : shopContent();
+      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
     const panel = h(
       'div',
@@ -1814,7 +1850,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h('h2', {}, state.outcome.result === 'win' ? 'Победа' : 'Поражение'),
         h('p', {}, outcomeText(state.outcome)),
         h('p', { class: 'muted' }, `Сыграно ходов: ${Math.min(state.turn - 1, c.balance.turnLimit)}. Индекс города: ${Math.round(state.metrics.cityIndex)}.`),
-        h('button', { class: 'primary big', onclick: newGame }, 'Новая игра'),
+        h(
+          'div',
+          { class: 'outcome-actions' },
+          state.outcome.result === 'win'
+            ? h('button', { class: 'primary big', onclick: () => void startGame() }, 'Следующий город ▸')
+            : h('button', { class: 'primary big', onclick: () => void startGame() }, 'Новая игра'),
+          h('button', { onclick: () => showTitle() }, 'Главное меню'),
+        ),
       ),
     );
   }
@@ -1833,8 +1876,208 @@ export function mountApp(root: HTMLElement, c: Content): void {
     renderReconcile();
     renderModal();
     renderOutcome();
+    renderTitle();
     saveSoon();
   }
+  // ---------- Menus (CONCEPT.md §7.3 «Меню») ----------
+
+  /** Title screen over the live city: continue, new game, how to play, settings, about. */
+  function renderTitle(): void {
+    titleLayer.hidden = !titleOpen;
+    root.classList.toggle('at-title', titleOpen);
+    if (!titleOpen) {
+      titleLayer.replaceChildren();
+      return;
+    }
+    const item = (label: string, onclick: () => void, cls = '') => h('button', { class: `title-item ${cls}`, onclick }, label);
+    titleLayer.replaceChildren(
+      h(
+        'div',
+        { class: 'title-box' },
+        h('h1', { class: 'title-logo' }, 'BREAKING TOWN'),
+        h('p', { class: 'title-sub' }, 'Газета, которая разрушит город'),
+        h(
+          'nav',
+          { class: 'title-menu' },
+          hasGame && !state.outcome
+            ? h(
+                'button',
+                { class: 'title-item primary', onclick: continueGame },
+                h('span', {}, 'Продолжить'),
+                h('small', {}, `День ${Math.min(state.turn, c.balance.turnLimit)} · индекс города ${Math.round(state.metrics.cityIndex)} · ${state.money} монет`),
+              )
+            : null,
+          item('Новая игра', () => openModal('newgame'), hasGame && !state.outcome ? '' : 'primary'),
+          item('Как играть', () => openModal('howto')),
+          item('Настройки', () => openModal('settings')),
+          item('Об игре', () => openModal('about')),
+        ),
+      ),
+    );
+  }
+
+  function showTitle(): void {
+    titleOpen = true;
+    modal = null;
+    issueOpen = false;
+    scene?.startTour();
+    render();
+  }
+
+  function continueGame(): void {
+    titleOpen = false;
+    modal = null;
+    scene?.stopTour();
+    issueOpen = true;
+    busy = true;
+    void runSearch();
+  }
+
+  /** Starts a new game; before the very first one the opening story plays (CONCEPT.md §1.1). */
+  async function startGame(seed?: number): Promise<void> {
+    modal = null;
+    titleOpen = false;
+    render();
+    if (!settings.introSeen) await watchIntro();
+    scene?.stopTour();
+    newGame(seed);
+  }
+
+  /** The opening story over the drifting city. */
+  async function watchIntro(): Promise<void> {
+    const wasTitle = titleOpen;
+    titleOpen = false;
+    modal = null;
+    issueOpen = false;
+    render();
+    scene?.startTour();
+    // The game interface hides behind the story as it does behind the title screen.
+    root.classList.add('at-title');
+    await playIntro(root, c, assetBase);
+    root.classList.remove('at-title');
+    settings.introSeen = true;
+    saveSettings(settings);
+    if (wasTitle) showTitle();
+  }
+
+  function pauseContent(): HTMLElement[] {
+    const item = (label: string, onclick: () => void, cls = '') => h('button', { class: `menu-item ${cls}`, onclick }, label);
+    return [
+      h(
+        'nav',
+        { class: 'pause-menu' },
+        item('Продолжить', () => openModal(null), 'primary'),
+        item('Как играть', () => openModal('howto')),
+        item('Настройки', () => openModal('settings')),
+        item('Новая игра', () => openModal('newgame')),
+        item('Главное меню', () => showTitle()),
+        debugMode ? item('Отладка', () => openModal('debug'), 'ghost') : null,
+      ),
+    ].filter((x): x is HTMLElement => x !== null);
+  }
+
+  /** Random town or a town by its number (seed); from the game it warns that the current game is lost. */
+  function newGameContent(): HTMLElement[] {
+    const input = h('input', { type: 'number', min: 1, placeholder: 'например, 7', class: 'seed-input' });
+    const startNumbered = () => {
+      const n = Number(input.value);
+      if (Number.isInteger(n) && n > 0) void startGame(n);
+      else input.focus();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') startNumbered();
+    });
+    const out: (HTMLElement | null)[] = [
+      hasGame && !titleOpen && !state.outcome ? h('p', { class: 'bad' }, 'Текущая партия будет потеряна.') : null,
+      h('button', { class: 'primary big', onclick: () => void startGame() }, 'Случайный город'),
+      h('p', { class: 'hint-line' }, 'Или город по номеру — у каждого номера своя карта и свои жители:'),
+      h('div', { class: 'seed-row' }, input, h('button', { onclick: startNumbered }, 'Начать')),
+      h('button', { class: 'ghost', onclick: () => openModal(titleOpen ? null : 'pause') }, '← Назад'),
+    ];
+    return out.filter((x): x is HTMLElement => x !== null);
+  }
+
+  function settingsContent(): HTMLElement[] {
+    const toggle = (label: string, hint: string, key: 'fastSearch' | 'skipCutscenes') =>
+      h(
+        'label',
+        { class: 'setting' },
+        h('input', {
+          type: 'checkbox',
+          checked: settings[key],
+          onchange: (e: Event) => {
+            settings[key] = (e.target as HTMLInputElement).checked;
+            saveSettings(settings);
+          },
+        }),
+        h('span', {}, h('b', {}, label), h('small', {}, hint)),
+      );
+    const themes: [typeof settings.theme, string][] = [
+      ['auto', 'Как в системе'],
+      ['light', 'Светлая'],
+      ['dark', 'Тёмная'],
+    ];
+    return [
+      h('h3', { class: 'section' }, 'Оформление'),
+      h(
+        'div',
+        { class: 'chips' },
+        ...themes.map(([t, label]) =>
+          h(
+            'button',
+            {
+              class: `chip${settings.theme === t ? ' on' : ''}`,
+              onclick: () => {
+                settings.theme = t;
+                saveSettings(settings);
+                render();
+              },
+            },
+            label,
+          ),
+        ),
+      ),
+      h('h3', { class: 'section' }, 'Анимации'),
+      toggle('Быстрый поиск', 'находки репортёров появляются сразу, без анимации', 'fastSearch'),
+      toggle('Без роликов дня', 'не показывать драки, протесты и другие яркие события перед выпуском', 'skipCutscenes'),
+      h('h3', { class: 'section' }, 'Вступление'),
+      h('button', { onclick: () => void watchIntro() }, 'Посмотреть вступление ещё раз'),
+      h('button', { class: 'ghost', onclick: () => openModal(titleOpen ? null : 'pause') }, '← Назад'),
+    ];
+  }
+
+  /** A short rulebook with the game's own icons. */
+  function howtoContent(): HTMLElement[] {
+    const b = c.balance;
+    const block = (icon: string, title: string, text: string) =>
+      h(
+        'div',
+        { class: 'howto-block' },
+        h('img', { src: `${assetBase}sprites/${icon}.png`, alt: '', width: 32, height: 32 }),
+        h('div', {}, h('b', {}, title), h('p', {}, text)),
+      );
+    return [
+      block('ui/city', 'Цель', `За ${b.turnLimit} дней опустите индекс города ниже ${b.winCityIndex}. Проигрыш — банкротство, потеря репутации или конец срока.`),
+      block('ui/readers', 'Ход', 'Репортёры приносят новости — события дня всегда, остальное как повезёт. Разложите выпуск: первая полоса, статья, заметки — и отправьте в печать.'),
+      block('ui/truth_1', 'Правда и ложь', 'Каждую новость можно оставить как есть, додумать или исказить. Чем сильнее искажение, тем громче новость и выше риск разоблачения.'),
+      block('ui/reputation', 'Репутация', 'Правда её поднимает, разоблачённая ложь обрушивает. Высокая репутация — вам верят и реже проверяют.'),
+      block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый ход. Скучный выпуск их распугивает, интересный — приводит новых. На деньги нанимайте репортёров и покупайте каналы.'),
+      block('groups/workers', 'Стравливайте группы', 'Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.'),
+      block('ui/issue_3', 'Уровень выпуска', 'Кнопка «В печать» показывает, каким выйдет номер. Сенсация на первой полосе — сенсационный выпуск.'),
+      h('button', { onclick: () => void watchIntro() }, 'Посмотреть вступление'),
+      h('button', { class: 'ghost', onclick: () => openModal(titleOpen ? null : 'pause') }, '← Назад'),
+    ];
+  }
+
+  function aboutContent(): HTMLElement[] {
+    return [
+      h('p', {}, h('b', {}, 'Breaking Town'), ' — пошаговая сатирическая стратегия о газете, которая разрушает город новостями.'),
+      h('p', {}, 'Все персонажи, город и медиахолдинг «Медиа-Плюс» вымышлены. Любые совпадения с реальными СМИ — повод задуматься.'),
+      h('p', { class: 'hint-line' }, 'Ранняя версия: графика временная, баланс меняется.'),
+      h('button', { class: 'ghost', onclick: () => openModal(titleOpen ? null : 'pause') }, '← Назад'),
+    ];
+  }
+
 
   // ---------- Autosave ----------
 
@@ -1854,6 +2097,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
   });
   window.addEventListener('pagehide', saveNow);
 
-  busy = true;
-  void runSearch();
+  if (titleOpen) {
+    issueOpen = false;
+    render();
+  } else {
+    hasGame = true;
+    busy = true;
+    void runSearch();
+  }
 }

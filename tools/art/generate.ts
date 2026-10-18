@@ -5,7 +5,7 @@
  *   npm run art
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { illustration, scenes } from './illustrations';
+import { illustration, introScenes, scenes } from './illustrations';
 import { portrait, type PortraitSpec } from './portraits';
 import { dirname, join } from 'node:path';
 import { buildingArts, FRAMES } from './buildings';
@@ -144,6 +144,9 @@ for (const c of cards) {
   for (const a of groups) for (const b of groups) if (a.id !== b.id) write(`sprites/news/${c.id}__${a.id}__${b.id}.png`, illustration(scenes[c.id], [a.id, b.id]).toPng());
 }
 
+// The opening story (CONCEPT.md §1.1).
+for (const [name, scene] of Object.entries(introScenes)) write(`sprites/intro/${name}.png`, illustration(scene).toPng());
+
 // What exists, so the game does not hard-code variant counts.
 write(
   'manifest.json',
@@ -157,6 +160,7 @@ write(
       ui: Object.keys(uiIcons),
       reporters: reporters.map((r) => r.id),
       groups: groups.map((g) => g.id),
+      intro: Object.keys(introScenes),
       news: cards.map((c) => c.id),
     },
     null,

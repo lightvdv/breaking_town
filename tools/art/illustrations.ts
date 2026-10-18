@@ -1217,3 +1217,69 @@ export const scenes: Record<string, Scene> = {
     ],
   },
 };
+
+/** Scenes of the opening story (CONCEPT.md §1.1), same size and style as the news. */
+export const introScenes: Record<string, Scene> = {
+  // A quiet town where nothing ever happens.
+  town: {
+    sky: 'day',
+    ground: 'grass',
+    building: { type: 'home', x: 4 },
+    trees: [80],
+    fountain: 104,
+    people: [p('pensioners', 'idle_front', 66), p('workers', 'react_happy', 82, { frame: 1 }), p('youth', 'idle_front', 98, { variant: 1 })],
+  },
+  // The board of the media holding in the capital: fear sells.
+  board: {
+    sky: 'night',
+    ground: 'plaza',
+    building: { type: 'cityHall', x: 4 },
+    people: [p('intelligentsia', 'react_talk', 70, { frame: 1 }), p('intelligentsia', 'idle_front', 86, { variant: 1 }), p('intelligentsia', 'react_happy', 102, { frame: 2 })],
+    icons: [
+      { name: 'money', x: 72, y: 10 },
+      { name: 'up', x: 92, y: 10 },
+    ],
+  },
+  // You become the new editor of the town paper.
+  editor: {
+    sky: 'dusk',
+    ground: 'road',
+    building: { type: 'shop', x: 6 },
+    people: [p('intelligentsia', 'react_talk', 84, { frame: 1 }), p('youth', 'idle_front', 100)],
+    icons: [
+      { name: 'document', x: 76, y: 10 },
+      { name: 'camera', x: 96, y: 14 },
+    ],
+  },
+  // How it works: a story turns the town on itself.
+  method: {
+    sky: 'dusk',
+    ground: 'plaza',
+    building: { type: 'factory', x: 4 },
+    people: [p('workers', 'react_scared', 74, { frame: 2 }), p('pensioners', 'react_outraged', 90, { frame: 1 }), p('youth', 'fight', 106, { frame: 1, mirror: true })],
+    icons: [
+      { name: 'megaphone', x: 76, y: 10 },
+      { name: 'warning', x: 96, y: 12 },
+    ],
+  },
+  // The goal: an empty town.
+  goal: {
+    sky: 'alarm',
+    ground: 'road',
+    building: { type: 'factory', state: 'closed', x: 4 },
+    people: [p('workers', 'walk_suitcase_front', 76), p('pensioners', 'walk_suitcase_front', 92), p('youth', 'walk_suitcase_front', 108, { variant: 1 })],
+    icons: [{ name: 'down', x: 84, y: 10 }],
+  },
+  // The reward: the next town.
+  reward: {
+    sky: 'night',
+    ground: 'grass',
+    trees: [20, 112],
+    people: [p('intelligentsia', 'react_happy', 70, { frame: 2 }), p('intelligentsia', 'react_happy', 88, { variant: 1, frame: 1 })],
+    icons: [
+      { name: 'globe', x: 46, y: 12 },
+      { name: 'star', x: 66, y: 8 },
+      { name: 'trophy', x: 86, y: 12 },
+    ],
+  },
+};

@@ -29,8 +29,9 @@
   --sidebar: 420px;
 }
 
+/* Light palette: from the system, unless the settings force a theme (CONCEPT.md §7.3 «Настройки»). */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme='dark']) {
     --bg: #c0cbdc;
     --bg-deep: #8b9bb4;
     --panel: #ffffff;
@@ -41,6 +42,18 @@
     --city-1: #8b9bb4;
     --city-2: #5a6988;
   }
+}
+
+:root[data-theme='light'] {
+  --bg: #c0cbdc;
+  --bg-deep: #8b9bb4;
+  --panel: #ffffff;
+  --panel-2: #ead4aa;
+  --line: #8b9bb4;
+  --text: #181425;
+  --muted: #3a4466;
+  --city-1: #8b9bb4;
+  --city-2: #5a6988;
 }
 
 * {
@@ -501,6 +514,241 @@ button.publish.level-3.bump-up {
   margin: 0;
   padding: 0 10px 6px;
   font-size: 13px;
+}
+
+/* ---------- Title screen and menus (CONCEPT.md §7.3 «Меню») ---------- */
+.title-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(ellipse at 50% 45%, rgba(24, 20, 37, 0.25), rgba(24, 20, 37, 0.85) 75%);
+}
+
+.title-screen[hidden] {
+  display: none;
+}
+
+/* The game interface stays out of sight behind the title screen. */
+.at-title .hud,
+.at-title .city-events,
+.at-title .city-tools,
+.at-title .city-legend,
+.at-title .toasts {
+  visibility: hidden;
+}
+
+.title-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(420px, 100%);
+}
+
+.title-logo {
+  margin: 0;
+  font-size: clamp(40px, 9vw, 72px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 3px;
+  text-align: center;
+  color: var(--accent);
+  text-shadow:
+    4px 4px 0 #181425,
+    -2px -2px 0 #181425,
+    2px -2px 0 #181425,
+    -2px 2px 0 #181425;
+}
+
+.title-sub {
+  margin: 0 0 14px;
+  font-size: 17px;
+  color: #fff;
+  text-shadow: 2px 2px 0 #181425;
+}
+
+.title-menu,
+.pause-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.title-item,
+.menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.title-item small {
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.title-item:not(.primary) {
+  background: rgba(38, 43, 68, 0.88);
+  color: #fff;
+}
+
+.outcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.seed-row {
+  display: flex;
+  gap: 8px;
+}
+
+.seed-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 16px;
+  padding: 6px 8px;
+}
+
+.setting {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.setting input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.setting span {
+  display: flex;
+  flex-direction: column;
+}
+
+.setting small {
+  color: var(--muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.howto-block {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.howto-block img {
+  image-rendering: pixelated;
+}
+
+.howto-block p {
+  margin: 2px 0 0;
+}
+
+/* ---------- Opening story (CONCEPT.md §1.1) ---------- */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(24, 20, 37, 0.45);
+}
+
+.intro .letterbox {
+  height: 7%;
+}
+
+.intro-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(560px, 100%);
+  padding: 14px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 rgba(24, 20, 37, 0.55);
+  cursor: pointer;
+}
+
+.intro-card.in {
+  animation: caption-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.intro-art {
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  border: 2px solid var(--paper-ink);
+}
+
+.intro-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #a22633;
+}
+
+.intro-text {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.intro-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: min(560px, 100%);
+}
+
+.intro-dots {
+  display: flex;
+  gap: 6px;
+  margin-right: auto;
+}
+
+.intro-dots span {
+  width: 10px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.35);
+  border: 2px solid #181425;
+}
+
+.intro-dots span.on {
+  background: var(--accent);
+}
+
+.intro-skip {
+  color: #fff;
 }
 
 /* ---------- City cutscene before the issue (CONCEPT.md §7.3) ---------- */

@@ -66,6 +66,8 @@ interface Draft {
   distortion: number;
 }
 
+type MenuKind = 'place' | 'truth';
+
 type Modal = 'report' | 'debug' | 'city' | 'money' | 'readers' | 'reputation' | 'shop' | 'investigate' | null;
 
 const REACTION_SECONDS = 2.6;
@@ -147,8 +149,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const details = new Set<number>();
   /** The exposure notice of the last report was closed. */
   let exposuresSeen = false;
-  /** Story whose placement menu is open. */
-  let menuFor: number | null = null;
+  /** Story and menu (placement or truth) that is open next to its headline. */
+  let menuFor: { uid: number; kind: MenuKind } | null = null;
 
   // ---------- Persistent shell ----------
   const hud = h('header', { class: 'hud' });
@@ -204,7 +206,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     if (searching) skip();
     else if (e.target === issue) closeIssue();
   });
-  // A press anywhere else closes an open placement menu.
+  // A press anywhere else closes an open story menu.
   document.addEventListener('pointerdown', (e) => {
     if (menuFor === null || (e.target as Element).closest('.place-menu, .place-btn')) return;
     menuFor = null;
@@ -575,9 +577,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
     return `${text}: прочтут ${read} читателей, воздействие ×${impact}, риск ×${risk}.`;
   }
 
-  /** Tier as a face next to the headline (CONCEPT.md §7.3). */
-  const tierFaces = ['😴', '🙂', '😮', '🤯'];
-
   /** Placeholder "text" under a headline: grey lines of varying length, stable per card. */
   function lorem(uid: number, lines: number): HTMLElement {
     return h(
@@ -609,75 +608,83 @@ export function mountApp(root: HTMLElement, c: Content): void {
       render();
     };
 
-    // Truth buttons next to the headline: a story can only be made less true.
-    const truthButtons = h(
-      'span',
-      { class: 'truth-buttons', role: 'group', 'aria-label': 'Искажение' },
-      ...([0, 1, 2] as const).map((t) => {
-        const dist = t - card.baseTruth;
-        const on = d.distortion === dist;
-        const title = `${truthLabels[t]} — ${dist <= 0 ? distortionLabels[0].toLowerCase() : distortionLabels[t].toLowerCase()}`;
-        return h(
-          'button',
-          {
-            class: `truth-btn${on ? ' on' : ''}`,
-            title,
-            'aria-pressed': String(on),
-            disabled: dist < 0 || dist > maxDistortion(card) || busy,
-            onclick: act(() => (d.distortion = dist)),
-          },
-          h('img', { src: `${assetBase}sprites/ui/truth_${t}.png`, alt: title, width: 16, height: 16 }),
-        );
-      }),
-    );
     const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `компромат на группу «${target}»` }[tpl.source];
-    // Placement menu next to the headline: the same moves as dragging (CONCEPT.md §7.3).
-    const menuOpen = menuFor === card.uid;
+    // Two menu buttons next to the headline: placement (same moves as dragging) and truth (CONCEPT.md §7.3).
+    const isOpen = (kind: MenuKind) => menuFor?.uid === card.uid && menuFor.kind === kind;
+    const menuButton = (kind: MenuKind, cls: string, title: string, content: Node | string) =>
+      h(
+        'button',
+        {
+          class: `${cls}${isOpen(kind) ? ' on' : ''}`,
+          title,
+          'aria-haspopup': 'menu',
+          'aria-expanded': String(isOpen(kind)),
+          disabled: busy,
+          onclick: act(() => (menuFor = isOpen(kind) ? null : { uid: card.uid, kind })),
+        },
+        content,
+      );
+    const menuItem = (current: boolean, disabled: boolean, pick: () => void, ...content: (Node | string)[]) =>
+      h(
+        'button',
+        {
+          role: 'menuitem',
+          class: current ? 'current' : '',
+          disabled: current || disabled,
+          onclick: act(() => {
+            menuFor = null;
+            pick();
+          }),
+        },
+        h('span', { class: 'check' }, current ? '✓' : ''),
+        ...content,
+      );
     const places: [Placement | 'out', string][] = [
       [2, 'На первую полосу'],
       [1, 'Статьёй'],
       [0, 'Заметкой'],
       ['out', 'Не печатать'],
     ];
-    const placeButton = h(
-      'button',
-      {
-        class: `place-btn${menuOpen ? ' on' : ''}`,
-        title: 'Куда поставить новость',
-        'aria-haspopup': 'menu',
-        'aria-expanded': String(menuOpen),
-        disabled: busy,
-        onclick: act(() => (menuFor = menuOpen ? null : card.uid)),
-      },
-      '⇄',
-    );
-    const placeMenu = menuOpen
+    const placeButton = menuButton('place', 'place-btn', 'Куда поставить новость', '⇄');
+    const placeMenu = isOpen('place')
       ? h(
           'div',
           { class: 'place-menu', role: 'menu' },
-          ...places.map(([key, label]) =>
-            h(
-              'button',
-              {
-                role: 'menuitem',
-                class: where === key ? 'current' : '',
-                disabled: where === key,
-                onclick: act(() => {
-                  menuFor = null;
-                  if (key === 'out') unpublish(card);
-                  else place(card, key);
-                }),
-              },
-              where === key ? `✓ ${label}` : label,
-            ),
-          ),
+          ...places.map(([key, label]) => menuItem(where === key, false, () => (key === 'out' ? unpublish(card) : place(card, key)), label)),
         )
       : null;
+    // Truth: the icon shows the current level; a story can only be made less true.
+    const truthIcon = (t: number) => h('img', { src: `${assetBase}sprites/ui/truth_${t}.png`, alt: '', width: 16, height: 16 });
+    const truthButton = menuButton('truth', 'place-btn truth-btn', `${truthLabels[p.truth]} — изменить правдивость`, truthIcon(p.truth));
+    const truthMenu = isOpen('truth')
+      ? h(
+          'div',
+          { class: 'place-menu truth-menu', role: 'menu' },
+          ...([0, 1, 2] as const).map((t) => {
+            const dist = t - card.baseTruth;
+            const how = dist <= 0 ? distortionLabels[0] : distortionLabels[t];
+            return menuItem(
+              d.distortion === dist,
+              dist < 0 || dist > maxDistortion(card),
+              () => (d.distortion = dist),
+              truthIcon(t),
+              h('span', {}, truthLabels[t]),
+              h('small', {}, dist < 0 ? 'правдивее не сделать' : how.toLowerCase()),
+            );
+          }),
+        )
+      : null;
+    // The better the story, the louder its label looks (CONCEPT.md §7.3).
+    const tierLabel = h(
+      'span',
+      { class: `tier-label t${tier}`, title: raised ? `Было: ${tierLabels[card.tier].toLowerCase()} — уровень поднят искажением` : `${tierLabels[tier]} новость` },
+      raised ? `${tierLabels[tier]} ↑` : tierLabels[tier],
+    );
     const info = open
       ? h(
           'div',
           { class: 'news-info' },
-          h('p', {}, h('b', {}, `${tierFaces[tier]} ${tierLabels[tier]}`), raised ? ` (было: ${tierLabels[card.tier].toLowerCase()}, поднято искажением)` : ''),
+          h('p', {}, h('b', {}, tierLabels[tier]), raised ? ` (было: ${tierLabels[card.tier].toLowerCase()}, поднято искажением)` : ''),
           h('p', {}, `${truthLabels[p.truth]} · ${topicLabels[tpl.topic]} · ${sourceLabel} · ${scopeLabels[card.scope]}`),
           h('p', { class: 'effect' }, effectText(c, p.effect, tpl.target)),
           h('p', {}, `Аудитория: ${audience}`),
@@ -701,9 +708,11 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h(
         'div',
         { class: 'news-head' },
-        placeButton,
+        // The buttons float at the start of the headline, and its text wraps around them.
+        h('span', { class: 'head-tools' }, placeButton, truthButton, tierLabel),
         h('h3', { class: 'headline' }, p.title),
         placeMenu,
+        truthMenu,
       ),
       h(
         'div',
@@ -719,16 +728,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h(
           'span',
           { class: 'news-tools' },
-          h('span', { class: 'tier-face', title: `${tierLabels[tier]} новость${raised ? ' — уровень поднят искажением' : ''}` }, tierFaces[tier]),
-          h('img', {
-            class: 'scope-icon',
-            src: `${assetBase}sprites/ui/${card.scope === 'global' ? 'globe' : 'city'}.png`,
-            alt: scopeLabels[card.scope],
-            title: card.scope === 'global' ? 'Новость о мире' : 'Новость о городе',
-            width: 16,
-            height: 16,
-          }),
-          truthButtons,
           h(
             'button',
             {
@@ -746,6 +745,32 @@ export function mountApp(root: HTMLElement, c: Content): void {
     return { cls, children: children.filter((x): x is HTMLElement => x !== null) };
   }
 
+  /** Small fixed-size clipping that follows the pointer while a story is dragged. */
+  function dragGhost(card: CardInstance): HTMLElement {
+    const d = draftOf(card);
+    const p = previewPublication(state, c, getModifiers(state, c), { cardUid: card.uid, placement: d.placement, distortion: d.distortion });
+    return h(
+      'div',
+      { class: 'drag-ghost' },
+      h(
+        'div',
+        { class: 'ghost-top' },
+        h('img', { src: `${assetBase}sprites/ui/truth_${p.truth}.png`, alt: '', width: 16, height: 16 }),
+        h('span', { class: `tier-label t${p.tier}` }, tierLabels[p.tier]),
+      ),
+      h('b', { class: 'ghost-title' }, p.title),
+    );
+  }
+
+  /** Where the ghost goes: beside the cursor, or above the finger so it does not hide the drop place. */
+  function ghostAt(ghost: HTMLElement, x: number, y: number, touch: boolean): string {
+    const w = ghost.offsetWidth;
+    const hgt = ghost.offsetHeight;
+    const gx = touch ? x - w / 2 : x + 14;
+    const gy = touch ? y - hgt - 28 : y + 14;
+    return `translate(${Math.round(gx)}px, ${Math.round(gy)}px) rotate(-2deg)`;
+  }
+
   /**
    * Drag a story by any part except its controls between the front page, the article, the briefs
    * and the tray (CONCEPT.md §7.3). A mouse drags at once; a finger drags after a short press, so a
@@ -755,9 +780,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const t = e.target as Element;
     if (busy || e.button !== 0 || t.closest('button, .news-info, .place-menu')) return;
     const touch = e.pointerType !== 'mouse';
-    const rect = el.getBoundingClientRect();
-    const offX = e.clientX - rect.left;
-    const offY = e.clientY - rect.top;
     let ghost: HTMLElement | null = null;
     let over: HTMLElement | null = null;
     let armed = !touch;
@@ -783,11 +805,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
       scrollFrame = requestAnimationFrame(autoScroll);
     };
     const begin = () => {
-      ghost = el.cloneNode(true) as HTMLElement;
-      ghost.classList.remove('lifting');
-      ghost.classList.add('drag-ghost');
-      ghost.style.width = `${rect.width}px`;
+      // The same small clipping wherever the story comes from, so the paper under it stays visible.
+      ghost = dragGhost(card);
       document.body.append(ghost);
+      ghost.style.transform = ghostAt(ghost, last.x, last.y, touch);
       el.classList.remove('lifting');
       el.classList.add('dragging');
       issue.classList.add('drag-active');
@@ -807,7 +828,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
         begin();
       }
       ev.preventDefault();
-      ghost!.style.transform = `translate(${ev.clientX - offX}px, ${ev.clientY - offY}px) rotate(-2deg)`;
+      ghost!.style.transform = ghostAt(ghost!, ev.clientX, ev.clientY, touch);
       const zone = zoneAt(ev.clientX, ev.clientY);
       if (zone !== over) {
         over?.classList.remove('drop-over');

@@ -861,8 +861,34 @@ button.res:hover {
   color: var(--paper-ink);
   border: 2px solid var(--ink);
   box-shadow: 8px 8px 0 rgba(24, 20, 37, 0.5);
-  opacity: 0.92;
+  opacity: 0.94;
   cursor: grabbing;
+  /* Same size wherever the story is dragged from. */
+  width: 220px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ghost-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ghost-top img {
+  image-rendering: pixelated;
+}
+
+.ghost-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.2;
 }
 
 .kicker {
@@ -879,19 +905,63 @@ button.res:hover {
   border-left: 4px solid #e43b44;
 }
 
-.news-head {
+/* The buttons float at the start of the headline; its text fills the space beside them and continues below. */
+.news-head::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+.head-tools {
+  float: left;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 6px;
+  margin: 0 8px 2px 0;
 }
 
 .news .headline {
-  flex: 1;
-  min-width: 0;
   margin: 0;
   font-weight: 700;
   line-height: 1.15;
   color: var(--paper-ink);
+  overflow-wrap: break-word;
+}
+
+/* The button row is no taller than one line of the headline, so only the first line is indented. */
+.at-2 .head-tools {
+  margin-top: 4px;
+}
+
+.at-1 .head-tools,
+.at-0 .head-tools,
+.at-out .head-tools {
+  margin-bottom: 0;
+}
+
+.at-1 .place-btn {
+  width: 22px;
+  height: 22px;
+}
+
+.at-0 .place-btn,
+.at-out .place-btn {
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+}
+
+.at-1 .tier-label,
+.at-0 .tier-label,
+.at-out .tier-label {
+  padding: 0 5px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.at-0 .headline,
+.at-out .headline {
+  line-height: 1.35;
 }
 
 .at-2 .headline {
@@ -923,32 +993,61 @@ button.res:hover {
   gap: 3px;
 }
 
-.tier-face {
-  font-size: 18px;
-  line-height: 1;
+/* Tier label: the better the story, the louder it looks (CONCEPT.md §7.3). */
+.tier-label {
+  padding: 1px 7px;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
   cursor: help;
 }
 
-.scope-icon {
-  width: 16px;
-  height: 16px;
-  image-rendering: pixelated;
+.tier-label.t0 {
+  color: #8b9bb4;
+  border: 1px dashed #8b9bb4;
+  font-style: italic;
 }
 
-.truth-buttons {
-  display: flex;
-  gap: 1px;
+.tier-label.t1 {
+  color: var(--paper-ink);
+  border: 1px solid var(--paper-ink);
 }
 
+.tier-label.t2 {
+  color: #fff;
+  background: #0099db;
+  border: 1px solid #124e89;
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(44, 232, 245, 0.7);
+}
+
+.tier-label.t3 {
+  position: relative;
+  overflow: hidden;
+  color: #fee761;
+  background: linear-gradient(135deg, #a22633, #e43b44 50%, #a22633);
+  border: 1px solid #feae34;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 0 #3e2731;
+  box-shadow: 0 0 10px rgba(254, 174, 52, 0.8);
+  animation: pulse 0.9s ease-in-out infinite alternate;
+}
+
+.tier-label.t3::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.6) 50%, transparent 65%);
+  background-size: 250% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Current truth level as an icon button next to the headline. */
 .truth-btn {
-  width: 24px;
-  height: 24px;
-  padding: 2px;
   display: grid;
   place-items: center;
-  background: #d9c08f;
-  border: 1px solid var(--paper-muted);
-  box-shadow: none;
 }
 
 .truth-btn img {
@@ -957,14 +1056,37 @@ button.res:hover {
   image-rendering: pixelated;
 }
 
-.truth-btn.on {
-  background: #fff6e0;
-  border: 2px solid var(--ink);
+.place-menu .check {
+  display: inline-block;
+  width: 14px;
 }
 
-.truth-btn:disabled img {
+.truth-menu {
+  left: 34px;
+  min-width: 230px;
+}
+
+.truth-menu button {
+  display: grid;
+  grid-template-columns: 14px 16px auto 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
+.truth-menu img {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+}
+
+.truth-menu small {
+  justify-self: end;
+  color: var(--paper-muted);
+}
+
+.truth-menu button:disabled img {
   filter: grayscale(1);
-  opacity: 0.3;
+  opacity: 0.35;
 }
 
 .news-body {

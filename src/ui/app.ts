@@ -168,7 +168,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
   let trayOpen = false;
 
   // ---------- Persistent shell ----------
-  const hud = h('header', { class: 'hud' });
+  // One top row (CONCEPT.md §7.3): resources, reporter portraits, the issue level and the buttons.
+  const hudRes = h('div', { class: 'resources' });
+  const hudActions = h('div', { class: 'hud-buttons' });
+  const hudMenu = h('button', { class: 'icon-btn hud-menu', title: 'Меню отладки', onclick: () => openModal('debug') }, '☰');
   const reporterBar = new ReporterBar(
     c,
     () => openModal('shop', 'hire'),
@@ -179,6 +182,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       openModal('investigate');
     },
   );
+  const hud = h('header', { class: 'hud' }, hudRes, reporterBar.el, hudActions, hudMenu);
   const cityHost = h('div', { class: 'city-host' });
   const cityEvents = h('div', { class: 'city-events' });
   const loading = h('div', { class: 'city-loading' }, 'Строим город…');
@@ -217,12 +221,18 @@ export function mountApp(root: HTMLElement, c: Content): void {
     return { root, items, empty, label, target };
   };
   const zones: Record<string, ReturnType<typeof makeZone>> = { 2: makeZone(2), 1: makeZone(1), 0: makeZone(0), out: makeZone('out') };
-  const masthead = h('header', { class: 'masthead' });
-  const paper = h('div', { class: 'paper' }, masthead, h('div', { class: 'paper-grid' }, zones[2].root, zones[1].root, zones[0].root));
+  const masthead = h(
+    'header',
+    { class: 'masthead' },
+    h('span', { class: 'masthead-side' }),
+    h('h2', {}, 'Городской Вестник'),
+    h('button', { class: 'paper-close', title: 'Свернуть — посмотреть на город', onclick: () => closeIssue() }, '—'),
+  );
+  // The tray of stories left out is the last rubric of the page, folded into one line (CONCEPT.md §7.3).
+  const paper = h('div', { class: 'paper' }, masthead, h('div', { class: 'paper-grid' }, zones[2].root, zones[1].root, zones[0].root), zones.out.root);
+  // On a phone the issue covers the top bar, so a thin bar at the bottom holds the level and «В печать».
   const issueFoot = h('div', { class: 'issue-foot' });
-  // The tray stays at the bottom of the screen, folded into one line above the buttons, so it is
-  // always a drop target (CONCEPT.md §7.3).
-  const dock = h('div', { class: 'issue-dock' }, zones.out.root, issueFoot);
+  const dock = h('div', { class: 'issue-dock' }, issueFoot);
   const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, paper, dock));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
@@ -247,7 +257,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const outcomeLayer = h('div', { class: 'modal-layer' });
   root.replaceChildren(
     hud,
-    reporterBar.el,
     h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, issue, exposureToast),
     tooltip,
     modalLayer,
@@ -551,59 +560,62 @@ export function mountApp(root: HTMLElement, c: Content): void {
   function renderHud(): void {
     const trust = averageTrust(state, c);
     const r = report;
-    hud.replaceChildren(
-      h('div', { class: 'brand' }, 'BREAKING TOWN'),
-      h(
-        'div',
-        { class: 'resources' },
-        resource(
-          'money',
-          'Деньги',
-          `${state.money}`,
-          r ? r.moneyDelta : null,
-          `Расходы: ${totalUpkeep(state, c)} за ход. Нажмите — доходы и расходы.`,
-          state.money < 0 ? 'bad' : '',
-          '',
-          () => openModal('money'),
-        ),
-        resource(
-          'readers',
-          'Читатели',
-          `${readerCount(state)}`,
-          r ? r.readers.after - r.readers.before : null,
-          'Постоянные читатели покупают каждый выпуск и приносят доход. Нажмите — кто пришёл и ушёл.',
-          '',
-          '',
-          () => openModal('readers'),
-        ),
-        resource(
-          'reputation',
-          'Репутация',
-          `${Math.round(trust)}%`,
-          r ? Math.round(r.trustAfter - r.trustBefore) : null,
-          'Чем выше, тем больше верят и реже проверяют. Упадёт до нуля — игра проиграна. Нажмите — подробности.',
-          trust < 20 ? 'bad' : '',
-          '%',
-          () => openModal('reputation'),
-        ),
-        resource(
-          'city',
-          'Индекс города',
-          `${Math.round(state.metrics.cityIndex)}`,
-          r ? Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex) : null,
-          `Насколько город жив. Для победы опустите ниже ${c.balance.winCityIndex}. Нажмите — подробности.`,
-          '',
-          '',
-          () => openModal('city'),
-        ),
+    hudRes.replaceChildren(
+      resource(
+        'money',
+        'Деньги',
+        `${state.money}`,
+        r ? r.moneyDelta : null,
+        `Расходы: ${totalUpkeep(state, c)} за ход. Нажмите — доходы и расходы.`,
+        state.money < 0 ? 'bad' : '',
+        '',
+        () => openModal('money'),
       ),
-      h(
-        'div',
-        { class: 'hud-buttons' },
-        !issueOpen ? h('button', { class: 'primary', onclick: () => ((issueOpen = true), render()) }, 'Выпуск') : null,
-        h('button', { onclick: () => openModal('shop') }, 'Покупки'),
-        h('button', { class: 'icon-btn', title: 'Меню отладки', onclick: () => openModal('debug') }, '☰'),
+      resource(
+        'readers',
+        'Читатели',
+        `${readerCount(state)}`,
+        r ? r.readers.after - r.readers.before : null,
+        'Постоянные читатели покупают каждый выпуск и приносят доход. Нажмите — кто пришёл и ушёл.',
+        '',
+        '',
+        () => openModal('readers'),
       ),
+      resource(
+        'reputation',
+        'Репутация',
+        `${Math.round(trust)}%`,
+        r ? Math.round(r.trustAfter - r.trustBefore) : null,
+        'Чем выше, тем больше верят и реже проверяют. Упадёт до нуля — игра проиграна. Нажмите — подробности.',
+        trust < 20 ? 'bad' : '',
+        '%',
+        () => openModal('reputation'),
+      ),
+      resource(
+        'city',
+        'Индекс города',
+        `${Math.round(state.metrics.cityIndex)}`,
+        r ? Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex) : null,
+        `Насколько город жив. Для победы опустите ниже ${c.balance.winCityIndex}. Нажмите — подробности.`,
+        '',
+        '',
+        () => openModal('city'),
+      ),
+    );
+    // While the issue is open: its level and «В печать»; folded: «Выпуск» brings it back.
+    const publishing = issueOpen && !state.outcome;
+    hudActions.replaceChildren(
+      ...(publishing && !searching ? [issueBadge()] : []),
+      h('button', { onclick: () => openModal('shop') }, 'Покупки'),
+      publishing ? publishButton() : h('button', { class: 'primary', onclick: () => ((issueOpen = true), render()) }, 'Выпуск'),
+    );
+  }
+
+  function publishButton(): HTMLElement {
+    return h(
+      'button',
+      { class: 'primary publish', title: 'Опубликовать выпуск и завершить ход', onclick: endTurn, disabled: busy || !!state.outcome },
+      searching ? 'Репортёры ищут…' : 'В печать ▸',
     );
   }
 
@@ -851,7 +863,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     // Near the top edge or the bottom dock the issue scrolls by itself, so every place is reachable.
     const autoScroll = () => {
       const box = issue.getBoundingClientRect();
-      const bottom = dock.getBoundingClientRect().top;
+      const bottom = dock.offsetParent ? dock.getBoundingClientRect().top : box.bottom;
       const edge = 70;
       const dy = last.y < box.top + edge ? -14 : last.y > bottom - edge && last.y < bottom ? 14 : 0;
       if (dy) issue.scrollTop += dy;
@@ -945,12 +957,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const visible = state.hand.filter((card) => revealed.has(card.uid));
 
     const note = searching ? 'Репортёры ищут новости… (щёлкните, чтобы пропустить)' : !visible.length ? 'Сегодня новостей нет.' : '';
-    issueHead.replaceChildren(...(note ? [h('p', {}, note)] : []));
-    masthead.replaceChildren(
-      h('span', { 'aria-hidden': 'true' }),
-      h('h2', {}, 'Городской Вестник'),
-      h('span', { class: 'masthead-side' }, `Выпуск № ${state.turn}`),
-    );
+    issueHead.replaceChildren(...(note ? [h('p', {}, note)] : []), ...(error ? [h('p', { class: 'bad' }, error)] : []));
+    masthead.firstElementChild!.textContent = `Выпуск № ${state.turn}`;
 
     for (const [uid, el] of cardEls) {
       if (!visible.some((x) => x.uid === uid)) {
@@ -1017,12 +1025,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       }
     }
 
-    issueFoot.replaceChildren(
-      ...(error ? [h('span', { class: 'bad' }, error)] : []),
-      ...(searching ? [] : [issueBadge()]),
-      h('button', { class: 'ghost', onclick: closeIssue }, 'Свернуть'),
-      h('button', { class: 'primary big', onclick: endTurn, disabled: busy || !!state.outcome }, searching ? 'Репортёры ищут…' : 'Опубликовать и завершить ход'),
-    );
+    issueFoot.replaceChildren(...(searching ? [] : [issueBadge()]), publishButton());
   }
 
   /** How interesting the issue being composed is: points of published stories against the thresholds (CONCEPT.md §4.2а). */

@@ -21,17 +21,26 @@ export function topicLine(r: ReporterDef): string {
 }
 
 export function portrait(id: string, cls = 'portrait'): HTMLImageElement {
-  return h('img', { class: cls, src: portraitUrl(id), alt: '', width: 64, height: 64 });
+  return h('img', {
+    class: cls,
+    src: portraitUrl(id),
+    alt: '',
+    width: 64,
+    height: 64,
+  });
 }
 
 /**
- * Row of hired reporters under the top bar. Card elements persist between renders so that CSS
- * animations of a reporter are not restarted while the next one is searching.
+ * Hired reporters as small portraits in the top bar (CONCEPT.md §7.3). Card elements persist
+ * between renders so that CSS animations of a reporter are not restarted while the next one is
+ * searching.
  */
 export class ReporterBar {
   readonly el = h('div', { class: 'reporter-bar' });
-  private cards = new Map<string, { root: HTMLElement; info: HTMLElement; status: HTMLElement; key: string }>();
+  private cards = new Map<string, { root: HTMLElement; status: HTMLElement; key: string }>();
   private layoutKey = '';
+  /** Reporter whose search result was shown last: only its clipping pops out under the bar. */
+  private front: string | null = null;
 
   private animating = false;
 
@@ -57,14 +66,11 @@ export class ReporterBar {
       this.cards.clear();
       const slots: HTMLElement[] = [];
       for (const id of state.reporters) {
-        const r = reporterOf(this.c, id);
-        const info = h('div', { class: 'rep-info' });
         const status = h('div', { class: 'rep-status' });
         const root = h(
           'div',
           {
             class: 'rep-card',
-            title: `${r.name}. ${r.bio} Щёлкните, чтобы поручить расследование.`,
             onclick: (e: Event) => {
               // During the search animation a click skips it (handled by the bar).
               if (this.animating) return;
@@ -72,29 +78,30 @@ export class ReporterBar {
               this.onInvestigate(id);
             },
           },
-          h('div', { class: 'rep-portrait' }, portrait(id)),
-          info,
+          h('div', { class: 'rep-portrait' }, portrait(id), h('span', { class: 'rep-dot' })),
           status,
         );
-        this.cards.set(id, { root, info, status, key: '' });
+        this.cards.set(id, { root, status, key: '' });
         slots.push(root);
       }
-      for (let i = state.reporters.length; i < max; i++) {
+      // One "+" for all free places.
+      if (state.reporters.length < max) {
         slots.push(
           h(
             'button',
             {
               class: 'rep-slot',
+              title: `Нанять репортёра (свободно мест: ${max - state.reporters.length})`,
               onclick: (e: Event) => {
                 e.stopPropagation();
                 this.onHire();
               },
             },
-            '+ Нанять репортёра',
+            '+',
           ),
         );
       }
-      this.el.replaceChildren(h('div', { class: 'rep-title' }, 'Редакция'), ...slots);
+      this.el.replaceChildren(...slots);
     }
     this.el.classList.toggle('animating', animating);
     this.animating = animating;
@@ -102,18 +109,20 @@ export class ReporterBar {
     for (const [id, card] of this.cards) {
       const r = reporterOf(this.c, id);
       const inv = state.investigations.find((x) => x.reporterId === id);
-      const invLine = inv
-        ? `Расследует: ${groupOf(this.c, inv.target).name.toLowerCase()} · ещё ${inv.turnsLeft} ${inv.turnsLeft === 1 ? 'ход' : 'хода'}`
-        : '';
-      card.info.replaceChildren(
-        h('b', {}, r.name),
-        inv ? h('span', { class: 'rep-inv' }, invLine) : h('span', {}, skillLine(this.c, state, r)),
-        h('span', { class: 'muted' }, `${searchLine(state, r)} · ${r.salary}/ход`),
-      );
+      const invLine = inv ? `Расследует: ${groupOf(this.c, inv.target).name.toLowerCase()} · ещё ${inv.turnsLeft} ${inv.turnsLeft === 1 ? 'ход' : 'хода'}` : '';
+      // Name and skills on hover; the portrait itself only shows a status dot.
+      card.root.title = [
+        r.name,
+        inv ? invLine : skillLine(this.c, state, r),
+        `${searchLine(state, r)} · ${r.salary}/ход`,
+        r.bio,
+        'Щёлкните — темы поиска и расследование.',
+      ].join('\n');
       const s = statuses.get(id);
       const statusKey = !s ? `idle:${invLine}` : s.phase === 'searching' ? 'searching' : `done:${s.find.kind}:${s.find.tier ?? 'empty'}`;
       if (statusKey === card.key) continue;
       card.key = statusKey;
+      if (s) this.front = id;
       const result =
         s?.phase === 'done'
           ? s.find.kind === 'investigating'
@@ -142,6 +151,7 @@ export class ReporterBar {
         );
       }
     }
+    for (const [id, card] of this.cards) card.root.classList.toggle('front', id === this.front);
   }
 }
 

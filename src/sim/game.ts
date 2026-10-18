@@ -11,7 +11,7 @@ import { collectIncome } from './economy';
 import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf } from './lookup';
 import { getModifiers, placementSlots, type Modifiers } from './modifiers';
-import { maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
+import { effectiveTier, issueLevel, issueScore, maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
 import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
 import { advanceInvestigations, findNews, isRecent, scopeOf } from './reporters';
 import type {
@@ -53,6 +53,7 @@ export function createGame(c: Content, seed: number): GameState {
     investigations: [],
     topicStreak: {},
     lastSeen: {},
+    reporterTopics: {},
     pendingLies: [],
     initialPopulation: residents.length,
     initialEmployed: residents.filter((r) => r.job !== null).length,
@@ -152,6 +153,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const buyers: Record<ChannelId, number> = {};
   for (const ch of state.ownedChannels) buyers[ch] = followersOf(state, ch);
   const readersBefore = readerCount(state);
+  const readerIds = new Set(state.residents.filter((r) => r.status === 'active' && r.follows.length > 0).map((r) => r.id));
 
   state.lastReactions = {};
   state.scandal = Math.min(1, state.scandal + b.scandalRecovery);
@@ -171,9 +173,14 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
 
-  // Readers who disliked the issue may leave; new ones arrive for the next turn.
-  const boring = published.length > 0 && published.every((n) => n.impact < b.boringImpact);
-  const readers = updateReaders(state, c, rng, mods, published.length, boring);
+  // The issue level decides how many untouched readers drift away and how many new ones arrive.
+  const score = issueScore(
+    c,
+    d.publish.map((p) => effectiveTier(state.hand.find((x) => x.uid === p.cardUid)!, p.distortion)),
+  );
+  const issue = { score, level: issueLevel(c, score) };
+  const readers = updateReaders(state, c, rng, mods, published.length, issue.level, readerIds);
+  const readersAfter = readerCount(state);
 
   const streak: Partial<Record<Topic, number>> = {};
   for (const [topic, n] of Object.entries(topicsThisTurn) as [Topic, number][]) {
@@ -195,7 +202,8 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     upkeep,
     upkeepItems,
     moneyDelta: state.money - moneyBefore,
-    readers: { before: readersBefore, ...readers, after: readerCount(state) },
+    readers: { before: readersBefore, ...readers, after: readersAfter },
+    issue,
     trustBefore,
     trustAfter: averageTrust(state, c),
     metricsBefore,

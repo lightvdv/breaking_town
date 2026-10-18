@@ -21,6 +21,7 @@ export const truthLabels = ['Правда', 'Полуправда', 'Ложь'];
 export const tierLabels = ['Скучная', 'Обычная', 'Интересная', 'Сенсация'];
 export const scopeLabels: Record<NewsScope | 'any', string> = { local: 'Город', global: 'Мир', any: 'Город и мир' };
 export const placementLabels = ['Заметка', 'Статья', 'Первая полоса'];
+export const issueLevelLabels = ['Скучный', 'Обычный', 'Интересный', 'Сенсационный'];
 export const distortionLabels = ['Как есть', 'Додумать', 'Исказить'];
 
 export const topicLabels: Record<Topic, string> = {

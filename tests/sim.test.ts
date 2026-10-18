@@ -7,6 +7,9 @@ import {
   fireReporter,
   followersOf,
   investigationTurns,
+  issueLevel,
+  issueScore,
+  setReporterTopics,
   reporterOf,
   startInvestigation,
   previewPublication,
@@ -243,6 +246,57 @@ describe('trust', () => {
       return;
     }
     throw new Error('no lie was ever exposed');
+  });
+});
+
+describe('issue level', () => {
+  it('sums story points: one boring story is boring, four make an ordinary issue', () => {
+    expect(issueLevel(content, issueScore(content, [0]))).toBe(0);
+    expect(issueLevel(content, issueScore(content, [0, 0, 0, 0]))).toBe(1);
+    expect(issueLevel(content, issueScore(content, [3]))).toBe(2);
+    expect(issueLevel(content, issueScore(content, [3, 2]))).toBe(3);
+  });
+
+  it('a boring issue keeps fewer readers than a sensational one', () => {
+    const net = (tier: 0 | 3) => {
+      let sum = 0;
+      for (const seed of [1, 2, 3, 4, 5, 6]) {
+        const s = createGame(content, seed);
+        s.hand = s.hand.slice(0, 1).map((card) => ({ ...card, tier }));
+        const r = playTurn(s, content, { publish: [{ cardUid: s.hand[0].uid, placement: 1, distortion: 0 }] });
+        expect(r.issue.level).toBe(tier === 0 ? 0 : 2);
+        sum += r.readers.after - r.readers.before;
+      }
+      return sum;
+    };
+    expect(net(3)).toBeGreaterThan(net(0));
+  });
+});
+
+describe('reporter topics', () => {
+  it('a reporter sent after a topic brings it more often', () => {
+    const share = (assign: boolean) => {
+      let hits = 0;
+      let total = 0;
+      for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+        const s = createGame(content, seed);
+        for (let i = 0; i < 12 && !s.outcome; i++) {
+          if (assign) setReporterTopics(s, content, s.reporters[0], ['crime']);
+          playTurn(s, content, { publish: [] });
+          for (const card of s.hand) {
+            total++;
+            if (templateOf(content, card.templateId).topic === 'crime') hits++;
+          }
+        }
+      }
+      return hits / total;
+    };
+    expect(share(true)).toBeGreaterThan(share(false) * 1.5);
+  });
+
+  it('rejects unknown topics', () => {
+    const s = createGame(content, 2);
+    expect(() => setReporterTopics(s, content, s.reporters[0], ['space' as never])).toThrow(/topic/);
   });
 });
 

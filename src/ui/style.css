@@ -219,6 +219,54 @@ button.res:hover {
   color: var(--muted);
 }
 
+/* Reporter search topics. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 4px 10px;
+  font-size: 14px;
+}
+
+.chip.on {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+/* Issue level next to the publish button (CONCEPT.md §4.2а). */
+.issue-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 4px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  cursor: help;
+}
+
+.issue-badge img {
+  image-rendering: pixelated;
+}
+
+.issue-badge.level-0 b {
+  color: var(--muted);
+}
+
+.issue-badge.level-2 b {
+  color: #2ce8f5;
+}
+
+.issue-badge.level-3 {
+  border-color: var(--danger);
+}
+
+.issue-badge.level-3 b {
+  color: var(--accent);
+}
+
 /* Money / readers / reputation breakdowns. */
 .ledger-row {
   display: flex;
@@ -861,22 +909,7 @@ button.res:hover {
   font-size: 15px;
 }
 
-/* ---------- Investigations (CONCEPT.md §7.3) ---------- */
-.investigations {
-  padding: 10px;
-  background: rgba(24, 20, 37, 0.75);
-  border: 2px dashed #e43b44;
-}
-
-.investigations > h3 {
-  margin: 0 0 8px;
-  text-align: center;
-  color: #e43b44;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  text-shadow: 2px 2px 0 var(--ink);
-}
-
+/* ---------- Investigation cards (CONCEPT.md §7.3) ---------- */
 .card.investigation {
   border: 3px solid #181425;
   box-shadow:

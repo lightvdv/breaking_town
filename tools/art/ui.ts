@@ -112,6 +112,23 @@ function city(): Raster {
   return outline(r);
 }
 
+/** Issue level: a newspaper that gets louder — grey with "z", plain, with a star, with a red burst. */
+function issue(level: 0 | 1 | 2 | 3): Raster {
+  const r = new Raster(16, 16);
+  const paper: Color = level === 0 ? 'silver' : 'sand';
+  r.rect(1, 3, 11, 12, paper);
+  r.rect(2, 4, 9, 2, level === 0 ? 'grey' : 'darkBrown');
+  for (const y of [8, 10, 12]) r.rect(2, y, 9, 1, 'grey');
+  if (level === 0) {
+    r.art(9, 0, ['zzzz.', '..z..', '.z...', 'zzzz.'], { z: 'blue' });
+  } else if (level === 2) {
+    r.art(9, 0, ['..y..', '.yyy.', 'yyyyy', '.yyy.', '.y.y.'], { y: 'cyan' });
+  } else if (level === 3) {
+    r.art(8, 0, ['..r.r..', 'r.ryr.r', '.ryyyr.', 'rryyyrr', '.ryyyr.', 'r.ryr.r', '..r.r..'], { r: 'red', y: 'yellow' });
+  }
+  return outline(r);
+}
+
 const truthArt: Record<number, string[]> = {
   0: [
     '................',
@@ -190,6 +207,10 @@ export const uiIcons: Record<string, () => Raster> = {
   reputation,
   residents,
   city,
+  issue_0: () => issue(0),
+  issue_1: () => issue(1),
+  issue_2: () => issue(2),
+  issue_3: () => issue(3),
   truth_0: () => truth(0),
   truth_1: () => truth(1),
   truth_2: () => truth(2),

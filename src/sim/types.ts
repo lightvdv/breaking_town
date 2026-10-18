@@ -181,6 +181,10 @@ export interface Balance {
   scopeFocus: number;
   /** Chance a reporter with topics brings news on one of them. */
   topicFocus: number;
+  /** Chance a reporter sent after topics brings news on one of them. */
+  assignFocus: number;
+  /** Luck bonus when every assigned topic is among the reporter's specialties. */
+  specialtyLuck: number;
   /** Chance a reporter brings a true story (event or fact) rather than a rumor (CONCEPT.md §3.3). */
   trueNewsShare: number;
   /** Chance a true local find is one of today's real events, when there is one. */
@@ -199,11 +203,17 @@ export interface Balance {
   acquisitionRate: number;
   /** Churn chances after an issue (see CONCEPT.md §5.2). */
   churnDoubt: number;
-  churnBoring: number;
   churnEmpty: number;
   churnExposed: number;
-  /** An issue is boring if every story's impact is below this. */
-  boringImpact: number;
+  /**
+   * Issue level (CONCEPT.md §4.2а): each published story adds points by its tier; the sum against
+   * the thresholds gives boring / ordinary / interesting / sensational.
+   */
+  issueTierPoints: [number, number, number, number];
+  issueThresholds: [number, number, number];
+  /** By issue level: churn of readers the issue did not touch, and the acquisition multiplier. */
+  issueChurn: [number, number, number, number];
+  issueAcquisition: [number, number, number, number];
   /** Impact that counts as ×1 effect strength. */
   impactNorm: number;
   /** City blocks per side; each block is a 2×2 lot surrounded by roads. */
@@ -467,6 +477,8 @@ export interface GameState {
   topicStreak: Partial<Record<Topic, number>>;
   /** Turn each story template was last found or happened, so stories do not repeat soon. */
   lastSeen: Record<string, number>;
+  /** Topics the player sends each reporter after; empty or missing = any topic (CONCEPT.md §3.3). */
+  reporterTopics: Record<string, Topic[]>;
   pendingLies: PendingLie[];
   initialPopulation: number;
   initialEmployed: number;
@@ -505,6 +517,9 @@ export interface UpkeepItem {
   amount: number;
 }
 
+/** 0 boring, 1 ordinary, 2 interesting, 3 sensational (CONCEPT.md §4.2а). */
+export type IssueLevel = 0 | 1 | 2 | 3;
+
 /** Why readers stopped buying (CONCEPT.md §5.2). */
 export type ChurnReason = 'exposed' | 'doubted' | 'boring' | 'empty';
 
@@ -532,6 +547,8 @@ export interface TurnReport {
   moneyDelta: number;
   /** Followers of at least one channel: at the start of the turn, lost and gained after it. */
   readers: ReadersChange & { before: number; after: number };
+  /** How interesting the issue was: the points sum and the level it reached. */
+  issue: { score: number; level: IssueLevel };
   trustBefore: number;
   trustAfter: number;
   metricsBefore: CityMetrics;

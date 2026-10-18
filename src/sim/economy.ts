@@ -73,6 +73,7 @@ export function fireReporter(state: GameState, id: string): void {
   if (state.reporters.length <= 1) throw new Error('The last reporter cannot be fired');
   state.reporters = state.reporters.filter((x) => x !== id);
   state.investigations = state.investigations.filter((x) => x.reporterId !== id);
+  delete state.reporterTopics[id];
 }
 
 export function purchase(state: GameState, c: Content, id: string): void {

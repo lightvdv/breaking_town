@@ -9,6 +9,11 @@ import {
   getModifiers,
   groupOf,
   investigationTurns,
+  issueLevel,
+  issueScore,
+  effectiveTier,
+  setReporterTopics,
+  onSpecialty,
   listPurchases,
   maxDistortion,
   playTurn,
@@ -27,6 +32,7 @@ import {
   type CardInstance,
   type Content,
   type ChurnReason,
+  type Topic,
   type Decision,
   type UpkeepItem,
   type Modifiers,
@@ -45,6 +51,7 @@ import {
   effectLabels,
   effectText,
   placementLabels,
+  issueLevelLabels,
   outcomeText,
   reactionLabels,
   scopeLabels,
@@ -171,12 +178,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
     ),
   );
   const issueHead = h('div', { class: 'issue-head' });
-  // Investigations are set apart above ordinary news (CONCEPT.md §7.3).
-  const invCards = h('div', { class: 'issue-cards' });
-  const invBlock = h('section', { class: 'investigations', hidden: true }, h('h3', {}, 'Расследования редакции'), invCards);
   const issueCards = h('div', { class: 'issue-cards' });
   const issueFoot = h('div', { class: 'issue-foot' });
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, invBlock, issueCards, issueFoot));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, issueCards, issueFoot));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue) closeIssue();
@@ -709,11 +713,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
     issue.classList.toggle('searching', searching);
     const mods = getModifiers(state, c);
     const visible = state.hand.filter((card) => revealed.has(card.uid));
-    const isInvestigation = (card: CardInstance) => templateOf(c, card.templateId).source === 'investigation';
 
     const note = searching ? 'Репортёры ищут новости… (щёлкните, чтобы пропустить)' : !visible.length ? 'Сегодня новостей нет.' : '';
     issueHead.replaceChildren(h('h2', {}, `Выпуск дня ${state.turn}`), ...(note ? [h('p', {}, note)] : []));
-    invBlock.hidden = !visible.some(isInvestigation);
 
     for (const [uid, el] of cardEls) {
       if (!visible.some((x) => x.uid === uid)) {
@@ -728,7 +730,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       if (!el) {
         el = h('article', {});
         cardEls.set(card.uid, el);
-        (isInvestigation(card) ? invCards : issueCards).append(el);
+        issueCards.append(el);
       }
       const extra = [...el.classList].filter((x) => x === 'flying' || x === 'landed');
       el.className = [cls, ...extra].join(' ');
@@ -741,8 +743,29 @@ export function mountApp(root: HTMLElement, c: Content): void {
 
     issueFoot.replaceChildren(
       ...(error ? [h('span', { class: 'bad' }, error)] : []),
+      ...(searching ? [] : [issueBadge()]),
       h('button', { class: 'ghost', onclick: closeIssue }, 'Свернуть'),
       h('button', { class: 'primary big', onclick: endTurn, disabled: busy || !!state.outcome }, searching ? 'Репортёры ищут…' : 'Опубликовать и завершить ход'),
+    );
+  }
+
+  /** How interesting the issue being composed is: points of published stories against the thresholds (CONCEPT.md §4.2а). */
+  function issueBadge(): HTMLElement {
+    const b = c.balance;
+    const tiers = state.hand.filter((x) => drafts.get(x.uid)?.publish).map((x) => effectiveTier(x, drafts.get(x.uid)!.distortion));
+    const score = issueScore(c, tiers);
+    const level = issueLevel(c, score);
+    const next = (b.issueThresholds as number[])[level] as number | undefined;
+    const hint =
+      `${issueLevelLabels[level]} выпуск: ${score} очк. (скучная новость ${b.issueTierPoints[0]}, обычная ${b.issueTierPoints[1]}, ` +
+      `интересная ${b.issueTierPoints[2]}, сенсация ${b.issueTierPoints[3]}).` +
+      (next !== undefined ? ` До уровня «${issueLevelLabels[level + 1].toLowerCase()}» — ${next} очк.` : '') +
+      ` Новых читателей ×${b.issueAcquisition[level]}, равнодушные уходят с шансом ${pct(b.issueChurn[level])}.`;
+    return h(
+      'span',
+      { class: `issue-badge level-${level}`, title: hint },
+      h('img', { src: `${assetBase}sprites/ui/issue_${level}.png`, alt: '', width: 32, height: 32 }),
+      h('b', {}, issueLevelLabels[level]),
     );
   }
 
@@ -935,7 +958,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const reasons: Record<ChurnReason, string> = {
       exposed: 'увидели разоблачённую ложь',
       doubted: 'не поверили новости',
-      boring: 'выпуск показался скучным',
+      boring: 'выпуск их не зацепил',
       empty: 'выпуска не было',
     };
     const out: HTMLElement[] = [
@@ -947,6 +970,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       const rd = r.readers;
       out.push(
         h('h3', { class: 'section' }, `Прошлый ход (${r.turn})`),
+        h('div', { class: 'ledger-row' }, h('span', {}, 'Выпуск'), h('b', {}, `${issueLevelLabels[r.issue.level]} · новых ×${c.balance.issueAcquisition[r.issue.level]}`)),
         countRow('Было', rd.before),
         ...(Object.keys(reasons) as ChurnReason[]).filter((k) => rd.lostBy[k] > 0).map((k) => ledgerRow(`Ушли: ${reasons[k]}`, -rd.lostBy[k])),
         ...(rd.movedAway ? [ledgerRow('Уехали из города', -rd.movedAway)] : []),
@@ -961,7 +985,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h(
         'p',
         { class: 'hint' },
-        'Поверившие новости остаются. Уходят те, кто не поверил, заскучал или увидел разоблачение. Новых приводят каналы, улучшения охвата и репутация.',
+        'Поверившие новости остаются. Уходят не поверившие и увидевшие разоблачение, а равнодушные — если выпуск скучный. Новых приводят каналы, улучшения охвата, репутация и интересный выпуск.',
       ),
     );
     return out;
@@ -1080,7 +1104,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     ];
   }
 
-  /** Assigning a reporter to dig dirt on a social group (CONCEPT.md §3.3а). */
+  /** Reporter window: search topics and assigning an investigation (CONCEPT.md §3.3, §3.3а). */
   function investigateContent(): HTMLElement[] {
     const id = investigator;
     if (!id || !state.reporters.includes(id)) return [h('p', { class: 'hint' }, 'Репортёр больше не работает в редакции.')];
@@ -1103,11 +1127,42 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h('div', {}, h('strong', {}, r.name), h('p', {}, r.bio), h('p', {}, skillLine(c, state, r))),
     );
     const errorLine = error ? [h('p', { class: 'bad' }, error)] : [];
+    // Search topics (CONCEPT.md §3.3): the reporter is sent after them and brings them more often.
+    const assigned = state.reporterTopics[id] ?? [];
+    const topics = Object.keys(topicLabels) as Topic[];
+    const chip = (label: string, on: boolean, pick: () => void, title = '') =>
+      h('button', { class: `chip${on ? ' on' : ''}`, 'aria-pressed': String(on), title, disabled: !!state.outcome, onclick: act(pick) }, label);
+    const topicSection = [
+      h('h3', { class: 'section' }, 'Темы поиска'),
+      h(
+        'div',
+        { class: 'chips' },
+        chip('Любые', assigned.length === 0, () => setReporterTopics(state, c, id, [])),
+        ...topics.map((t) => {
+          const special = r.skills.topics.includes(t);
+          const on = assigned.includes(t);
+          return chip(
+            `${special ? '★ ' : ''}${topicLabels[t]}`,
+            on,
+            () => setReporterTopics(state, c, id, on ? assigned.filter((x) => x !== t) : [...assigned, t]),
+            special ? 'Специальность репортёра' : '',
+          );
+        }),
+      ),
+      h(
+        'p',
+        { class: 'hint' },
+        `С шансом ${pct(b.assignFocus)} репортёр приносит новость на выбранные темы. ★ — его специальность: если все выбранные темы из них, удача +${pct(b.specialtyLuck)}.` +
+          (onSpecialty(state, r) ? ' Сейчас он работает по специальности.' : ''),
+      ),
+    ];
     if (inv) {
       const done = inv.total - inv.turnsLeft;
       return [
         head,
         ...errorLine,
+        ...topicSection,
+        h('h3', { class: 'section' }, 'Расследование'),
         h('p', {}, `Копает грязь на группу «${groupOf(c, inv.target).name}». Осталось ходов: ${inv.turnsLeft} из ${inv.total}.`),
         meter(done / inv.total, 'warn'),
         h('p', { class: 'hint' }, `Пока идёт расследование, репортёр не ищет обычные новости, а редакция тратит ${b.investigationCost} за ход.`),
@@ -1120,6 +1175,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
     return [
       head,
       ...errorLine,
+      ...topicSection,
+      h('h3', { class: 'section' }, 'Расследование'),
       h(
         'p',
         {},
@@ -1153,7 +1210,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       readers: 'Читатели',
       reputation: 'Репутация',
       shop: 'Покупки',
-      investigate: 'Расследование',
+      investigate: 'Репортёр',
     };
     const body =
       modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : shopContent();

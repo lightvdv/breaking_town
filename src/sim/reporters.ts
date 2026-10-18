@@ -1,7 +1,7 @@
 import { chance, pick, weightedPick, type RngState } from './rng';
 import { clamp } from './lookup';
 import type { Modifiers } from './modifiers';
-import type { CardInstance, CardTemplate, Content, Find, GameState, NewsScope, NewsTier, ReporterDef } from './types';
+import type { CardInstance, CardTemplate, Content, Find, GameState, NewsScope, NewsTier, ReporterDef, Topic } from './types';
 
 export function reporterOf(c: Content, id: string): ReporterDef {
   const r = c.reporters.find((x) => x.id === id);
@@ -15,6 +15,26 @@ export function scopeOf(t: CardTemplate): NewsScope {
 
 export function reporterLuck(r: ReporterDef, mods: Modifiers): number {
   return clamp(r.skills.luck + mods.reporterLuck, 0.05, 0.98);
+}
+
+/** True when the reporter is sent after topics that are all their specialties. */
+export function onSpecialty(state: GameState, r: ReporterDef): boolean {
+  const assigned = state.reporterTopics[r.id] ?? [];
+  return assigned.length > 0 && assigned.every((t) => r.skills.topics.includes(t));
+}
+
+/** This turn's chance to find something: luck, plus a bonus for working on one's specialty. */
+export function searchLuck(state: GameState, c: Content, r: ReporterDef, mods: Modifiers): number {
+  return clamp(reporterLuck(r, mods) + (onSpecialty(state, r) ? c.balance.specialtyLuck : 0), 0.05, 0.98);
+}
+
+/** Sends a reporter after topics (CONCEPT.md §3.3); an empty list means any topic. */
+export function setReporterTopics(state: GameState, c: Content, reporterId: string, topics: Topic[]): void {
+  if (!state.reporters.includes(reporterId)) throw new Error(`Reporter ${reporterId} is not hired`);
+  const known = new Set(c.cards.map((t) => t.topic));
+  for (const t of topics) if (!known.has(t)) throw new Error(`Unknown topic ${t}`);
+  if (topics.length) state.reporterTopics[reporterId] = [...new Set(topics)];
+  else delete state.reporterTopics[reporterId];
 }
 
 /** Tier odds for a reporter: base weights, shifted up by nose (CONCEPT.md §3.3). */
@@ -80,8 +100,11 @@ export function findNews(
     // Stories found or happened recently do not come back (today's events are exempt: they just happened).
     const notRecent = candidates.filter((t) => todays.includes(t) || !recent(t));
     candidates = notRecent.length ? notRecent : oldestSeen(candidates);
-    if (s.topics.length && chance(rng, b.topicFocus)) {
-      const focused = candidates.filter((t) => s.topics.includes(t.topic));
+    // The player's assignment comes first, then the reporter's own specialties.
+    const assigned = state.reporterTopics[r.id] ?? [];
+    const focus = assigned.length ? (chance(rng, b.assignFocus) ? assigned : []) : s.topics.length && chance(rng, b.topicFocus) ? s.topics : [];
+    if (focus.length) {
+      const focused = candidates.filter((t) => focus.includes(t.topic));
       if (focused.length) candidates = focused;
     }
     if (candidates.length === 0) return null;
@@ -108,7 +131,7 @@ export function findNews(
   const busy = new Set(state.investigations.map((x) => x.reporterId));
   const hired = state.reporters.filter((id) => !busy.has(id)).map((id) => reporterOf(c, id));
   for (const r of hired) {
-    const card = chance(rng, reporterLuck(r, mods)) ? make(r, null) : null;
+    const card = chance(rng, searchLuck(state, c, r, mods)) ? make(r, null) : null;
     finds.push({ reporterId: r.id, cardUid: card?.uid ?? null, tier: card?.tier ?? null, forced: false, kind: 'search' });
   }
 

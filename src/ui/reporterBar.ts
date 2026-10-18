@@ -1,4 +1,4 @@
-import { getModifiers, groupOf, reporterLuck, reporterOf, type Content, type Find, type GameState, type ReporterDef } from '../sim';
+import { getModifiers, groupOf, reporterOf, searchLuck, type Content, type Find, type GameState, type ReporterDef } from '../sim';
 import { h, pct } from './dom';
 import { scopeLabels, tierLabels, topicLabels } from './text';
 
@@ -12,7 +12,7 @@ export function stars(nose: number): string {
 }
 
 export function skillLine(c: Content, state: GameState, r: ReporterDef): string {
-  const luck = reporterLuck(r, getModifiers(state, c));
+  const luck = searchLuck(state, c, r, getModifiers(state, c));
   return `Удача ${pct(luck)} · Чутьё ${stars(r.skills.nose)} · ${scopeLabels[r.skills.scope]}`;
 }
 
@@ -108,7 +108,7 @@ export class ReporterBar {
       card.info.replaceChildren(
         h('b', {}, r.name),
         inv ? h('span', { class: 'rep-inv' }, invLine) : h('span', {}, skillLine(this.c, state, r)),
-        h('span', { class: 'muted' }, `${topicLine(r)} · ${r.salary}/ход`),
+        h('span', { class: 'muted' }, `${searchLine(state, r)} · ${r.salary}/ход`),
       );
       const s = statuses.get(id);
       const statusKey = !s ? `idle:${invLine}` : s.phase === 'searching' ? 'searching' : `done:${s.find.kind}:${s.find.tier ?? 'empty'}`;
@@ -143,4 +143,10 @@ export class ReporterBar {
       }
     }
   }
+}
+
+/** What the reporter is looking for: the player's topics, or their own specialties. */
+export function searchLine(state: GameState, r: ReporterDef): string {
+  const assigned = state.reporterTopics[r.id] ?? [];
+  return assigned.length ? `Ищет: ${assigned.map((t) => topicLabels[t].toLowerCase()).join(', ')}` : topicLine(r);
 }

@@ -9,6 +9,7 @@ import type {
   ChannelId,
   Content,
   ExposedStory,
+  IssueLevel,
   Placement,
   GameState,
   NewsTier,
@@ -404,4 +405,14 @@ export function processLateExposures(state: GameState, c: Content, rng: RngState
   }
   state.pendingLies = keep;
   return exposed;
+}
+
+/** Points of an issue: every published story adds points by its tier after distortion (CONCEPT.md §4.2а). */
+export function issueScore(c: Content, tiers: NewsTier[]): number {
+  return tiers.reduce<number>((s, t) => s + c.balance.issueTierPoints[t], 0);
+}
+
+export function issueLevel(c: Content, score: number): IssueLevel {
+  const [ordinary, interesting, sensational] = c.balance.issueThresholds;
+  return score >= sensational ? 3 : score >= interesting ? 2 : score >= ordinary ? 1 : 0;
 }

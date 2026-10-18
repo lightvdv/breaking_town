@@ -215,8 +215,6 @@ export interface Balance {
   specialtyLuck: number;
   /** Chance a reporter brings a true story (event or fact) rather than a rumor (CONCEPT.md §3.3). */
   trueNewsShare: number;
-  /** Chance a true local find is one of today's real events, when there is one. */
-  eventPreference: number;
   /** A story template does not come back for this many turns after it was found or happened. */
   repeatCooldown: number;
   /** Impact multiplier for global news. */

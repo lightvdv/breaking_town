@@ -55,8 +55,10 @@ function available(state: GameState, t: CardTemplate): boolean {
 }
 
 /**
- * Hired reporters search for stories. `events` are today's real local events; a reporter who
- * finds one takes it, so it cannot be found twice. Returns the new cards and the search log.
+ * Hired reporters bring the news. Everything that happened in the city today (`events`, incidents
+ * included) always reaches the issue: each event is written up by a reporter — one who covers its
+ * topic if there is one, otherwise in turn. Then every reporter searches as usual for facts, rumors
+ * and world news (CONCEPT.md §3.3). Returns the new cards and the search log.
  */
 export function findNews(
   state: GameState,
@@ -70,7 +72,6 @@ export function findNews(
   const b = c.balance;
   const cards: CardInstance[] = [];
   const finds: Find[] = [];
-  const pool = [...events];
   const inHand = new Set(state.hand.map((x) => x.templateId));
   const recent = (t: CardTemplate) => isRecent(state, c, t.id);
   const oldestSeen = (list: CardTemplate[]) => {
@@ -96,12 +97,10 @@ export function findNews(
     // Mostly true stories (CONCEPT.md §3.3); investigation stories only come from assigned reporters.
     const facts = c.cards.filter((t) => ofScope(t) && (t.source === 'fact' || (scope === 'global' && t.source === 'event')));
     const rumors = c.cards.filter((t) => ofScope(t) && t.source === 'rumor');
-    const todays = scope === 'local' ? pool.filter(fresh) : [];
-    const truths = todays.length && (facts.length === 0 || chance(rng, b.eventPreference)) ? todays : facts;
     const wantsTruth = chance(rng, b.trueNewsShare);
-    let candidates = wantsTruth ? (truths.length ? truths : rumors) : rumors.length ? rumors : truths;
-    // Stories found or happened recently do not come back (today's events are exempt: they just happened).
-    const notRecent = candidates.filter((t) => todays.includes(t) || !recent(t));
+    let candidates = wantsTruth ? (facts.length ? facts : rumors) : rumors.length ? rumors : facts;
+    // Stories found or happened recently do not come back.
+    const notRecent = candidates.filter((t) => !recent(t));
     candidates = notRecent.length ? notRecent : oldestSeen(candidates);
     // The player's assignment comes first, then the reporter's own specialties.
     const assigned = state.reporterTopics[r.id] ?? [];
@@ -112,9 +111,11 @@ export function findNews(
     }
     if (candidates.length === 0) return null;
 
-    const tpl = weightedPick(rng, candidates);
-    const idx = pool.indexOf(tpl);
-    if (idx >= 0) pool.splice(idx, 1);
+    return write(r, weightedPick(rng, candidates), forcedTier);
+  };
+
+  /** A card for a template, written up by a reporter (tier by the reporter's nose). */
+  const write = (r: ReporterDef, tpl: CardTemplate, forcedTier: NewsTier | null): CardInstance => {
     state.lastSeen[tpl.id] = state.turn;
     const tiers = tierWeights(c, r).map((weight, tier) => ({ weight, tier: tier as NewsTier }));
     const card: CardInstance = {
@@ -135,6 +136,16 @@ export function findNews(
   // Reporters busy with an investigation skip the ordinary search.
   const busy = new Set(state.investigations.map((x) => x.reporterId));
   const hired = state.reporters.filter((id) => !busy.has(id)).map((id) => reporterOf(c, id));
+
+  // Today's events always make the news: the reporter on the topic, otherwise the next in turn.
+  const writers = hired.length ? hired : state.reporters.slice(0, 1).map((id) => reporterOf(c, id));
+  let turn = 0;
+  for (const tpl of events) {
+    if (!writers.length || inHand.has(tpl.id) || cards.some((x) => x.templateId === tpl.id)) continue;
+    const r = writers.find((w) => w.skills.topics.includes(tpl.topic) || (state.reporterTopics[w.id] ?? []).includes(tpl.topic)) ?? writers[turn++ % writers.length];
+    const card = write(r, tpl, null);
+    finds.push({ reporterId: r.id, cardUid: card.uid, tier: card.tier, forced: false, kind: 'search' });
+  }
   for (const r of hired) {
     const card = chance(rng, searchLuck(state, c, r, mods)) ? make(r, null) : null;
     finds.push({ reporterId: r.id, cardUid: card?.uid ?? null, tier: card?.tier ?? null, forced: false, kind: 'search' });

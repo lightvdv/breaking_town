@@ -98,7 +98,8 @@ describe('game', () => {
     expect(s.turn).toBe(1);
     expect(s.reporters).toEqual(content.balance.startReporters);
     expect(s.hand.length).toBeGreaterThanOrEqual(1);
-    expect(s.lastFinds.length).toBe(s.reporters.length);
+    // One search per reporter plus one write-up per event of the day.
+    expect(s.lastFinds.length).toBe(s.reporters.length + s.todayEvents.length);
     expect(s.ownedChannels).toEqual(['newspaper']);
     expect(s.outcome).toBeNull();
   });
@@ -410,8 +411,21 @@ describe('reporters', () => {
       for (let i = 0; i < 5; i++) {
         const found = s.lastFinds.filter((f) => f.cardUid !== null).length;
         expect(found).toBeGreaterThanOrEqual(unlucky.balance.minFinds);
-        expect(found).toBeLessThanOrEqual(s.reporters.length);
+        expect(found).toBeLessThanOrEqual(s.reporters.length + s.todayEvents.length);
         playTurn(s, unlucky, { publish: [] });
+      }
+    }
+  });
+
+  it('everything that happened in the city today reaches the issue', () => {
+    const c = withBalance({ incidentChance: 1 });
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const s = createGame(c, seed);
+      for (const k of pairKeys(c)) s.tension[k] = 70;
+      for (let i = 0; i < 4 && !s.outcome; i++) {
+        playTurn(s, c, { publish: [] });
+        const titles = s.hand.map((x) => storyTitle(c, x, 0));
+        for (const e of s.todayEvents) expect(titles).toContain(e);
       }
     }
   });

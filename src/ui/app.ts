@@ -147,6 +147,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const details = new Set<number>();
   /** The exposure notice of the last report was closed. */
   let exposuresSeen = false;
+  /** Story whose placement menu is open. */
+  let menuFor: number | null = null;
 
   // ---------- Persistent shell ----------
   const hud = h('header', { class: 'hud' });
@@ -201,6 +203,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue) closeIssue();
+  });
+  // A press anywhere else closes an open placement menu.
+  document.addEventListener('pointerdown', (e) => {
+    if (menuFor === null || (e.target as Element).closest('.place-menu, .place-btn')) return;
+    menuFor = null;
+    render();
   });
   // Start-of-turn notice about exposed stories; hovering it shows the cards (CONCEPT.md §7.3).
   const exposureToast = h('div', { class: 'exposure-toast', hidden: true });
@@ -623,12 +631,48 @@ export function mountApp(root: HTMLElement, c: Content): void {
       }),
     );
     const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `компромат на группу «${target}»` }[tpl.source];
-    const moveTo = (label: string, key: Placement | 'out') =>
-      h(
-        'button',
-        { class: 'ghost small', disabled: where === key || busy, onclick: act(() => (key === 'out' ? unpublish(card) : place(card, key))) },
-        label,
-      );
+    // Placement menu next to the headline: the same moves as dragging (CONCEPT.md §7.3).
+    const menuOpen = menuFor === card.uid;
+    const places: [Placement | 'out', string][] = [
+      [2, 'На первую полосу'],
+      [1, 'Статьёй'],
+      [0, 'Заметкой'],
+      ['out', 'Не печатать'],
+    ];
+    const placeButton = h(
+      'button',
+      {
+        class: `place-btn${menuOpen ? ' on' : ''}`,
+        title: 'Куда поставить новость',
+        'aria-haspopup': 'menu',
+        'aria-expanded': String(menuOpen),
+        disabled: busy,
+        onclick: act(() => (menuFor = menuOpen ? null : card.uid)),
+      },
+      '⇄',
+    );
+    const placeMenu = menuOpen
+      ? h(
+          'div',
+          { class: 'place-menu', role: 'menu' },
+          ...places.map(([key, label]) =>
+            h(
+              'button',
+              {
+                role: 'menuitem',
+                class: where === key ? 'current' : '',
+                disabled: where === key,
+                onclick: act(() => {
+                  menuFor = null;
+                  if (key === 'out') unpublish(card);
+                  else place(card, key);
+                }),
+              },
+              where === key ? `✓ ${label}` : label,
+            ),
+          ),
+        )
+      : null;
     const info = open
       ? h(
           'div',
@@ -647,7 +691,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
           bar('Охват города', p.reachChance),
           bar('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
           where !== 'out' ? h('p', { class: 'hint' }, placementNote(where)) : null,
-          h('div', { class: 'news-moves' }, moveTo('На первую', 2), moveTo('Статьёй', 1), moveTo('Заметкой', 0), moveTo('Убрать', 'out')),
         )
       : null;
 
@@ -658,8 +701,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h(
         'div',
         { class: 'news-head' },
-        h('span', { class: 'grip', title: 'Перетащите, чтобы переставить', 'aria-hidden': 'true' }, '⠿'),
+        placeButton,
         h('h3', { class: 'headline' }, p.title),
+        placeMenu,
       ),
       h(
         'div',
@@ -702,30 +746,68 @@ export function mountApp(root: HTMLElement, c: Content): void {
     return { cls, children: children.filter((x): x is HTMLElement => x !== null) };
   }
 
-  /** Drag a story between the front page, the article, the briefs and the tray (CONCEPT.md §7.3). */
+  /**
+   * Drag a story by any part except its controls between the front page, the article, the briefs
+   * and the tray (CONCEPT.md §7.3). A mouse drags at once; a finger drags after a short press, so a
+   * quick swipe still scrolls the issue.
+   */
   function startDrag(e: PointerEvent, card: CardInstance, el: HTMLElement): void {
     const t = e.target as Element;
-    if (busy || e.button !== 0 || t.closest('button, .news-info')) return;
-    // On touch screens only the grip drags, so the issue can still be scrolled.
-    if (e.pointerType === 'touch' && !t.closest('.grip')) return;
+    if (busy || e.button !== 0 || t.closest('button, .news-info, .place-menu')) return;
+    const touch = e.pointerType !== 'mouse';
     const rect = el.getBoundingClientRect();
     const offX = e.clientX - rect.left;
     const offY = e.clientY - rect.top;
     let ghost: HTMLElement | null = null;
     let over: HTMLElement | null = null;
+    let armed = !touch;
+    let last = { x: e.clientX, y: e.clientY };
+    let scrollFrame = 0;
     const zoneAt = (x: number, y: number) => (document.elementFromPoint(x, y)?.closest('[data-zone]') as HTMLElement | null) ?? null;
+    // While a finger drags, the page must not scroll under it.
+    const blockScroll = (ev: TouchEvent) => ev.preventDefault();
+    const pressTimer = touch
+      ? window.setTimeout(() => {
+          armed = true;
+          el.classList.add('lifting');
+          document.addEventListener('touchmove', blockScroll, { passive: false });
+          navigator.vibrate?.(15);
+        }, 280)
+      : 0;
+    // Near the top or bottom edge the issue scrolls by itself, so the tray is reachable.
+    const autoScroll = () => {
+      const box = issue.getBoundingClientRect();
+      const edge = 70;
+      const dy = last.y < box.top + edge ? -14 : last.y > box.bottom - edge ? 14 : 0;
+      if (dy) issue.scrollTop += dy;
+      scrollFrame = requestAnimationFrame(autoScroll);
+    };
+    const begin = () => {
+      ghost = el.cloneNode(true) as HTMLElement;
+      ghost.classList.remove('lifting');
+      ghost.classList.add('drag-ghost');
+      ghost.style.width = `${rect.width}px`;
+      document.body.append(ghost);
+      el.classList.remove('lifting');
+      el.classList.add('dragging');
+      issue.classList.add('drag-active');
+      menuFor = null;
+      scrollFrame = requestAnimationFrame(autoScroll);
+    };
     const move = (ev: PointerEvent) => {
+      last = { x: ev.clientX, y: ev.clientY };
+      const moved = Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY);
+      if (!armed) {
+        // A finger moved before the press: it is a scroll, not a drag.
+        if (moved > 8) cleanup();
+        return;
+      }
       if (!ghost) {
-        if (Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 6) return;
-        ghost = el.cloneNode(true) as HTMLElement;
-        ghost.classList.add('drag-ghost');
-        ghost.style.width = `${rect.width}px`;
-        document.body.append(ghost);
-        el.classList.add('dragging');
-        issue.classList.add('drag-active');
+        if (moved < 6) return;
+        begin();
       }
       ev.preventDefault();
-      ghost.style.transform = `translate(${ev.clientX - offX}px, ${ev.clientY - offY}px) rotate(-2deg)`;
+      ghost!.style.transform = `translate(${ev.clientX - offX}px, ${ev.clientY - offY}px) rotate(-2deg)`;
       const zone = zoneAt(ev.clientX, ev.clientY);
       if (zone !== over) {
         over?.classList.remove('drop-over');
@@ -733,10 +815,17 @@ export function mountApp(root: HTMLElement, c: Content): void {
         over = zone;
       }
     };
-    const end = (ev: PointerEvent) => {
+    const cleanup = () => {
+      window.clearTimeout(pressTimer);
+      cancelAnimationFrame(scrollFrame);
+      document.removeEventListener('touchmove', blockScroll);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', end);
+      el.classList.remove('lifting');
+    };
+    const end = (ev: PointerEvent) => {
+      cleanup();
       if (!ghost) return;
       ghost.remove();
       el.classList.remove('dragging');

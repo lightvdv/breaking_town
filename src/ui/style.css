@@ -767,7 +767,74 @@ button.res:hover {
   position: relative;
   padding: 4px 4px 6px;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   cursor: grab;
+  transition: transform 0.12s;
+}
+
+/* A finger held on a story: it lifts, ready to be dragged. */
+.news.lifting {
+  transform: scale(1.03);
+  box-shadow: 0 6px 16px rgba(24, 20, 37, 0.35);
+}
+
+.news .news-art {
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/* Placement button next to the headline and its menu. */
+.place-btn {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  background: #d9c08f;
+  color: var(--paper-ink);
+  border: 1px solid var(--paper-muted);
+  box-shadow: none;
+}
+
+.place-btn.on {
+  background: var(--paper-ink);
+  color: var(--paper);
+}
+
+.place-menu {
+  position: absolute;
+  z-index: 25;
+  top: 34px;
+  left: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 4px;
+  background: #fff6e0;
+  border: 2px solid var(--ink);
+  box-shadow: 5px 5px 0 rgba(24, 20, 37, 0.45);
+  cursor: default;
+}
+
+.place-menu button {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 14px;
+  background: transparent;
+  color: var(--paper-ink);
+  border: none;
+  box-shadow: none;
+}
+
+.place-menu button:hover:not(:disabled) {
+  background: rgba(254, 174, 52, 0.35);
+}
+
+.place-menu button.current {
+  font-weight: 700;
+  color: var(--paper-muted);
 }
 
 .zone-0 .news + .news {
@@ -816,16 +883,6 @@ button.res:hover {
   display: flex;
   align-items: flex-start;
   gap: 6px;
-}
-
-.grip {
-  flex: none;
-  margin-top: 2px;
-  color: var(--paper-muted);
-  font-size: 16px;
-  line-height: 1;
-  cursor: grab;
-  touch-action: none;
 }
 
 .news .headline {
@@ -1011,19 +1068,6 @@ button.res:hover {
 
 .news-info .card-stat {
   grid-template-columns: 112px 1fr 36px;
-}
-
-.news-moves {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.news-moves button {
-  color: var(--paper-ink);
-  font-size: 12px;
-  padding: 2px 6px;
 }
 
 .issue-foot {

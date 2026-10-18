@@ -2889,10 +2889,8 @@ button.publish.level-3.bump-up {
     height: 100%;
   }
 
-  /* The issue covers the whole phone screen; "Свернуть" returns to the city. */
+  /* The issue fills the city stage under the top bar, so money, reporters and ☰ stay in sight. */
   .issue {
-    position: fixed;
-    z-index: 30;
     padding: 8px;
     background: rgba(24, 20, 37, 0.92);
   }
@@ -3004,7 +3002,7 @@ button.publish.level-3.bump-up {
     margin-left: 0;
   }
 
-  /* The phone issue covers the top bar; its level and «В печать» live in the bottom bar. */
+  /* On phones «В печать» with the issue level lives in the bottom bar, under the thumb. */
   .hud .publish {
     display: none;
   }

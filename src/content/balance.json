@@ -2,11 +2,12 @@
   "population": 240,
   "maxPopulation": 300,
   "turnLimit": 40,
-  "winCityIndex": 35,
+  "winCityIndex": 32,
   "startMoney": 100,
-  "maxReporters": 10,
-  "agencyFee": 120,
+  "maxReporters": 5,
+  "agencyFee": 50,
   "agencyMaxOffer": 2,
+  "maxSensations": 1,
   "startReporters": [
     "petrova"
   ],

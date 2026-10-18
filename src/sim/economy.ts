@@ -1,4 +1,5 @@
 import { channelOf } from './lookup';
+import { getModifiers } from './modifiers';
 import { reporterOf } from './reporters';
 import type { ChannelId, Content, GameState, Requirement, UpkeepItem } from './types';
 
@@ -75,8 +76,9 @@ export function purchase(state: GameState, c: Content, id: string): void {
 
 /** Channel upkeep, reporter salaries and running investigations, paid every turn. */
 export function upkeepItems(state: GameState, c: Content): UpkeepItem[] {
+  const mods = getModifiers(state, c);
   return [
-    ...state.ownedChannels.map((id) => ({ kind: 'channel' as const, id, amount: channelOf(c, id).upkeep })),
+    ...state.ownedChannels.map((id) => ({ kind: 'channel' as const, id, amount: Math.max(0, channelOf(c, id).upkeep + mods.channels[id].upkeepAdd) })),
     ...state.reporters.map((id) => ({ kind: 'salary' as const, id, amount: reporterOf(c, id).salary })),
     // Digging dirt costs money every turn: sources, bribes, stakeouts (CONCEPT.md §3.3а).
     ...state.investigations.map((x) => ({ kind: 'investigation' as const, id: x.reporterId, amount: c.balance.investigationCost })),
@@ -87,9 +89,14 @@ export function totalUpkeep(state: GameState, c: Content): number {
   return upkeepItems(state, c).reduce((s, x) => s + x.amount, 0);
 }
 
+/** Income per reader of a channel, with upgrades such as kiosks. */
+export function adRateOf(state: GameState, c: Content, channel: ChannelId): number {
+  return channelOf(c, channel).adRate + getModifiers(state, c).channels[channel].adRateAdd;
+}
+
 /** Sales of one channel: its buyers × ad rate × the scandal multiplier. */
 export function salesOf(state: GameState, c: Content, channel: ChannelId, buyers: number, scandal = state.scandal): number {
-  return Math.round(buyers * channelOf(c, channel).adRate * scandal);
+  return Math.round(buyers * adRateOf(state, c, channel) * scandal);
 }
 
 /** Sales to this turn's regular readers of each channel, minus upkeep (CONCEPT.md §5.4). */

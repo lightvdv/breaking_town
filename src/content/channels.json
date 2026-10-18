@@ -2,7 +2,7 @@
   {
     "id": "newspaper",
     "name": "Газета",
-    "description": "Старт. Новости читают пенсионеры и интеллигенция.",
+    "description": "Ваша газета. Улучшения делают её интереснее разным группам.",
     "cost": 0,
     "upkeep": 20,
     "baseReach": 0.6,
@@ -10,47 +10,5 @@
     "adRate": 3.5,
     "exposureRisk": 0.8,
     "requires": null
-  },
-  {
-    "id": "radio",
-    "name": "Радио",
-    "description": "Новости начинают слышать рабочие. Недорогое содержание.",
-    "cost": 400,
-    "upkeep": 40,
-    "baseReach": 0.6,
-    "virality": 0.2,
-    "adRate": 2.2,
-    "exposureRisk": 1,
-    "requires": {
-      "upgrade": "newspaper_quality_1"
-    }
-  },
-  {
-    "id": "tv",
-    "name": "ТВ",
-    "description": "Новости видят все группы. Большой охват, дорогое содержание.",
-    "cost": 1500,
-    "upkeep": 120,
-    "baseReach": 0.8,
-    "virality": 0.3,
-    "adRate": 2.8,
-    "exposureRisk": 1,
-    "requires": {
-      "channel": "radio"
-    }
-  },
-  {
-    "id": "social",
-    "name": "Соцсети",
-    "description": "Новости доходят до молодёжи и расходятся вирусно. Повышает риск разоблачения всех новостей.",
-    "cost": 1200,
-    "upkeep": 60,
-    "baseReach": 0.4,
-    "virality": 1.2,
-    "adRate": 1.4,
-    "exposureRisk": 1.5,
-    "requires": {
-      "channel": "tv"
-    }
   }
 ]

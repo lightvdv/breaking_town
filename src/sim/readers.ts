@@ -17,7 +17,7 @@ function trustFactor(c: Content, mods: Modifiers, r: Resident): number {
 /** Per-turn chance that a resident who does not follow `channel` starts following it. */
 export function joinChance(c: Content, mods: Modifiers, r: Resident, channel: ChannelId, scale: number): number {
   const ch = channelOf(c, channel);
-  const affinity = groupOf(c, r.group).channels[channel] ?? 0;
+  const affinity = (groupOf(c, r.group).channels[channel] ?? 0) + (mods.channels[channel].groupReach[r.group] ?? 0);
   const reach = (ch.baseReach + mods.channels[channel].reachAdd) * mods.channels[channel].reachMul;
   return clamp(affinity * reach * trustFactor(c, mods, r) * scale);
 }
@@ -40,7 +40,12 @@ export function seedFollowers(state: GameState, c: Content, rng: RngState, mods:
 }
 
 /** Why a reader might leave after this turn and how likely it is, given what they experienced; null when they stay. */
-function churnOf(c: Content, state: GameState, r: Resident, issueSize: number, level: IssueLevel): { reason: ChurnReason; chance: number } | null {
+function churnOf(c: Content, mods: Modifiers, state: GameState, r: Resident, issueSize: number, level: IssueLevel): { reason: ChurnReason; chance: number } | null {
+  const found = baseChurn(c, state, r, issueSize, level);
+  return found && { reason: found.reason, chance: found.chance * mods.churnMul };
+}
+
+function baseChurn(c: Content, state: GameState, r: Resident, issueSize: number, level: IssueLevel): { reason: ChurnReason; chance: number } | null {
   const b = c.balance;
   if (issueSize === 0) return { reason: 'empty', chance: b.churnEmpty };
   const reaction = state.lastReactions[r.id];
@@ -79,7 +84,7 @@ export function updateReaders(
       continue;
     }
     const wasReader = r.follows.length > 0;
-    const churn = wasReader ? churnOf(c, state, r, issueSize, level) : null;
+    const churn = wasReader ? churnOf(c, mods, state, r, issueSize, level) : null;
     if (churn && chance(rng, churn.chance)) {
       r.follows = [];
       out.lost++;

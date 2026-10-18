@@ -29,6 +29,8 @@ export interface ReporterDef {
   bio: string;
   /** How often the HR agency offers this reporter (higher = more often; 0 = never, e.g. the start reporter). */
   weight: number;
+  /** Paid once when hired from the agency's offer, on top of the agency fee. */
+  hireCost: number;
   /** Paid every turn while hired. */
   salary: number;
   skills: {
@@ -110,6 +112,14 @@ export interface UpgradeEffects {
   exposurePenaltyMul?: number;
   checkerMul?: number;
   plausibilityAdd?: number;
+  /** For `channel`: added to sales per reader. */
+  adRateAdd?: number;
+  /** For `channel`: added to the upkeep per turn (negative = cheaper). */
+  upkeepAdd?: number;
+  /** For `channel`: added to the channel affinity of these groups. */
+  groupReach?: Partial<Record<GroupId, number>>;
+  /** Multiplies the chance that a reader stops buying. */
+  churnMul?: number;
 }
 
 export interface UpgradeDef {
@@ -119,6 +129,10 @@ export interface UpgradeDef {
   cost: number;
   requires: Requirement | null;
   effects: UpgradeEffects;
+  /** Upgrades of one series (e.g. kiosks) are bought one after another and shown as one line. */
+  series?: string;
+  /** Heading of the upgrades window this upgrade is listed under. */
+  section?: string;
 }
 
 /** stigma = dirt on the template's `target` group: other groups turn on it, it feels hunted. */
@@ -199,6 +213,8 @@ export interface Balance {
   /** HR agency (CONCEPT.md §3.3): the fee for one search and how many candidates it offers at most. */
   agencyFee: number;
   agencyMaxOffer: number;
+  /** Most stories of sensation tier in a day's finds and in one issue. */
+  maxSensations: number;
   startReporters: string[];
   /** Stories guaranteed per turn even if every reporter fails. */
   minFinds: number;

@@ -24,6 +24,9 @@ import {
   purchase,
   callAgency,
   hireFromAgency,
+  limitSensations,
+  salesOf,
+  effectiveTier,
   validateContent,
   pairKey,
   pairKeys,
@@ -186,22 +189,33 @@ describe('distortion', () => {
 });
 
 describe('readers', () => {
-  it('the newspaper starts with readers and a new channel builds its audience over turns', () => {
+  it('the newspaper starts with readers; a group page brings in a new group over turns', () => {
     const s = createGame(content, 6);
     expect(followersOf(s, 'newspaper')).toBeGreaterThan(0);
+    const workers = () => s.residents.filter((r) => r.status === 'active' && r.group === 'workers' && r.follows.length > 0).length;
+    const before = workers();
     s.money = 10_000;
-    purchase(s, content, 'newspaper_quality_1');
-    purchase(s, content, 'radio');
-    expect(followersOf(s, 'radio')).toBe(0);
+    purchase(s, content, 'sports_page');
     // Boring issues attract nobody, so publish interesting stories.
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       for (const card of s.hand) card.tier = 2;
       playTurn(s, content, simpleDecision(s, 'none'));
     }
-    expect(followersOf(s, 'radio')).toBeGreaterThan(0);
+    expect(workers()).toBeGreaterThan(before);
     const report = playTurn(s, content, simpleDecision(s, 'none'));
-    expect(report.buyers.radio).toBeGreaterThan(0);
-    expect(report.income.radio).toBe(Math.round(report.buyers.radio * content.channels.find((x) => x.id === 'radio')!.adRate * 1));
+    expect(report.income.newspaper).toBe(Math.round(report.buyers.newspaper * content.channels[0].adRate * s.scandal));
+  });
+
+  it('every kiosk adds to the sales per reader', () => {
+    const s = createGame(content, 6);
+    s.money = 10_000;
+    const base = salesOf(s, content, 'newspaper', 100);
+    expect(() => purchase(s, content, 'kiosk_2')).toThrow();
+    purchase(s, content, 'kiosk_1');
+    const one = salesOf(s, content, 'newspaper', 100);
+    purchase(s, content, 'kiosk_2');
+    expect(one).toBeGreaterThan(base);
+    expect(salesOf(s, content, 'newspaper', 100)).toBeGreaterThan(one);
   });
 
   it('an empty issue drives readers away, and exposed lies drive away even more', () => {
@@ -464,7 +478,9 @@ describe('reporters', () => {
       expect(() => hireFromAgency(s, content, spare.id)).toThrow();
       hireFromAgency(s, content, offer[0]);
       expect(s.reporters).toContain(offer[0]);
-      expect(s.money).toBe(1000 - b.agencyFee);
+      // The reporter's own price on top of the fee; the salary goes into the upkeep.
+      expect(s.money).toBe(1000 - b.agencyFee - reporterOf(content, offer[0]).hireCost);
+      expect(totalUpkeep(s, content)).toBeGreaterThanOrEqual(reporterOf(content, offer[0]).salary);
       // The offer lapses at the end of the turn.
       playTurn(s, content, { publish: [] });
       expect(s.agencyOffer).toEqual([]);
@@ -472,10 +488,31 @@ describe('reporters', () => {
     expect([...sizes].sort()).toEqual([1, 2]);
   });
 
+  it('a day brings at most one sensation, and an issue carries at most one', () => {
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const s = createGame(content, seed);
+      for (let t = 0; t < 8; t++) {
+        expect(s.hand.filter((x) => x.tier === 3).length).toBeLessThanOrEqual(content.balance.maxSensations);
+        playTurn(s, content, { publish: [] });
+      }
+    }
+    const s = createGame(content, 2);
+    s.hand = s.hand.slice(0, 1);
+    while (s.hand.length < 3) s.hand.push({ ...s.hand[0], uid: s.nextUid++ });
+    for (const card of s.hand) Object.assign(card, { tier: 2, baseTruth: 0, conflict: undefined });
+    const publish = s.hand.map((card, i) => ({ cardUid: card.uid, placement: (i === 0 ? 2 : 0) as 0 | 2, distortion: 1 }));
+    expect(() => playTurn(s, content, { publish: publish.map((p) => ({ ...p })) })).toThrow(/sensation/);
+    limitSensations(s, content, publish);
+    expect(publish.filter((p) => effectiveTier(s.hand.find((x) => x.uid === p.cardUid)!, p.distortion) === 3)).toHaveLength(1);
+    expect(publish[0].distortion).toBe(1);
+    expect(() => playTurn(s, content, { publish })).not.toThrow();
+  });
+
   it('cannot hire more than maxReporters or fire the last one', () => {
     const s = createGame(content, 1);
     s.money = 100_000;
-    expect(content.balance.maxReporters).toBe(10);
+    expect(content.balance.maxReporters).toBe(5);
+    expect(content.reporters.length).toBeGreaterThan(content.balance.maxReporters);
     while (s.reporters.length < content.balance.maxReporters) {
       for (const id of callAgency(s, content)) if (s.reporters.length < content.balance.maxReporters) hireFromAgency(s, content, id);
     }
@@ -562,11 +599,11 @@ describe('purchases', () => {
   it('requires money and prerequisites', () => {
     const s = createGame(content, 1);
     s.money = 10_000;
-    expect(() => purchase(s, content, 'radio')).toThrow();
+    expect(() => purchase(s, content, 'newspaper_quality_2')).toThrow();
+    expect(listPurchases(s, content).find((p) => p.id === 'newspaper_quality_2')?.unlocked).toBe(false);
     purchase(s, content, 'newspaper_quality_1');
-    purchase(s, content, 'radio');
-    expect(s.ownedChannels).toContain('radio');
-    expect(listPurchases(s, content).find((p) => p.id === 'tv')?.unlocked).toBe(true);
+    purchase(s, content, 'newspaper_quality_2');
+    expect(s.upgrades).toContain('newspaper_quality_2');
   });
 
   it('cannot buy without enough money', () => {

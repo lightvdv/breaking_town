@@ -13,6 +13,7 @@ import {
   createRng,
   getModifiers,
   isHarmful,
+  limitSensations,
   listPurchases,
   reporterOf,
   startInvestigation,
@@ -181,7 +182,7 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
  * A number in the plan means "have this many reporters": the bot pays the HR agency and hires the
  * best candidate it offers.
  */
-const buyOrder: (string | number)[] = [2, 'newspaper_quality_1', 'radio', 3, 'editorial_1', 'tv', 4, 'social', 'lawyers'];
+const buyOrder: (string | number)[] = [2, 'kiosk_1', 'sports_page', 'newspaper_quality_1', 3, 'kiosk_2', 'editorial_1', 'youth_insert', 4, 'kiosk_3', 'subscription', 5, 'lawyers', 'kiosk_4'];
 
 function shop(s: GameState): void {
   for (;;) {
@@ -189,9 +190,10 @@ function shop(s: GameState): void {
     const options = listPurchases(s, content).filter((p) => p.unlocked);
     const step = buyOrder.find((x) => (typeof x === 'number' ? s.reporters.length < x : options.some((p) => p.id === x)));
     if (typeof step === 'number') {
-      if (s.money - content.balance.agencyFee < reserve) return;
+      // Enough for the fee and a typical hire on top of the reserve.
+      if (s.money - content.balance.agencyFee - 200 < reserve) return;
       const offer = callAgency(s, content);
-      const best = [...offer].sort((a, b) => score(b) - score(a))[0];
+      const best = offer.filter((id) => reporterOf(content, id).hireCost <= s.money).sort((a, b) => score(b) - score(a))[0];
       if (best) hireFromAgency(s, content, best);
       continue;
     }
@@ -215,7 +217,9 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
     if ((strategy === mixed || strategy === agitator) && !noInvestigations) manageInvestigations(s);
-    const r = playTurn(s, content, decide(s, strategy, rng));
+    const d = decide(s, strategy, rng);
+    limitSensations(s, content, d.publish);
+    const r = playTurn(s, content, d);
     if (!s.outcome) shop(s);
     if (trace) {
       const m = r.metricsAfter;

@@ -2220,6 +2220,36 @@ button.publish.level-3.bump-up {
   min-width: 70px;
 }
 
+.shop-item.owned {
+  opacity: 0.75;
+}
+
+.shop-item .owned-mark {
+  min-width: 70px;
+  text-align: center;
+  color: var(--ok);
+  font-weight: bold;
+}
+
+/* Progress of an upgrade series, e.g. kiosks 2/4. */
+.shop-item .pips {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.shop-item .pips span {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+}
+
+.shop-item .pips span.on {
+  background: var(--accent);
+}
+
 /* ---------- Report ---------- */
 .report-item {
   padding: 8px;

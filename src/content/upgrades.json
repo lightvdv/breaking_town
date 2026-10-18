@@ -1,31 +1,106 @@
 [
   {
+    "id": "kiosk_1",
+    "name": "Киоск у рынка",
+    "description": "Ещё одна точка продаж у рынка: +5% охвата и +0.3 денег с каждого читателя.",
+    "cost": 100,
+    "requires": null,
+    "series": "kiosks",
+    "effects": {
+      "channel": "newspaper",
+      "reachAdd": 0.05,
+      "adRateAdd": 0.3
+    },
+    "section": "Продажи"
+  },
+  {
+    "id": "kiosk_2",
+    "name": "Киоск у завода",
+    "description": "Ещё одна точка продаж у проходной завода: +5% охвата и +0.3 денег с каждого читателя.",
+    "cost": 180,
+    "requires": {
+      "upgrade": "kiosk_1"
+    },
+    "series": "kiosks",
+    "effects": {
+      "channel": "newspaper",
+      "reachAdd": 0.05,
+      "adRateAdd": 0.3
+    },
+    "section": "Продажи"
+  },
+  {
+    "id": "kiosk_3",
+    "name": "Киоск на остановке",
+    "description": "Ещё одна точка продаж на автобусной остановке: +5% охвата и +0.3 денег с каждого читателя.",
+    "cost": 280,
+    "requires": {
+      "upgrade": "kiosk_2"
+    },
+    "series": "kiosks",
+    "effects": {
+      "channel": "newspaper",
+      "reachAdd": 0.05,
+      "adRateAdd": 0.3
+    },
+    "section": "Продажи"
+  },
+  {
+    "id": "kiosk_4",
+    "name": "Киоск у больницы",
+    "description": "Ещё одна точка продаж у больницы: +5% охвата и +0.3 денег с каждого читателя.",
+    "cost": 400,
+    "requires": {
+      "upgrade": "kiosk_3"
+    },
+    "series": "kiosks",
+    "effects": {
+      "channel": "newspaper",
+      "reachAdd": 0.05,
+      "adRateAdd": 0.3
+    },
+    "section": "Продажи"
+  },
+  {
+    "id": "subscription",
+    "name": "Подписка с доставкой",
+    "description": "Газету приносят домой: читатели бросают её на 25% реже.",
+    "cost": 300,
+    "requires": null,
+    "effects": {
+      "churnMul": 0.75
+    },
+    "section": "Продажи"
+  },
+  {
+    "id": "printing_house",
+    "name": "Своя типография",
+    "description": "Печать дешевле: содержание газеты −10 в ход.",
+    "cost": 350,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "upkeepAdd": -10
+    },
+    "section": "Продажи"
+  },
+  {
     "id": "newspaper_quality_1",
     "name": "Цветная печать",
-    "description": "Газета: +20% охвата этого канала, +5 к репутации.",
+    "description": "Газета выглядит солиднее: +15% охвата, +5 к репутации.",
     "cost": 150,
     "requires": null,
     "effects": {
       "channel": "newspaper",
-      "reachMul": 1.2,
+      "reachMul": 1.15,
       "trustBonus": 5
-    }
-  },
-  {
-    "id": "newspaper_reach_1",
-    "name": "Больше киосков",
-    "description": "Газета: +15% охвата.",
-    "cost": 200,
-    "requires": null,
-    "effects": {
-      "channel": "newspaper",
-      "reachAdd": 0.15
-    }
+    },
+    "section": "Содержание"
   },
   {
     "id": "newspaper_quality_2",
     "name": "Колумнист с именем",
-    "description": "Газета: +20% охвата этого канала, +5 к репутации.",
+    "description": "Его читают ради мнения: +20% охвата, +5 к репутации.",
     "cost": 400,
     "requires": {
       "upgrade": "newspaper_quality_1"
@@ -34,75 +109,52 @@
       "channel": "newspaper",
       "reachMul": 1.2,
       "trustBonus": 5
-    }
+    },
+    "section": "Содержание"
   },
   {
-    "id": "radio_reach_1",
-    "name": "Новые частоты",
-    "description": "Радио: +15% охвата.",
-    "cost": 400,
+    "id": "tv_guide",
+    "name": "Телепрограмма и кроссворд",
+    "description": "Пенсионеры берут газету чаще: их интерес к газете +0.15.",
+    "cost": 200,
     "requires": null,
     "effects": {
-      "channel": "radio",
-      "reachAdd": 0.15
-    }
+      "channel": "newspaper",
+      "groupReach": {
+        "pensioners": 0.15
+      }
+    },
+    "section": "Содержание"
   },
   {
-    "id": "radio_quality_1",
-    "name": "Харизматичный ведущий",
-    "description": "Радио: +25% охвата этого канала, +5 к репутации.",
+    "id": "sports_page",
+    "name": "Спортивная страница",
+    "description": "Футбол и рыбалка: рабочие начинают покупать газету (интерес +0.3).",
     "cost": 450,
     "requires": null,
     "effects": {
-      "channel": "radio",
-      "reachMul": 1.25,
-      "trustBonus": 5
-    }
+      "channel": "newspaper",
+      "groupReach": {
+        "workers": 0.3
+      }
+    },
+    "section": "Содержание"
   },
   {
-    "id": "tv_studio",
-    "name": "Новая студия",
-    "description": "ТВ: +20% охвата этого канала, +5 к репутации.",
-    "cost": 900,
-    "requires": null,
+    "id": "youth_insert",
+    "name": "Молодёжная вкладка",
+    "description": "Комиксы, гороскоп и афиша: газету берёт молодёжь (интерес +0.35).",
+    "cost": 650,
+    "requires": {
+      "upgrade": "newspaper_quality_1"
+    },
     "effects": {
-      "channel": "tv",
-      "reachMul": 1.2,
-      "trustBonus": 5
-    }
-  },
-  {
-    "id": "tv_reach_1",
-    "name": "Кабельные сети",
-    "description": "ТВ: +10% охвата.",
-    "cost": 1000,
-    "requires": null,
-    "effects": {
-      "channel": "tv",
-      "reachAdd": 0.1
-    }
-  },
-  {
-    "id": "social_boost",
-    "name": "Продвижение постов",
-    "description": "Соцсети: +20% охвата.",
-    "cost": 600,
-    "requires": null,
-    "effects": {
-      "channel": "social",
-      "reachAdd": 0.2
-    }
-  },
-  {
-    "id": "social_bots",
-    "name": "Сеть ботов",
-    "description": "Соцсети: +30% охвата.",
-    "cost": 900,
-    "requires": null,
-    "effects": {
-      "channel": "social",
-      "reachMul": 1.3
-    }
+      "channel": "newspaper",
+      "groupReach": {
+        "youth": 0.35
+      }
+    },
+    "section": "Содержание"
   },
   {
     "id": "editorial_1",
@@ -112,7 +164,19 @@
     "requires": null,
     "effects": {
       "reporterLuck": 0.1
-    }
+    },
+    "section": "Редакция"
+  },
+  {
+    "id": "experts",
+    "name": "Независимые эксперты",
+    "description": "+0.1 к правдоподобию всех новостей.",
+    "cost": 600,
+    "requires": null,
+    "effects": {
+      "plausibilityAdd": 0.1
+    },
+    "section": "Редакция"
   },
   {
     "id": "lawyers",
@@ -122,28 +186,20 @@
     "requires": null,
     "effects": {
       "exposurePenaltyMul": 0.7
-    }
+    },
+    "section": "Редакция"
   },
   {
     "id": "insider",
     "name": "Свои люди в мэрии",
     "description": "Шанс разоблачения −25%.",
-    "cost": 900,
+    "cost": 800,
     "requires": {
       "upgrade": "lawyers"
     },
     "effects": {
       "checkerMul": 0.75
-    }
-  },
-  {
-    "id": "experts",
-    "name": "Независимые эксперты",
-    "description": "+0.1 к правдоподобию всех новостей.",
-    "cost": 700,
-    "requires": null,
-    "effects": {
-      "plausibilityAdd": 0.1
-    }
+    },
+    "section": "Редакция"
   }
 ]

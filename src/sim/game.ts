@@ -123,11 +123,15 @@ function startTurn(state: GameState, c: Content): string[] {
   const { cards, finds } = findNews(state, c, state.rng, getModifiers(state, c), events, pairs);
   state.hand = [...state.hand, ...dug.cards, ...cards];
   state.lastFinds = [...dug.finds, ...finds];
+  // At most one sensation a day (CONCEPT.md §4.2а): the others come out as interesting stories.
+  let sensations = 0;
+  for (const card of state.hand) if (card.tier === 3 && ++sensations > c.balance.maxSensations) card.tier = 2;
+  for (const f of state.lastFinds) if (f.cardUid !== null) f.tier = state.hand.find((x) => x.uid === f.cardUid)?.tier ?? f.tier;
   state.metrics = computeMetrics(state, c);
   return notes;
 }
 
-export function validateDecision(state: GameState, _c: Content, d: Decision, mods: Modifiers): void {
+export function validateDecision(state: GameState, c: Content, d: Decision, mods: Modifiers): void {
   // Any number of stories, but the front page and articles have limited room (CONCEPT.md §4.2).
   const slots = placementSlots(mods);
   const names = ['brief', 'article', 'front page'];
@@ -147,6 +151,9 @@ export function validateDecision(state: GameState, _c: Content, d: Decision, mod
       throw new Error(`Bad distortion ${p.distortion} for card ${p.cardUid}`);
     }
   }
+  // An issue carries at most one sensation, found or blown up (CONCEPT.md §4.2а).
+  const sensations = d.publish.filter((p) => effectiveTier(state.hand.find((x) => x.uid === p.cardUid)!, p.distortion) === 3).length;
+  if (sensations > c.balance.maxSensations) throw new Error(`Only ${c.balance.maxSensations} sensation(s) per issue`);
 }
 
 export function checkOutcome(state: GameState, c: Content): Outcome | null {

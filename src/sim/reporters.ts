@@ -245,11 +245,14 @@ export function callAgency(state: GameState, c: Content): string[] {
   return offer;
 }
 
-/** Hires one of the agency's candidates; the fee already paid for it, only the salary follows. */
+/** Hires one of the agency's candidates for the reporter's own price; the salary follows every turn. */
 export function hireFromAgency(state: GameState, c: Content, id: string): void {
   if (state.outcome) throw new Error('Game is over');
   if (!state.agencyOffer.includes(id)) throw new Error(`Reporter ${id} was not offered`);
   if (state.reporters.length >= c.balance.maxReporters) throw new Error('The newsroom is full');
+  const cost = reporterOf(c, id).hireCost;
+  if (state.money < cost) throw new Error(`Not enough money to hire ${id}`);
+  state.money -= cost;
   state.reporters.push(id);
   state.agencyOffer = state.agencyOffer.filter((x) => x !== id);
 }

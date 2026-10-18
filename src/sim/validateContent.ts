@@ -42,6 +42,11 @@ export function validateContent(c: Content): string[] {
   for (const u of c.upgrades) {
     checkReq(`upgrade ${u.id}`, u.requires);
     if (u.effects.channel && !channelIds.has(u.effects.channel)) errors.push(`upgrade ${u.id}: unknown channel`);
+    for (const g of Object.keys(u.effects.groupReach ?? {})) if (!c.groups.some((x) => x.id === g)) errors.push(`upgrade ${u.id}: unknown group ${g}`);
+    // A series is a chain: each next upgrade requires the previous one.
+    const series = u.series ? c.upgrades.filter((x) => x.series === u.series) : [];
+    const i = series.indexOf(u);
+    if (i > 0 && u.requires?.upgrade !== series[i - 1].id) errors.push(`upgrade ${u.id}: must require ${series[i - 1].id} (series ${u.series})`);
   }
 
   for (const t of c.cards) {
@@ -102,7 +107,8 @@ export function validateContent(c: Content): string[] {
   if (b.startReporters.length > b.maxReporters) errors.push('more start reporters than maxReporters');
   if (b.maxReporters > c.reporters.length) errors.push('maxReporters exceeds the number of reporters');
   if (b.agencyFee < 0 || b.agencyMaxOffer < 1) errors.push('agencyFee must be ≥ 0 and agencyMaxOffer ≥ 1');
-  for (const r of c.reporters) if (!(r.weight >= 0)) errors.push(`reporter ${r.id}: weight must be ≥ 0`);
+  for (const r of c.reporters) if (!(r.weight >= 0 && r.hireCost >= 0)) errors.push(`reporter ${r.id}: weight and hireCost must be ≥ 0`);
+  if (b.maxSensations < 1) errors.push('maxSensations must be at least 1');
   if (b.minFinds < 1) errors.push('minFinds must be at least 1');
   if (!c.cards.some((t) => t.scope === 'global')) errors.push('no global news');
   // Enough stories of each kind that the no-repeat rule can hold (CONCEPT.md §3.3).

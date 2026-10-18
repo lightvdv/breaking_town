@@ -58,6 +58,20 @@ export function effectiveTier(card: CardInstance, distortion: number): NewsTier 
   return Math.max(0, Math.min(3, card.tier + distortion)) as NewsTier;
 }
 
+/**
+ * Keeps an issue within `maxSensations` (CONCEPT.md §4.2а): a found sensation stays, then the ones
+ * placed higher; the other blown-up stories are toned down until they are merely interesting.
+ */
+export function limitSensations(state: GameState, c: Content, publish: Publication[]): void {
+  const cardOf = (p: Publication) => state.hand.find((x) => x.uid === p.cardUid)!;
+  const sensations = publish
+    .filter((p) => effectiveTier(cardOf(p), p.distortion) === 3)
+    .sort((a, b) => cardOf(b).tier - cardOf(a).tier || b.placement - a.placement);
+  for (const p of sensations.slice(c.balance.maxSensations)) {
+    while (p.distortion > minDistortion(cardOf(p)) && effectiveTier(cardOf(p), p.distortion) === 3) p.distortion--;
+  }
+}
+
 /** The headline at this distortion, with the conflict pair's names filled in. */
 export function storyTitle(c: Content, card: CardInstance, distortion: number): string {
   const tpl = templateOf(c, card.templateId);

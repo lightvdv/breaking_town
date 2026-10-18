@@ -126,9 +126,9 @@
     0.5,
     1
   ],
-  "lateExposureFactor": 0.4,
+  "lateExposureFactor": 0.75,
   "lateExposureDecay": 0.5,
-  "lateExposureTurns": 3,
+  "lateExposureTurns": 1,
   "trustShield": 0.4,
   "scandalAdMul": 0.5,
   "scandalRecovery": 0.1,

@@ -1239,6 +1239,86 @@
     "w": 16,
     "h": 16
    }
+  },
+  "fight_0": {
+   "frame": {
+    "x": 0,
+    "y": 272,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "fight_1": {
+   "frame": {
+    "x": 16,
+    "y": 272,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "fight_2": {
+   "frame": {
+    "x": 32,
+    "y": 272,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "fight_3": {
+   "frame": {
+    "x": 48,
+    "y": 272,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
   }
  },
  "animations": {
@@ -1337,6 +1417,12 @@
    "react_outraged_1",
    "react_outraged_2",
    "react_outraged_3"
+  ],
+  "fight": [
+   "fight_0",
+   "fight_1",
+   "fight_2",
+   "fight_3"
   ]
  },
  "meta": {
@@ -1344,7 +1430,7 @@
   "format": "RGBA8888",
   "size": {
    "w": 64,
-   "h": 272
+   "h": 288
   },
   "scale": "1"
  }

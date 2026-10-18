@@ -2596,7 +2596,7 @@
       }
     ],
     "engagement": 0.7,
-    "weight": 1,
+    "weight": 3,
     "interest": 0.65
   },
   {
@@ -2624,7 +2624,7 @@
       }
     ],
     "engagement": 0.7,
-    "weight": 1,
+    "weight": 3,
     "interest": 0.65
   },
   {
@@ -2652,7 +2652,7 @@
       }
     ],
     "engagement": 0.7,
-    "weight": 1,
+    "weight": 3,
     "interest": 0.65
   },
   {
@@ -2680,7 +2680,7 @@
       }
     ],
     "engagement": 0.7,
-    "weight": 1,
+    "weight": 3,
     "interest": 0.65
   },
   {
@@ -2708,7 +2708,7 @@
       }
     ],
     "engagement": 0.7,
-    "weight": 1,
+    "weight": 3,
     "interest": 0.65
   },
   {
@@ -2736,7 +2736,7 @@
       }
     ],
     "engagement": 0.7,
-    "weight": 1,
+    "weight": 3,
     "interest": 0.65
   }
 ]

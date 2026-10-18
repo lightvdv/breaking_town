@@ -113,6 +113,12 @@
     "gusev",
     "belov"
   ],
+  "groups": [
+    "pensioners",
+    "workers",
+    "youth",
+    "intelligentsia"
+  ],
   "news": [
     "factory_accident",
     "price_rise",

@@ -59,7 +59,7 @@ function mixed(s: GameState): Decision {
 
   // A few half-truths pushed one step further; risky ones go in as briefs.
   const lies = s.hand
-    .filter((c) => c.baseTruth <= 1)
+    .filter((c) => c.baseTruth <= 1 && !c.conflict)
     .map((c) => ({ c, d: 1 - c.baseTruth, score: harm(c, 1 - c.baseTruth) }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
@@ -68,8 +68,9 @@ function mixed(s: GameState): Decision {
     publish.push({ cardUid: lie.c.uid, placement: 0, distortion: lie.d });
     used.add(lie.c.uid);
   }
-  // Every harmful truth goes out; good news only to rebuild trust.
-  for (const c of s.hand.filter((x) => !used.has(x.uid) && (harm(x, 0) > 0 || trust < 45))) {
+  // Every harmful truth goes out; good news only to rebuild trust. Conflict stories did not exist
+  // in the original concept, so this bot leaves them out (see agitator).
+  for (const c of s.hand.filter((x) => !used.has(x.uid) && !x.conflict && (harm(x, 0) > 0 || trust < 45))) {
     publish.push({ cardUid: c.uid, placement: 0, distortion: 0 });
   }
   // The strongest harmful stories take the front page and the article slots; risky lies stay briefs.

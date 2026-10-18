@@ -523,6 +523,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
     reconcile: 'Примирение',
   };
 
+  /** A story's illustration; a conflict story about any pair shows exactly its two groups. */
+  const newsArt = (templateId: string, pair?: [string, string]) =>
+    `${assetBase}sprites/news/${templateId}${pair && templateOf(c, templateId).conflict === 'any' ? `__${pair[0]}__${pair[1]}` : ''}.png`;
+
   /** Plays the city cutscene with a caption for each bright moment. */
   async function playCutscene(highlights: Highlight[]): Promise<void> {
     cutscene.hidden = false;
@@ -745,7 +749,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const H = 280;
     const cx = W / 2;
     const cy = H / 2;
-    const R = 96;
+    const R = 100;
     const n = c.groups.length;
     const angle = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / n;
     const pos = new Map(c.groups.map((g, i) => [g.id, { x: cx + R * Math.cos(angle(i)), y: cy + R * Math.sin(angle(i)) }]));
@@ -755,7 +759,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
       render();
     };
     const lines: SVGElement[] = [];
-    const labels: SVGElement[] = [];
     for (const key of pairKeys(c)) {
       const [a, z] = pairOf(key);
       const t = state.tension[key] ?? 0;
@@ -771,21 +774,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
           x2: pz.x,
           y2: pz.y,
           stroke: colorOf(level),
-          'stroke-width': (2 + t / 25 + (touches ? 2 : 0)).toFixed(1),
+          'stroke-width': (3 + t / 20 + (touches ? 2.5 : 0)).toFixed(1),
           'stroke-linecap': 'round',
           class: `rel-line level-${level}${dim}`,
         }),
-      );
-      // The number sits off the middle, so the two diagonals do not cover each other.
-      const lx = pa.x + (pz.x - pa.x) * 0.38;
-      const ly = pa.y + (pz.y - pa.y) * 0.38;
-      labels.push(
-        svg(
-          'g',
-          { class: `rel-label${dim}` },
-          svg('rect', { x: lx - 13, y: ly - 9, width: 26, height: 18, rx: 3, fill: colorOf(level), stroke: '#181425', 'stroke-width': 1.5 }),
-          svg('text', { x: lx, y: ly + 4.5, 'text-anchor': 'middle' }, String(Math.round(t))),
-        ),
       );
     }
     const nodes = c.groups.map((g, i) => {
@@ -797,16 +789,26 @@ export function mountApp(root: HTMLElement, c: Content): void {
       return svg(
         'g',
         { class: `rel-node${relFocus === g.id ? ' focus' : ''}`, tabindex: 0, role: 'button', onclick: focus(relFocus === g.id ? null : g.id) },
-        svg('circle', { cx: p.x, cy: p.y, r: 20, fill: g.color, stroke: '#181425', 'stroke-width': 3 }),
-        svg('text', { x: side ? p.x + dx * 28 : p.x, y: side ? p.y + 5 : p.y + dy * 32 + 5, 'text-anchor': anchor }, g.name),
+        // The group's portrait in a ring of its colour.
+        svg('circle', { class: 'ring', cx: p.x, cy: p.y, r: 27, fill: g.color, stroke: '#181425', 'stroke-width': 3 }),
+        svg('image', {
+          href: `${assetBase}sprites/groups/${g.id}.png`,
+          x: p.x - 22,
+          y: p.y - 22,
+          width: 44,
+          height: 44,
+          'clip-path': `url(#rel-clip-${g.id})`,
+          preserveAspectRatio: 'xMidYMid slice',
+        }),
+        svg('text', { x: side ? p.x + dx * 36 : p.x, y: side ? p.y + 5 : p.y + dy * 42 + 5, 'text-anchor': anchor }, g.name),
       );
     });
     const chart = svg(
       'svg',
       { class: 'relations', viewBox: `-70 -10 ${W + 140} ${H + 20}`, role: 'img', 'aria-label': 'Отношения между группами' },
+      svg('defs', {}, ...c.groups.map((g) => svg('clipPath', { id: `rel-clip-${g.id}` }, svg('circle', { cx: pos.get(g.id)!.x, cy: pos.get(g.id)!.y, r: 22 })))),
       svg('rect', { x: -70, y: -10, width: W + 140, height: H + 20, fill: 'transparent', onclick: focus(null) }),
       ...lines,
-      ...labels,
       ...nodes,
     );
     const before = report?.tensionBefore;
@@ -816,16 +818,17 @@ export function mountApp(root: HTMLElement, c: Content): void {
       .map((key) => {
         const t = state.tension[key] ?? 0;
         const level = tensionLevel(c, t);
-        const delta = before ? Math.round(t - (before[key] ?? t)) : 0;
+        const delta = before ? t - (before[key] ?? t) : 0;
         return h(
           'div',
           { class: 'ledger-row rel-row' },
           h('span', {}, h('span', { class: `rel-dot level-${Math.min(2, level)}` }), pairOf(key).map((g) => groupOf(c, g).name).join(' ↔ ')),
+          // Only the state and where it is heading, no numbers.
           h(
             'b',
             {},
-            `${Math.round(t)} · ${tensionLabels[level]}`,
-            delta ? h('span', { class: delta > 0 ? 'bad' : 'good' }, ` ${delta > 0 ? '▲' : '▼'}${Math.abs(delta)}`) : '',
+            tensionLabels[level],
+            Math.abs(delta) >= 1 ? h('span', { class: delta > 0 ? 'bad' : 'good', title: delta > 0 ? 'накаляется' : 'остывает' }, ` ${delta > 0 ? '▲' : '▼'}`) : '',
           ),
         );
       });
@@ -997,8 +1000,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
             ? h(
                 'p',
                 { class: p.tension.delta > 0 ? 'bad' : '' },
-                `Напряжённость ${pairNames}: ${Math.round(state.tension[pair])} (${tensionLabels[tensionLevel(c, state.tension[pair])].toLowerCase()}) → ` +
-                  `${p.tension.delta > 0 ? 'разожжёт' : 'остудит'} примерно на ${Math.abs(Math.round(p.tension.delta))}`,
+                `${pairNames[0].toUpperCase()}${pairNames.slice(1)}: ${tensionLabels[tensionLevel(c, state.tension[pair])].toLowerCase()}. ` +
+                  `Новость ${p.tension.delta > 0 ? 'разожжёт' : 'остудит'} конфликт ${Math.abs(p.tension.delta) >= 8 ? 'сильно' : Math.abs(p.tension.delta) >= 3 ? 'заметно' : 'чуть-чуть'}.`,
               )
             : null,
           where !== 'out' ? h('p', { class: 'hint' }, placementNote(where)) : null,
@@ -1024,7 +1027,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h(
         'div',
         { class: 'news-body' },
-        withImage ? h('img', { class: 'news-art', src: `${assetBase}sprites/news/${tpl.id}.png`, alt: '', width: 256, height: 144 }) : null,
+        withImage ? h('img', { class: 'news-art', src: newsArt(tpl.id, card.conflict), alt: '', width: 256, height: 144 }) : null,
         lorem(card.uid, where === 2 ? 16 : where === 1 ? 7 : 3),
       ),
       // One bottom row: the author, then everything about the story and its controls (CONCEPT.md §7.3).
@@ -1284,7 +1287,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     return h(
       'div',
       { class: `exposed-card truth-${x.truth}` },
-      h('img', { src: `${assetBase}sprites/news/${x.templateId}.png`, alt: '', width: 128, height: 72 }),
+      h('img', { src: newsArt(x.templateId, x.conflict), alt: '', width: 128, height: 72 }),
       h(
         'div',
         {},

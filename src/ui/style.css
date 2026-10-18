@@ -627,15 +627,8 @@ button.publish.level-3.bump-up {
   }
 }
 
-.rel-line.dim,
-.rel-label.dim {
+.rel-line.dim {
   opacity: 0.12;
-}
-
-.rel-label text {
-  font-size: 12px;
-  font-weight: 700;
-  fill: #181425;
 }
 
 .rel-node {
@@ -651,12 +644,16 @@ button.publish.level-3.bump-up {
   stroke-width: 4px;
 }
 
-.rel-node:hover circle,
-.rel-node:focus-visible circle {
+.rel-node image {
+  image-rendering: pixelated;
+}
+
+.rel-node:hover .ring,
+.rel-node:focus-visible .ring {
   stroke: var(--accent);
 }
 
-.rel-node.focus circle {
+.rel-node.focus .ring {
   stroke: var(--accent);
   stroke-width: 5;
 }

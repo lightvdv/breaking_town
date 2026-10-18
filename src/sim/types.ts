@@ -522,6 +522,8 @@ export interface ExposedStory {
   turn: number;
   /** Average reputation lost because of it. */
   trustLoss: number;
+  /** Conflict stories: the pair it was about (picks the matching illustration). */
+  conflict?: [GroupId, GroupId];
 }
 
 export interface PendingLie {

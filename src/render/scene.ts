@@ -793,14 +793,17 @@ export class CityScene {
       await this.flyTo(this.viewAt({ x: center.x, y: center.y - 12 }, zoom), 0.9);
       const [a, z] = h.groups;
       if (h.kind === 'fight' && a && z) {
-        this.addActor(a, { x: spot.x - 0.18, y: spot.y + 0.1 }, 'react_outraged', false, 'fight');
-        this.addActor(z, { x: spot.x + 0.18, y: spot.y - 0.1 }, 'react_outraged', true, 'fight', 1);
-        this.addActor(a, { x: spot.x - 0.5, y: spot.y + 0.45 }, 'react_scared', false, 'still', 1);
+        // The two exchange blows; a bystander from the first group recoils.
+        this.addActor(a, { x: spot.x - 0.16, y: spot.y + 0.08 }, 'fight', false, 'fight');
+        this.addActor(z, { x: spot.x + 0.16, y: spot.y - 0.08 }, 'fight', true, 'fight', 1);
+        this.addActor(a, { x: spot.x - 0.55, y: spot.y + 0.45 }, 'react_scared', false, 'still', 1);
+        this.addActor(z, { x: spot.x + 0.55, y: spot.y - 0.4 }, 'react_outraged', true, 'still');
         this.addFx('fight', spot);
       } else if (h.kind === 'clash' && a && z) {
+        // Two crowds: the front rows fight, the back rows wave placards.
         for (let i = 0; i < 4; i++) {
-          this.addActor(a, { x: spot.x - 0.35, y: spot.y - 0.45 + i * 0.3 }, i % 2 ? 'protest' : 'react_outraged', false, 'fight', i);
-          this.addActor(z, { x: spot.x + 0.35, y: spot.y - 0.45 + i * 0.3 }, i % 2 ? 'react_outraged' : 'protest', true, 'fight', i + 1);
+          this.addActor(a, { x: spot.x - (i % 2 ? 0.55 : 0.2), y: spot.y - 0.45 + i * 0.3 }, i % 2 ? 'protest' : 'fight', false, i % 2 ? 'cheer' : 'fight', i);
+          this.addActor(z, { x: spot.x + (i % 2 ? 0.55 : 0.2), y: spot.y - 0.45 + i * 0.3 }, i % 2 ? 'protest' : 'fight', true, i % 2 ? 'cheer' : 'fight', i + 1);
         }
         this.addFx('fight', { x: spot.x, y: spot.y - 0.2 });
         this.addFx('fight', { x: spot.x, y: spot.y + 0.4 });

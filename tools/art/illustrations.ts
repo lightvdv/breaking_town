@@ -12,7 +12,8 @@ const GROUND = 58;
 type Sky = 'day' | 'dusk' | 'night' | 'alarm';
 
 interface Person {
-  group: keyof typeof looks;
+  /** A and B stand for the two groups of a conflict story about any pair (CONCEPT.md §5.5). */
+  group: keyof typeof looks | 'A' | 'B';
   row: string;
   frame?: number;
   x: number;
@@ -407,9 +408,12 @@ function building(type: string, state: BuildingState): Raster {
 }
 
 const sheets = new Map<string, Raster>();
+/** Who A and B are in the scene being drawn; workers and intelligentsia by default. */
+let actors: [string, string] = ['workers', 'intelligentsia'];
 function person(p: Person): Raster {
-  const key = `${p.group}:${p.variant ?? 0}`;
-  if (!sheets.has(key)) sheets.set(key, residentSheet(looks[p.group][p.variant ?? 0]));
+  const group = p.group === 'A' ? actors[0] : p.group === 'B' ? actors[1] : p.group;
+  const key = `${group}:${p.variant ?? 0}`;
+  if (!sheets.has(key)) sheets.set(key, residentSheet(looks[group][p.variant ?? 0]));
   const sheet = sheets.get(key)!;
   const row = ROWS.findIndex((x) => x.name === p.row);
   const out = new Raster(16, 16);
@@ -429,7 +433,9 @@ function double(src: Raster): Raster {
   return out;
 }
 
-export function illustration(s: Scene): Raster {
+/** Draws a scene; `pair` fills in the A and B groups of a conflict story. */
+export function illustration(s: Scene, pair: [string, string] = ['workers', 'intelligentsia']): Raster {
+  actors = pair;
   const r = new Raster(W, H);
   sky(r, s.sky);
   ground(r, s.ground);
@@ -1104,21 +1110,21 @@ export const scenes: Record<string, Scene> = {
     sky: 'day',
     ground: 'plaza',
     building: { type: 'shop', x: 6 },
-    people: [p('workers', 'react_outraged', 80, { frame: 1 }), p('intelligentsia', 'react_scared', 96, { frame: 2, mirror: true })],
-    icons: [{ name: 'warning', x: 86, y: 14 }],
+    people: [p('A', 'fight', 82, { frame: 1 }), p('B', 'fight', 96, { frame: 3, mirror: true })],
+    icons: [{ name: 'star', x: 90, y: 14 }],
   },
   conflict_bar_brawl: {
     sky: 'night',
     ground: 'road',
     building: { type: 'entertainment', x: 8 },
-    people: [p('youth', 'react_outraged', 78, { frame: 1 }), p('workers', 'react_outraged', 94, { frame: 2, mirror: true }), p('youth', 'react_scared', 110, { variant: 1, frame: 1 })],
-    icons: [{ name: 'star', x: 86, y: 12 }],
+    people: [p('A', 'fight', 74, { frame: 1 }), p('B', 'fight', 88, { frame: 3, mirror: true }), p('B', 'react_scared', 106, { variant: 1, frame: 2 })],
+    icons: [{ name: 'star', x: 84, y: 12 }],
   },
   conflict_graffiti: {
     sky: 'dusk',
     ground: 'road',
     building: { type: 'home', x: 6 },
-    people: [p('youth', 'walk_angry_front', 82), p('pensioners', 'react_outraged', 100, { frame: 1 })],
+    people: [p('A', 'walk_angry_front', 82), p('B', 'react_outraged', 100, { frame: 1 })],
     icons: [
       { name: 'warning', x: 40, y: 30 },
       { name: 'eyes', x: 22, y: 40 },
@@ -1128,42 +1134,42 @@ export const scenes: Record<string, Scene> = {
     sky: 'day',
     ground: 'plaza',
     building: { type: 'hospital', x: 4 },
-    people: [p('pensioners', 'react_outraged', 78, { frame: 1 }), p('workers', 'idle_back', 92), p('intelligentsia', 'react_scared', 106, { frame: 2 })],
+    people: [p('A', 'fight', 80, { frame: 1 }), p('B', 'fight', 94, { frame: 3, mirror: true }), p('B', 'idle_back', 110, { variant: 1 })],
     icons: [{ name: 'cross', x: 98, y: 12 }],
   },
   conflict_factory_gate: {
     sky: 'dusk',
     ground: 'road',
     building: { type: 'factory', x: 4 },
-    people: [p('workers', 'react_outraged', 84, { frame: 1 }), p('youth', 'react_outraged', 100, { frame: 2, mirror: true })],
+    people: [p('A', 'react_outraged', 84, { frame: 1 }), p('B', 'react_outraged', 100, { frame: 2, mirror: true })],
     icons: [{ name: 'warning', x: 92, y: 12 }],
   },
   conflict_hall_meeting: {
     sky: 'day',
     ground: 'plaza',
     building: { type: 'cityHall', x: 4 },
-    people: [p('workers', 'react_talk', 78, { frame: 1 }), p('intelligentsia', 'react_outraged', 94, { frame: 1, mirror: true }), p('pensioners', 'react_shrug', 110, { frame: 1 })],
+    people: [p('A', 'react_talk', 78, { frame: 1 }), p('A', 'react_outraged', 92, { variant: 1, frame: 2 }), p('B', 'react_scared', 108, { frame: 1, mirror: true })],
     icons: [{ name: 'megaphone', x: 84, y: 14 }],
   },
   conflict_bench: {
     sky: 'day',
     ground: 'grass',
     trees: [24],
-    people: [p('youth', 'idle_front', 62), p('youth', 'react_happy', 76, { variant: 1, frame: 1 }), p('pensioners', 'react_outraged', 98, { frame: 1, mirror: true })],
+    people: [p('youth', 'react_happy', 62, { frame: 1 }), p('youth', 'fight', 78, { variant: 1, frame: 0 }), p('pensioners', 'react_outraged', 96, { frame: 1, mirror: true })],
     icons: [{ name: 'note', x: 66, y: 14 }],
   },
   conflict_lecture: {
     sky: 'day',
     ground: 'plaza',
     building: { type: 'cityHall', x: 4 },
-    people: [p('intelligentsia', 'react_talk', 80, { frame: 1 }), p('workers', 'react_outraged', 96, { frame: 2, mirror: true }), p('workers', 'react_outraged', 110, { variant: 1, frame: 1, mirror: true })],
+    people: [p('intelligentsia', 'fight', 80, { frame: 3 }), p('workers', 'fight', 94, { frame: 1, mirror: true }), p('workers', 'react_outraged', 110, { variant: 1, frame: 1, mirror: true })],
     icons: [{ name: 'document', x: 84, y: 12 }],
   },
   rumor_complaints: {
     sky: 'dusk',
     ground: 'plaza',
     building: { type: 'cityHall', x: 4 },
-    people: [p('intelligentsia', 'react_talk', 84, { frame: 1 }), p('workers', 'react_shrug', 102, { frame: 1 })],
+    people: [p('A', 'react_talk', 84, { frame: 1 }), p('B', 'react_shrug', 102, { frame: 1 })],
     icons: [
       { name: 'document', x: 78, y: 12 },
       { name: 'eyes', x: 100, y: 22 },
@@ -1173,14 +1179,14 @@ export const scenes: Record<string, Scene> = {
     sky: 'dusk',
     ground: 'road',
     building: { type: 'factory', x: 4 },
-    people: [p('youth', 'walk_front', 82), p('workers', 'react_scared', 100, { frame: 2 })],
+    people: [p('A', 'walk_front', 82), p('B', 'react_scared', 100, { frame: 2 })],
     icons: [{ name: 'down', x: 94, y: 12 }],
   },
   rumor_hoarding: {
     sky: 'day',
     ground: 'plaza',
     building: { type: 'shop', x: 6 },
-    people: [p('pensioners', 'walk_bag_front', 80), p('youth', 'react_outraged', 98, { frame: 1 })],
+    people: [p('A', 'walk_bag_front', 80), p('A', 'walk_bag_front', 94, { variant: 1 }), p('B', 'react_outraged', 110, { frame: 1 })],
     icons: [
       { name: 'wheat', x: 84, y: 14 },
       { name: 'down', x: 102, y: 14 },
@@ -1190,21 +1196,21 @@ export const scenes: Record<string, Scene> = {
     sky: 'night',
     ground: 'road',
     trees: [16],
-    people: [p('youth', 'walk_angry_front', 60), p('youth', 'walk_angry_front', 74, { variant: 1 }), p('pensioners', 'react_scared', 102, { frame: 2 })],
+    people: [p('A', 'walk_angry_front', 60), p('A', 'walk_angry_front', 74, { variant: 1 }), p('B', 'react_scared', 102, { frame: 2 })],
     icons: [{ name: 'eyes', x: 88, y: 24 }],
   },
   rumor_budget: {
     sky: 'day',
     ground: 'plaza',
     building: { type: 'cityHall', x: 4 },
-    people: [p('workers', 'react_outraged', 88, { frame: 1 }), p('intelligentsia', 'react_happy', 104, { frame: 1 })],
+    people: [p('A', 'react_happy', 88, { frame: 1 }), p('B', 'react_outraged', 104, { frame: 1 })],
     icons: [{ name: 'money', x: 94, y: 12 }],
   },
   rumor_noise: {
     sky: 'night',
     ground: 'road',
     building: { type: 'home', x: 6 },
-    people: [p('youth', 'react_happy', 84, { frame: 2 }), p('pensioners', 'react_outraged', 102, { frame: 1 })],
+    people: [p('A', 'react_happy', 84, { frame: 2 }), p('B', 'react_outraged', 102, { frame: 1 })],
     icons: [
       { name: 'note', x: 76, y: 12 },
       { name: 'note', x: 92, y: 20 },

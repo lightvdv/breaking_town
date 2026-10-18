@@ -15,7 +15,7 @@ export interface Look {
   cane: boolean;
 }
 
-type Arms = 'down' | 'swingA' | 'swingB' | 'up' | 'out' | 'work1' | 'work2' | 'talk1' | 'talk2' | 'fist' | 'hold';
+type Arms = 'down' | 'swingA' | 'swingB' | 'up' | 'out' | 'work1' | 'work2' | 'talk1' | 'talk2' | 'fist' | 'hold' | 'guard' | 'punch' | 'hit';
 type Face = 'normal' | 'blink' | 'open' | 'angry' | 'happy';
 
 interface Pose {
@@ -72,6 +72,16 @@ export const ROWS: { name: string; frames: Pose[] }[] = [
       { arms: 'fist', face: 'angry', bodyDy: 1, steam: 1 },
       { arms: 'fist', face: 'angry', steam: 2 },
       { arms: 'fist', face: 'angry', bodyDy: 1, steam: 3 },
+    ],
+  },
+  {
+    // A fistfight, drawn facing right (mirror it to face left): guard, punch, guard, takes a hit.
+    name: 'fight',
+    frames: [
+      { arms: 'guard', face: 'angry', legs: 3 },
+      { arms: 'punch', face: 'angry', legs: 1, bodyDy: 1 },
+      { arms: 'guard', face: 'angry', dy: -1, legs: 3 },
+      { arms: 'hit', face: 'open', bodyDy: 1, legs: 2 },
     ],
   },
 ];
@@ -224,6 +234,62 @@ function drawFigure(look: Look, p: Pose): Raster {
       up(10);
       set(11, 4 + by, look.skin);
       set(10, 3 + by, look.skin);
+      break;
+    case 'guard':
+      // Both fists up in front of the chest.
+      sleeve(
+        [
+          [4, 7],
+          [4, 6],
+        ],
+        [5, 5],
+      );
+      sleeve(
+        [
+          [10, 7],
+          [11, 6],
+        ],
+        [11, 5],
+      );
+      set(12, 5 + by, look.skin);
+      break;
+    case 'punch':
+      // Right arm thrown straight out at head height.
+      sleeve(
+        [
+          [4, 7],
+          [4, 6],
+        ],
+        [5, 5],
+      );
+      sleeve(
+        [
+          [10, 6],
+          [11, 6],
+          [12, 6],
+          [13, 6],
+        ],
+        [14, 6],
+      );
+      set(15, 6, look.skin);
+      set(14, 5 + by, look.skin);
+      break;
+    case 'hit':
+      // Recoils with the arms flung back.
+      sleeve(
+        [
+          [4, 7],
+          [3, 6],
+        ],
+        [2, 5],
+      );
+      sleeve(
+        [
+          [10, 8],
+          [11, 9],
+        ],
+        [12, 10],
+      );
       break;
   }
 

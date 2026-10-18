@@ -129,11 +129,20 @@ const reporters: { id: string; portrait: PortraitSpec }[] = JSON.parse(
 );
 reporters.forEach((r, i) => write(`sprites/reporters/${r.id}.png`, portrait(r.portrait, i).toPng()));
 
-// News illustrations: every card template needs a scene.
-const cards: { id: string }[] = JSON.parse(readFileSync(join(process.cwd(), 'src', 'content', 'cards.json'), 'utf8'));
+// Social group portraits for the relations circle, described in the content file.
+const groups: { id: string; portrait: PortraitSpec }[] = JSON.parse(readFileSync(join(process.cwd(), 'src', 'content', 'groups.json'), 'utf8'));
+groups.forEach((g, i) => write(`sprites/groups/${g.id}.png`, portrait(g.portrait, 100 + i).toPng()));
+
+// News illustrations: every card template needs a scene. A conflict story about any pair of groups
+// also gets one picture per ordered pair, "<id>__<a>__<b>.png", showing exactly those two groups.
+const cards: { id: string; conflict?: string | string[] }[] = JSON.parse(readFileSync(join(process.cwd(), 'src', 'content', 'cards.json'), 'utf8'));
 const missing = cards.filter((c) => !scenes[c.id]).map((c) => c.id);
 if (missing.length) throw new Error(`No illustration scene for: ${missing.join(', ')}`);
-for (const c of cards) write(`sprites/news/${c.id}.png`, illustration(scenes[c.id]).toPng());
+for (const c of cards) {
+  write(`sprites/news/${c.id}.png`, illustration(scenes[c.id]).toPng());
+  if (c.conflict !== 'any') continue;
+  for (const a of groups) for (const b of groups) if (a.id !== b.id) write(`sprites/news/${c.id}__${a.id}__${b.id}.png`, illustration(scenes[c.id], [a.id, b.id]).toPng());
+}
 
 // What exists, so the game does not hard-code variant counts.
 write(
@@ -147,6 +156,7 @@ write(
       fx: Object.keys(fxIcons),
       ui: Object.keys(uiIcons),
       reporters: reporters.map((r) => r.id),
+      groups: groups.map((g) => g.id),
       news: cards.map((c) => c.id),
     },
     null,

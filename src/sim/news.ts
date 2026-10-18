@@ -435,6 +435,7 @@ export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Mo
     const story = {
       cardUid: card.uid,
       templateId: card.templateId,
+      ...(card.conflict ? { conflict: card.conflict } : {}),
       title: n.report.title,
       truth: n.truth,
       tier: effectiveTier(card, n.pub.distortion),

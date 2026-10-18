@@ -8,7 +8,8 @@
     "jobs": [],
     "pension": 8,
     "color": "#d4a373",
-    "forms": { "one": "пенсионер", "oneAcc": "пенсионера", "oneDat": "пенсионеру", "oneIns": "пенсионером", "many": "пенсионеры", "manyGen": "пенсионеров", "manyDat": "пенсионерам", "manyIns": "пенсионерами" }
+    "forms": { "one": "пенсионер", "oneAcc": "пенсионера", "oneDat": "пенсионеру", "oneIns": "пенсионером", "many": "пенсионеры", "manyGen": "пенсионеров", "manyDat": "пенсионерам", "manyIns": "пенсионерами" },
+    "portrait": { "bg": "tan", "skin": "skin", "hair": "white", "hairStyle": "bun", "clothes": "plum", "accessory": "glasses" }
   },
   {
     "id": "workers",
@@ -19,7 +20,8 @@
     "jobs": ["factory", "shop"],
     "pension": 0,
     "color": "#6c8ead",
-    "forms": { "one": "рабочий", "oneAcc": "рабочего", "oneDat": "рабочему", "oneIns": "рабочим", "many": "рабочие", "manyGen": "рабочих", "manyDat": "рабочим", "manyIns": "рабочими" }
+    "forms": { "one": "рабочий", "oneAcc": "рабочего", "oneDat": "рабочему", "oneIns": "рабочим", "many": "рабочие", "manyGen": "рабочих", "manyDat": "рабочим", "manyIns": "рабочими" },
+    "portrait": { "bg": "blue", "skin": "skinDark", "hair": "brown", "hairStyle": "short", "clothes": "orange", "accessory": "helmet" }
   },
   {
     "id": "youth",
@@ -30,7 +32,8 @@
     "jobs": ["shop", "entertainment", "factory"],
     "pension": 0,
     "color": "#ff7aa2",
-    "forms": { "one": "молодой парень", "oneAcc": "молодого парня", "oneDat": "молодому парню", "oneIns": "молодым парнем", "many": "молодые", "manyGen": "молодых", "manyDat": "молодым", "manyIns": "молодыми" }
+    "forms": { "one": "молодой парень", "oneAcc": "молодого парня", "oneDat": "молодому парню", "oneIns": "молодым парнем", "many": "молодые", "manyGen": "молодых", "manyDat": "молодым", "manyIns": "молодыми" },
+    "portrait": { "bg": "pink", "skin": "skin", "hair": "amber", "hairStyle": "mohawk", "clothes": "magenta", "accessory": "headphones" }
   },
   {
     "id": "intelligentsia",
@@ -41,6 +44,7 @@
     "jobs": ["hospital", "cityHall", "factCheckers", "shop"],
     "pension": 0,
     "color": "#7bd389",
-    "forms": { "one": "интеллигент", "oneAcc": "интеллигента", "oneDat": "интеллигенту", "oneIns": "интеллигентом", "many": "интеллигенты", "manyGen": "интеллигентов", "manyDat": "интеллигентам", "manyIns": "интеллигентами" }
+    "forms": { "one": "интеллигент", "oneAcc": "интеллигента", "oneDat": "интеллигенту", "oneIns": "интеллигентом", "many": "интеллигенты", "manyGen": "интеллигентов", "manyDat": "интеллигентам", "manyIns": "интеллигентами" },
+    "portrait": { "bg": "green", "skin": "skin", "hair": "darkBrown", "hairStyle": "slick", "clothes": "white", "accessory": "glasses" }
   }
 ]

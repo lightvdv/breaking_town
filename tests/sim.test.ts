@@ -577,9 +577,10 @@ describe('group relations', () => {
       return r.publications[0].tension![key];
     };
     expect(shift(-1)).toBeLessThan(0);
-    expect(shift(0)).toBeGreaterThan(0);
+    // Telling it as it is leaves the pair alone; heating and inflating stir it, inflating more.
+    expect(shift(0)).toBe(0);
+    expect(shift(1)).toBeGreaterThan(0);
     expect(shift(2)).toBeGreaterThan(shift(1));
-    expect(shift(1)).toBeGreaterThan(shift(0));
   });
 
   it('calm framing is true, duller and only allowed on conflict stories', () => {

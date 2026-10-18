@@ -111,7 +111,9 @@ export function advanceRelations(state: GameState, c: Content, rng: RngState): {
     for (const r of active) {
       if (r.group !== a && r.group !== z) continue;
       r.mood = clamp(r.mood - b.enmityMood * (level === 3 ? 2 : 1));
+      // Enemies keep out of each other's way: bars, and in clashes the shops too.
       if (chance(rng, b.enmityAvoid)) r.avoid.entertainment = Math.max(r.avoid.entertainment ?? 0, 2);
+      if (level === 3 && chance(rng, b.enmityAvoid)) r.avoid.shop = Math.max(r.avoid.shop ?? 0, 2);
       if (level === 3 && chance(rng, b.clashProtest)) {
         r.protestTurns = Math.max(r.protestTurns, 2);
         r.mood = clamp(r.mood - b.protestMoodPenalty);

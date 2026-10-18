@@ -510,7 +510,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const trust = averageTrust(state, c);
     const r = report;
     hud.replaceChildren(
-      h('div', { class: 'brand' }, 'NEWS FIGHTS'),
+      h('div', { class: 'brand' }, 'BREAKING TOWN'),
       h(
         'div',
         { class: 'resources' },

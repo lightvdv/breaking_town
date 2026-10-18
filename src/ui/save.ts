@@ -4,6 +4,7 @@ import type { Content, GameState, TurnReport } from '../sim';
  * Autosave in the browser (CONCEPT.md §7.3): the game state is plain JSON, so it is kept in
  * localStorage and the game continues after a reload or when the tab comes back.
  */
+// The key keeps the old working title so existing saves are not lost.
 const KEY = 'news-fights-save-v1';
 
 export interface SaveData<D> {

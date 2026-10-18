@@ -45,7 +45,7 @@ export function rgb(color: Color): [number, number, number] {
 }
 
 export function gimpPalette(): string {
-  const lines = ['GIMP Palette', 'Name: News Fights (ENDESGA 32)', 'Columns: 8', '#'];
+  const lines = ['GIMP Palette', 'Name: Breaking Town (ENDESGA 32)', 'Columns: 8', '#'];
   for (const name of Object.keys(PALETTE) as Color[]) {
     const [r, g, b] = rgb(name);
     lines.push(`${String(r).padStart(3)} ${String(g).padStart(3)} ${String(b).padStart(3)}\t${name}`);

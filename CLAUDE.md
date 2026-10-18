@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-News Fights is a turn-based satirical strategy game: the player is a media outlet that manipulates true / half-true / false news to destroy a simulated city. Current stage: CONCEPT.md §7.4 step 3 — full simulation, headless bots, isometric PixiJS city with generated placeholder pixel art, UI per §7.3.
+Breaking Town (working title; formerly News Fights) is a turn-based satirical strategy game: the player is a media outlet that manipulates true / half-true / false news to destroy a simulated city. Current stage: CONCEPT.md §7.4 step 3 — full simulation, headless bots, isometric PixiJS city with generated placeholder pixel art, UI per §7.3.
 
 ## Commands
 

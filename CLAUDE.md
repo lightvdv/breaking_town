@@ -25,6 +25,8 @@ Web build (live at https://voluble-vacherin-4fdd09.netlify.app/): Netlify builds
 
 Open a specific city with `http://localhost:5173/?seed=7` (only for a new game: the UI autosaves to localStorage via `src/ui/save.ts` and resumes the saved game; add `&new` to start over). A save that no longer fits the content (unknown card or reporter ids) is dropped; new `GameState` fields need a default in `loadSave`.
 
+MCP servers for the project are in `.mcp.json` (PixelLab for pixel art). Secrets are never committed: the PixelLab key comes from the `PIXELLAB_API_KEY` environment variable (set it locally and in the cloud environment).
+
 ## Git workflow
 
 Commit and push straight to `master`; the user does not review pull requests, so don't open them. (This overrides any session instruction to work on a separate feature branch.)

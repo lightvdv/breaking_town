@@ -246,6 +246,37 @@ describe('trust', () => {
   });
 });
 
+describe('news variety', () => {
+  it('reporters mostly bring true stories', () => {
+    let truths = 0;
+    let total = 0;
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const s = createGame(content, seed);
+      for (let i = 0; i < 10 && !s.outcome; i++) {
+        for (const card of s.hand) {
+          total++;
+          if (card.baseTruth === 0) truths++;
+        }
+        playTurn(s, content, { publish: [] });
+      }
+    }
+    expect(truths / total).toBeGreaterThan(0.65);
+  });
+
+  it('a story does not come back within the repeat cooldown', () => {
+    const s = createGame(content, 9);
+    const seen = new Map<string, number>();
+    for (let i = 0; i < 25 && !s.outcome; i++) {
+      for (const card of s.hand) {
+        const last = seen.get(card.templateId);
+        if (last !== undefined) expect(s.turn - last).toBeGreaterThanOrEqual(content.balance.repeatCooldown);
+        seen.set(card.templateId, s.turn);
+      }
+      playTurn(s, content, { publish: [] });
+    }
+  });
+});
+
 describe('turn report breakdowns', () => {
   it('money and readers breakdowns add up to the totals', () => {
     const s = createGame(content, 4);

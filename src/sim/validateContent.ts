@@ -56,6 +56,9 @@ export function validateContent(c: Content): string[] {
       if (e?.building && !buildingTypes.has(e.building)) errors.push(`card ${t.id}: unknown building ${e.building}`);
     }
     if (t.source === 'event' && t.baseTruth !== 0) errors.push(`card ${t.id}: events must be true`);
+    if (t.source === 'fact' && t.baseTruth !== 0) errors.push(`card ${t.id}: facts must be true`);
+    if (t.source === 'fact' && t.cityEffect) errors.push(`card ${t.id}: facts do not change the city (use an event)`);
+    if (!['event', 'fact', 'rumor', 'investigation'].includes(t.source)) errors.push(`card ${t.id}: unknown source ${t.source}`);
     if (t.scope === 'global' && (t.witness || t.cityEffect)) errors.push(`card ${t.id}: global news cannot have witnesses or city effects`);
     if (t.scope && t.scope !== 'local' && t.scope !== 'global') errors.push(`card ${t.id}: unknown scope ${t.scope}`);
     for (const g of t.audience ?? []) if (!c.groups.some((x) => x.id === g)) errors.push(`card ${t.id}: unknown audience ${g}`);
@@ -84,6 +87,15 @@ export function validateContent(c: Content): string[] {
   if (b.maxReporters > c.reporters.length) errors.push('maxReporters exceeds the number of reporters');
   if (b.minFinds < 1) errors.push('minFinds must be at least 1');
   if (!c.cards.some((t) => t.scope === 'global')) errors.push('no global news');
+  // Enough stories of each kind that the no-repeat rule can hold (CONCEPT.md §3.3).
+  for (const scope of ['local', 'global'] as const) {
+    for (const kind of ['true', 'rumor'] as const) {
+      const n = c.cards.filter(
+        (t) => (t.scope ?? 'local') === scope && (kind === 'rumor' ? t.source === 'rumor' : t.source === 'fact' || t.source === 'event'),
+      ).length;
+      if (n < 8) errors.push(`only ${n} ${scope} ${kind} stories, need at least 8`);
+    }
+  }
   for (const g of c.groups) {
     if (!c.cards.some((t) => t.source === 'investigation' && t.target === g.id)) errors.push(`no investigation story about ${g.id}`);
   }

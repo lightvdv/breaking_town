@@ -23,6 +23,12 @@ export function tierWeights(c: Content, r: ReporterDef): number[] {
   return b.tierWeights.map((w, i) => w * (1 + r.skills.nose * b.noseTierBonus * i));
 }
 
+/** A story template found or happened within the last `repeatCooldown` turns. */
+export function isRecent(state: GameState, c: Content, id: string): boolean {
+  const seen = state.lastSeen[id];
+  return seen !== undefined && state.turn - seen < c.balance.repeatCooldown;
+}
+
 function available(state: GameState, t: CardTemplate): boolean {
   return !t.requires || state.buildings.some((x) => x.type === t.requires && x.open);
 }
@@ -43,6 +49,11 @@ export function findNews(
   const finds: Find[] = [];
   const pool = [...events];
   const inHand = new Set(state.hand.map((x) => x.templateId));
+  const recent = (t: CardTemplate) => isRecent(state, c, t.id);
+  const oldestSeen = (list: CardTemplate[]) => {
+    const oldest = Math.min(...list.map((t) => state.lastSeen[t.id] ?? -Infinity));
+    return list.filter((t) => (state.lastSeen[t.id] ?? -Infinity) === oldest);
+  };
 
   const make = (r: ReporterDef, forcedTier: NewsTier | null): CardInstance | null => {
     const s = r.skills;
@@ -58,15 +69,17 @@ export function findNews(
         : 'global';
 
     const fresh = (t: CardTemplate) => !inHand.has(t.id) && !cards.some((x) => x.templateId === t.id);
-    let candidates: CardTemplate[];
-    if (scope === 'local') {
-      const todays = pool.filter(fresh);
-      const rumors = c.cards.filter((t) => scopeOf(t) === 'local' && t.source === 'rumor' && available(state, t) && fresh(t));
-      // Investigation stories only come from assigned reporters.
-      candidates = todays.length && chance(rng, b.eventPreference) ? todays : rumors.length ? rumors : todays;
-    } else {
-      candidates = c.cards.filter((t) => scopeOf(t) === 'global' && t.source !== 'investigation' && available(state, t) && fresh(t));
-    }
+    const ofScope = (t: CardTemplate) => scopeOf(t) === scope && available(state, t) && fresh(t);
+    // Mostly true stories (CONCEPT.md §3.3); investigation stories only come from assigned reporters.
+    const facts = c.cards.filter((t) => ofScope(t) && (t.source === 'fact' || (scope === 'global' && t.source === 'event')));
+    const rumors = c.cards.filter((t) => ofScope(t) && t.source === 'rumor');
+    const todays = scope === 'local' ? pool.filter(fresh) : [];
+    const truths = todays.length && (facts.length === 0 || chance(rng, b.eventPreference)) ? todays : facts;
+    const wantsTruth = chance(rng, b.trueNewsShare);
+    let candidates = wantsTruth ? (truths.length ? truths : rumors) : rumors.length ? rumors : truths;
+    // Stories found or happened recently do not come back (today's events are exempt: they just happened).
+    const notRecent = candidates.filter((t) => todays.includes(t) || !recent(t));
+    candidates = notRecent.length ? notRecent : oldestSeen(candidates);
     if (s.topics.length && chance(rng, b.topicFocus)) {
       const focused = candidates.filter((t) => s.topics.includes(t.topic));
       if (focused.length) candidates = focused;
@@ -76,6 +89,7 @@ export function findNews(
     const tpl = weightedPick(rng, candidates);
     const idx = pool.indexOf(tpl);
     if (idx >= 0) pool.splice(idx, 1);
+    state.lastSeen[tpl.id] = state.turn;
     const tiers = tierWeights(c, r).map((weight, tier) => ({ weight, tier: tier as NewsTier }));
     const card: CardInstance = {
       uid: state.nextUid++,

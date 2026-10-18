@@ -611,7 +611,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     ]
       .filter(Boolean)
       .join(' ');
-    const sourceLabel = tpl.source === 'event' ? 'событие' : tpl.source === 'rumor' ? 'слух' : `о группе: ${target.toLowerCase()}`;
+    const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `о группе: ${target.toLowerCase()}` }[tpl.source];
     const children: (HTMLElement | null)[] = [
       tier === 3 && !investigation ? h('div', { class: 'ribbon' }, 'СЕНСАЦИЯ') : null,
       investigation ? h('div', { class: 'inv-band' }, 'РАССЛЕДОВАНИЕ', h('span', {}, truthLabels[p.truth].toLowerCase())) : null,

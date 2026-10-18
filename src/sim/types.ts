@@ -122,10 +122,11 @@ export interface CityEffect {
 export interface CardTemplate {
   id: string;
   /**
-   * event = real event (true card), rumor = made-up or exaggerated story,
+   * event = real event that happens in the city (true card, may change the city),
+   * fact = true everyday story that needs no event, rumor = made-up or exaggerated story,
    * investigation = dirt on a social group, only from assigned reporters (CONCEPT.md §3.3а).
    */
-  source: 'event' | 'rumor' | 'investigation';
+  source: 'event' | 'fact' | 'rumor' | 'investigation';
   /** Investigations: the social group the dirt is about. */
   target?: GroupId;
   /** local = about this city (default), global = about the country or the world. */
@@ -180,8 +181,12 @@ export interface Balance {
   scopeFocus: number;
   /** Chance a reporter with topics brings news on one of them. */
   topicFocus: number;
-  /** Chance a local find is one of today's real events, when there is one. */
+  /** Chance a reporter brings a true story (event or fact) rather than a rumor (CONCEPT.md §3.3). */
+  trueNewsShare: number;
+  /** Chance a true local find is one of today's real events, when there is one. */
   eventPreference: number;
+  /** A story template does not come back for this many turns after it was found or happened. */
+  repeatCooldown: number;
   /** Impact multiplier for global news. */
   globalEffectMul: number;
   /** Initial trust of residents in the outlet (± noise). */
@@ -460,6 +465,8 @@ export interface GameState {
   investigations: Investigation[];
   /** Consecutive turns each topic was published, ending last turn. */
   topicStreak: Partial<Record<Topic, number>>;
+  /** Turn each story template was last found or happened, so stories do not repeat soon. */
+  lastSeen: Record<string, number>;
   pendingLies: PendingLie[];
   initialPopulation: number;
   initialEmployed: number;

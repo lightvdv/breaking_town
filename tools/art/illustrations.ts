@@ -746,4 +746,356 @@ export const scenes: Record<string, Scene> = {
       { name: 'alien', x: 64, y: 40 },
     ],
   },
+
+  // ---------- Local facts ----------
+  park_benches: {
+    sky: 'day',
+    ground: 'grass',
+    trees: [16, 112],
+    people: [p('pensioners', 'idle_front', 54), p('youth', 'react_happy', 76, { frame: 1 })],
+    icons: [{ name: 'star', x: 64, y: 14 }],
+  },
+  bus_schedule: {
+    sky: 'day',
+    ground: 'road',
+    people: [30, 44, 58, 72].map((x, i) => p(i % 2 ? 'workers' : 'pensioners', 'idle_back', x, { variant: i % 2 })),
+    icons: [
+      { name: 'document', x: 90, y: 14 },
+      { name: 'down', x: 106, y: 20 },
+    ],
+  },
+  school_olympiad: {
+    sky: 'day',
+    ground: 'plaza',
+    building: { type: 'cityHall', x: 4 },
+    people: [p('youth', 'react_happy', 84, { frame: 2 }), p('intelligentsia', 'react_happy', 102, { frame: 1 })],
+    icons: [{ name: 'trophy', x: 84, y: 10 }],
+  },
+  hospital_scanner: {
+    sky: 'day',
+    ground: 'plaza',
+    building: { type: 'hospital', x: 4 },
+    people: [p('intelligentsia', 'idle_front', 86), p('pensioners', 'react_happy', 104, { frame: 1 })],
+    icons: [
+      { name: 'cross', x: 86, y: 12 },
+      { name: 'star', x: 104, y: 18 },
+    ],
+  },
+  factory_order: {
+    sky: 'day',
+    ground: 'road',
+    building: { type: 'factory', x: 4 },
+    people: [p('workers', 'work', 84), p('workers', 'react_happy', 102, { variant: 1, frame: 1 })],
+    icons: [
+      { name: 'document', x: 84, y: 12 },
+      { name: 'up', x: 102, y: 16 },
+    ],
+  },
+  shop_discounts: {
+    sky: 'day',
+    ground: 'plaza',
+    building: { type: 'shop', x: 8 },
+    people: [p('pensioners', 'walk_bag_front', 70), p('workers', 'walk_bag_front', 86, { variant: 1 }), p('pensioners', 'react_happy', 104, { variant: 1, frame: 1 })],
+    icons: [
+      { name: 'down', x: 70, y: 12 },
+      { name: 'money', x: 98, y: 14 },
+    ],
+  },
+  police_patrol: {
+    sky: 'dusk',
+    ground: 'road',
+    building: { type: 'home', x: 8 },
+    people: [p('intelligentsia', 'walk_front', 68), p('intelligentsia', 'walk_front', 84, { variant: 1 }), p('pensioners', 'idle_front', 108)],
+    icons: [{ name: 'eyes', x: 76, y: 14 }],
+  },
+  library_reopen: {
+    sky: 'day',
+    ground: 'plaza',
+    building: { type: 'factCheckers', x: 8 },
+    people: [p('intelligentsia', 'react_happy', 74, { frame: 1 }), p('pensioners', 'idle_front', 92), p('youth', 'idle_front', 108)],
+    icons: [{ name: 'document', x: 84, y: 12 }],
+  },
+  pipes_repair: {
+    sky: 'dusk',
+    ground: 'road',
+    building: { type: 'home', x: 8 },
+    people: [p('workers', 'work', 60), p('workers', 'work', 76, { variant: 1 }), p('pensioners', 'react_shrug', 104, { frame: 1 })],
+    icons: [{ name: 'warning', x: 90, y: 14 }],
+  },
+  new_doctor: {
+    sky: 'day',
+    ground: 'plaza',
+    building: { type: 'hospital', x: 2 },
+    people: [p('intelligentsia', 'react_happy', 84, { variant: 1, frame: 1 }), p('pensioners', 'idle_back', 102)],
+    icons: [{ name: 'heart', x: 84, y: 12 }],
+  },
+  bakery_award: {
+    sky: 'day',
+    ground: 'plaza',
+    building: { type: 'shop', x: 8 },
+    people: [p('workers', 'react_happy', 78, { frame: 2 }), p('pensioners', 'walk_bag_front', 100)],
+    icons: [
+      { name: 'wheat', x: 66, y: 12 },
+      { name: 'trophy', x: 90, y: 10 },
+    ],
+  },
+  concert_announce: {
+    sky: 'night',
+    ground: 'road',
+    building: { type: 'entertainment', x: 8 },
+    people: [p('youth', 'react_happy', 72, { frame: 2 }), p('youth', 'react_happy', 90, { variant: 1, frame: 1 }), p('youth', 'idle_front', 108)],
+    icons: [
+      { name: 'note', x: 72, y: 10 },
+      { name: 'megaphone', x: 96, y: 16 },
+    ],
+  },
+
+  // ---------- Local events ----------
+  factory_overtime: {
+    sky: 'night',
+    ground: 'road',
+    building: { type: 'factory', x: 4 },
+    people: [p('workers', 'work', 84), p('workers', 'walk_angry_front', 102, { variant: 1 })],
+    icons: [
+      { name: 'warning', x: 84, y: 10 },
+      { name: 'down', x: 104, y: 16 },
+    ],
+  },
+  storm_damage: {
+    sky: 'alarm',
+    ground: 'grass',
+    trees: [30, 52],
+    people: [p('pensioners', 'react_scared', 84, { frame: 2 }), p('workers', 'react_scared', 102, { frame: 1 })],
+    icons: [
+      { name: 'warning', x: 40, y: 10 },
+      { name: 'down', x: 92, y: 14 },
+    ],
+  },
+  shop_robbery: {
+    sky: 'night',
+    ground: 'plaza',
+    building: { type: 'shop', state: 'closed', x: 8 },
+    people: [p('youth', 'walk_angry_front', 70, { variant: 1 }), p('pensioners', 'react_scared', 96, { frame: 2 })],
+    icons: [
+      { name: 'money', x: 70, y: 14 },
+      { name: 'warning', x: 100, y: 12 },
+    ],
+  },
+  bar_fight: {
+    sky: 'night',
+    ground: 'road',
+    building: { type: 'entertainment', x: 6 },
+    people: [p('youth', 'react_outraged', 72, { frame: 1 }), p('workers', 'react_outraged', 88, { frame: 2, mirror: true }), p('pensioners', 'react_scared', 108, { frame: 1 })],
+    icons: [{ name: 'warning', x: 80, y: 10 }],
+  },
+  salary_delay: {
+    sky: 'dusk',
+    ground: 'road',
+    building: { type: 'factory', x: 4 },
+    people: [p('workers', 'react_outraged', 84, { frame: 2 }), p('workers', 'react_shrug', 102, { variant: 1, frame: 1 })],
+    icons: [
+      { name: 'money', x: 84, y: 10 },
+      { name: 'down', x: 98, y: 14 },
+    ],
+  },
+  flu_season: {
+    sky: 'dusk',
+    ground: 'plaza',
+    building: { type: 'hospital', x: 2 },
+    people: [p('pensioners', 'react_scared', 80, { frame: 1 }), p('intelligentsia', 'idle_back', 98), p('pensioners', 'idle_back', 112, { variant: 1 })],
+    icons: [{ name: 'virus', x: 88, y: 12 }],
+  },
+  playground_open: {
+    sky: 'day',
+    ground: 'grass',
+    trees: [14],
+    fountain: 44,
+    people: [p('youth', 'react_happy', 76, { frame: 2 }), p('intelligentsia', 'idle_front', 94), p('pensioners', 'react_happy', 110, { frame: 1 })],
+    icons: [
+      { name: 'megaphone', x: 88, y: 12 },
+      { name: 'heart', x: 106, y: 16 },
+    ],
+  },
+
+  // ---------- Local rumors ----------
+  factory_waste: {
+    sky: 'dusk',
+    ground: 'grass',
+    building: { type: 'factory', x: 4 },
+    people: [p('intelligentsia', 'react_scared', 90, { frame: 2 })],
+    icons: [
+      { name: 'poison', x: 80, y: 14 },
+      { name: 'skull', x: 104, y: 16 },
+    ],
+  },
+  shop_meat: {
+    sky: 'dusk',
+    ground: 'plaza',
+    building: { type: 'shop', x: 8 },
+    people: [p('pensioners', 'react_scared', 84, { frame: 2 }), p('workers', 'react_outraged', 102, { frame: 1 })],
+    icons: [
+      { name: 'rat', x: 70, y: 16 },
+      { name: 'warning', x: 92, y: 10 },
+    ],
+  },
+  mayor_affair: {
+    sky: 'night',
+    ground: 'plaza',
+    building: { type: 'cityHall', x: 4 },
+    people: [p('intelligentsia', 'idle_front', 82), p('youth', 'idle_front', 96, { variant: 1, mirror: true })],
+    icons: [
+      { name: 'heart', x: 88, y: 10 },
+      { name: 'camera', x: 110, y: 20 },
+    ],
+  },
+  hospital_bribes: {
+    sky: 'dusk',
+    ground: 'plaza',
+    building: { type: 'hospital', x: 2 },
+    people: [p('intelligentsia', 'idle_front', 84, { variant: 1 }), p('pensioners', 'react_shrug', 102, { frame: 1 })],
+    icons: [
+      { name: 'money', x: 92, y: 10 },
+      { name: 'eyes', x: 110, y: 22 },
+    ],
+  },
+  teen_gang: {
+    sky: 'night',
+    ground: 'road',
+    building: { type: 'home', x: 6 },
+    people: [p('youth', 'idle_front', 52), p('youth', 'idle_front', 64, { variant: 1 }), p('youth', 'idle_front', 76), p('pensioners', 'react_scared', 108, { frame: 2 })],
+    icons: [{ name: 'eyes', x: 96, y: 14 }],
+  },
+  bar_closing: {
+    sky: 'night',
+    ground: 'road',
+    building: { type: 'entertainment', state: 'closed', x: 8 },
+    people: [p('youth', 'react_shrug', 82, { frame: 1 }), p('youth', 'walk_angry_front', 100, { variant: 1 })],
+    icons: [
+      { name: 'poison', x: 74, y: 12 },
+      { name: 'down', x: 98, y: 14 },
+    ],
+  },
+  water_shutoff: {
+    sky: 'dusk',
+    ground: 'plaza',
+    fountain: 34,
+    people: [p('pensioners', 'react_outraged', 84, { frame: 1 }), p('workers', 'react_shrug', 102, { frame: 1 })],
+    icons: [
+      { name: 'warning', x: 30, y: 10 },
+      { name: 'down', x: 94, y: 14 },
+    ],
+  },
+  factory_robots: {
+    sky: 'dusk',
+    ground: 'road',
+    building: { type: 'factory', x: 4 },
+    people: [p('workers', 'react_scared', 86, { frame: 1 }), p('workers', 'walk_suitcase_front', 104, { variant: 1 })],
+    icons: [
+      { name: 'alien', x: 82, y: 12 },
+      { name: 'down', x: 104, y: 14 },
+    ],
+  },
+
+  // ---------- Global events ----------
+  global_fuel: {
+    sky: 'day',
+    ground: 'road',
+    people: [p('workers', 'react_shrug', 82, { frame: 1 }), p('workers', 'react_outraged', 100, { variant: 1, frame: 1 })],
+    icons: [
+      { name: 'globe', x: 24, y: 14 },
+      { name: 'up', x: 44, y: 14 },
+      { name: 'money', x: 60, y: 18 },
+    ],
+  },
+  global_film: {
+    sky: 'night',
+    ground: 'plaza',
+    people: [p('youth', 'react_happy', 70, { frame: 2 }), p('intelligentsia', 'react_talk', 88, { frame: 1 }), p('youth', 'idle_front', 106, { variant: 1 })],
+    icons: [
+      { name: 'camera', x: 24, y: 14 },
+      { name: 'star', x: 44, y: 10 },
+    ],
+  },
+  global_vaccine: {
+    sky: 'day',
+    ground: 'plaza',
+    people: [p('intelligentsia', 'react_happy', 84, { frame: 1 }), p('pensioners', 'idle_front', 102)],
+    icons: [
+      { name: 'globe', x: 24, y: 14 },
+      { name: 'cross', x: 44, y: 12 },
+      { name: 'virus', x: 62, y: 18 },
+    ],
+  },
+  global_election: {
+    sky: 'dusk',
+    ground: 'plaza',
+    people: [p('intelligentsia', 'react_talk', 80, { frame: 1 }), p('workers', 'react_shrug', 98, { frame: 1 })],
+    icons: [
+      { name: 'globe', x: 24, y: 14 },
+      { name: 'document', x: 44, y: 12 },
+      { name: 'megaphone', x: 62, y: 16 },
+    ],
+  },
+  global_space: {
+    sky: 'night',
+    ground: 'grass',
+    trees: [112],
+    people: [p('youth', 'react_happy', 76, { frame: 2 }), p('intelligentsia', 'idle_front', 94)],
+    icons: [
+      { name: 'star', x: 24, y: 8 },
+      { name: 'ufo', x: 48, y: 14 },
+    ],
+  },
+
+  // ---------- Global rumors ----------
+  global_famine: {
+    sky: 'dusk',
+    ground: 'grass',
+    people: [p('pensioners', 'react_scared', 84, { frame: 2 }), p('workers', 'react_shrug', 102, { frame: 1 })],
+    icons: [
+      { name: 'globe', x: 24, y: 14 },
+      { name: 'wheat', x: 44, y: 16 },
+      { name: 'down', x: 60, y: 14 },
+    ],
+  },
+  global_war: {
+    sky: 'alarm',
+    ground: 'road',
+    people: [p('pensioners', 'react_scared', 70, { frame: 2 }), p('workers', 'walk_suitcase_front', 88), p('intelligentsia', 'walk_suitcase_front', 106, { variant: 1 })],
+    icons: [
+      { name: 'globe', x: 22, y: 14 },
+      { name: 'fire', x: 40, y: 12 },
+      { name: 'warning', x: 56, y: 16 },
+    ],
+  },
+  global_mafia: {
+    sky: 'night',
+    ground: 'road',
+    building: { type: 'factory', state: 'closed', x: 4 },
+    people: [p('intelligentsia', 'idle_front', 90, { variant: 1 })],
+    icons: [
+      { name: 'money', x: 84, y: 10 },
+      { name: 'eyes', x: 104, y: 18 },
+    ],
+  },
+  global_banks: {
+    sky: 'dusk',
+    ground: 'plaza',
+    people: [p('pensioners', 'react_scared', 78, { frame: 2 }), p('intelligentsia', 'react_outraged', 96, { frame: 1 }), p('pensioners', 'idle_back', 112, { variant: 1 })],
+    icons: [
+      { name: 'globe', x: 22, y: 14 },
+      { name: 'money', x: 40, y: 16 },
+      { name: 'fire', x: 56, y: 12 },
+    ],
+  },
+  global_asteroid: {
+    sky: 'night',
+    ground: 'grass',
+    trees: [16],
+    people: [p('youth', 'react_scared', 90, { frame: 2 }), p('pensioners', 'react_scared', 106, { frame: 1 })],
+    icons: [
+      { name: 'fire', x: 44, y: 6 },
+      { name: 'warning', x: 64, y: 22 },
+    ],
+  },
 };

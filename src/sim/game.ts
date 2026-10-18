@@ -13,7 +13,7 @@ import { averageTrust, groupOf, templateOf } from './lookup';
 import { getModifiers, placementSlots, type Modifiers } from './modifiers';
 import { maxDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
 import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
-import { advanceInvestigations, findNews, scopeOf } from './reporters';
+import { advanceInvestigations, findNews, isRecent, scopeOf } from './reporters';
 import type {
   CardTemplate,
   ChannelId,
@@ -52,6 +52,7 @@ export function createGame(c: Content, seed: number): GameState {
     scandal: 1,
     investigations: [],
     topicStreak: {},
+    lastSeen: {},
     pendingLies: [],
     initialPopulation: residents.length,
     initialEmployed: residents.filter((r) => r.job !== null).length,
@@ -73,12 +74,16 @@ function cardAvailable(state: GameState, tpl: CardTemplate): boolean {
 /** Real events happen in the city; reporters may turn them into true cards. */
 function generateEvents(state: GameState, c: Content, rng: RngState): CardTemplate[] {
   const b = c.balance;
-  const pool = c.cards.filter((t) => t.source === 'event' && scopeOf(t) === 'local' && cardAvailable(state, t));
+  const all = c.cards.filter((t) => t.source === 'event' && scopeOf(t) === 'local' && cardAvailable(state, t));
+  // The same thing does not happen again soon (CONCEPT.md §3.3).
+  const fresh = all.filter((t) => !isRecent(state, c, t.id));
+  const pool = fresh.length ? fresh : all;
   const count = b.eventsMin + int(rng, b.eventsMax - b.eventsMin + 1);
   const out: CardTemplate[] = [];
   for (let i = 0; i < count && pool.length; i++) {
     const tpl = weightedPick(rng, pool);
     pool.splice(pool.indexOf(tpl), 1);
+    state.lastSeen[tpl.id] = state.turn;
     if (tpl.cityEffect) applyCityEffect(state, rng, tpl.cityEffect);
     state.todayEvents.push(tpl.titles[0] ?? tpl.id);
     out.push(tpl);

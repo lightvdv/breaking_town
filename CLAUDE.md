@@ -21,7 +21,7 @@ npm run bots -- --trace mixed --seed 3 # one bot game turn by turn
 npm run art          # regenerate placeholder pixel art into public/assets (overwrites it)
 ```
 
-Web build (live at https://voluble-vacherin-4fdd09.netlify.app/): Netlify builds `master` from its git integration with `netlify.toml` (tests + `npm run build`, publishes `dist` at the site root) and redeploys on every push. Asset URLs must go through `import.meta.env.BASE_URL`.
+Web build (live at https://lightvdv.github.io/breaking_town/): GitHub Pages, deployed by `.github/workflows/pages.yml` on every push to `master` (tests, then `npm run build -- --base=/<repo>/`, publishes `dist`). The site lives under `/breaking_town/`, so asset URLs must go through `import.meta.env.BASE_URL`. The old Netlify site (https://voluble-vacherin-4fdd09.netlify.app/, `netlify.toml`, site root) is paused: the team ran out of build credits.
 
 Open a specific city with `http://localhost:5173/?seed=7` (only for a new game: the UI autosaves to localStorage via `src/ui/save.ts` and resumes the saved game; add `&new` to start over, skipping the title screen). `?debug` adds «Отладка» to the pause menu. Player settings (theme, fast search, no cutscenes, intro seen) live apart from the save (`src/ui/settings.ts`). A save that no longer fits the content (unknown card or reporter ids) is dropped; new `GameState` fields need a default in `loadSave`.
 

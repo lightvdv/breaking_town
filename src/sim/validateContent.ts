@@ -73,7 +73,7 @@ export function validateContent(c: Content): string[] {
     if (t.source === 'event' && t.baseTruth !== 0) errors.push(`card ${t.id}: events must be true`);
     if (t.source === 'fact' && t.baseTruth !== 0) errors.push(`card ${t.id}: facts must be true`);
     if (t.source === 'fact' && t.cityEffect) errors.push(`card ${t.id}: facts do not change the city (use an event)`);
-    if (!['event', 'fact', 'rumor', 'investigation', 'debunk'].includes(t.source)) errors.push(`card ${t.id}: unknown source ${t.source}`);
+    if (!['event', 'fact', 'rumor', 'investigation', 'debunk', 'offer'].includes(t.source)) errors.push(`card ${t.id}: unknown source ${t.source}`);
     if (t.scope === 'global' && (t.witness || t.cityEffect)) errors.push(`card ${t.id}: global news cannot have witnesses or city effects`);
     if (t.scope && t.scope !== 'local' && t.scope !== 'global') errors.push(`card ${t.id}: unknown scope ${t.scope}`);
     for (const g of t.audience ?? []) if (!c.groups.some((x) => x.id === g)) errors.push(`card ${t.id}: unknown audience ${g}`);
@@ -146,6 +146,15 @@ export function validateContent(c: Content): string[] {
       else if (t.arc !== a.id || t.arcStage !== stage) errors.push(`card ${id}: must be arc ${a.id} stage ${stage}`);
       else if (t.conflict || t.scope === 'global' || t.source === 'investigation' || t.source === 'debunk') errors.push(`card ${id}: arc stages are local events, facts or rumors`);
     }
+  }
+  // Offers with a catch (CONCEPT.md §3.5а).
+  unique('offer', c.offers.map((x) => x.id));
+  for (const o of c.offers) {
+    if (!['silence', 'subsidy', 'kompromat'].includes(o.kind)) errors.push(`offer ${o.id}: unknown kind ${o.kind}`);
+    if (o.requires && !buildingTypes.has(o.requires)) errors.push(`offer ${o.id}: unknown building ${o.requires}`);
+    if (o.kind === 'silence' && (!o.requires || !(o.amount! > 0) || !(o.days! > 0))) errors.push(`offer ${o.id}: silence needs a building, amount and days`);
+    if (o.kind === 'subsidy' && (!o.topic || !(o.amount! > 0) || !(o.days! > 0))) errors.push(`offer ${o.id}: subsidy needs a topic, amount and days`);
+    if (o.kind === 'kompromat' && !c.cards.some((t) => t.id === o.template && t.source === 'offer')) errors.push(`offer ${o.id}: kompromat needs an offer card template`);
   }
   for (const t of c.cards) if (t.arc && !c.arcs.some((a) => a.id === t.arc)) errors.push(`card ${t.id}: unknown arc ${t.arc}`);
   for (const g of c.groups) {

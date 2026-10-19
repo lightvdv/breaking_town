@@ -5010,5 +5010,108 @@
       "type": "mood",
       "amount": 0.03
     }
+  },
+  {
+    "id": "kompromat_mayor",
+    "source": "offer",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Документы: мэр брал откаты за дороги",
+      "Мэр годами грабил город",
+      "Мэр продал город по кускам"
+    ],
+    "effects": [
+      {
+        "type": "protest",
+        "strength": 0.12
+      },
+      {
+        "type": "protest",
+        "strength": 0.2
+      },
+      {
+        "type": "protest",
+        "strength": 0.3
+      }
+    ],
+    "interest": 0.85,
+    "engagement": 0.7,
+    "weight": 0,
+    "tiers": [
+      3,
+      3
+    ],
+    "requires": "cityHall"
+  },
+  {
+    "id": "kompromat_factory",
+    "source": "offer",
+    "topic": "factory",
+    "baseTruth": 0,
+    "titles": [
+      "Записи: завод сливает отходы в реку",
+      "Завод травит город годами",
+      "Река мертва: завод убивает нас"
+    ],
+    "effects": [
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.12
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.2
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.03
+      }
+    ],
+    "interest": 0.85,
+    "engagement": 0.7,
+    "weight": 0,
+    "tiers": [
+      3,
+      3
+    ],
+    "requires": "factory",
+    "audience": [
+      "workers"
+    ]
+  },
+  {
+    "id": "kompromat_rival",
+    "source": "offer",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Бухгалтерия «Набата»: панику оплачивает застройщик",
+      "«Набат» пугает город за деньги",
+      "«Набат» — купленная газета"
+    ],
+    "effects": [
+      {
+        "type": "debunk",
+        "strength": 1
+      },
+      {
+        "type": "debunk",
+        "strength": 1.3
+      },
+      {
+        "type": "debunk",
+        "strength": 1.6
+      }
+    ],
+    "interest": 0.85,
+    "engagement": 0.7,
+    "weight": 0,
+    "tiers": [
+      3,
+      3
+    ]
   }
 ]

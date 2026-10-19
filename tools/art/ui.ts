@@ -331,8 +331,18 @@ function guardian(): Raster {
   return outline(r);
 }
 
+/** An offer with a catch: a sealed envelope with a red wax seal. */
+function offer(): Raster {
+  const r = new Raster(16, 16);
+  r.rect(1, 4, 14, 9, 'sand');
+  r.art(1, 4, ['g............g', '.g..........g.', '..g........g..', '...g......g...', '....g....g....', '.....gggg.....'], { g: 'grey' });
+  r.rect(7, 8, 2, 2, 'red');
+  return outline(r);
+}
+
 export const uiIcons: Record<string, () => Raster> = {
   rival,
+  offer,
   guardian,
   money,
   readers,

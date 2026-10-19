@@ -6,10 +6,11 @@ export { callAgency, cancelInvestigation, hireFromAgency, investigationTurns, on
 export { buyWillingness, followersOf, readerCount } from './readers';
 export { cityStateOf, wealthOf } from './city';
 export { getModifiers, placementSlots, rankedPlacements, type Modifiers } from './modifiers';
-export { previewPublication, cardTruth, effectiveTier, framingOf, isHarmful, issueLevel, limitSensations, issueScore, isSoothed, maxDistortion, minDistortion, outletReach, storyTitle, type IssueStory, type PublicationPreview } from './news';
+export { previewPublication, storyEffect, cardTruth, effectiveTier, framingOf, isHarmful, issueLevel, limitSensations, issueScore, isSoothed, maxDistortion, minDistortion, outletReach, storyTitle, type IssueStory, type PublicationPreview } from './news';
 export { createTension, fillTitle, pairKey, pairKeys, pairOf, startTension, tensionLevel } from './relations';
 export { averageTrust, buildingDefOf, buildingName, channelOf, groupOf, templateOf } from './lookup';
 export { validateContent } from './validateContent';
 export { DEBUNK_TEMPLATE, debunkTargets, rivalReaders, rivalTrust, setRivalWatch } from './rival';
 export { ARC_DAYS, arcInfo, arcLean, arcOf } from './arcs';
+export { answerOffer, dealBrokenBy, offerOf, offerText } from './offers';
 export { isRoadTile, mapSizeFor } from './map';

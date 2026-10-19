@@ -9,6 +9,7 @@ import {
 } from './city';
 import { advanceArcs, pushArc } from './arcs';
 import { collectIncome } from './economy';
+import { advanceOffers, settleDeals } from './offers';
 import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf } from './lookup';
 import { getModifiers, placementSlots, type Modifiers } from './modifiers';
@@ -51,6 +52,9 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy')
     ourPrinted: [],
     arcs: [],
     arcsDone: [],
+    offer: null,
+    deals: [],
+    lastOfferTurn: 0,
     money: c.balance.startMoney,
     price: c.balance.startPrice,
     brokeTurns: 0,
@@ -128,6 +132,7 @@ function startTurn(state: GameState, c: Content): string[] {
   const arcs = advanceArcs(state, c, state.rng);
   events.push(...arcs.events);
   notes.push(...arcs.notes);
+  notes.push(...advanceOffers(state, c, state.rng));
   // Incidents are today's events too: reporters may write them up as true conflict stories.
   const pairs = new Map<string, [GroupId, GroupId]>();
   for (const i of relations.incidents) {
@@ -244,6 +249,8 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   // The rival may answer our lies over the next days.
   recordOurIssue(state, c, published);
 
+  // Deals with a catch (CONCEPT.md §3.5а): a bad story about what we promised to keep quiet about costs us.
+  const deals = settleDeals(state, c, d.publish);
   const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
 
@@ -282,6 +289,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     income,
     upkeep,
     upkeepItems,
+    deals,
     moneyDelta: state.money - moneyBefore,
     readers: { before: readersBefore, ...readers, after: readersAfter },
     issue,

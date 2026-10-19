@@ -28,6 +28,8 @@ import {
   rivalReaders,
   rivalTrust,
   setRivalWatch,
+  answerOffer,
+  offerOf,
   templateOf,
   type CardInstance,
   type Decision,
@@ -293,6 +295,19 @@ interface Result {
   cityIndex: number;
 }
 
+/**
+ * Offers with a catch (CONCEPT.md §3.5а): the thoughtful bots take the kompromat while trusted, the
+ * defenders take the mayor's subsidy (they print no bad news about power anyway); the rest say no.
+ */
+function answerOffers(s: GameState, strategy: Strategy): void {
+  if (!s.offer) return;
+  const kind = offerOf(content, s.offer.id).kind;
+  const trust = averageTrust(s, content);
+  const thoughtful = strategy === mixed || strategy === agitator;
+  const defending = strategy === defender || strategy === liarDefender || strategy === soother;
+  answerOffer(s, content, (thoughtful && kind === 'kompromat' && trust >= 45) || (defending && ((kind === 'subsidy' && trust >= 45) || kind === 'kompromat')));
+}
+
 function playGame(seed: number, strategy: Strategy, trace = false): Result {
   const s = createGame(content, seed, saveMode ? 'save' : 'destroy');
   const rng = createRng(seed ^ 0x5bd1e995);
@@ -303,6 +318,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
       const free = s.reporters.filter((id) => !s.investigations.some((x) => x.reporterId === id));
       s.reporters.forEach((id) => setRivalWatch(s, id, id === free[free.length - 1] && s.reporters.length >= 2));
     }
+    answerOffers(s, strategy);
     const d = decide(s, strategy, rng);
     limitSensations(s, content, d.publish);
     const r = playTurn(s, content, d);

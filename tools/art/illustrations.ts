@@ -1317,6 +1317,9 @@ export const scenes: Record<string, Scene> = {
 scenes.debunk_guardian = scenes.debunk;
 scenes.tabloid_debunk = scenes.debunk;
 scenes.guardian_debunk = scenes.debunk;
+scenes.kompromat_mayor = scenes.mayor_affair;
+scenes.kompromat_factory = scenes.factory_waste;
+scenes.kompromat_rival = scenes.debunk;
 // Story arcs (CONCEPT.md §3.1а) reuse the scenes of similar stories.
 scenes.arc_factory_1 = scenes.layoffs_coming;
 scenes.arc_factory_2 = scenes.rumor_jobs_taken;

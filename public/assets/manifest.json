@@ -85,6 +85,7 @@
   ],
   "ui": [
     "rival",
+    "offer",
     "guardian",
     "money",
     "readers",
@@ -268,6 +269,9 @@
     "arc_bus_2",
     "arc_bus_3",
     "arc_bus_bad",
-    "arc_bus_good"
+    "arc_bus_good",
+    "kompromat_mayor",
+    "kompromat_factory",
+    "kompromat_rival"
   ]
 }

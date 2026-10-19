@@ -28,6 +28,7 @@ import {
   rivalReaders,
   rivalTrust,
   setRivalWatch,
+  answerOffer,
   cardTruth,
   minDistortion,
   salesOf,
@@ -948,5 +949,52 @@ describe('story arcs', () => {
       }
       playTurn(s, content, { publish: [] });
     }
+  });
+});
+
+describe('offers with a catch', () => {
+  const card = (s: GameState, templateId: string, building?: number): CardInstance => {
+    const tpl = templateOf(content, templateId);
+    const x: CardInstance = { uid: s.nextUid++, templateId, baseTruth: tpl.baseTruth, createdTurn: s.turn, tier: 1, scope: 'local', reporterId: s.reporters[0], ...(building !== undefined ? { building } : {}) };
+    s.hand.push(x);
+    return x;
+  };
+  it('a silence deal pays at once and costs double when broken', () => {
+    const s = createGame(content, 4);
+    const shop = s.buildings.find((x) => x.type === 'shop' && x.open)!.id;
+    s.offer = { id: 'silence_shop', building: shop };
+    const money = s.money;
+    answerOffer(s, content, true);
+    expect(s.money).toBe(money + 60);
+    expect(s.deals).toHaveLength(1);
+    const robbery = card(s, 'shop_robbery', shop);
+    const trust = averageTrust(s, content);
+    const report = playTurn(s, content, { publish: [{ cardUid: robbery.uid, placement: 0, distortion: 0 }] });
+    expect(report.deals.broken).toEqual(['Реклама за молчание']);
+    expect(s.deals).toHaveLength(0);
+    expect(averageTrust(s, content)).toBeLessThan(trust);
+  });
+  it('declining or ignoring an offer changes nothing; it lapses with the turn', () => {
+    const s = createGame(content, 4);
+    s.offer = { id: 'subsidy' };
+    const money = s.money;
+    answerOffer(s, content, false);
+    expect(s.money).toBe(money);
+    expect(s.deals).toHaveLength(0);
+    expect(s.offer).toBeNull();
+  });
+  it('a fake kompromat looks true but the fact-checkers catch it as a lie', () => {
+    const c = { ...content, offers: content.offers.map((o) => ({ ...o, setupChance: 1 })), balance: { ...content.balance, checkerBase: 100 } };
+    let caught = 0;
+    for (let seed = 1; seed <= 4; seed++) {
+      const s = createGame(c, seed);
+      s.offer = { id: 'kompromat_mayor' };
+      const k = answerOffer(s, c, true)!;
+      expect(k.setup).toBe(true);
+      expect(previewPublication(s, c, getModifiers(s, c), { cardUid: k.uid, placement: 2, distortion: 0 }).truth).toBe(0);
+      const report = playTurn(s, c, { publish: [{ cardUid: k.uid, placement: 2, distortion: 0 }] });
+      caught += report.exposures.filter((x) => x.setup && x.truth === 2).length;
+    }
+    expect(caught).toBeGreaterThan(0);
   });
 });

@@ -30,6 +30,10 @@ import {
   pairOf,
   tensionLevel,
   arcInfo,
+  answerOffer,
+  dealBrokenBy,
+  offerOf,
+  offerText,
   playTurn,
   previewPublication,
   purchase,
@@ -301,7 +305,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const reconcileNotice = h('section', { class: 'notice notice-peace', hidden: true, role: 'status' });
   // Save mode: what the rival paper prints today, and which of its stories we answer (CONCEPT.md §8).
   const rivalNotice = h('section', { class: 'notice notice-rival', hidden: true, role: 'status' });
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, exposureNotice, reconcileNotice, rivalNotice, paper));
+  const offerNotice = h('section', { class: 'notice notice-offer', hidden: true, role: 'status' });
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, exposureNotice, reconcileNotice, offerNotice, rivalNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -889,6 +894,35 @@ export function mountApp(root: HTMLElement, c: Content): void {
     );
   }
 
+  /** Today's offer with a catch (CONCEPT.md §3.5а): what is offered, what can go wrong, yes or no. */
+  function renderOffer(): void {
+    const offer = state.offer;
+    offerNotice.hidden = !offer || searching || !!state.outcome;
+    if (!offer || offerNotice.hidden) return;
+    const def = offerOf(c, offer.id);
+    const answer = (accept: boolean) => () => {
+      const card = answerOffer(state, c, accept);
+      if (card) revealed.add(card.uid);
+      render();
+    };
+    offerNotice.replaceChildren(
+      h(
+        'div',
+        { class: 'notice-head' },
+        h('img', { src: `${assetBase}sprites/ui/offer.png`, alt: '', width: 24, height: 24 }),
+        h('b', {}, def.title),
+      ),
+      h('p', { class: 'notice-note' }, offerText(state, c, def, offer.building)),
+      h('p', { class: 'notice-note offer-catch' }, def.catch),
+      h(
+        'div',
+        { class: 'offer-buttons' },
+        h('button', { class: 'primary', onclick: answer(true) }, def.kind === 'kompromat' ? 'Взять документы' : 'Согласиться'),
+        h('button', { onclick: answer(false) }, 'Отказаться'),
+      ),
+    );
+  }
+
   /**
    * Save mode (CONCEPT.md §8): what the rival printed in the last days, which of it we can still
    * answer, its readers and trust, and how our debunks went yesterday.
@@ -1080,7 +1114,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       render();
     };
 
-    const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `компромат на группу «${target}»`, debunk: 'опровержение' }[tpl.source];
+    const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `компромат на группу «${target}»`, debunk: 'опровержение', offer: 'документы от анонима' }[tpl.source];
     // Truth menu next to the headline (CONCEPT.md §7.3); the place is changed by dragging or by a tap
     // on the story and then on a place in the paper.
     const menuOpen = truthMenuFor === card.uid;
@@ -1105,6 +1139,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const calmIcon = () => h('img', { src: `${assetBase}sprites/fx/peace.png`, alt: '', width: 16, height: 16 });
     const pair = card.conflict ? pairKey(c, ...card.conflict) : null;
     const pairNames = card.conflict ? card.conflict.map((g) => groupOf(c, g).name.toLowerCase()).join(' ↔ ') : '';
+    // A bad story about what we were paid to keep quiet about breaks the deal (CONCEPT.md §3.5а).
+    const brokenDeal = where === 'out' ? null : dealBrokenBy(state, c, card, d.distortion);
     // Story arcs (CONCEPT.md §3.1а): which ending the arc heads to, with this story as it is told now.
     const arc = arcInfo(state, c, card);
     const arcLeanNow =
@@ -1226,6 +1262,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
       investigation ? h('div', { class: 'kicker' }, `Расследование · эксклюзив · ${target.toLowerCase()}`) : null,
       card.debunk ? h('div', { class: 'kicker debunk-kicker' }, `Опровержение · «${rivalNames[state.rival?.kind ?? 'tabloid'].name}»`) : null,
       pair ? h('div', { class: `kicker conflict-kicker level-${tensionLevel(c, state.tension[pair])}` }, `Конфликт · ${pairNames}`) : null,
+      tpl.source === 'offer' ? h('div', { class: 'kicker offer-kicker' }, 'Документы от анонима · подлинность не проверена') : null,
+      brokenDeal ? h('div', { class: 'kicker deal-kicker' }, `Нарушит сделку «${offerOf(c, brokenDeal.id).title}»`) : null,
       arc
         ? h(
             'div',
@@ -1733,21 +1771,37 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const scandalNext = Math.min(1, state.scandal + b.scandalRecovery);
     const forecastIncome = state.ownedChannels.map((ch) => ({ ch, buyers: followersOf(state, ch), sum: salesOf(state, c, ch, followersOf(state, ch), scandalNext) }));
     const items = upkeepItems(state, c);
-    const net = forecastIncome.reduce((s, x) => s + x.sum, 0) - items.reduce((s, x) => s + x.amount, 0);
+    const subsidies = state.deals.map((x) => ({ ...offerOf(c, x.id), until: x.untilTurn })).filter((x) => x.kind === 'subsidy');
+    const net = forecastIncome.reduce((s, x) => s + x.sum, 0) + subsidies.reduce((s, x) => s + (x.amount ?? 0), 0) - items.reduce((s, x) => s + x.amount, 0);
     const out: (HTMLElement | null)[] = [
       h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/money.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${state.money}`), h('span', {}, 'денег в кассе'))),
       state.brokeTurns > 0 ? h('p', { class: 'bad' }, `Касса в минусе ${state.brokeTurns} ход(а) из ${b.brokeTurnsLimit} допустимых — потом банкротство.`) : null,
       h('h3', { class: 'section' }, 'Ожидается в этом ходу'),
       ...forecastIncome.map((x) => ledgerRow(`Продажи: ${channelOf(c, x.ch).name}`, x.sum, `${x.buyers} чит. × ${incomePerReader(state, c, x.ch)} (цена «${priceLabels[state.price]}» ${c.balance.prices[state.price]} + реклама ${adRateOf(state, c, x.ch)})`)),
       scandalNext < 1 ? h('p', { class: 'hint' }, `После скандала реклама приносит ×${scandalNext.toFixed(1)}, восстанавливается на ${b.scandalRecovery} за ход.`) : null,
+      ...subsidies.map((x) => ledgerRow(x.title, x.amount ?? 0, `до дня ${x.until}`)),
       ...items.map((x) => ledgerRow(upkeepLabel(x), -x.amount)),
       ledgerTotal('Итого за ход', net),
+      ...(state.deals.length
+        ? [
+            h('h3', { class: 'section' }, 'Сделки'),
+            ...state.deals.map((x) =>
+              h(
+                'p',
+                { class: 'hint' },
+                `${offerOf(c, x.id).title}: до дня ${x.untilTurn}. ${offerOf(c, x.id).kind === 'silence' && x.building !== undefined ? `Молчим о: ${buildingName(state, c, x.building)}.` : 'Ни одной плохой новости о власти.'}`,
+              ),
+            ),
+          ]
+        : []),
     ];
     if (r) {
       out.push(
         h('h3', { class: 'section' }, `Прошлый ход (${r.turn})`),
         ...Object.entries(r.income).map(([ch, v]) => ledgerRow(`Продажи: ${channelOf(c, ch).name}`, v, `${r.buyers[ch] ?? 0} чит.`)),
+        ...(r.deals?.paid ? [ledgerRow('Субсидия мэрии', r.deals.paid)] : []),
         ...r.upkeepItems.map((x) => ledgerRow(upkeepLabel(x), -x.amount)),
+        ...(r.deals?.broken ?? []).map((t) => ledgerRow(`Нарушена сделка «${t}»`, -(c.offers.find((o) => o.title === t)?.penalty ?? 0))),
         ledgerTotal('Итого', r.moneyDelta),
       );
     }
@@ -2138,6 +2192,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     renderIssue();
     renderExposures();
     renderReconcile();
+    renderOffer();
     renderRival();
     renderModal();
     renderOutcome();

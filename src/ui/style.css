@@ -611,6 +611,29 @@ button.publish.level-3.bump-up {
   color: #265c42;
 }
 
+/* Offers with a catch: an envelope on the desk, with yes and no. */
+.notice-offer {
+  border-left-color: #c79a2e;
+}
+
+.notice-offer .offer-catch {
+  color: #a22633;
+}
+
+.offer-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.kicker.offer-kicker {
+  color: #8a6a2a;
+}
+
+.kicker.deal-kicker {
+  color: #a22633;
+}
+
 /* Story arcs: the day of the story, coloured by the ending it heads to. */
 .kicker.arc-kicker {
   color: #4b5a8a;

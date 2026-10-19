@@ -164,7 +164,8 @@ export interface CardTemplate {
    * investigation = dirt on a social group, only from assigned reporters (CONCEPT.md §3.3а).
    */
   /** debunk = our answer to a story of the rival paper (save mode, CONCEPT.md §8); never found by search. */
-  source: 'event' | 'fact' | 'rumor' | 'investigation' | 'debunk';
+  /** offer = the dirt an anonymous source sends with an offer (CONCEPT.md §3.5а); never found by search. */
+  source: 'event' | 'fact' | 'rumor' | 'investigation' | 'debunk' | 'offer';
   /** Investigations: the social group the dirt is about. */
   target?: GroupId;
   /** local = about this city (default), global = about the country or the world. */
@@ -209,6 +210,52 @@ export interface CardTemplate {
   /** Story arcs (CONCEPT.md §3.1а): the arc this template is a stage of; never found by ordinary search. */
   arc?: string;
   arcStage?: 1 | 2 | 3 | 'bad' | 'good';
+}
+
+/**
+ * Offers with a catch (CONCEPT.md §3.5а): silence = paid not to write bad news about one place,
+ * subsidy = paid daily for no bad news on a topic, kompromat = a sensation that may be a setup.
+ */
+export type OfferKind = 'silence' | 'subsidy' | 'kompromat';
+
+export interface OfferDef {
+  id: string;
+  kind: OfferKind;
+  /** Offered only in this mode; any mode when missing. */
+  mode?: GameMode;
+  /** Needs an open building of this type (silence: the place the deal is about). */
+  requires?: BuildingType;
+  title: string;
+  /** {place}, {amount} and {days} are filled in. */
+  text: string;
+  /** What can go wrong, shown with the offer. */
+  catch: string;
+  /** silence: paid at once; subsidy: paid every day. */
+  amount?: number;
+  days?: number;
+  /** silence: money to pay back and reputation lost when the deal is broken. */
+  penalty?: number;
+  trustPenalty?: number;
+  /** subsidy: reputation every reader loses each day of the deal; the topic it keeps us quiet about. */
+  trustDrain?: number;
+  topic?: Topic;
+  /** kompromat: the card it brings and the chance the dirt is fake. */
+  template?: string;
+  setupChance?: number;
+}
+
+/** An offer on the table this turn; it lapses (declined) when the turn ends. */
+export interface Offer {
+  id: string;
+  /** silence: the building the deal is about. */
+  building?: number;
+}
+
+/** An accepted deal that lasts until `untilTurn`. */
+export interface Deal {
+  id: string;
+  building?: number;
+  untilTurn: number;
 }
 
 /** A multi-day story (CONCEPT.md §3.1а): three stages on three days, then one of two endings. */
@@ -300,6 +347,12 @@ export interface Balance {
   /** Mood below `arcMoodPivot` pushes the ending to the bad side by `arcMoodBias` per unit. */
   arcMoodBias: number;
   arcMoodPivot: number;
+  /** Offers (CONCEPT.md §3.5а): daily chance, the first turn and the quiet days after each one. */
+  offerChance: number;
+  offerStartTurn: number;
+  offerCooldown: number;
+  /** A fake kompromat caught by the fact-checkers costs this many times the usual reputation. */
+  setupPenaltyMul: number;
   /** Chance the rival takes up a stage of a running arc on top of its own stories. */
   rivalArcChance: number;
   /** The same for the rival's debunks of our stories: the reputation we lose. */
@@ -506,6 +559,7 @@ export interface Content {
   buildings: BuildingDef[];
   reporters: ReporterDef[];
   arcs: ArcDef[];
+  offers: OfferDef[];
   balance: Balance;
 }
 
@@ -572,6 +626,8 @@ export interface CardInstance {
   building?: number;
   /** Its template has soothing headlines: it can be told «Без паники» or «Всё хорошо!». */
   soft?: boolean;
+  /** Kompromat from an anonymous source that is fake: told as true, it is a lie for the fact-checkers. Hidden. */
+  setup?: boolean;
   /** Debunks: the rival's printed story it answers (uid in `RivalState.printed`), its headline and effect. */
   debunk?: { uid: number; title: string; effect: EffectType | null };
 }
@@ -696,6 +752,8 @@ export interface ExposedStory {
   trustLoss: number;
   /** Conflict stories: the pair it was about (picks the matching illustration). */
   conflict?: [GroupId, GroupId];
+  /** The anonymous kompromat was a fake. */
+  setup?: boolean;
 }
 
 export interface PendingLie {
@@ -742,6 +800,10 @@ export interface GameState {
   /** Running story arcs and the ids of arcs this game already had (each happens once). */
   arcs: ArcState[];
   arcsDone: string[];
+  /** Offers with a catch (CONCEPT.md §3.5а): today's offer, the deals in force, the turn of the last offer. */
+  offer: Offer | null;
+  deals: Deal[];
+  lastOfferTurn: number;
   money: number;
   /** Price level of the paper (index in `Balance.prices`), chosen by the player. */
   price: number;
@@ -844,6 +906,8 @@ export interface TurnReport {
   upkeep: number;
   /** What the upkeep was paid for (money window, CONCEPT.md §7.3). */
   upkeepItems: UpkeepItem[];
+  /** Offers with a catch (CONCEPT.md §3.5а): money the deals paid this turn and the deals we broke. */
+  deals: { paid: number; broken: string[] };
   moneyDelta: number;
   /** Followers of at least one channel: at the start of the turn, lost and gained after it. */
   readers: ReadersChange & { before: number; after: number };

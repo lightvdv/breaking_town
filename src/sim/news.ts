@@ -47,6 +47,13 @@ export function cardTruth(card: CardInstance, distortion: number): TruthLevel {
   return Math.min(2, card.baseTruth + distortion) as TruthLevel;
 }
 
+/** What a story does to believers as it is told: the soothed effect, none for a calmed conflict, or by truth. */
+export function storyEffect(c: Content, card: CardInstance, distortion: number): CardEffect | null {
+  const tpl = templateOf(c, card.templateId);
+  if (distortion < 0) return card.conflict ? null : tpl.softEffects?.[-distortion - 1] ?? null;
+  return tpl.effects[cardTruth(card, distortion)];
+}
+
 export function maxDistortion(card: CardInstance): number {
   return 2 - card.baseTruth;
 }
@@ -189,7 +196,7 @@ export function previewPublication(
   return {
     title: storyTitle(c, card, pub.distortion),
     truth,
-    effect: pub.distortion < 0 ? (card.conflict ? null : tpl.softEffects?.[-pub.distortion - 1] ?? null) : tpl.effects[truth],
+    effect: storyEffect(c, card, pub.distortion),
     impact,
     tier: effectiveTier(card, pub.distortion),
     reachChance: outletReach(state, c, pub.placement),
@@ -378,9 +385,11 @@ export function publish(
     // A believed debunk: the outlet it answers loses this reader's trust (the rival's when we print
     // it, ours when the rival does), and who believed the story stops believing it — the fear or the
     // false comfort it brought goes away (CONCEPT.md §8).
-    if (effect?.type === 'debunk' && card.debunk) {
+    if (effect?.type === 'debunk') {
       if (rival) r.trust = clamp(r.trust - b.rivalDebunkTrust * effect.strength * hit, 0, 100);
       else r.rivalTrust = clamp(r.rivalTrust - b.debunkTrust * effect.strength * hit, 0, 100);
+    }
+    if (effect?.type === 'debunk' && card.debunk) {
       if (r.beliefs.some((x) => x.cardUid === card.debunk!.uid)) {
         r.beliefs = r.beliefs.filter((x) => x.cardUid !== card.debunk!.uid);
         const comforted = card.debunk.effect === 'moodUp';
@@ -473,7 +482,8 @@ export function exposeNews(
 ): ExposedStory {
   const b = c.balance;
   const before = averageTrust(state, c);
-  const penalty = b.trustGain * b.trustPenaltyMul * b.placementExposurePenalty[story.placement] * mods.exposurePenaltyMul;
+  const penalty =
+    b.trustGain * b.trustPenaltyMul * b.placementExposurePenalty[story.placement] * mods.exposurePenaltyMul * (story.setup ? b.setupPenaltyMul : 1);
   const viewerSet = new Set(viewers);
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
@@ -493,7 +503,8 @@ export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Mo
   const active = Math.max(1, state.residents.filter((r) => r.status === 'active').length);
   const exposed: ExposedStory[] = [];
   for (const n of news) {
-    if (n.truth === 0) {
+    const fake = !!state.hand.find((x) => x.uid === n.pub.cardUid)?.setup;
+    if (n.truth === 0 && !fake) {
       for (const id of n.viewers) state.residents[id].trust = clamp(state.residents[id].trust + b.trustGain, 0, 100);
       continue;
     }
@@ -503,12 +514,14 @@ export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Mo
       templateId: card.templateId,
       ...(card.conflict ? { conflict: card.conflict } : {}),
       title: n.report.title,
-      truth: n.truth,
+      // A fake kompromat is a lie, however true it was told.
+      truth: fake ? 2 : n.truth,
       tier: effectiveTier(card, n.pub.distortion),
       placement: n.pub.placement,
       turn: state.turn,
+      ...(fake ? { setup: true } : {}),
     };
-    const risk = exposureRiskOf(state, c, mods, n.truth, n.pub.placement, n.viewers.length / active);
+    const risk = exposureRiskOf(state, c, mods, story.truth, n.pub.placement, n.viewers.length / active);
     if (chance(rng, risk)) {
       n.report.exposed = true;
       exposed.push(exposeNews(state, c, mods, story, n.viewers));

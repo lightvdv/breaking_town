@@ -611,6 +611,75 @@ button.publish.level-3.bump-up {
   color: #265c42;
 }
 
+/* «Письма читателей»: a column of letters under the paper's stories. */
+.letters {
+  border-top: 2px solid var(--paper-ink);
+  margin-top: 8px;
+  padding-top: 6px;
+}
+
+.letters[hidden] {
+  display: none;
+}
+
+.letters-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px 16px;
+}
+
+.letter {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.letter-text {
+  margin: 0;
+  font-style: italic;
+  font-size: 13px;
+}
+
+.letter-sign {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--paper-muted);
+}
+
+.person-portrait {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  image-rendering: pixelated;
+}
+
+.person-portrait.big {
+  width: 48px;
+  height: 48px;
+}
+
+.person-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--paper-muted);
+}
+
+.person-card p {
+  margin: 2px 0;
+}
+
+.person-card.gone {
+  opacity: 0.6;
+}
+
+.person-log {
+  font-size: 12px;
+  color: var(--paper-muted);
+}
+
 /* The newsroom's news: level-ups and who quit. */
 .notice-staff {
   border-left-color: #4b5a8a;

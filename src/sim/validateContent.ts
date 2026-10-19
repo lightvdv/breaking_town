@@ -147,6 +147,15 @@ export function validateContent(c: Content): string[] {
       else if (t.conflict || t.scope === 'global' || t.source === 'investigation' || t.source === 'debunk') errors.push(`card ${id}: arc stages are local events, facts or rumors`);
     }
   }
+  // Named residents and their letters (CONCEPT.md §2.2а).
+  unique('person', c.people.map((x) => x.id));
+  for (const p of c.people) {
+    if (!c.groups.some((g) => g.id === p.group)) errors.push(`person ${p.id}: unknown group ${p.group}`);
+    if (p.job && !c.groups.find((g) => g.id === p.group)?.jobs.includes(p.job)) errors.push(`person ${p.id}: ${p.group} do not work at ${p.job}`);
+  }
+  for (const kind of ['scared', 'happy', 'doubted', 'outraged', 'lostJob', 'left', 'protest', 'price', 'anonymous'] as const) {
+    if (!c.letters[kind]?.length) errors.push(`letters: no ${kind} texts`);
+  }
   // Offers with a catch (CONCEPT.md §3.5а).
   unique('offer', c.offers.map((x) => x.id));
   for (const o of c.offers) {

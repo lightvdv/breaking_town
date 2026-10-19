@@ -11,6 +11,7 @@ import { advanceArcs, pushArc } from './arcs';
 import { collectIncome } from './economy';
 import { advanceOffers, settleDeals } from './offers';
 import { updateStaff } from './staff';
+import { assignPeople, snapshotPeople, updatePeople } from './people';
 import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf } from './lookup';
 import { getModifiers, placementSlots, type Modifiers } from './modifiers';
@@ -56,6 +57,9 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy')
     offer: null,
     deals: [],
     lastOfferTurn: 0,
+    people: {},
+    letters: [],
+    fates: [],
     staff: Object.fromEntries(c.balance.startReporters.map((id) => [id, { xp: 0, loyalty: c.balance.startLoyalty }])),
     money: c.balance.startMoney,
     price: c.balance.startPrice,
@@ -89,6 +93,7 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy')
     outcome: null,
   };
   state.metrics = computeMetrics(state, c);
+  assignPeople(state, c, rng);
   seedFollowers(state, c, rng, getModifiers(state, c));
   if (state.rival) seedRival(state, c, rng);
   startTurn(state, c);
@@ -224,6 +229,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const activeBefore = new Set(state.residents.filter((r) => r.status === 'active').map((r) => r.id));
   const openBefore = new Set(state.buildings.filter((x) => x.open).map((x) => x.id));
   const reconcileBefore = state.reconciliation;
+  const peopleBefore = snapshotPeople(state);
 
   state.lastReactions = {};
   state.scandal = Math.min(1, state.scandal + b.scandalRecovery);
@@ -275,6 +281,8 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
 
   const tensionMid = { ...state.tension };
   const notes = startTurn(state, c);
+  // The named residents: what the day did to them, and their letters to the paper (CONCEPT.md §2.2а).
+  updatePeople(state, c, rng, peopleBefore, published, exposures);
   state.outcome = checkOutcome(state, c);
   const reconciliationStarted = state.reconciliation && state.reconciliation !== reconcileBefore ? { ...state.reconciliation } : null;
   const highlights = findHighlights(state, c, {

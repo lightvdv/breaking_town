@@ -5,9 +5,11 @@ import buildings from './buildings.json';
 import cards from './cards.json';
 import channels from './channels.json';
 import offers from './offers.json';
+import letters from './letters.json';
+import people from './people.json';
 import groups from './groups.json';
 import reporters from './reporters.json';
 import upgrades from './upgrades.json';
 
 // JSON imports are typed loosely (string instead of literal unions); validateContent checks the shape.
-export const content = { arcs, balance, buildings, cards, channels, groups, offers, reporters, upgrades } as unknown as Content;
+export const content = { arcs, balance, buildings, cards, channels, groups, letters, offers, people, reporters, upgrades } as unknown as Content;

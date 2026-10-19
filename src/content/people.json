@@ -1,0 +1,82 @@
+[
+  {
+    "id": "grisha",
+    "name": "Гриша",
+    "role": "бармен",
+    "group": "youth",
+    "job": "entertainment",
+    "bio": "Наливает в баре и знает все городские новости раньше газеты.",
+    "letterChance": 0.4,
+    "portrait": { "bg": "magenta", "skin": "skin", "hair": "ink", "hairStyle": "slick", "clothes": "ink", "accessory": "earrings" }
+  },
+  {
+    "id": "zinaida",
+    "name": "Зинаида Петровна",
+    "role": "пенсионерка",
+    "group": "pensioners",
+    "female": true,
+    "bio": "Читает газету от корки до корки и пишет в редакцию в каждый номер.",
+    "letterChance": 0.95,
+    "portrait": { "bg": "amber", "skin": "skin", "hair": "silver", "hairStyle": "bun", "clothes": "plum", "accessory": "glasses" }
+  },
+  {
+    "id": "nikolay",
+    "name": "Николай Степанович",
+    "role": "токарь",
+    "group": "workers",
+    "job": "factory",
+    "bio": "Тридцать лет у станка. Верит заводу больше, чем мэрии.",
+    "letterChance": 0.35,
+    "portrait": { "bg": "blue", "skin": "skin", "hair": "grey", "hairStyle": "short", "clothes": "orange", "accessory": "beard" }
+  },
+  {
+    "id": "lyuba",
+    "name": "Люба",
+    "role": "продавщица",
+    "group": "workers",
+    "job": "shop",
+    "female": true,
+    "bio": "Стоит за прилавком и пересказывает газету каждому покупателю.",
+    "letterChance": 0.4,
+    "portrait": { "bg": "pink", "skin": "skin", "hair": "amber", "hairStyle": "curly", "clothes": "red", "accessory": "none" }
+  },
+  {
+    "id": "artem",
+    "name": "Артём",
+    "role": "студент",
+    "group": "youth",
+    "bio": "Газет не читает — почти. Хочет уехать в столицу.",
+    "letterChance": 0.3,
+    "portrait": { "bg": "cyan", "skin": "skin", "hair": "brown", "hairStyle": "mohawk", "clothes": "navyBlue", "accessory": "headphones" }
+  },
+  {
+    "id": "irina",
+    "name": "Ирина Сергеевна",
+    "role": "учительница",
+    "group": "intelligentsia",
+    "female": true,
+    "bio": "Проверяет каждую цифру в газете красной ручкой.",
+    "letterChance": 0.45,
+    "portrait": { "bg": "green", "skin": "skin", "hair": "darkRed", "hairStyle": "long", "clothes": "white", "accessory": "glasses" }
+  },
+  {
+    "id": "samuil",
+    "name": "Самуил Аронович",
+    "role": "врач",
+    "group": "intelligentsia",
+    "job": "hospital",
+    "bio": "Старый врач городской больницы. Не любит паники.",
+    "letterChance": 0.35,
+    "portrait": { "bg": "darkGrey", "skin": "skin", "hair": "white", "hairStyle": "bald", "clothes": "white", "accessory": "glasses" }
+  },
+  {
+    "id": "rustam",
+    "name": "Рустам",
+    "role": "грузчик",
+    "group": "workers",
+    "job": "shop",
+    "bio": "Разгружает фуры у магазина и кормит семью из пяти человек.",
+    "letterChance": 0.3,
+    "portrait": { "bg": "wood", "skin": "skinDark", "hair": "ink", "hairStyle": "short", "clothes": "brown", "accessory": "beard" }
+  }
+]

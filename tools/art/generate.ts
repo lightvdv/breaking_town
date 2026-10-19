@@ -132,6 +132,9 @@ reporters.forEach((r, i) => write(`sprites/reporters/${r.id}.png`, portrait(r.po
 // Social group portraits for the relations circle, described in the content file.
 const groups: { id: string; portrait: PortraitSpec }[] = JSON.parse(readFileSync(join(process.cwd(), 'src', 'content', 'groups.json'), 'utf8'));
 groups.forEach((g, i) => write(`sprites/groups/${g.id}.png`, portrait(g.portrait, 100 + i).toPng()));
+// Named residents (CONCEPT.md §2.2а): their portraits in the letters column and the residents window.
+const people: { id: string; portrait: PortraitSpec }[] = JSON.parse(readFileSync(join(process.cwd(), 'src', 'content', 'people.json'), 'utf8'));
+people.forEach((p, i) => write(`sprites/people/${p.id}.png`, portrait(p.portrait, 200 + i).toPng()));
 
 // News illustrations: every card template needs a scene. A conflict story about any pair of groups
 // also gets one picture per ordered pair, "<id>__<a>__<b>.png", showing exactly those two groups.
@@ -160,6 +163,7 @@ write(
       ui: Object.keys(uiIcons),
       reporters: reporters.map((r) => r.id),
       groups: groups.map((g) => g.id),
+      people: people.map((p) => p.id),
       intro: Object.keys(introScenes),
       news: cards.map((c) => c.id),
     },

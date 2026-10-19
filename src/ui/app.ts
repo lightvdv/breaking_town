@@ -33,6 +33,9 @@ import {
   answerOffer,
   dealBrokenBy,
   retainCost,
+  personResident,
+  type PersonDef,
+  type FateEvent,
   offerOf,
   offerText,
   playTurn,
@@ -302,7 +305,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
     h('div', { class: 'masthead-row' }, priceSelect, issueNo),
   );
   // The tray of stories left out is the last rubric of the page, folded into one line (CONCEPT.md §7.3).
-  const paper = h('div', { class: 'paper' }, masthead, h('div', { class: 'paper-grid' }, zones[2].root, zones[1].root, zones[0].root), zones.out.root);
+  // «Письма читателей» (CONCEPT.md §2.2а): what readers wrote about yesterday's issue.
+  const lettersBox = h('section', { class: 'letters', hidden: true });
+  const paper = h('div', { class: 'paper' }, masthead, h('div', { class: 'paper-grid' }, zones[2].root, zones[1].root, zones[0].root), lettersBox, zones.out.root);
   // Exposures and the mayor's reconciliation are announced by plaques above the paper (CONCEPT.md §7.3).
   const exposureNotice = h('section', { class: 'notice notice-exposed', hidden: true, role: 'status' });
   const reconcileNotice = h('section', { class: 'notice notice-peace', hidden: true, role: 'status' });
@@ -897,6 +902,87 @@ export function mountApp(root: HTMLElement, c: Content): void {
       ),
       h('p', { class: 'notice-note' }, `${rec.turnsLeft} ${turnsWord(rec.turnsLeft)} их вражда будет остывать, а фактчекеры проверяют прессу строже.`),
     );
+  }
+
+  const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
+  const personPortrait = (id: string, cls = 'person-portrait') =>
+    h('img', { class: cls, src: `${assetBase}sprites/people/${id}.png`, alt: '', width: 32, height: 32 });
+
+  /** The letters column of today's paper: readers on yesterday's issue, the named residents first. */
+  function renderLetters(): void {
+    const letters = state.letters ?? [];
+    lettersBox.hidden = !letters.length || searching;
+    if (lettersBox.hidden) return;
+    lettersBox.replaceChildren(
+      h('h4', { class: 'zone-label' }, 'Письма читателей'),
+      h(
+        'div',
+        { class: 'letters-list' },
+        ...letters.map((l) =>
+          h(
+            'div',
+            { class: `letter letter-${l.kind}` },
+            l.from ? personPortrait(l.from) : null,
+            h('div', {}, h('p', { class: 'letter-text' }, `«${l.text}»`), h('p', { class: 'letter-sign' }, `— ${l.name}`)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /** What happened to a named resident, in words. */
+  function fateText(p: PersonDef, e: FateEvent): string {
+    const a = p.female ? 'а' : '';
+    const place = e.building !== undefined && state.buildings[e.building] ? buildingName(state, c, e.building) : 'работа';
+    switch (e.kind) {
+      case 'lostJob':
+        return state.buildings[e.building ?? -1]?.open === false ? `${place} закрылся — остал${p.female ? 'ась' : 'ся'} без работы` : `потерял${a} работу (${lowerFirst(place)})`;
+      case 'gotJob':
+        return `${p.female ? 'нашла' : 'нашёл'} работу: ${lowerFirst(place)}`;
+      case 'left':
+        return `уехал${a} из города`;
+      case 'protest':
+        return `выш${p.female ? 'ла' : 'ел'} на протест`;
+      case 'fear':
+        return `боится выходить из дома`;
+    }
+  }
+
+  /** The named residents (CONCEPT.md §2.2а): who they are, how they live now, what happened to them. */
+  function peopleContent(): HTMLElement[] {
+    return c.people.flatMap((p) => {
+      const r = personResident(state, p.id);
+      if (!r) return [];
+      const a = p.female ? 'а' : '';
+      const now =
+        r.status === 'left'
+          ? `Уехал${a} из города.`
+          : [
+              r.job !== null ? `Работает: ${lowerFirst(buildingName(state, c, r.job))}` : groupOf(c, p.group).jobs.length ? 'Без работы' : 'На пенсии',
+              r.protestTurns > 0 ? 'протестует' : '',
+              r.fearTurns > 0 ? 'боится выходить из дома' : '',
+              r.mood < 0.35 ? 'в отчаянии' : r.mood > 0.7 ? (p.female ? 'довольна жизнью' : 'доволен жизнью') : '',
+              r.follows.length ? 'читает «Вестник»' : '',
+            ]
+              .filter(Boolean)
+              .join(' · ');
+      const log = state.fates.filter((e) => e.person === p.id).slice(0, 3);
+      return [
+        h(
+          'div',
+          { class: `person-card${r.status === 'left' ? ' gone' : ''}` },
+          personPortrait(p.id, 'person-portrait big'),
+          h(
+            'div',
+            {},
+            h('b', {}, `${p.name}, ${p.role}`),
+            h('p', { class: 'hint' }, p.bio),
+            h('p', { class: r.status === 'left' || (r.job === null && groupOf(c, p.group).jobs.length) ? 'bad' : '' }, now),
+            ...log.map((e) => h('p', { class: 'person-log' }, `День ${e.turn}: ${fateText(p, e)}`)),
+          ),
+        ),
+      ];
+    });
   }
 
   /** The newsroom's news of the day (CONCEPT.md §3.3б): who grew, who quit, who leaked our lies. */
@@ -2022,6 +2108,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h('div', {}, h('b', {}, `${active.length}`), h('span', {}, `жителей сейчас · всего уехали ${all.length - active.length}`)),
       ),
       ...relationsContent(),
+      h('h3', { class: 'section' }, 'Горожане'),
+      ...peopleContent(),
       h('h3', { class: 'section' }, 'Группы'),
       ...rows,
       h('button', { onclick: () => openModal('city') }, '← Город'),
@@ -2262,6 +2350,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     renderExposures();
     renderReconcile();
     renderStaff();
+    renderLetters();
     renderOffer();
     renderRival();
     renderModal();

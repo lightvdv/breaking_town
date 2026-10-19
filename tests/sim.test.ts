@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { content } from '../src/content';
+import { snapshotPeople, updatePeople } from '../src/sim/people';
 import {
   averageTrust,
   createGame,
@@ -754,7 +755,7 @@ describe('group relations', () => {
     expect(calm.title).toBe(storyTitle(content, card, -1));
     expect(calm.effect).toBeNull();
     const plain = createGame(content, 2);
-    const other = plain.hand.find((x) => !x.conflict)!;
+    const other = plain.hand.find((x) => !x.conflict && !x.soft)!;
     expect(() => playTurn(plain, content, { publish: [{ cardUid: other.uid, placement: 1, distortion: -1 }] })).toThrow();
   });
 
@@ -1054,5 +1055,38 @@ describe('reporters with character', () => {
     answerOffer(s, content, true);
     expect(s.reporters).toContain('kim');
     expect(s.money).toBe(money - reporterOf(content, 'kim').salary * content.balance.poachRetain);
+  });
+});
+
+describe('named residents and letters', () => {
+  it('every named resident is a real resident of their group, at their work when possible', () => {
+    const s = createGame(content, 6);
+    for (const p of content.people) {
+      const r = s.residents[s.people[p.id]];
+      expect(r.group).toBe(p.group);
+    }
+    expect(new Set(Object.values(s.people)).size).toBe(Object.keys(s.people).length);
+    const grisha = s.residents[s.people.grisha];
+    if (grisha.job !== null) expect(s.buildings[grisha.job].type).toBe('entertainment');
+  });
+  it('readers write letters about the issue, and a lost job goes to the fate log', () => {
+    const s = createGame(content, 6);
+    let letters = 0;
+    for (let i = 0; i < 8 && !s.outcome; i++) {
+      playTurn(s, content, { publish: s.hand.slice(0, 2).map((x, j) => ({ cardUid: x.uid, placement: (j ? 0 : 2) as 0 | 2, distortion: 0 })) });
+      letters += s.letters.length;
+      for (const l of s.letters) expect(l.text).not.toMatch(/[{}]/);
+      expect(s.letters.length).toBeLessThanOrEqual(content.balance.lettersMax);
+    }
+    expect(letters).toBeGreaterThan(0);
+    // Losing a job shows in the fate log and brings a letter.
+    const nikolay = s.residents[s.people.nikolay];
+    nikolay.status = 'active';
+    nikolay.job = s.buildings.findIndex((x) => x.type === 'factory');
+    const before = snapshotPeople(s);
+    nikolay.job = null;
+    updatePeople(s, content, s.rng, before, [], []);
+    expect(s.fates[0]).toMatchObject({ person: 'nikolay', kind: 'lostJob' });
+    expect(s.letters.some((l) => l.from === 'nikolay' && l.kind === 'lostJob')).toBe(true);
   });
 });

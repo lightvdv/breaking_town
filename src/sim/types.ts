@@ -272,6 +272,44 @@ export interface Deal {
   untilTurn: number;
 }
 
+/** A named resident whose fate the player can follow (CONCEPT.md §2.2а). */
+export interface PersonDef {
+  id: string;
+  name: string;
+  /** «бармен», «пенсионерка»: the signature under a letter. */
+  role: string;
+  group: GroupId;
+  /** Works in a building of this type when the game starts, if one has room. */
+  job?: BuildingType;
+  female?: boolean;
+  bio: string;
+  /** Chance to write to the paper after reading an issue. */
+  letterChance: number;
+  portrait: Record<string, string>;
+}
+
+export type LetterKind = 'scared' | 'happy' | 'doubted' | 'outraged' | 'lostJob' | 'left' | 'protest' | 'price';
+
+/** Letter templates by kind ({title}, {женская|мужская} forms) and signatures of anonymous readers. */
+export type LetterTemplates = Record<LetterKind, string[]> & { anonymous: string[] };
+
+/** A letter in «Письма читателей»: from a named resident (`from`) or an anonymous reader. */
+export interface Letter {
+  from: string | null;
+  name: string;
+  kind: LetterKind;
+  text: string;
+}
+
+/** Something that happened to a named resident. */
+export interface FateEvent {
+  person: string;
+  turn: number;
+  kind: 'lostJob' | 'gotJob' | 'left' | 'protest' | 'fear';
+  /** lostJob: the building they worked in. */
+  building?: number;
+}
+
 /** A multi-day story (CONCEPT.md §3.1а): three stages on three days, then one of two endings. */
 export interface ArcDef {
   id: string;
@@ -365,6 +403,10 @@ export interface Balance {
   offerChance: number;
   offerStartTurn: number;
   offerCooldown: number;
+  /** «Письма читателей» (CONCEPT.md §2.2а): letters a day at most, chance of an anonymous one, fate events kept. */
+  lettersMax: number;
+  anonymousLetterChance: number;
+  fatesKept: number;
   /** Reporters with character (CONCEPT.md §3.3б): xp needed for each level and what a level adds. */
   reporterLevels: number[];
   levelLuck: number;
@@ -595,6 +637,8 @@ export interface Content {
   reporters: ReporterDef[];
   arcs: ArcDef[];
   offers: OfferDef[];
+  people: PersonDef[];
+  letters: LetterTemplates;
   balance: Balance;
 }
 
@@ -842,6 +886,10 @@ export interface GameState {
   /** Offers with a catch (CONCEPT.md §3.5а): today's offer, the deals in force, the turn of the last offer. */
   offer: Offer | null;
   deals: Deal[];
+  /** Named residents (CONCEPT.md §2.2а): person id → resident id; today's letters; what happened to them. */
+  people: Record<string, number>;
+  letters: Letter[];
+  fates: FateEvent[];
   /** Experience and loyalty of the reporters, by id. */
   staff: Record<string, StaffState>;
   lastOfferTurn: number;

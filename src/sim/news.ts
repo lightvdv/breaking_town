@@ -38,9 +38,12 @@ export interface PublicationPreview {
   tension: { pair: string; delta: number } | null;
 }
 
-/** Calm framing of a conflict story is honest: it tells the truth and takes the heat out (CONCEPT.md §5.5). */
+/**
+ * Calm framing of a conflict story is honest: it tells the truth and takes the heat out (CONCEPT.md §5.5).
+ * Soothing a bad story is not: «Без паники» (−1) is a half-truth, «Всё хорошо!» (−2) a lie.
+ */
 export function cardTruth(card: CardInstance, distortion: number): TruthLevel {
-  if (distortion < 0) return 0;
+  if (distortion < 0) return card.conflict ? 0 : (Math.min(2, -distortion) as TruthLevel);
   return Math.min(2, card.baseTruth + distortion) as TruthLevel;
 }
 
@@ -48,9 +51,14 @@ export function maxDistortion(card: CardInstance): number {
   return 2 - card.baseTruth;
 }
 
-/** Conflict stories can also be calmed: one step below the truth. */
+/** Conflict stories can be calmed one step below the truth; bad true stories soothed two steps. */
 export function minDistortion(card: CardInstance): number {
-  return card.conflict ? -1 : 0;
+  return card.conflict ? -1 : card.soft && card.baseTruth === 0 ? -2 : 0;
+}
+
+/** Soothing a bad story: «Без паники» or «Всё хорошо!» (not the honest calm framing of a conflict). */
+export function isSoothed(card: CardInstance, distortion: number): boolean {
+  return distortion < 0 && !card.conflict;
 }
 
 /** Each step of distortion raises the story one tier, up to a sensation (CONCEPT.md §3.1); calming lowers it. */
@@ -68,14 +76,16 @@ export function limitSensations(state: GameState, c: Content, publish: Publicati
     .filter((p) => effectiveTier(cardOf(p), p.distortion) === 3)
     .sort((a, b) => cardOf(b).tier - cardOf(a).tier || b.placement - a.placement);
   for (const p of sensations.slice(c.balance.maxSensations)) {
-    while (p.distortion > minDistortion(cardOf(p)) && effectiveTier(cardOf(p), p.distortion) === 3) p.distortion--;
+    // Toned down to the truth at most: soothing is a choice, not a way out of the rule.
+    const floor = Math.max(minDistortion(cardOf(p)), cardOf(p).conflict ? -1 : 0);
+    while (p.distortion > floor && effectiveTier(cardOf(p), p.distortion) === 3) p.distortion--;
   }
 }
 
 /** The headline at this distortion, with the conflict pair's names filled in. */
 export function storyTitle(c: Content, card: CardInstance, distortion: number): string {
   const tpl = templateOf(c, card.templateId);
-  const raw = distortion < 0 ? tpl.calmTitle ?? '' : tpl.titles[cardTruth(card, distortion)] ?? '';
+  const raw = distortion < 0 ? (card.conflict ? tpl.calmTitle : tpl.softTitles?.[-distortion - 1]) ?? '' : tpl.titles[cardTruth(card, distortion)] ?? '';
   // A debunk quotes the rival's headline.
   return fillTitle(c, card.debunk ? raw.replace('{story}', card.debunk.title) : raw, card.conflict);
 }
@@ -179,7 +189,7 @@ export function previewPublication(
   return {
     title: storyTitle(c, card, pub.distortion),
     truth,
-    effect: pub.distortion < 0 ? null : tpl.effects[truth],
+    effect: pub.distortion < 0 ? (card.conflict ? null : tpl.softEffects?.[-pub.distortion - 1] ?? null) : tpl.effects[truth],
     impact,
     tier: effectiveTier(card, pub.distortion),
     reachChance: outletReach(state, c, pub.placement),
@@ -317,8 +327,9 @@ export function publish(
   const tpl = templateOf(c, card.templateId);
   const truth = cardTruth(card, pub.distortion);
   const title = storyTitle(c, card, pub.distortion);
-  const calm = pub.distortion < 0;
-  const effect = calm ? null : tpl.effects[truth];
+  const calm = pub.distortion < 0 && !!card.conflict;
+  const soothed = isSoothed(card, pub.distortion);
+  const effect = calm ? null : soothed ? tpl.softEffects?.[-pub.distortion - 1] ?? null : tpl.effects[truth];
   const impact = impactOf(state, c, card, tpl, pub, repeatsThisTurn);
   // Interesting stories are retold more, and viral channels spread them further.
   const retell = clamp(

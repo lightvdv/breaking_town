@@ -28,6 +28,8 @@ import {
   rivalReaders,
   rivalTrust,
   setRivalWatch,
+  cardTruth,
+  minDistortion,
   salesOf,
   setPrice,
   buyWillingness,
@@ -810,6 +812,26 @@ describe('group relations', () => {
     const r = playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 2, distortion: 0 }] });
     expect(r.publications[0].tension![pairKey(content, 'youth', 'workers')]).toBeGreaterThan(0);
     expect(r.tensionBefore[pairKey(content, 'youth', 'workers')]).toBe(before);
+  });
+});
+
+describe('soothing (CONCEPT.md §3.1)', () => {
+  it('a bad true story can be told «Без паники» (half-truth) or «Всё хорошо!» (lie); it calms instead of scaring', () => {
+    const s = createGame(content, 4);
+    const tpl = templateOf(content, 'salary_delay');
+    const card = { uid: s.nextUid++, templateId: tpl.id, baseTruth: 0 as const, createdTurn: s.turn, tier: 2 as const, scope: 'local' as const, reporterId: s.reporters[0], soft: true };
+    s.hand = [card];
+    expect(minDistortion(card)).toBe(-2);
+    expect(cardTruth(card, -1)).toBe(1);
+    expect(cardTruth(card, -2)).toBe(2);
+    expect(storyTitle(content, card, -2)).toBe(tpl.softTitles![1]);
+    const mods = getModifiers(s, content);
+    expect(previewPublication(s, content, mods, { cardUid: card.uid, placement: 2, distortion: -2 }).effect?.type).toBe('moodUp');
+    expect(previewPublication(s, content, mods, { cardUid: card.uid, placement: 2, distortion: -1 }).effect).toBeNull();
+    expect(previewPublication(s, content, mods, { cardUid: card.uid, placement: 2, distortion: -1 }).tier).toBe(1);
+    // A rumor or good news has nothing to soothe.
+    expect(minDistortion({ ...card, soft: undefined })).toBe(0);
+    expect(() => playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 2, distortion: -2 }] })).not.toThrow();
   });
 });
 

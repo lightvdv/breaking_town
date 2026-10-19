@@ -156,6 +156,21 @@ const liarDefender: Strategy = (s) => {
   watchRival(s);
   return defend(s, (c) => (averageTrust(s, content) >= 40 ? maxDistortion(c) : 0));
 };
+/**
+ * The defender that also soothes bad true news («Без паники», a half-truth) while it is trusted,
+ * and goes all the way («Всё хорошо!») only when very trusted.
+ */
+const soother: Strategy = (s) => {
+  watchRival(s);
+  const d = defend(s, () => 0);
+  const trust = averageTrust(s, content);
+  for (const c of s.hand) {
+    if (!c.soft || c.baseTruth !== 0 || trust < 40 || d.publish.some((p) => p.cardUid === c.uid)) continue;
+    d.publish.push({ cardUid: c.uid, placement: 0, distortion: trust >= 55 ? -2 : -1 });
+  }
+  return d;
+};
+
 /** Prints only harmless truth and never answers the rival. */
 const bystander: Strategy = (s) => {
   const d = defend(s, () => 0);
@@ -163,7 +178,7 @@ const bystander: Strategy = (s) => {
   return d;
 };
 
-const saveStrategies: Record<string, Strategy> = { defender, liarDefender, bystander, destroyer: mixed };
+const saveStrategies: Record<string, Strategy> = { defender, liarDefender, soother, bystander, destroyer: mixed };
 
 const pairKeyOf = (c: CardInstance) => pairKey(content, c.conflict![0], c.conflict![1]);
 

@@ -139,6 +139,7 @@ export function findNews(
       tier: forcedTier !== null ? (Math.min(hi, Math.max(lo, forcedTier)) as NewsTier) : weightedPick(rng, tiers).tier,
       scope: scopeOf(tpl),
       reporterId: r.id,
+      ...(tpl.softTitles ? { soft: true } : {}),
     };
     // A story about a kind of place is about one open place of that kind (a closed bar makes no news).
     const places = tpl.requires ? state.buildings.filter((x) => x.type === tpl.requires && x.open) : [];

@@ -198,6 +198,12 @@ export interface CardTemplate {
   conflict?: [GroupId, GroupId] | 'any';
   /** Conflict stories: the calming title, one step below the truth. */
   calmTitle?: string;
+  /**
+   * Bad true stories: the soothing headlines «Без паники» (half-truth) and «Всё хорошо!» (lie), with
+   * their effects — distortion −1 and −2 (CONCEPT.md §3.1).
+   */
+  softTitles?: [string, string];
+  softEffects?: [CardEffect | null, CardEffect | null];
   /** Incidents: the kind of building where it happens (the city cutscene flies there). */
   place?: BuildingType;
 }
@@ -527,6 +533,8 @@ export interface CardInstance {
   conflict?: [GroupId, GroupId];
   /** The open building of the template's `requires` type the story is about. */
   building?: number;
+  /** Its template has soothing headlines: it can be told «Без паники» or «Всё хорошо!». */
+  soft?: boolean;
   /** Debunks: the rival's printed story it answers (uid in `RivalState.printed`), its headline and effect. */
   debunk?: { uid: number; title: string; effect: EffectType | null };
 }

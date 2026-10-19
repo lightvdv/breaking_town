@@ -50,6 +50,10 @@ export function validateContent(c: Content): string[] {
   }
 
   for (const t of c.cards) {
+    // Soothing headlines belong to bad true stories, two of them with an effect slot each.
+    if (t.softTitles && (t.softTitles.length !== 2 || t.softEffects?.length !== 2 || t.baseTruth !== 0 || t.conflict)) {
+      errors.push(`card ${t.id}: softTitles need two titles and two softEffects on a true non-conflict story`);
+    }
     if (t.tiers && !(t.tiers[0] >= 0 && t.tiers[0] <= t.tiers[1] && t.tiers[1] <= 3)) errors.push(`card ${t.id}: tiers must be 0 ≤ min ≤ max ≤ 3`);
     for (let level = 0; level < 3; level++) {
       const possible = level >= t.baseTruth;

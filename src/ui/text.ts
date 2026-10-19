@@ -1,6 +1,7 @@
 import {
   buildingDefOf,
   type CardEffect,
+  type CardInstance,
   type Content,
   type EffectType,
   type GameMode,
@@ -29,6 +30,20 @@ export const modeLabels: Record<GameMode, string> = { destroy: 'Разрушит
 export const priceLabels = ['Бесплатно', 'Дёшево', 'Как у всех', 'Дорого'];
 /** Framing of a conflict story between two groups (CONCEPT.md §5.5): calm, as is, heat, inflate. */
 export const framingLabels = ['Успокоить', 'Как есть', 'Подогреть', 'Раздуть'];
+/**
+ * How a story is told (CONCEPT.md §3.1): «Всё хорошо!» and «Без паники» soothe a bad story (a lie and
+ * a half-truth), «Как есть» is the truth, «Это неспроста» and «Всё пропало!» blow it up.
+ */
+export const toneLabels = ['Как есть', 'Это неспроста', 'Всё пропало!'];
+export const soothingLabels = ['Без паники', 'Всё хорошо!'];
+
+/** The name of the option for this story at this distortion; conflict stories keep their framing scale. */
+export function toneOf(card: CardInstance, distortion: number): string {
+  if (card.conflict) return framingLabels[distortion < 0 ? 0 : Math.min(2, card.baseTruth + distortion) + 1];
+  if (distortion < 0) return soothingLabels[Math.min(2, -distortion) - 1];
+  return toneLabels[Math.min(2, card.baseTruth + distortion)];
+}
+
 /** Relations between two groups by tension level. */
 export const tensionLabels = ['Мир', 'Трения', 'Вражда', 'Столкновения'];
 

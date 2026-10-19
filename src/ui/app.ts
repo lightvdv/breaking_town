@@ -18,12 +18,12 @@ import {
   issueLevel,
   effectiveTier,
   limitSensations,
+  cardTruth,
   setReporterTopics,
   onSpecialty,
   listPurchases,
   maxDistortion,
   minDistortion,
-  framingOf,
   storyTitle,
   pairKey,
   pairKeys,
@@ -71,9 +71,9 @@ import { applyTheme, loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
 import { portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
-  framingLabels,
   priceLabels,
   modeLabels,
+  toneOf,
   tensionLabels,
   effectLabels,
   effectText,
@@ -1110,8 +1110,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const truthButton = h(
       'button',
       {
-        class: `truth-chip ${d.distortion < 0 ? 'calm' : `t${p.truth}`}${menuOpen ? ' on' : ''}`,
-        title: card.conflict ? `${framingLabels[framingOf(card, d.distortion)]} — изменить подачу` : `${truthLabels[p.truth]} — изменить правдивость`,
+        class: `truth-chip ${d.distortion < 0 && card.conflict ? 'calm' : `t${p.truth}`}${menuOpen ? ' on' : ''}`,
+        title: `${toneOf(card, d.distortion)} (${truthLabels[p.truth].toLowerCase()}) — изменить подачу`,
         'aria-haspopup': 'menu',
         'aria-expanded': String(menuOpen),
         disabled: busy,
@@ -1120,8 +1120,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
           selected = null;
         }),
       },
-      d.distortion < 0 ? calmIcon() : truthIcon(p.truth),
-      h('span', { class: 'chip-label' }, card.conflict ? framingLabels[framingOf(card, d.distortion)] : truthLabels[p.truth]),
+      d.distortion < 0 && card.conflict ? calmIcon() : truthIcon(p.truth),
+      h('span', { class: 'chip-label' }, toneOf(card, d.distortion)),
       h('span', { class: 'chip-arrow' }, '▾'),
     );
     // "✕" takes a story out of the issue; in the tray "↩" brings it back as a brief.
@@ -1140,38 +1140,37 @@ export function mountApp(root: HTMLElement, c: Content): void {
       },
       out ? '↩' : '✕',
     );
-    // Each option shows what the player gets and pays: the headline it turns into, the story's level
-    // and the fact-check risk (CONCEPT.md §7.3).
-    const option = (dist: number, icon: Node, name: string, blockedHint: string | null) => {
-      const unavailable = dist < minDistortion(card) || dist > maxDistortion(card);
-      const preview = unavailable ? null : previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: dist });
-      const steps = preview ? preview.tier - card.tier : 0;
-      const stats = preview
-        ? `${tierLabels[preview.tier]}${steps > 0 ? ` ${'↑'.repeat(steps)}` : steps < 0 ? ' ↓' : ''} · риск ${Math.round(preview.exposureRisk * 100)}%`
-        : '';
+    // Each option shows what the player gets and pays: the headline it turns into, its truth, the
+    // story's level and the fact-check risk (CONCEPT.md §7.3). Which options there are depends on the
+    // story: only bad true news can be soothed, a rumor cannot be told «как есть», a conflict is framed.
+    const option = (dist: number, icon: Node, blockedHint: string | null) => {
+      const preview = previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: dist });
+      const steps = preview.tier - card.tier;
+      const stats = `${truthLabels[preview.truth]} · ${tierLabels[preview.tier]}${steps > 0 ? ` ${'↑'.repeat(steps)}` : steps < 0 ? ` ${'↓'.repeat(-steps)}` : ''} · риск ${Math.round(preview.exposureRisk * 100)}%`;
       return menuItem(
         d.distortion === dist,
-        !preview || !!blockedHint,
+        !!blockedHint,
         () => (d.distortion = dist),
         icon,
         h(
           'span',
           { class: 'opt' },
-          h('span', { class: 'opt-head' }, h('b', {}, name), h('small', {}, preview ? (blockedHint ?? stats) : 'правдивее не сделать')),
-          preview ? h('span', { class: 'opt-title' }, `«${preview.title}»`) : null,
+          h('span', { class: 'opt-head' }, h('b', {}, toneOf(card, dist)), h('small', {}, blockedHint ?? stats)),
+          h('span', { class: 'opt-title' }, `«${preview.title}»`),
         ),
       );
     };
+    const steps: number[] = [];
+    for (let dist = minDistortion(card); dist <= maxDistortion(card); dist++) steps.push(dist);
     const truthMenu = menuOpen
       ? h(
           'div',
           { class: 'place-menu truth-menu', role: 'menu' },
-          ...(card.conflict ? [option(-1, calmIcon(), framingLabels[0], null)] : []),
-          ...([0, 1, 2] as const).map((t) => {
-            const dist = t - card.baseTruth;
+          ...steps.map((dist) => {
             // Only one sensation per issue: a second one cannot be blown up.
-            const blocked = d.publish && dist >= 0 && effectiveTier(card, dist) === 3 && card.tier < 3 && sensationTaken(card);
-            return option(dist < 0 ? -2 : dist, truthIcon(t), card.conflict ? framingLabels[t + 1] : truthLabels[t], blocked ? 'в выпуске уже есть сенсация' : null);
+            const blocked = d.publish && dist > 0 && effectiveTier(card, dist) === 3 && card.tier < 3 && sensationTaken(card);
+            const icon = dist < 0 && card.conflict ? calmIcon() : truthIcon(cardTruth(card, dist));
+            return option(dist, icon, blocked ? 'в выпуске уже есть сенсация' : null);
           }),
         )
       : null;

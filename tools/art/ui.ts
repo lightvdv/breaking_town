@@ -224,35 +224,32 @@ function placement(level: 0 | 1 | 2): Raster {
   return outline(r);
 }
 
-/** One gold coin with a rim and a glint. */
-function coin(r: Raster, cx: number, cy: number, radius: number): void {
-  // Its own ink rim, so overlapping coins stay apart.
-  disc(r, cx, cy, radius + 1, 'ink');
-  disc(r, cx, cy, radius, 'amber');
-  disc(r, cx, cy, radius - 1.3, 'yellow');
-  r.set(Math.round(cx - radius / 2), Math.round(cy - radius / 2), 'white');
-}
+/** A gold coin seen from the side: top face with a glint, then its rim. */
+const COIN = [
+  '..kkkkkkkk..',
+  '.kyyyyyyyyk.',
+  'kyywyyyyyyyk',
+  'kaayyyyyyaak',
+  '.kaaaaaaaak.',
+  '..kkkkkkkk..',
+];
+/** Free: only the outline of a coin, nothing in it. */
+const NO_COIN = [
+  '..ssssssss..',
+  '.s........s.',
+  's..........s',
+  's..........s',
+  '.s........s.',
+  '..ssssssss..',
+];
 
-/** Cover price of the paper: an empty ring (free), then one, two and three coins (CONCEPT.md §3.4). */
+/** Cover price of the paper: an empty place (free), then a stack of one, two and three coins (CONCEPT.md §3.4). */
 function price(level: 0 | 1 | 2 | 3): Raster {
   const r = new Raster(16, 16);
-  if (level === 0) {
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        const d = Math.hypot(x - 7.5, y - 7.5);
-        if (d >= 4.3 && d <= 5.8) r.set(x, y, 'silver');
-      }
-    }
-  } else if (level === 1) coin(r, 7.5, 7.5, 5);
-  else if (level === 2) {
-    coin(r, 5, 9.5, 4);
-    coin(r, 10.5, 6, 4);
-  } else {
-    coin(r, 4.5, 10.5, 3.6);
-    coin(r, 11, 10.5, 3.6);
-    coin(r, 7.75, 4.5, 3.6);
-  }
-  return outline(r);
+  if (level === 0) r.art(2, 10, NO_COIN, { s: 'grey' });
+  // From the bottom up, each coin a little higher and drawn over the one below.
+  for (let i = 0; i < level; i++) r.art(2, 10 - i * 3, COIN, { k: 'ink', y: 'yellow', a: 'amber', w: 'white' });
+  return r;
 }
 
 export const uiIcons: Record<string, () => Raster> = {

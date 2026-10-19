@@ -64,8 +64,6 @@ import { applyTheme, loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
 import { portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
-  distortionLabels,
-  framingHints,
   framingLabels,
   tensionLabels,
   effectLabels,
@@ -294,7 +292,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
   });
   // A press anywhere else closes an open truth menu.
   document.addEventListener('pointerdown', (e) => {
-    if (truthMenuFor === null || (e.target as Element).closest('.place-menu, .place-btn')) return;
+    if (truthMenuFor === null || (e.target as Element).closest('.place-menu, .truth-chip')) return;
     truthMenuFor = null;
     render();
   });
@@ -974,7 +972,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const truthButton = h(
       'button',
       {
-        class: `place-btn truth-btn${menuOpen ? ' on' : ''}`,
+        class: `truth-chip ${d.distortion < 0 ? 'calm' : `t${p.truth}`}${menuOpen ? ' on' : ''}`,
         title: card.conflict ? `${framingLabels[framingOf(card, d.distortion)]} — изменить подачу` : `${truthLabels[p.truth]} — изменить правдивость`,
         'aria-haspopup': 'menu',
         'aria-expanded': String(menuOpen),
@@ -985,6 +983,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
         }),
       },
       d.distortion < 0 ? calmIcon() : truthIcon(p.truth),
+      h('span', { class: 'chip-label' }, card.conflict ? framingLabels[framingOf(card, d.distortion)] : truthLabels[p.truth]),
+      h('span', { class: 'chip-arrow' }, '▾'),
     );
     // "✕" takes a story out of the issue; in the tray "↩" brings it back as a brief.
     const out = where === 'out';
@@ -1002,28 +1002,38 @@ export function mountApp(root: HTMLElement, c: Content): void {
       },
       out ? '↩' : '✕',
     );
+    // Each option shows what the player gets and pays: the headline it turns into, the story's level
+    // and the fact-check risk (CONCEPT.md §7.3).
+    const option = (dist: number, icon: Node, name: string, blockedHint: string | null) => {
+      const unavailable = dist < minDistortion(card) || dist > maxDistortion(card);
+      const preview = unavailable ? null : previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: dist });
+      const steps = preview ? preview.tier - card.tier : 0;
+      const stats = preview
+        ? `${tierLabels[preview.tier]}${steps > 0 ? ` ${'↑'.repeat(steps)}` : steps < 0 ? ' ↓' : ''} · риск ${Math.round(preview.exposureRisk * 100)}%`
+        : '';
+      return menuItem(
+        d.distortion === dist,
+        !preview || !!blockedHint,
+        () => (d.distortion = dist),
+        icon,
+        h(
+          'span',
+          { class: 'opt' },
+          h('span', { class: 'opt-head' }, h('b', {}, name), h('small', {}, preview ? (blockedHint ?? stats) : 'правдивее не сделать')),
+          preview ? h('span', { class: 'opt-title' }, `«${preview.title}»`) : null,
+        ),
+      );
+    };
     const truthMenu = menuOpen
       ? h(
           'div',
           { class: 'place-menu truth-menu', role: 'menu' },
-          ...(card.conflict
-            ? [
-                menuItem(d.distortion === -1, false, () => (d.distortion = -1), calmIcon(), h('span', {}, framingLabels[0]), h('small', {}, framingHints[0])),
-              ]
-            : []),
+          ...(card.conflict ? [option(-1, calmIcon(), framingLabels[0], null)] : []),
           ...([0, 1, 2] as const).map((t) => {
             const dist = t - card.baseTruth;
-            const how = dist <= 0 ? distortionLabels[0] : distortionLabels[t];
             // Only one sensation per issue: a second one cannot be blown up.
             const blocked = d.publish && dist >= 0 && effectiveTier(card, dist) === 3 && card.tier < 3 && sensationTaken(card);
-            return menuItem(
-              d.distortion === dist,
-              dist < minDistortion(card) || dist < 0 || dist > maxDistortion(card) || blocked,
-              () => (d.distortion = dist),
-              truthIcon(t),
-              h('span', {}, card.conflict ? framingLabels[t + 1] : truthLabels[t]),
-              h('small', {}, dist < 0 ? 'правдивее не сделать' : blocked ? 'в выпуске уже есть сенсация' : card.conflict ? framingHints[t + 1] : how.toLowerCase()),
-            );
+            return option(dist < 0 ? -2 : dist, truthIcon(t), card.conflict ? framingLabels[t + 1] : truthLabels[t], blocked ? 'в выпуске уже есть сенсация' : null);
           }),
         )
       : null;
@@ -1076,9 +1086,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h(
         'div',
         { class: 'news-head' },
-        // The buttons float at the start of the headline, and its text wraps around them.
-        h('span', { class: 'head-tools' }, truthButton, tierLabel),
-        outButton,
+        // The controls sit in a row above the headline: level, truth, and «✕» on the right.
+        h('div', { class: 'head-tools' }, tierLabel, truthButton, outButton),
         h('h3', { class: 'headline' }, p.title),
         truthMenu,
       ),

@@ -1451,10 +1451,10 @@ button.publish.level-3.bump-up {
 
 /* "✕" in the corner of a story takes it out of the issue ("↩" in the tray brings it back). */
 .out-btn {
-  float: right;
+  flex: none;
   width: 22px;
   height: 22px;
-  margin: 0 0 2px 6px;
+  margin: 0 0 0 auto;
   padding: 0;
   font-size: 12px;
   line-height: 1;
@@ -1469,30 +1469,65 @@ button.publish.level-3.bump-up {
   border-color: var(--paper-muted);
 }
 
-/* Truth button next to the headline and its menu. */
-.place-btn {
+/* Truth chip above the headline: icon, the current level in words and «▾» (CONCEPT.md §7.3). */
+.truth-chip {
   flex: none;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  font-size: 15px;
-  line-height: 1;
-  background: #d9c08f;
-  color: var(--paper-ink);
-  border: 1px solid var(--paper-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  white-space: nowrap;
+  border: 1px solid;
   box-shadow: none;
 }
 
-.place-btn.on {
-  background: var(--paper-ink);
-  color: var(--paper);
+.truth-chip img {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+}
+
+.truth-chip .chip-arrow {
+  font-size: 10px;
+}
+
+.truth-chip.t0 {
+  color: #265c42;
+  background: #dcebc8;
+  border-color: var(--truth-0);
+}
+
+.truth-chip.t1 {
+  color: #8a3d12;
+  background: #fbdcb8;
+  border-color: var(--truth-1);
+}
+
+.truth-chip.t2 {
+  color: #fff;
+  background: var(--truth-2);
+  border-color: #a22633;
+}
+
+.truth-chip.calm {
+  color: #124e89;
+  background: #d4eaf6;
+  border-color: #0099db;
+}
+
+.truth-chip.on {
+  outline: 2px solid var(--paper-ink);
+  outline-offset: 1px;
 }
 
 .place-menu {
   position: absolute;
   z-index: 25;
-  top: 34px;
-  left: 4px;
+  top: 28px;
+  left: 0;
   display: flex;
   flex-direction: column;
   min-width: 190px;
@@ -1595,19 +1630,16 @@ button.publish.level-3.bump-up {
   border-left: 4px solid #e43b44;
 }
 
-/* The buttons float at the start of the headline; its text fills the space beside them and continues below. */
-.news-head::after {
-  content: '';
-  display: block;
-  clear: both;
+/* Controls in a row above the headline: level, truth chip, and «✕» on the right. */
+.news-head {
+  position: relative;
 }
 
 .head-tools {
-  float: left;
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 0 8px 2px 0;
+  margin-bottom: 4px;
 }
 
 .news .headline {
@@ -1618,27 +1650,15 @@ button.publish.level-3.bump-up {
   overflow-wrap: break-word;
 }
 
-/* The button row is no taller than one line of the headline, so only the first line is indented. */
-.at-2 .head-tools {
-  margin-top: 4px;
-}
-
-.at-1 .head-tools,
 .at-0 .head-tools,
 .at-out .head-tools {
-  margin-bottom: 0;
+  margin-bottom: 2px;
 }
 
-.at-1 .place-btn {
-  width: 22px;
-  height: 22px;
-}
-
-.at-0 .place-btn,
-.at-out .place-btn {
-  width: 20px;
-  height: 20px;
-  font-size: 12px;
+.at-0 .truth-chip,
+.at-out .truth-chip {
+  font-size: 11px;
+  line-height: 16px;
 }
 
 .at-1 .tier-label,
@@ -1734,33 +1754,48 @@ button.publish.level-3.bump-up {
   animation: shimmer 2s linear infinite;
 }
 
-/* Current truth level as an icon button next to the headline. */
-.truth-btn {
-  display: grid;
-  place-items: center;
-}
-
-.truth-btn img {
-  width: 16px;
-  height: 16px;
-  image-rendering: pixelated;
-}
-
 .place-menu .check {
   display: inline-block;
   width: 14px;
 }
 
 .truth-menu {
-  left: 4px;
-  min-width: 230px;
+  width: max-content;
+  min-width: 260px;
+  max-width: min(380px, calc(100vw - 40px));
 }
 
+/* Each option: its name, the level and risk it brings, and the headline it turns into. */
 .truth-menu button {
   display: grid;
-  grid-template-columns: 14px 16px auto 1fr;
-  align-items: center;
+  grid-template-columns: 14px 16px 1fr;
+  align-items: start;
   gap: 6px;
+}
+
+.truth-menu .opt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.truth-menu .opt-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.truth-menu .opt-head small {
+  white-space: nowrap;
+}
+
+.truth-menu .opt-title {
+  font-size: 13px;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.25;
+  white-space: normal;
 }
 
 .truth-menu img {
@@ -1770,7 +1805,6 @@ button.publish.level-3.bump-up {
 }
 
 .truth-menu small {
-  justify-self: end;
   color: var(--paper-muted);
 }
 

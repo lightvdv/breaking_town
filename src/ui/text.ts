@@ -22,10 +22,8 @@ export const tierLabels = ['Скучная', 'Обычная', 'Интересн
 export const scopeLabels: Record<NewsScope | 'any', string> = { local: 'Город', global: 'Мир', any: 'Город и мир' };
 export const placementLabels = ['Заметка', 'Статья', 'Первая полоса'];
 export const issueLevelLabels = ['Скучный', 'Обычный', 'Интересный', 'Сенсационный'];
-export const distortionLabels = ['Как есть', 'Додумать', 'Исказить'];
 /** Framing of a conflict story between two groups (CONCEPT.md §5.5): calm, as is, heat, inflate. */
 export const framingLabels = ['Успокоить', 'Как есть', 'Подогреть', 'Раздуть'];
-export const framingHints = ['правда, остудит', 'правда', 'полуправда, разожжёт', 'ложь, раздует'];
 /** Relations between two groups by tension level. */
 export const tensionLabels = ['Мир', 'Трения', 'Вражда', 'Столкновения'];
 

@@ -117,16 +117,22 @@ export function findNews(
   /** A card for a template, written up by a reporter (tier by the reporter's nose). */
   const write = (r: ReporterDef, tpl: CardTemplate, forcedTier: NewsTier | null): CardInstance => {
     state.lastSeen[tpl.id] = state.turn;
-    const tiers = tierWeights(c, r).map((weight, tier) => ({ weight, tier: tier as NewsTier }));
+    const [lo, hi] = tpl.tiers ?? [0, 3];
+    const tiers = tierWeights(c, r)
+      .map((weight, tier) => ({ weight, tier: tier as NewsTier }))
+      .filter((x) => x.tier >= lo && x.tier <= hi);
     const card: CardInstance = {
       uid: state.nextUid++,
       templateId: tpl.id,
       baseTruth: tpl.baseTruth,
       createdTurn: state.turn,
-      tier: forcedTier ?? weightedPick(rng, tiers).tier,
+      tier: forcedTier !== null ? (Math.min(hi, Math.max(lo, forcedTier)) as NewsTier) : weightedPick(rng, tiers).tier,
       scope: scopeOf(tpl),
       reporterId: r.id,
     };
+    // A story about a kind of place is about one open place of that kind (a closed bar makes no news).
+    const places = tpl.requires ? state.buildings.filter((x) => x.type === tpl.requires && x.open) : [];
+    if (places.length) card.building = pick(rng, places).id;
     // Conflict stories are about a pair: today's incident's, the template's, or a tense one.
     if (tpl.conflict) card.conflict = eventPairs.get(tpl.id) ?? (tpl.conflict === 'any' ? pickPair(state, c, rng) : [...tpl.conflict]);
     cards.push(card);

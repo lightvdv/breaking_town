@@ -1,5 +1,5 @@
 import { chance, int, next, pick, weightedPick, type RngState } from './rng';
-import { buildingDefOf, clamp, groupOf } from './lookup';
+import { buildingName, clamp, groupOf } from './lookup';
 import type {
   Building,
   BuildingType,
@@ -190,7 +190,7 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
     if (staff < minStaff) {
       x.open = false;
       for (const r of state.residents) if (r.job === x.id) r.job = null;
-      notes.push(`${buildingDefOf(c, x.type).name} закрылся`);
+      notes.push(`${buildingName(state, c, x.id)} закрылся`);
     }
   }
 

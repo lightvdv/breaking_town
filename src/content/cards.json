@@ -38,7 +38,11 @@
     "audience": [
       "workers"
     ],
-    "interest": 0.6
+    "interest": 0.6,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "price_rise",
@@ -78,7 +82,11 @@
       "pensioners",
       "workers"
     ],
-    "interest": 0.5
+    "interest": 0.5,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "new_bar",
@@ -119,7 +127,11 @@
     "audience": [
       "youth"
     ],
-    "interest": 0.45
+    "interest": 0.45,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "hospital_queue",
@@ -156,7 +168,11 @@
     "audience": [
       "pensioners"
     ],
-    "interest": 0.5
+    "interest": 0.5,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "mayor_promise",
@@ -191,7 +207,11 @@
       "workers",
       "intelligentsia"
     ],
-    "interest": 0.4
+    "interest": 0.4,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "factory_bonus",
@@ -230,7 +250,11 @@
     "audience": [
       "workers"
     ],
-    "interest": 0.35
+    "interest": 0.35,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "festival",
@@ -269,7 +293,11 @@
     "audience": [
       "youth"
     ],
-    "interest": 0.55
+    "interest": 0.55,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "shop_layoff",
@@ -310,7 +338,11 @@
       "pensioners",
       "workers"
     ],
-    "interest": 0.35
+    "interest": 0.35,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "sports_win",
@@ -346,7 +378,11 @@
       "youth",
       "workers"
     ],
-    "interest": 0.75
+    "interest": 0.75,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "water_poison",
@@ -372,7 +408,11 @@
     "engagement": 0.6,
     "weight": 2,
     "audience": [],
-    "interest": 0.8
+    "interest": 0.8,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "factory_sold",
@@ -404,7 +444,11 @@
     "audience": [
       "workers"
     ],
-    "interest": 0.55
+    "interest": 0.55,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "shop_rats",
@@ -439,7 +483,11 @@
       "pensioners",
       "workers"
     ],
-    "interest": 0.6
+    "interest": 0.6,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "mayor_flee",
@@ -470,7 +518,11 @@
       "intelligentsia",
       "pensioners"
     ],
-    "interest": 0.7
+    "interest": 0.7,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "crime_wave",
@@ -500,7 +552,11 @@
     "audience": [
       "pensioners"
     ],
-    "interest": 0.6
+    "interest": 0.6,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "bar_drugs",
@@ -535,7 +591,11 @@
       "youth",
       "pensioners"
     ],
-    "interest": 0.55
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "doctors_strike",
@@ -565,7 +625,11 @@
     "audience": [
       "pensioners"
     ],
-    "interest": 0.5
+    "interest": 0.5,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "layoffs_coming",
@@ -597,7 +661,11 @@
     "audience": [
       "workers"
     ],
-    "interest": 0.5
+    "interest": 0.5,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "tax_rise",
@@ -628,7 +696,11 @@
       "intelligentsia",
       "workers"
     ],
-    "interest": 0.5
+    "interest": 0.5,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "celebrity",
@@ -656,7 +728,11 @@
     "audience": [
       "youth"
     ],
-    "interest": 0.9
+    "interest": 0.9,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "global_recession",
@@ -686,7 +762,11 @@
     "engagement": 0.4,
     "weight": 2,
     "audience": [],
-    "interest": 0.55
+    "interest": 0.55,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "global_grain",
@@ -721,7 +801,11 @@
       "pensioners",
       "workers"
     ],
-    "interest": 0.45
+    "interest": 0.45,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "global_star",
@@ -754,7 +838,11 @@
       "youth",
       "pensioners"
     ],
-    "interest": 0.8
+    "interest": 0.8,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "global_cup",
@@ -787,7 +875,11 @@
       "youth",
       "workers"
     ],
-    "interest": 0.75
+    "interest": 0.75,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "global_flu",
@@ -816,7 +908,11 @@
     "audience": [
       "pensioners"
     ],
-    "interest": 0.65
+    "interest": 0.65,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "global_plants",
@@ -848,7 +944,11 @@
     "audience": [
       "workers"
     ],
-    "interest": 0.5
+    "interest": 0.5,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "global_taxes",
@@ -879,7 +979,11 @@
       "intelligentsia",
       "workers"
     ],
-    "interest": 0.55
+    "interest": 0.55,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "global_aliens",
@@ -906,7 +1010,11 @@
     "engagement": 0.9,
     "weight": 1,
     "audience": [],
-    "interest": 0.95
+    "interest": 0.95,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "park_benches",
@@ -938,7 +1046,11 @@
     "interest": 0.3,
     "engagement": 0.3,
     "weight": 2,
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "bus_schedule",
@@ -970,7 +1082,11 @@
     "interest": 0.35,
     "engagement": 0.4,
     "weight": 2,
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "school_olympiad",
@@ -1002,7 +1118,11 @@
     "interest": 0.4,
     "engagement": 0.4,
     "weight": 2,
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "hospital_scanner",
@@ -1035,7 +1155,11 @@
     "engagement": 0.4,
     "weight": 2,
     "requires": "hospital",
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "factory_order",
@@ -1070,7 +1194,11 @@
     "weight": 2,
     "requires": "factory",
     "witness": "factory",
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "shop_discounts",
@@ -1108,7 +1236,11 @@
     "weight": 2,
     "requires": "shop",
     "witness": "shop",
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "police_patrol",
@@ -1142,7 +1274,11 @@
     "interest": 0.45,
     "engagement": 0.5,
     "weight": 2,
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "library_reopen",
@@ -1174,7 +1310,11 @@
     "interest": 0.3,
     "engagement": 0.3,
     "weight": 2,
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "pipes_repair",
@@ -1206,7 +1346,11 @@
     "interest": 0.4,
     "engagement": 0.4,
     "weight": 2,
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "new_doctor",
@@ -1239,7 +1383,11 @@
     "weight": 2,
     "requires": "hospital",
     "witness": "hospital",
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "bakery_award",
@@ -1276,7 +1424,11 @@
     "engagement": 0.4,
     "weight": 2,
     "requires": "shop",
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "concert_announce",
@@ -1313,7 +1465,11 @@
     "weight": 2,
     "requires": "entertainment",
     "witness": "entertainment",
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "factory_overtime",
@@ -1353,7 +1509,11 @@
       "building": "factory",
       "amount": -0.04
     },
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "storm_damage",
@@ -1391,7 +1551,11 @@
       "type": "mood",
       "amount": -0.03
     },
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "shop_robbery",
@@ -1432,7 +1596,11 @@
       "building": "shop",
       "amount": -0.03
     },
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "bar_fight",
@@ -1475,7 +1643,11 @@
       "building": "entertainment",
       "amount": -0.03
     },
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "salary_delay",
@@ -1514,7 +1686,11 @@
       "type": "money",
       "amount": -4
     },
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "flu_season",
@@ -1551,7 +1727,11 @@
       "type": "mood",
       "amount": -0.02
     },
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "playground_open",
@@ -1588,7 +1768,304 @@
       "type": "mood",
       "amount": 0.02
     },
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
+  },
+  {
+    "id": "factory_hiring",
+    "source": "event",
+    "topic": "factory",
+    "baseTruth": 0,
+    "titles": [
+      "Завод набирает новых рабочих",
+      "Завод нанимает приезжих вместо местных",
+      "Завод зовёт людей на вредный цех и молчит о рисках"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.08
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.2
+      }
+    ],
+    "engagement": 0.4,
+    "weight": 2,
+    "witness": "factory",
+    "requires": "factory",
+    "cityEffect": {
+      "type": "mood",
+      "building": "factory",
+      "amount": 0.04
+    },
+    "audience": [
+      "workers"
+    ],
+    "interest": 0.45,
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "salary_raise",
+    "source": "event",
+    "topic": "factory",
+    "baseTruth": 0,
+    "titles": [
+      "Завод поднял зарплату",
+      "Прибавку к зарплате съест подорожание",
+      "Зарплату подняли перед массовыми увольнениями"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.06
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.08
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.25
+      }
+    ],
+    "engagement": 0.4,
+    "weight": 2,
+    "witness": "factory",
+    "requires": "factory",
+    "cityEffect": {
+      "type": "money",
+      "amount": 3
+    },
+    "audience": [
+      "workers"
+    ],
+    "interest": 0.5,
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "free_checkup",
+    "source": "event",
+    "topic": "health",
+    "baseTruth": 0,
+    "titles": [
+      "Больница проводит бесплатные обследования",
+      "Бесплатно обследуют только своих",
+      "На «бесплатных обследованиях» испытывают лекарства"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.07
+      },
+      {
+        "type": "avoid",
+        "building": "hospital",
+        "strength": 0.3,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.4,
+    "weight": 2,
+    "witness": "hospital",
+    "requires": "hospital",
+    "cityEffect": {
+      "type": "mood",
+      "amount": 0.02
+    },
+    "audience": [
+      "pensioners"
+    ],
+    "interest": 0.4,
+    "tiers": [
+      0,
+      1
+    ]
+  },
+  {
+    "id": "market_fair",
+    "source": "event",
+    "topic": "food",
+    "baseTruth": 0,
+    "titles": [
+      "У магазинов прошла ярмарка с низкими ценами",
+      "На ярмарке торговали втридорога",
+      "С ярмарки развезли по домам отравленные продукты"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.06
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.3,
+        "duration": 2
+      }
+    ],
+    "engagement": 0.4,
+    "weight": 2,
+    "witness": "shop",
+    "requires": "shop",
+    "cityEffect": {
+      "type": "money",
+      "amount": 2
+    },
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.45,
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "bar_quiz",
+    "source": "event",
+    "topic": "fun",
+    "baseTruth": 0,
+    "titles": [
+      "В баре прошла городская викторина",
+      "Викторину выиграли друзья хозяина бара",
+      "После викторины в баре отравились десятки гостей"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.3,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.4,
+    "weight": 2,
+    "witness": "entertainment",
+    "requires": "entertainment",
+    "cityEffect": {
+      "type": "mood",
+      "amount": 0.02
+    },
+    "audience": [
+      "youth",
+      "intelligentsia"
+    ],
+    "interest": 0.4,
+    "tiers": [
+      0,
+      1
+    ]
+  },
+  {
+    "id": "park_cleanup",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Жители вместе убрали городской парк",
+      "Субботник устроили ради отчёта мэрии",
+      "На субботнике в парке нашли ядовитые отходы"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.15
+      }
+    ],
+    "engagement": 0.4,
+    "weight": 2,
+    "cityEffect": {
+      "type": "mood",
+      "amount": 0.03
+    },
+    "audience": [
+      "pensioners",
+      "intelligentsia"
+    ],
+    "interest": 0.35,
+    "tiers": [
+      0,
+      1
+    ]
+  },
+  {
+    "id": "city_day",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Мэрия устроила День города",
+      "На праздник потратили деньги больницы",
+      "Мэр прикрыл праздником кражу городского бюджета"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.06
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.07
+      },
+      {
+        "type": "protest",
+        "strength": 0.2
+      }
+    ],
+    "engagement": 0.4,
+    "weight": 2,
+    "requires": "cityHall",
+    "cityEffect": {
+      "type": "mood",
+      "amount": 0.04
+    },
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "factory_waste",
@@ -1618,7 +2095,11 @@
     "engagement": 0.6,
     "weight": 2,
     "requires": "factory",
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "shop_meat",
@@ -1653,7 +2134,11 @@
     "weight": 2,
     "requires": "shop",
     "witness": "shop",
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "mayor_affair",
@@ -1683,7 +2168,11 @@
     "engagement": 0.8,
     "weight": 2,
     "requires": "cityHall",
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "hospital_bribes",
@@ -1714,7 +2203,11 @@
     "weight": 2,
     "requires": "hospital",
     "witness": "hospital",
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "teen_gang",
@@ -1745,7 +2238,11 @@
     "interest": 0.65,
     "engagement": 0.6,
     "weight": 2,
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "bar_closing",
@@ -1779,7 +2276,11 @@
     "weight": 2,
     "requires": "entertainment",
     "witness": "entertainment",
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "water_shutoff",
@@ -1808,7 +2309,11 @@
     "interest": 0.6,
     "engagement": 0.5,
     "weight": 2,
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "factory_robots",
@@ -1840,7 +2345,11 @@
     "weight": 2,
     "requires": "factory",
     "witness": "factory",
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "global_fuel",
@@ -1872,7 +2381,11 @@
     "interest": 0.5,
     "engagement": 0.5,
     "weight": 2,
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "global_film",
@@ -1905,7 +2418,11 @@
     "interest": 0.6,
     "engagement": 0.6,
     "weight": 2,
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "global_vaccine",
@@ -1938,7 +2455,11 @@
     "interest": 0.6,
     "engagement": 0.6,
     "weight": 2,
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "global_election",
@@ -1971,7 +2492,11 @@
     "interest": 0.55,
     "engagement": 0.6,
     "weight": 2,
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "global_space",
@@ -2004,7 +2529,11 @@
     "interest": 0.55,
     "engagement": 0.5,
     "weight": 2,
-    "baseTruth": 0
+    "baseTruth": 0,
+    "tiers": [
+      0,
+      1
+    ]
   },
   {
     "id": "global_famine",
@@ -2036,7 +2565,11 @@
     "interest": 0.65,
     "engagement": 0.6,
     "weight": 2,
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "global_war",
@@ -2068,7 +2601,11 @@
     "interest": 0.9,
     "engagement": 0.8,
     "weight": 1,
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "global_mafia",
@@ -2099,7 +2636,11 @@
     "interest": 0.65,
     "engagement": 0.6,
     "weight": 2,
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      1,
+      2
+    ]
   },
   {
     "id": "global_banks",
@@ -2129,7 +2670,11 @@
     "interest": 0.7,
     "engagement": 0.7,
     "weight": 2,
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "global_asteroid",
@@ -2159,7 +2704,11 @@
     "interest": 0.9,
     "engagement": 0.8,
     "weight": 1,
-    "baseTruth": 1
+    "baseTruth": 1,
+    "tiers": [
+      1,
+      3
+    ]
   },
   {
     "id": "investigation_pensioners",
@@ -2339,7 +2888,11 @@
     ],
     "engagement": 0.7,
     "weight": 2,
-    "interest": 0.7
+    "interest": 0.7,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "conflict_bar_brawl",
@@ -2371,7 +2924,11 @@
     ],
     "engagement": 0.7,
     "weight": 2,
-    "interest": 0.7
+    "interest": 0.7,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "conflict_graffiti",
@@ -2403,7 +2960,11 @@
     ],
     "engagement": 0.7,
     "weight": 2,
-    "interest": 0.7
+    "interest": 0.7,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "conflict_hospital_queue",
@@ -2435,7 +2996,11 @@
     ],
     "engagement": 0.7,
     "weight": 2,
-    "interest": 0.7
+    "interest": 0.7,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "conflict_factory_gate",
@@ -2467,7 +3032,11 @@
     ],
     "engagement": 0.7,
     "weight": 2,
-    "interest": 0.7
+    "interest": 0.7,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "conflict_hall_meeting",
@@ -2499,7 +3068,11 @@
     ],
     "engagement": 0.7,
     "weight": 2,
-    "interest": 0.7
+    "interest": 0.7,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "conflict_bench",
@@ -2534,7 +3107,11 @@
     ],
     "engagement": 0.7,
     "weight": 2,
-    "interest": 0.7
+    "interest": 0.7,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "conflict_lecture",
@@ -2569,7 +3146,11 @@
     ],
     "engagement": 0.7,
     "weight": 2,
-    "interest": 0.7
+    "interest": 0.7,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "rumor_complaints",
@@ -2597,7 +3178,11 @@
     ],
     "engagement": 0.7,
     "weight": 3,
-    "interest": 0.65
+    "interest": 0.65,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "rumor_jobs_taken",
@@ -2625,7 +3210,11 @@
     ],
     "engagement": 0.7,
     "weight": 3,
-    "interest": 0.65
+    "interest": 0.65,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "rumor_hoarding",
@@ -2653,7 +3242,11 @@
     ],
     "engagement": 0.7,
     "weight": 3,
-    "interest": 0.65
+    "interest": 0.65,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "rumor_gangs",
@@ -2681,7 +3274,11 @@
     ],
     "engagement": 0.7,
     "weight": 3,
-    "interest": 0.65
+    "interest": 0.65,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "rumor_budget",
@@ -2709,7 +3306,11 @@
     ],
     "engagement": 0.7,
     "weight": 3,
-    "interest": 0.65
+    "interest": 0.65,
+    "tiers": [
+      0,
+      2
+    ]
   },
   {
     "id": "rumor_noise",
@@ -2737,6 +3338,10 @@
     ],
     "engagement": 0.7,
     "weight": 3,
-    "interest": 0.65
+    "interest": 0.65,
+    "tiers": [
+      0,
+      2
+    ]
   }
 ]

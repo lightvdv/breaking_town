@@ -28,6 +28,14 @@ export function buildingDefOf(c: Content, type: BuildingType): BuildingDef {
   return def;
 }
 
+/** «Бар «Якорь»»: the type's name plus the building's own name when there are several of the type. */
+export function buildingName(state: GameState, c: Content, id: number): string {
+  const x = state.buildings[id];
+  const def = buildingDefOf(c, x.type);
+  const k = state.buildings.filter((y) => y.type === x.type).indexOf(x);
+  return def.names?.length ? `${def.name} ${def.names[k % def.names.length]}` : def.name;
+}
+
 /** Share of a group that follows at least one owned channel, 0..1. */
 export function coverageOf(state: GameState, group: GroupDef): number {
   let miss = 1;

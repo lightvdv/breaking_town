@@ -50,6 +50,7 @@ export function validateContent(c: Content): string[] {
   }
 
   for (const t of c.cards) {
+    if (t.tiers && !(t.tiers[0] >= 0 && t.tiers[0] <= t.tiers[1] && t.tiers[1] <= 3)) errors.push(`card ${t.id}: tiers must be 0 ≤ min ≤ max ≤ 3`);
     for (let level = 0; level < 3; level++) {
       const possible = level >= t.baseTruth;
       if (possible !== (t.titles[level] !== null)) {

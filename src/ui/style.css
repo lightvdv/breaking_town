@@ -1585,6 +1585,11 @@ button.publish.level-3.bump-up {
   color: #a22633;
 }
 
+/* The bar or shop a story is about: a quiet dateline, not an alarm. */
+.kicker.place-kicker {
+  color: #5a6988;
+}
+
 .news.investigation {
   padding-left: 8px;
   border-left: 4px solid #e43b44;

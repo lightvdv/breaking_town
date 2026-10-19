@@ -171,6 +171,11 @@ export interface CardTemplate {
   titles: Triple<string | null>;
   effects: Triple<CardEffect | null>;
   interest: number;
+  /**
+   * Lowest and highest tier a reporter can find this story at, so the headline fits its level: a new
+   * bus schedule is never a sensation (CONCEPT.md §3.1). Distortion can still raise it above.
+   */
+  tiers?: [NewsTier, NewsTier];
   engagement: number;
   weight: number;
   baseTruth: TruthLevel;
@@ -195,6 +200,8 @@ export interface CardTemplate {
 export interface BuildingDef {
   type: BuildingType;
   name: string;
+  /** Own names of the buildings of this type, e.g. «Якорь» for bars, so news and notes can tell them apart. */
+  names?: string[];
   count: number;
   jobs: number;
   /** Footprint on the isometric map in tiles: 1 = 1×1, 2 = 2×2. */
@@ -467,6 +474,8 @@ export interface CardInstance {
   reporterId: string;
   /** Conflict stories: the two groups it is about (CONCEPT.md §5.5). */
   conflict?: [GroupId, GroupId];
+  /** The open building of the template's `requires` type the story is about. */
+  building?: number;
 }
 
 /** An incident between two groups that happened today (it becomes a true story). */

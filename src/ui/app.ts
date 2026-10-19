@@ -2,6 +2,7 @@ import { CityScene, REACTION_ICON, type HoverTarget } from '../render/scene';
 import {
   averageTrust,
   buildingDefOf,
+  buildingName,
   cancelInvestigation,
   channelOf,
   adRateOf,
@@ -878,7 +879,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
             'b',
             {},
             tensionLabels[level],
-            Math.abs(delta) >= 1 ? h('span', { class: delta > 0 ? 'bad' : 'good', title: delta > 0 ? 'накаляется' : 'остывает' }, ` ${delta > 0 ? '▲' : '▼'}`) : '',
+            // Arrows follow the relations, not the tension: worse is a red arrow down, better a green one up.
+            Math.abs(delta) >= 1 ? h('span', { class: delta > 0 ? 'bad' : 'good', title: delta > 0 ? 'отношения ухудшаются' : 'отношения налаживаются' }, ` ${delta > 0 ? '▼' : '▲'}`) : '',
           ),
         );
       });
@@ -1067,6 +1069,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const children: (HTMLElement | null)[] = [
       investigation ? h('div', { class: 'kicker' }, `Расследование · эксклюзив · ${target.toLowerCase()}`) : null,
       pair ? h('div', { class: `kicker conflict-kicker level-${tensionLevel(c, state.tension[pair])}` }, `Конфликт · ${pairNames}`) : null,
+      // Which of the town's bars or shops the story is about.
+      card.building !== undefined && state.buildings[card.building] && buildingDefOf(c, state.buildings[card.building].type).names
+        ? h('div', { class: 'kicker place-kicker' }, buildingName(state, c, card.building))
+        : null,
       h(
         'div',
         { class: 'news-head' },

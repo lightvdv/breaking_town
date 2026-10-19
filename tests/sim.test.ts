@@ -54,14 +54,15 @@ function simpleDecision(state: GameState, distortion: 'none' | 'max', placement:
   const cards = state.hand
     .filter((c) => (distortion === 'none' ? c.baseTruth === 0 : true))
     .slice(0, 2);
-  return {
-    publish: cards.map((c, i) => ({
-      cardUid: c.uid,
-      // The first card gets the placement; the second takes the next free slot below it.
-      placement: (i === 0 ? placement : Math.max(0, Math.min(1, placement - 1))) as 0 | 1 | 2,
-      distortion: distortion === 'max' ? maxDistortion(c) : 0,
-    })),
-  };
+  const publish = cards.map((c, i) => ({
+    cardUid: c.uid,
+    // The first card gets the placement; the second takes the next free slot below it.
+    placement: (i === 0 ? placement : Math.max(0, Math.min(1, placement - 1))) as 0 | 1 | 2,
+    distortion: distortion === 'max' ? maxDistortion(c) : 0,
+  }));
+  // Only one sensation per issue: a second blown-up story is toned down.
+  limitSensations(state, content, publish);
+  return { publish };
 }
 
 describe('content', () => {
@@ -506,6 +507,40 @@ describe('reporters', () => {
     expect(publish.filter((p) => effectiveTier(s.hand.find((x) => x.uid === p.cardUid)!, p.distortion) === 3)).toHaveLength(1);
     expect(publish[0].distortion).toBe(1);
     expect(() => playTurn(s, content, { publish })).not.toThrow();
+  });
+
+  it('found stories stay within their template tiers and are about an open place', () => {
+    for (const seed of [1, 2, 3, 4]) {
+      const s = createGame(content, seed);
+      // Close one bar: no story may be about it any more.
+      const bar = s.buildings.find((x) => x.type === 'entertainment')!;
+      bar.open = false;
+      for (let t = 0; t < 10 && !s.outcome; t++) {
+        for (const card of s.hand) {
+          const tpl = templateOf(content, card.templateId);
+          if (tpl.tiers && tpl.source !== 'investigation') {
+            expect(card.tier).toBeGreaterThanOrEqual(tpl.tiers[0]);
+            expect(card.tier).toBeLessThanOrEqual(tpl.tiers[1]);
+          }
+          if (tpl.requires) {
+            expect(card.building).toBeDefined();
+            expect(s.buildings[card.building!].open).toBe(true);
+            expect(s.buildings[card.building!].type).toBe(tpl.requires);
+          }
+        }
+        playTurn(s, content, { publish: [] });
+      }
+    }
+    expect(templateOf(content, 'bus_schedule').tiers![1]).toBeLessThan(2);
+  });
+
+  it('dirt on a group visibly worsens its relations with every other group', () => {
+    const s = createGame(content, 1);
+    const tpl = content.cards.find((t) => t.source === 'investigation' && t.target === 'workers')!;
+    s.hand = [{ uid: s.nextUid++, templateId: tpl.id, baseTruth: 0, createdTurn: s.turn, tier: 3, scope: 'local', reporterId: s.reporters[0] }];
+    const r = playTurn(s, content, { publish: [{ cardUid: s.hand[0].uid, placement: 2, distortion: 0 }] });
+    const shifts = r.publications[0].tension!;
+    for (const g of content.groups.filter((x) => x.id !== 'workers')) expect(shifts[pairKey(content, 'workers', g.id)]).toBeGreaterThan(5);
   });
 
   it('cannot hire more than maxReporters or fire the last one', () => {

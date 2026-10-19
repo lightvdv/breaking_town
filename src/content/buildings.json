@@ -1,7 +1,7 @@
 [
   { "type": "factory", "name": "Завод", "count": 1, "jobs": 100, "size": 2, "color": "#8b9bb4" },
-  { "type": "shop", "name": "Магазин", "count": 3, "jobs": 8, "size": 1, "color": "#feae34" },
-  { "type": "entertainment", "name": "Бар", "count": 2, "jobs": 6, "size": 1, "color": "#b55088" },
+  { "type": "shop", "name": "Магазин", "names": ["«Колосок»", "«Ромашка»", "«Копейка»"], "count": 3, "jobs": 8, "size": 1, "color": "#feae34" },
+  { "type": "entertainment", "name": "Бар", "names": ["«Якорь»", "«Подкова»"], "count": 2, "jobs": 6, "size": 1, "color": "#b55088" },
   { "type": "hospital", "name": "Больница", "count": 1, "jobs": 12, "size": 2, "color": "#e43b44" },
   { "type": "cityHall", "name": "Мэрия", "count": 1, "jobs": 8, "size": 2, "color": "#0099db" },
   { "type": "factCheckers", "name": "Фактчекеры", "count": 1, "jobs": 6, "size": 1, "color": "#63c74d" },

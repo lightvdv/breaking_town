@@ -383,12 +383,15 @@ export function publish(
     }
     report.stigma = { target: tpl.target, pressure, left };
     if (left) report.effects.leaveCity = (report.effects.leaveCity ?? 0) + left;
-    // Dirt on a group sets the rest of the city against it (CONCEPT.md §5.5).
+    // Dirt on a group sets the rest of the city against it (CONCEPT.md §5.5): like a heated conflict
+    // story, the more of its other readers believed it, the harder.
+    const others = viewers.filter((id) => state.residents[id].group !== tpl.target).length;
+    const share = clamp(believers.filter((r) => r.group !== tpl.target).length / Math.max(1, others));
     report.tension = {};
     for (const g of c.groups) {
       if (g.id === tpl.target) continue;
       const key = pairKey(c, tpl.target, g.id);
-      const delta = b.tensionStigma * pressure * impact;
+      const delta = b.tensionStigma * impact * (b.tensionReachBase + share * b.tensionShareMul);
       addTension(state, key, delta);
       report.tension[key] = delta;
     }

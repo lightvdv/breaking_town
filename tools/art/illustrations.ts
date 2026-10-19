@@ -923,6 +923,73 @@ export const scenes: Record<string, Scene> = {
     ],
   },
 
+  // ---------- Good days in the city ----------
+  factory_hiring: {
+    sky: 'day',
+    ground: 'road',
+    building: { type: 'factory', x: 4 },
+    people: [p('workers', 'walk_front', 80), p('workers', 'react_happy', 98, { variant: 1, frame: 2 }), p('youth', 'walk_front', 114)],
+    icons: [{ name: 'up', x: 88, y: 12 }],
+  },
+  salary_raise: {
+    sky: 'day',
+    ground: 'road',
+    building: { type: 'factory', x: 4 },
+    people: [p('workers', 'react_happy', 86, { frame: 1 }), p('workers', 'react_happy', 104, { variant: 1, frame: 2 })],
+    icons: [
+      { name: 'money', x: 82, y: 10 },
+      { name: 'up', x: 100, y: 14 },
+    ],
+  },
+  free_checkup: {
+    sky: 'day',
+    ground: 'plaza',
+    building: { type: 'hospital', x: 2 },
+    people: [p('pensioners', 'react_happy', 82, { frame: 1 }), p('intelligentsia', 'idle_front', 98), p('pensioners', 'walk_front', 114, { variant: 1 })],
+    icons: [
+      { name: 'cross', x: 86, y: 10 },
+      { name: 'heart', x: 104, y: 14 },
+    ],
+  },
+  market_fair: {
+    sky: 'day',
+    ground: 'plaza',
+    building: { type: 'shop', x: 8 },
+    people: [p('pensioners', 'walk_bag_front', 70), p('workers', 'react_happy', 88, { frame: 2 }), p('youth', 'walk_bag_front', 106, { variant: 1 })],
+    icons: [
+      { name: 'money', x: 78, y: 10 },
+      { name: 'star', x: 100, y: 8 },
+    ],
+  },
+  bar_quiz: {
+    sky: 'night',
+    ground: 'plaza',
+    building: { type: 'entertainment', x: 8 },
+    people: [p('intelligentsia', 'react_happy', 76, { frame: 1 }), p('youth', 'react_happy', 94, { frame: 2 }), p('intelligentsia', 'idle_front', 110, { variant: 1 })],
+    icons: [
+      { name: 'document', x: 80, y: 10 },
+      { name: 'trophy', x: 100, y: 10 },
+    ],
+  },
+  park_cleanup: {
+    sky: 'day',
+    ground: 'grass',
+    trees: [18, 44, 112],
+    people: [p('pensioners', 'work', 66), p('intelligentsia', 'work', 84, { frame: 1 }), p('youth', 'react_happy', 100, { frame: 2 })],
+    icons: [{ name: 'heart', x: 88, y: 12 }],
+  },
+  city_day: {
+    sky: 'day',
+    ground: 'plaza',
+    building: { type: 'cityHall', x: 2 },
+    fountain: 68,
+    people: [p('youth', 'react_happy', 88, { frame: 2 }), p('pensioners', 'react_happy', 104, { frame: 1 }), p('workers', 'react_happy', 118, { variant: 1 })],
+    icons: [
+      { name: 'note', x: 84, y: 8 },
+      { name: 'star', x: 104, y: 10 },
+    ],
+  },
+
   // ---------- Local rumors ----------
   factory_waste: {
     sky: 'dusk',

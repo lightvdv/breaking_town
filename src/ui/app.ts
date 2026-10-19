@@ -632,8 +632,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
   // ---------- Tooltip ----------
 
   function showTooltip(t: HoverTarget | null): void {
-    // The city is under the issue or a window: no hints over it then (CONCEPT.md §7.3).
-    if (!t || issueOpen || modal) {
+    // The city is under the title screen, the issue or a window: no hints over it then (CONCEPT.md §7.3).
+    // Anything drawn above the city at the pointer (menus, the opening story, plaques) hides them too.
+    const covered = t && !cityHost.contains(document.elementFromPoint(t.clientX, t.clientY));
+    if (!t || titleOpen || issueOpen || modal || covered) {
       tooltip.hidden = true;
       return;
     }
@@ -2073,6 +2075,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
 
   function showTitle(): void {
     titleOpen = true;
+    tooltip.hidden = true;
     modal = null;
     issueOpen = false;
     scene?.startTour();

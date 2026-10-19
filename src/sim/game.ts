@@ -15,7 +15,7 @@ import { effectiveTier, issueLevel, issueScore, maxDistortion, minDistortion, pr
 import { advanceRelations, createTension, fillTitle, pairKeys, pairOf, tensionLevel } from './relations';
 import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
 import { advanceInvestigations, findNews, isRecent, scopeOf } from './reporters';
-import { markDebunked, planRival, pruneRival, publishRival, rivalReaders, rivalTrust, seedRival, updateRivalReaders, verifyRival } from './rival';
+import { markDebunked, planRival, pruneRival, publishRival, recordOurIssue, rivalKindOf, rivalReaders, rivalTrust, seedRival, updateRivalReaders, verifyRival } from './rival';
 import type {
   CardTemplate,
   ChannelId,
@@ -44,8 +44,10 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy')
     rng,
     turn: 0,
     mode,
-    rival: mode === 'save' ? { plan: [], printed: [], closed: false, debunked: 0 } : null,
+    // Either mode has a rival paper: the tabloid when we defend the town, the guardian when we ruin it.
+    rival: { kind: rivalKindOf(mode), plan: [], printed: [], closed: false, debunked: 0 },
     rivalWatch: [],
+    ourPrinted: [],
     money: c.balance.startMoney,
     price: c.balance.startPrice,
     brokeTurns: 0,
@@ -168,6 +170,7 @@ export function validateDecision(state: GameState, c: Content, d: Decision, mods
 
 export function checkOutcome(state: GameState, c: Content): Outcome | null {
   const b = c.balance;
+  if (state.mode === 'destroy' && state.rival?.closed) return { result: 'win', reason: 'rivalClosed' };
   if (state.mode === 'save') {
     // Save the town (CONCEPT.md §8): close the rival or hold out to the end; lose the town and it is over.
     if (state.rival?.closed) return { result: 'win', reason: 'rivalClosed' };
@@ -229,6 +232,8 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const rivalNews = publishRival(state, c, rng);
   const exposures = [...lateExposures, ...verifyNews(state, c, rng, mods, published)];
   verifyRival(state, c, rng, rivalNews);
+  // The rival may answer our lies over the next days.
+  recordOurIssue(state, c, published);
 
   const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;

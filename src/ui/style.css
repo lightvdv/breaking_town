@@ -549,6 +549,14 @@ button.publish.level-3.bump-up {
   border-left-color: #a22633;
 }
 
+.notice-guardian {
+  border-left-color: #124e89;
+}
+
+.notice-guardian .rival-title {
+  color: #124e89;
+}
+
 .rival-stats {
   flex: none;
   font-size: 13px;

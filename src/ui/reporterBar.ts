@@ -1,6 +1,6 @@
 import { getModifiers, groupOf, reporterOf, searchLuck, type Content, type Find, type GameState, type ReporterDef } from '../sim';
 import { h, pct } from './dom';
-import { scopeLabels, tierLabels, topicLabels } from './text';
+import { rivalNames, scopeLabels, tierLabels, topicLabels } from './text';
 
 /** A reporter's state during the start-of-turn search animation (CONCEPT.md §7.3). */
 export type RepStatus = { phase: 'searching' } | { phase: 'done'; find: Find; title: string | null };
@@ -158,6 +158,6 @@ export class ReporterBar {
 /** What the reporter is looking for: the player's topics, or their own specialties. */
 export function searchLine(state: GameState, r: ReporterDef): string {
   const assigned = state.reporterTopics[r.id] ?? [];
-  if (state.rival && !state.rival.closed && state.rivalWatch.includes(r.id)) return 'Следит за «Набатом»';
+  if (state.rival && !state.rival.closed && state.rivalWatch.includes(r.id)) return `Следит за «${rivalNames[state.rival.kind].ins}»`;
   return assigned.length ? `Ищет: ${assigned.map((t) => topicLabels[t].toLowerCase()).join(', ')}` : topicLine(r);
 }

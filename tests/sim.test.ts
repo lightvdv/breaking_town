@@ -434,7 +434,7 @@ describe('news variety', () => {
     const s = createGame(content, 9);
     const seen = new Map<string, number>();
     for (let i = 0; i < 25 && !s.outcome; i++) {
-      for (const card of s.hand) {
+      for (const card of s.hand.filter((x) => !x.debunk)) {
         const last = seen.get(card.templateId);
         if (last !== undefined) expect(s.turn - last).toBeGreaterThanOrEqual(content.balance.repeatCooldown);
         seen.set(card.templateId, s.turn);
@@ -551,6 +551,7 @@ describe('reporters', () => {
       // Close one bar: no story may be about it any more.
       const bar = s.buildings.find((x) => x.type === 'entertainment')!;
       bar.open = false;
+      playTurn(s, content, { publish: [] });
       for (let t = 0; t < 10 && !s.outcome; t++) {
         for (const card of s.hand) {
           const tpl = templateOf(content, card.templateId);
@@ -842,7 +843,8 @@ describe('save mode (CONCEPT.md §8)', () => {
     expect(rivalReaders(s)).toBeGreaterThan(0);
     // Nothing is known of its issue before it comes out.
     expect(s.hand.some((x) => x.debunk)).toBe(false);
-    expect(createGame(content, 3).rival).toBeNull();
+    expect(createGame(content, 3).rival!.kind).toBe('guardian');
+    expect(s.rival!.kind).toBe('tabloid');
     setRivalWatch(s, s.reporters[0], true);
     let found = 0;
     for (let t = 0; t < 8 && !s.outcome; t++) {
@@ -890,5 +892,19 @@ describe('save mode (CONCEPT.md §8)', () => {
     for (const r of t.residents) r.protestTurns = 5;
     playTurn(t, content, { publish: [] });
     expect(t.outcome).toEqual({ result: 'lose', reason: 'cityFallen' });
+  });
+});
+
+describe('the guardian of the destroy mode (CONCEPT.md §8)', () => {
+  it('reassures the town and answers our fresh lies the next day', () => {
+    const s = createGame(content, 6);
+    expect(s.rival!.kind).toBe('guardian');
+    const lie = s.hand.find((x) => maxDistortion(x) > 0)!;
+    playTurn(s, content, { publish: [{ cardUid: lie.uid, placement: 2, distortion: maxDistortion(lie) }] });
+    const answer = s.rival!.plan.find((x) => x.card.debunk?.uid === lie.uid);
+    expect(answer).toBeDefined();
+    expect(answer!.card.templateId).toBe('guardian_debunk');
+    // Its own stories are good news, soothed bad news or calm ones, never frightening.
+    for (const story of s.rival!.plan.filter((x) => !x.card.debunk)) expect(story.distortion).toBeLessThanOrEqual(0);
   });
 });

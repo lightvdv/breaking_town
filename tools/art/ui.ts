@@ -320,8 +320,20 @@ function rival(): Raster {
   return outline(r);
 }
 
+/** The guardian paper «Голос города»: a newspaper with a blue masthead and a heart. */
+function guardian(): Raster {
+  const r = new Raster(16, 16);
+  r.rect(2, 2, 12, 12, 'sand');
+  r.rect(3, 3, 10, 2, 'blue');
+  r.art(4, 6, ['r.r.', 'rrrr', '.rr.'], { r: 'red' });
+  for (const y of [6, 8, 10, 12]) r.rect(10, y, 3, 1, 'grey');
+  r.rect(3, 12, 6, 1, 'grey');
+  return outline(r);
+}
+
 export const uiIcons: Record<string, () => Raster> = {
   rival,
+  guardian,
   money,
   readers,
   reputation,

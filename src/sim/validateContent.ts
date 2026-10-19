@@ -128,11 +128,12 @@ export function validateContent(c: Content): string[] {
       if (n < 8) errors.push(`only ${n} ${scope} ${kind} stories, need at least 8`);
     }
   }
-  // The save mode needs exactly one debunk template, the one the rival's stories are answered with.
-  if (c.cards.filter((t) => t.source === 'debunk').length !== 1 || !c.cards.some((t) => t.id === 'debunk' && t.source === 'debunk')) {
-    errors.push('need exactly one debunk template with id "debunk"');
+  for (const [kind, affinity] of Object.entries(b.rivalAffinity)) {
+    for (const id of Object.keys(affinity)) if (!c.groups.some((g) => g.id === id)) errors.push(`rivalAffinity.${kind}: unknown group ${id}`);
   }
-  for (const id of Object.keys(b.rivalAffinity)) if (!c.groups.some((g) => g.id === id)) errors.push(`rivalAffinity: unknown group ${id}`);
+  for (const id of ['debunk', 'debunk_guardian', 'tabloid_debunk', 'guardian_debunk']) {
+    if (!c.cards.some((t) => t.id === id && t.source === 'debunk')) errors.push(`missing debunk template ${id}`);
+  }
   for (const g of c.groups) {
     if (!c.cards.some((t) => t.source === 'investigation' && t.target === g.id)) errors.push(`no investigation story about ${g.id}`);
   }

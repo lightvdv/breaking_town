@@ -85,6 +85,7 @@
   ],
   "ui": [
     "rival",
+    "guardian",
     "money",
     "readers",
     "reputation",
@@ -234,6 +235,9 @@
     "rumor_gangs",
     "rumor_budget",
     "rumor_noise",
-    "debunk"
+    "debunk",
+    "debunk_guardian",
+    "tabloid_debunk",
+    "guardian_debunk"
   ]
 }

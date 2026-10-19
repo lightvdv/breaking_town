@@ -375,13 +375,16 @@ export function publish(
       const delta = good ? b.hopePerBelief : -b.fearPerBelief;
       r.outlook = clamp(r.outlook + delta * hit);
     }
-    // A believed debunk: the rival loses this reader's trust, and who believed its story stops
-    // believing it — the fear it brought goes away (CONCEPT.md §8).
+    // A believed debunk: the outlet it answers loses this reader's trust (the rival's when we print
+    // it, ours when the rival does), and who believed the story stops believing it — the fear or the
+    // false comfort it brought goes away (CONCEPT.md §8).
     if (effect?.type === 'debunk' && card.debunk) {
-      r.rivalTrust = clamp(r.rivalTrust - b.debunkTrust * effect.strength * hit, 0, 100);
+      if (rival) r.trust = clamp(r.trust - b.rivalDebunkTrust * effect.strength * hit, 0, 100);
+      else r.rivalTrust = clamp(r.rivalTrust - b.debunkTrust * effect.strength * hit, 0, 100);
       if (r.beliefs.some((x) => x.cardUid === card.debunk!.uid)) {
         r.beliefs = r.beliefs.filter((x) => x.cardUid !== card.debunk!.uid);
-        r.outlook = clamp(r.outlook + b.fearPerBelief * hit);
+        const comforted = card.debunk.effect === 'moodUp';
+        r.outlook = clamp(r.outlook + (comforted ? -b.hopePerBelief : b.fearPerBelief) * hit);
         if (card.debunk.effect === 'fear') r.fearTurns = 0;
         if (card.debunk.effect === 'protest') r.protestTurns = 0;
         report.effects.debunk = (report.effects.debunk ?? 0) + 1;

@@ -256,13 +256,17 @@ export interface Balance {
   /** Rival paper: share of the city reading it at the start, its readers' starting trust, per-group appeal. */
   rivalStartShare: number;
   rivalStartTrust: number;
-  rivalAffinity: Record<GroupId, number>;
+  rivalAffinity: Record<RivalKind, Record<GroupId, number>>;
   /** Per-turn chances: a non-reader starts buying it (× trust × appeal), a reader drops it, more after doubting it. */
   rivalJoin: number;
   rivalChurn: number;
   rivalChurnDoubt: number;
   /** It prints 1..rivalStoriesMax stories a day. */
   rivalStoriesMax: number;
+  /** The same for the guardian of the destroy mode. */
+  guardianStoriesMax: number;
+  /** At most this many of its daily stories are debunks of ours. */
+  rivalCountersMax: number;
   /** Fact-check chance of its half-truths and lies, and the trust its readers lose when one is caught. */
   rivalExposure: number;
   rivalExposurePenalty: number;
@@ -273,6 +277,8 @@ export interface Balance {
   rivalTrustCollapse: number;
   /** A believed debunk: the rival trust lost (× impact × the debunk's strength). */
   debunkTrust: number;
+  /** The same for the rival's debunks of our stories: the reputation we lose. */
+  rivalDebunkTrust: number;
   /** A story of the rival can be debunked this many days after it came out. */
   debunkWindow: number;
   /** Chance a reporter who does not watch the rival stumbles on a debunk instead of a story. */
@@ -564,10 +570,16 @@ export interface PrintedStory {
   debunked: boolean;
   /** Caught by the fact-checkers: nobody believes it any more, there is nothing left to debunk. */
   exposed?: boolean;
+  /** Told «Без паники» / «Всё хорошо!»: a lie that calms. */
+  soothed?: boolean;
 }
 
-/** The rival paper «Вечерний Набат» of the save mode (CONCEPT.md §8). */
+/** tabloid = «Вечерний Набат», scares the town (save mode); guardian = «Голос города», defends it (destroy mode). */
+export type RivalKind = 'tabloid' | 'guardian';
+
+/** The rival paper of either mode (CONCEPT.md §8). */
 export interface RivalState {
+  kind: RivalKind;
   /** Its issue being written; it comes out with ours and nobody sees it before. */
   plan: RivalStory[];
   /** What it printed in the last `debunkWindow` days, newest first. */
@@ -689,8 +701,10 @@ export interface GameState {
   mode: GameMode;
   /** Save mode only: the rival paper. */
   rival: RivalState | null;
-  /** Save mode: reporters sent to watch the rival paper; they mostly bring debunks of its lies. */
+  /** Reporters sent to watch the rival paper; they mostly bring debunks of its lies. */
   rivalWatch: string[];
+  /** What we printed in the last `debunkWindow` days: the rival may debunk our lies. */
+  ourPrinted: PrintedStory[];
   money: number;
   /** Price level of the paper (index in `Balance.prices`), chosen by the player. */
   price: number;

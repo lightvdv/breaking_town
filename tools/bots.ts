@@ -286,6 +286,11 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
     if ((strategy === mixed || strategy === agitator) && !noInvestigations) manageInvestigations(s);
+    // The thoughtful bots keep an eye on the rival with one reporter not digging dirt.
+    if ((strategy === mixed || strategy === agitator) && s.rival && !s.rival.closed) {
+      const free = s.reporters.filter((id) => !s.investigations.some((x) => x.reporterId === id));
+      s.reporters.forEach((id) => setRivalWatch(s, id, id === free[free.length - 1] && s.reporters.length >= 2));
+    }
     const d = decide(s, strategy, rng);
     limitSensations(s, content, d.publish);
     const r = playTurn(s, content, d);

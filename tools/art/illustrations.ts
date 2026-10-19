@@ -1313,6 +1313,11 @@ export const scenes: Record<string, Scene> = {
 };
 
 /** Scenes of the opening story (CONCEPT.md §1.1), same size and style as the news. */
+// The other debunks look like ours.
+scenes.debunk_guardian = scenes.debunk;
+scenes.tabloid_debunk = scenes.debunk;
+scenes.guardian_debunk = scenes.debunk;
+
 export const introScenes: Record<string, Scene> = {
   // A quiet town where nothing ever happens.
   town: {

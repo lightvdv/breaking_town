@@ -74,6 +74,7 @@ import { portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './r
 import {
   priceLabels,
   modeLabels,
+  rivalNames,
   toneOf,
   tensionLabels,
   effectLabels,
@@ -893,10 +894,16 @@ export function mountApp(root: HTMLElement, c: Content): void {
    */
   function renderRival(): void {
     const rival = state.rival;
+    if (!rival) {
+      rivalNotice.hidden = true;
+      return;
+    }
+    rivalNotice.classList.toggle('notice-guardian', rival.kind === 'guardian');
     const r = report?.rival;
     const notes: string[] = [];
     if (r?.cured) notes.push(`Вчера опровержения разубедили ${r.cured} ${peopleWord(r.cured)}.`);
-    for (const p of r?.publications ?? []) if (p.exposed) notes.push(`«Набат» пойман на лжи: «${p.title}».`);
+    const rn = rivalNames[rival.kind];
+    for (const p of r?.publications ?? []) if (p.exposed) notes.push(`«${rn.short}» пойман на лжи: «${p.title}».`);
     // Nothing printed yet and nothing to tell: no notice at all.
     rivalNotice.hidden = !rival || searching || !!state.outcome || (!rival.closed && !rival.printed.length && !notes.length);
     if (!rival || rivalNotice.hidden) return;
@@ -909,8 +916,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h(
         'div',
         { class: 'notice-head' },
-        h('img', { src: `${assetBase}sprites/ui/rival.png`, alt: '', width: 24, height: 24 }),
-        h('b', {}, rival.closed ? '«Вечерний Набат» закрылся' : '«Вечерний Набат» напечатал'),
+        h('img', { src: `${assetBase}sprites/ui/${rival.kind === 'guardian' ? 'guardian' : 'rival'}.png`, alt: '', width: 24, height: 24 }),
+        h('b', {}, rival.closed ? `«${rn.name}» закрылся` : `«${rn.name}» напечатал`),
         h('span', { class: 'rival-stats' }, `читателей ${rivalReaders(state)} · доверие ${Math.round(rivalTrust(state))}%`),
       ),
       ...(rival.printed.length
@@ -1072,7 +1079,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       render();
     };
 
-    const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `компромат на группу «${target}»`, debunk: 'опровержение «Набата»' }[tpl.source];
+    const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `компромат на группу «${target}»`, debunk: 'опровержение' }[tpl.source];
     // Truth menu next to the headline (CONCEPT.md §7.3); the place is changed by dragging or by a tap
     // on the story and then on a place in the paper.
     const menuOpen = truthMenuFor === card.uid;
@@ -1205,7 +1212,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       .join(' ');
     const children: (HTMLElement | null)[] = [
       investigation ? h('div', { class: 'kicker' }, `Расследование · эксклюзив · ${target.toLowerCase()}`) : null,
-      card.debunk ? h('div', { class: 'kicker debunk-kicker' }, 'Опровержение · «Вечерний Набат»') : null,
+      card.debunk ? h('div', { class: 'kicker debunk-kicker' }, `Опровержение · «${rivalNames[state.rival?.kind ?? 'tabloid'].name}»`) : null,
       pair ? h('div', { class: `kicker conflict-kicker level-${tensionLevel(c, state.tension[pair])}` }, `Конфликт · ${pairNames}`) : null,
       // Which of the town's bars or shops the story is about.
       card.building !== undefined && state.buildings[card.building] && buildingDefOf(c, state.buildings[card.building].type).names
@@ -1987,12 +1994,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
     if (state.rival && !state.rival.closed) {
       const watching = state.rivalWatch.includes(id);
       topicSection.push(
-        h('h3', { class: 'section' }, '«Вечерний Набат»'),
-        h('div', { class: 'chips' }, chip('Следить за «Набатом»', watching, () => setRivalWatch(state, id, !watching))),
+        h('h3', { class: 'section' }, `«${rivalNames[state.rival.kind].name}»`),
+        h('div', { class: 'chips' }, chip(`Следить за «${rivalNames[state.rival.kind].ins}»`, watching, () => setRivalWatch(state, id, !watching))),
         h(
           'p',
           { class: 'hint' },
-          `Следящий репортёр с шансом ${pct(b.assignFocus)} приносит опровержение свежей лжи «Набата» вместо обычной новости; остальные находят его случайно, с шансом ${pct(b.debunkFindChance)}.`,
+          `Следящий репортёр с шансом ${pct(b.assignFocus)} приносит опровержение свежей лжи «${rivalNames[state.rival.kind].gen}» вместо обычной новости; остальные находят его случайно, с шансом ${pct(b.debunkFindChance)}.`,
         ),
       );
     }
@@ -2085,7 +2092,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
         'div',
         { class: `modal ${state.outcome.result}` },
         h('h2', {}, state.outcome.result === 'win' ? 'Победа' : 'Поражение'),
-        h('p', {}, outcomeText(state.outcome)),
+        h('p', {}, outcomeText(state.outcome, state.mode)),
         h('p', { class: 'muted' }, `Сыграно ходов: ${Math.min(state.turn - 1, c.balance.turnLimit)}. Город: ${cityStage().name.toLowerCase()}.`),
         h(
           'div',
@@ -2232,7 +2239,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h(
         'div',
         { class: 'mode-cards' },
-        card('destroy', 'goal', 'Разрушить город', 'Вы — редактор газеты холдинга «Медиа-Плюс». Пугайте, стравливайте и врите, пока город не опустеет.'),
+        card('destroy', 'goal', 'Разрушить город', 'Вы — редактор газеты холдинга «Медиа-Плюс». Пугайте, стравливайте и врите, пока город не опустеет. Мешать будет честный «Голос города».'),
         card('save', 'defend', 'Спасти город', 'Вы — последняя честная газета. «Вечерний Набат» холдинга пугает город — опровергайте его и не дайте городу пасть.'),
       ),
       h('button', { class: 'ghost', onclick: () => openModal(titleOpen ? null : 'pause') }, '← Назад'),
@@ -2299,10 +2306,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h('div', {}, h('b', {}, title), h('p', {}, text)),
       );
     return [
-      block('ui/city', 'Цель', `«Разрушить город»: за ${b.turnLimit} дней доведите город до стадии «${stageBelow(b.winCityIndex)}». Проигрыш — банкротство, потеря репутации или конец срока.`),
+      block('ui/city', 'Цель', `«Разрушить город»: за ${b.turnLimit} дней доведите город до стадии «${stageBelow(b.winCityIndex)}». Или закройте «Голос города» — честную газету, которая успокаивает людей и опровергает вашу ложь. Проигрыш — банкротство, потеря репутации или конец срока.`),
       block('ui/rival', 'Спасти город', `Продержитесь ${b.turnLimit} дней, не дав городу скатиться в «${stageBelow(b.saveLoseIndex)}», или закройте «Вечерний Набат». Что он напечатал, видно над газетой; опровержения его свежей лжи приносят репортёры — особенно тот, кого отправили следить за «Набатом».`),
       block('ui/readers', 'Ход', 'Репортёры приносят новости — события дня всегда, остальное как повезёт. Разложите выпуск: первая полоса, статья, заметки — и отправьте в печать.'),
-      block('ui/truth_1', 'Правда и ложь', 'Каждую новость можно оставить как есть, додумать или исказить. Чем сильнее искажение, тем громче новость и выше риск разоблачения.'),
+      block('ui/truth_1', 'Правда и ложь', 'Подачу новости выбирают в плашке над заголовком: «Всё хорошо!», «Без паники», «Как есть», «Это неспроста», «Всё пропало!». Чем дальше от правды, тем выше риск разоблачения; вверх — громче, вниз — тише.'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, разоблачённая ложь обрушивает. Высокая репутация — вам верят и реже проверяют.'),
       block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый ход. Скучный выпуск их распугивает, интересный — приводит новых. На деньги нанимайте репортёров и улучшайте газету: киоски, цветная печать, новые рубрики.'),
       block('groups/workers', 'Стравливайте группы', 'Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.'),

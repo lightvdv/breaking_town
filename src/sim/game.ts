@@ -15,6 +15,7 @@ import { effectiveTier, issueLevel, issueScore, maxDistortion, minDistortion, pr
 import { advanceRelations, createTension, fillTitle, pairKeys, pairOf, tensionLevel } from './relations';
 import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
 import { advanceInvestigations, findNews, isRecent, scopeOf } from './reporters';
+import { planRival, publishRival, rivalReaders, rivalTrust, seedRival, updateRivalReaders, verifyRival } from './rival';
 import type {
   CardTemplate,
   ChannelId,
@@ -27,9 +28,10 @@ import type {
   Outcome,
   Topic,
   TurnReport,
+  GameMode,
 } from './types';
 
-export function createGame(c: Content, seed: number): GameState {
+export function createGame(c: Content, seed: number, mode: GameMode = 'destroy'): GameState {
   const rng = createRng(seed);
   const { buildings, mapSize } = createBuildings(c, rng);
   const residents = createResidents(c, rng, buildings);
@@ -41,6 +43,8 @@ export function createGame(c: Content, seed: number): GameState {
     seed,
     rng,
     turn: 0,
+    mode,
+    rival: mode === 'save' ? { plan: [], closed: false, debunked: 0 } : null,
     money: c.balance.startMoney,
     price: c.balance.startPrice,
     brokeTurns: 0,
@@ -74,6 +78,7 @@ export function createGame(c: Content, seed: number): GameState {
   };
   state.metrics = computeMetrics(state, c);
   seedFollowers(state, c, rng, getModifiers(state, c));
+  if (state.rival) seedRival(state, c, rng);
   startTurn(state, c);
   return state;
 }
@@ -122,8 +127,10 @@ function startTurn(state: GameState, c: Content): string[] {
   }
   const dug = advanceInvestigations(state, c, state.rng);
   const { cards, finds } = findNews(state, c, state.rng, getModifiers(state, c), events, pairs);
-  state.hand = [...state.hand, ...dug.cards, ...cards];
-  state.lastFinds = [...dug.finds, ...finds];
+  // Save mode: the rival plans its issue, and our sources bring a debunk for each story (CONCEPT.md §8).
+  const tips = planRival(state, c, state.rng, events, pairs);
+  state.hand = [...state.hand, ...dug.cards, ...cards, ...tips.cards];
+  state.lastFinds = [...dug.finds, ...finds, ...tips.finds];
   // At most one sensation a day (CONCEPT.md §4.2а): the others come out as interesting stories.
   let sensations = 0;
   for (const card of state.hand) if (card.tier === 3 && ++sensations > c.balance.maxSensations) card.tier = 2;
@@ -159,6 +166,15 @@ export function validateDecision(state: GameState, c: Content, d: Decision, mods
 
 export function checkOutcome(state: GameState, c: Content): Outcome | null {
   const b = c.balance;
+  if (state.mode === 'save') {
+    // Save the town (CONCEPT.md §8): close the rival or hold out to the end; lose the town and it is over.
+    if (state.rival?.closed) return { result: 'win', reason: 'rivalClosed' };
+    if (state.metrics.cityIndex < b.saveLoseIndex) return { result: 'lose', reason: 'cityFallen' };
+    if (state.brokeTurns >= b.brokeTurnsLimit) return { result: 'lose', reason: 'bankrupt' };
+    if (averageTrust(state, c) < b.trustCollapse) return { result: 'lose', reason: 'trustCollapse' };
+    if (state.turn > b.turnLimit) return { result: 'win', reason: 'citySaved' };
+    return null;
+  }
   if (state.metrics.cityIndex < b.winCityIndex) return { result: 'win', reason: 'cityDestroyed' };
   if (state.brokeTurns >= b.brokeTurnsLimit) return { result: 'lose', reason: 'bankrupt' };
   if (averageTrust(state, c) < b.trustCollapse) return { result: 'lose', reason: 'trustCollapse' };
@@ -197,13 +213,18 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
 
   const published: PublishedNews[] = [];
   const topicsThisTurn: Partial<Record<Topic, number>> = {};
+  const shields = new Map<number, Set<number>>();
   for (const p of d.publish) {
     const card = state.hand.find((x) => x.uid === p.cardUid)!;
     const topic = templateOf(c, card.templateId).topic;
-    published.push(publish(state, c, rng, mods, p, topicsThisTurn[topic] ?? 0));
+    published.push(publish(state, c, rng, mods, p, topicsThisTurn[topic] ?? 0, { shields }));
     topicsThisTurn[topic] = (topicsThisTurn[topic] ?? 0) + 1;
   }
+  // The rival's issue comes out the same day; our debunks went first (CONCEPT.md §8).
+  const rivalBefore = state.rival ? { readers: rivalReaders(state), trust: rivalTrust(state) } : null;
+  const rivalIssue = publishRival(state, c, rng, shields);
   const exposures = [...lateExposures, ...verifyNews(state, c, rng, mods, published)];
+  verifyRival(state, c, rng, rivalIssue.news);
 
   const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
@@ -211,6 +232,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const stories = d.publish.map((p) => ({ tier: effectiveTier(state.hand.find((x) => x.uid === p.cardUid)!, p.distortion), placement: p.placement }));
   const issue = { score: issueScore(c, stories), level: issueLevel(c, stories) };
   const readers = updateReaders(state, c, rng, mods, published.length, issue.level, readerIds);
+  updateRivalReaders(state, c, rng, rivalIssue.news);
   const readersAfter = readerCount(state);
 
   const streak: Partial<Record<Topic, number>> = {};
@@ -256,6 +278,19 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     events: [...state.todayEvents],
     notes,
     outcome: state.outcome,
+    ...(state.rival && rivalBefore
+      ? {
+          rival: {
+            publications: rivalIssue.news.map((n) => n.report),
+            shielded: rivalIssue.shielded,
+            readersBefore: rivalBefore.readers,
+            readersAfter: rivalReaders(state),
+            trustBefore: rivalBefore.trust,
+            trustAfter: rivalTrust(state),
+            closed: state.rival.closed,
+          },
+        }
+      : {}),
   };
 }
 

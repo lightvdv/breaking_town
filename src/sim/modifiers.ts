@@ -24,6 +24,11 @@ export interface Modifiers {
 }
 
 export function getModifiers(state: GameState, c: Content): Modifiers {
+  return modifiersOf(c, state.upgrades);
+}
+
+/** Modifiers of a set of upgrades; with none, those of an outlet without upgrades (the rival paper). */
+export function modifiersOf(c: Content, upgrades: string[]): Modifiers {
   const m: Modifiers = {
     reporterLuck: 0,
     frontPageSlots: c.balance.frontPageSlots,
@@ -37,7 +42,7 @@ export function getModifiers(state: GameState, c: Content): Modifiers {
   };
   for (const ch of c.channels) m.channels[ch.id] = { reachAdd: 0, reachMul: 1, adRateAdd: 0, upkeepAdd: 0, groupReach: {} };
 
-  for (const id of state.upgrades) {
+  for (const id of upgrades) {
     const u = c.upgrades.find((x) => x.id === id);
     if (!u) continue;
     const e = u.effects;

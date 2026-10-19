@@ -25,6 +25,8 @@ import {
   rankedPlacements,
   totalUpkeep,
   pairKey,
+  rivalReaders,
+  rivalTrust,
   type CardInstance,
   type Decision,
   type Placement,
@@ -110,6 +112,49 @@ function agitator(s: GameState): Decision {
   }
   return d;
 }
+
+// ---------- Save mode (CONCEPT.md §8): defend the town from the rival paper ----------
+
+/**
+ * Lays out a defending issue: debunks of the rival first (the loudest rival story's on the front
+ * page), then harmless true stories; conflict stories are calmed, frightening ones left out.
+ */
+function defend(s: GameState, debunkDistortion: (c: CardInstance) => number): Decision {
+  const mods = getModifiers(s, content);
+  const impact = (c: CardInstance, distortion: number) => previewPublication(s, content, mods, { cardUid: c.uid, placement: 2, distortion }).impact;
+  const out: { p: Publication; score: number }[] = [];
+  for (const c of s.hand) {
+    if (c.debunk) {
+      const d = debunkDistortion(c);
+      out.push({ p: { cardUid: c.uid, placement: 0, distortion: d }, score: 10 + impact(c, d) });
+    } else if (c.conflict) out.push({ p: { cardUid: c.uid, placement: 0, distortion: -1 }, score: impact(c, -1) });
+    else if (c.baseTruth === 0) {
+      const p = previewPublication(s, content, mods, { cardUid: c.uid, placement: 0, distortion: 0 });
+      if (!isHarmful(p.effect)) out.push({ p: { cardUid: c.uid, placement: 0, distortion: 0 }, score: p.effect ? 5 + p.impact : p.impact });
+    }
+  }
+  out.sort((a, b) => b.score - a.score);
+  const places = rankedPlacements(out.length, mods);
+  out.forEach((x, i) => (x.p.placement = places[i]));
+  return { publish: out.map((x) => x.p) };
+}
+
+/** Answers every rival story with the plain truth (a true story's debunk is skipped: it would be a lie). */
+const defender: Strategy = (s) => {
+  const d = defend(s, () => 0);
+  d.publish = d.publish.filter((p) => s.hand.find((x) => x.uid === p.cardUid)!.baseTruth === 0 || !s.hand.find((x) => x.uid === p.cardUid)!.debunk);
+  return d;
+};
+/** Answers everything, true stories too, and blows the debunks up while it is trusted. */
+const liarDefender: Strategy = (s) => defend(s, (c) => (averageTrust(s, content) >= 40 ? maxDistortion(c) : 0));
+/** Prints only harmless truth and never answers the rival. */
+const bystander: Strategy = (s) => {
+  const d = defend(s, () => 0);
+  d.publish = d.publish.filter((p) => !s.hand.find((x) => x.uid === p.cardUid)!.debunk);
+  return d;
+};
+
+const saveStrategies: Record<string, Strategy> = { defender, liarDefender, bystander, destroyer: mixed };
 
 const pairKeyOf = (c: CardInstance) => pairKey(content, c.conflict![0], c.conflict![1]);
 
@@ -213,7 +258,7 @@ interface Result {
 }
 
 function playGame(seed: number, strategy: Strategy, trace = false): Result {
-  const s = createGame(content, seed);
+  const s = createGame(content, seed, saveMode ? 'save' : 'destroy');
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
     if ((strategy === mixed || strategy === agitator) && !noInvestigations) manageInvestigations(s);
@@ -223,7 +268,8 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
     if (!s.outcome) shop(s);
     if (trace) {
       const m = r.metricsAfter;
-      const trust = `${averageTrust(s, content).toFixed(0)} published ${r.publications.length} readers ${r.readers.after} (-${r.readers.lost} +${r.readers.gained}) [${s.ownedChannels.join(',')}]`;
+      const rivalInfo = s.rival ? ` | rival readers ${rivalReaders(s)} trust ${rivalTrust(s).toFixed(0)}${s.rival.closed ? ' CLOSED' : ''}` : '';
+      const trust = `${averageTrust(s, content).toFixed(0)}${rivalInfo} published ${r.publications.length} readers ${r.readers.after} (-${r.readers.lost} +${r.readers.gained}) [${s.ownedChannels.join(',')}]`;
       console.log(
         `T${r.turn} index ${m.cityIndex.toFixed(0)} | pop ${m.activeResidents} emp ${m.employment.toFixed(2)} ` +
           `eco ${m.economy.toFixed(2)} mood ${m.mood.toFixed(2)} order ${m.order.toFixed(2)} | ` +
@@ -248,6 +294,8 @@ function arg(name: string, fallback: number): number {
 }
 
 const games = arg('games', 200);
+// --mode save: the save mode and its strategies (CONCEPT.md §8).
+const saveMode = process.argv.includes('save') && process.argv.includes('--mode');
 // --no-investigations: measure how much investigations add to the thoughtful bot.
 const noInvestigations = process.argv.includes('--no-investigations');
 const baseSeed = arg('seed', 1);
@@ -256,8 +304,8 @@ const baseSeed = arg('seed', 1);
 const traceIndex = process.argv.indexOf('--trace');
 if (traceIndex >= 0) {
   const name = process.argv[traceIndex + 1];
-  const strategy = strategies[name];
-  if (!strategy) throw new Error(`Unknown strategy ${name}; use one of ${Object.keys(strategies).join(', ')}`);
+  const strategy = (saveMode ? saveStrategies : strategies)[name];
+  if (!strategy) throw new Error(`Unknown strategy ${name}; use one of ${Object.keys(saveMode ? saveStrategies : strategies).join(', ')}`);
   playGame(baseSeed, strategy, true);
   process.exit(0);
 }
@@ -265,7 +313,7 @@ if (traceIndex >= 0) {
 const rows = [];
 let flagged = false;
 
-for (const [name, strategy] of Object.entries(strategies)) {
+for (const [name, strategy] of Object.entries(saveMode ? saveStrategies : strategies)) {
   const results = Array.from({ length: games }, (_, i) => playGame(baseSeed + i, strategy));
   const wins = results.filter((r) => r.outcome.result === 'win').length;
   const reasons: Record<string, number> = {};

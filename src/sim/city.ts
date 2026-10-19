@@ -28,6 +28,8 @@ export function newResident(c: Content, rng: RngState, id: number, group: GroupD
     beliefs: [],
     protestTurns: 0,
     fearTurns: 0,
+    rivalReader: false,
+    rivalTrust: 0,
     avoid: {},
     quitFrom: [],
   };

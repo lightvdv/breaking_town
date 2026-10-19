@@ -31,7 +31,13 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.reporterTopics ??= {};
     s.agencyOffer ??= [];
     s.price ??= c.balance.startPrice;
-    for (const r of s.residents) r.fearTurns ??= 0;
+    for (const r of s.residents) {
+      r.fearTurns ??= 0;
+      r.rivalReader ??= false;
+      r.rivalTrust ??= 0;
+    }
+    s.mode ??= 'destroy';
+    s.rival ??= null;
     // Channels and upgrades that left the game (radio, TV, social networks) are dropped; the rest stays.
     s.ownedChannels = s.ownedChannels.filter((id) => c.channels.some((x) => x.id === id));
     s.upgrades = s.upgrades.filter((id) => c.upgrades.some((x) => x.id === id));

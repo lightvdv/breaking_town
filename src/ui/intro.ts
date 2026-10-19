@@ -1,4 +1,4 @@
-import { reporterOf, type Content } from '../sim';
+import { reporterOf, type Content, type GameMode } from '../sim';
 import { h } from './dom';
 
 /**
@@ -12,9 +12,39 @@ export interface IntroSlide {
   text: string;
 }
 
-export function introSlides(c: Content): IntroSlide[] {
+export function introSlides(c: Content, mode: GameMode = 'destroy'): IntroSlide[] {
   const b = c.balance;
   const reporter = reporterOf(c, b.startReporters[0]).name;
+  // The other side of the same story (CONCEPT.md §8): the holding's tabloid against the town paper.
+  if (mode === 'save') {
+    return [
+      {
+        art: 'town',
+        kicker: 'Где-то в провинции',
+        text: `Тихий городок. ${b.population} жителей, завод, рынок и бар по пятницам. Здесь давно ничего не случалось.`,
+      },
+      {
+        art: 'rival',
+        kicker: 'Столица · «Медиа-Плюс»',
+        text: 'Медиахолдинг проверяет теорию: страх продаётся лучше всего. Он купил местный «Вечерний Набат», и тот каждый день пугает город.',
+      },
+      {
+        art: 'editor',
+        kicker: 'Редакция «Городского Вестника»',
+        text: `Вы — редактор последней честной газеты. Бюджет — ${b.startMoney} монет, в штате — один репортёр, ${reporter}.`,
+      },
+      {
+        art: 'defend',
+        kicker: 'Как это работает',
+        text: 'Ваши источники заранее узнают, что напечатает «Набат». Опровергайте его, печатайте хорошие новости, мирите группы. Можно и соврать — но если поймают, вам перестанут верить.',
+      },
+      {
+        art: 'saved',
+        kicker: 'Задание',
+        text: `Продержитесь ${b.turnLimit} дней и не дайте индексу города упасть ниже ${b.saveLoseIndex}. Или разорите «Набат»: без читателей и доверия он закроется.`,
+      },
+    ];
+  }
   return [
     {
       art: 'town',
@@ -50,8 +80,8 @@ export function introSlides(c: Content): IntroSlide[] {
 }
 
 /** Shows the slides one by one; resolves when the player reaches the end or skips. */
-export function playIntro(host: HTMLElement, c: Content, assetBase: string): Promise<void> {
-  const slides = introSlides(c);
+export function playIntro(host: HTMLElement, c: Content, assetBase: string, mode: GameMode = 'destroy'): Promise<void> {
+  const slides = introSlides(c, mode);
   return new Promise((resolve) => {
     let i = 0;
     const card = h('div', { class: 'intro-card' });

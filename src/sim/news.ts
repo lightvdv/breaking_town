@@ -76,7 +76,8 @@ export function limitSensations(state: GameState, c: Content, publish: Publicati
 export function storyTitle(c: Content, card: CardInstance, distortion: number): string {
   const tpl = templateOf(c, card.templateId);
   const raw = distortion < 0 ? tpl.calmTitle ?? '' : tpl.titles[cardTruth(card, distortion)] ?? '';
-  return fillTitle(c, raw, card.conflict);
+  // A debunk quotes the rival's headline.
+  return fillTitle(c, card.debunk ? raw.replace('{story}', card.debunk.title) : raw, card.conflict);
 }
 
 /** Framing of a conflict story as an index into tensionNews: calm, as is, heat, inflate. */
@@ -200,6 +201,8 @@ function beliefChance(
   r: Resident,
   tpl: CardTemplate,
   truth: TruthLevel,
+  /** Trust in the outlet printing the story; the player's by default. */
+  trustIn?: number,
 ): number {
   const b = c.balance;
   let plausibility = b.plausibility[truth] + mods.plausibilityAdd;
@@ -208,7 +211,7 @@ function beliefChance(
   }
   // People do not believe dirt about their own group.
   if (tpl.target === r.group) plausibility *= b.witness[truth];
-  const trust = (r.trust + mods.trustBonus) / 100;
+  const trust = (trustIn ?? r.trust + mods.trustBonus) / 100;
   const skepticism = groupOf(c, r.group).skepticism;
   return clamp(b.beliefScale * trust * plausibility * (1 - skepticism), 0, b.maxBelief);
 }
@@ -236,6 +239,9 @@ function applyEffect(
       return true;
     case 'moodUp':
       r.mood = clamp(r.mood + e.strength * mult);
+      return true;
+    case 'debunk':
+      // Handled by `publish`, which knows the story it answers.
       return true;
     case 'moodDown':
       r.mood = clamp(r.mood - e.strength * mult);
@@ -284,7 +290,16 @@ export interface PublishedNews {
   truth: TruthLevel;
   impact: number;
   viewers: number[];
+  /** Viewers who did not believe it. */
+  doubters: number[];
   report: PublicationReport;
+}
+
+export interface PublishOptions {
+  /** Prints a story of the rival paper: its readers see it, judged by their trust in it (CONCEPT.md §8). */
+  rival?: { card: CardInstance; shielded: Set<number> };
+  /** Our debunks: who believed a debunk, by the uid of the rival story it answers (filled here). */
+  shields?: Map<number, Set<number>>;
 }
 
 /** The story goes out on every owned channel; a resident sees it if any channel reaches them. */
@@ -295,9 +310,11 @@ export function publish(
   mods: Modifiers,
   pub: Publication,
   repeatsThisTurn: number,
+  opts: PublishOptions = {},
 ): PublishedNews {
   const b = c.balance;
-  const card = state.hand.find((x) => x.uid === pub.cardUid);
+  const rival = opts.rival;
+  const card = rival?.card ?? state.hand.find((x) => x.uid === pub.cardUid);
   if (!card) throw new Error(`Card ${pub.cardUid} is not in hand`);
   const tpl = templateOf(c, card.templateId);
   const truth = cardTruth(card, pub.distortion);
@@ -327,24 +344,38 @@ export function publish(
   };
   const heard = new Set<number>();
   const viewers: number[] = [];
+  const doubters: number[] = [];
   const believers: Resident[] = [];
+  const good = effect?.type === 'moodUp' || effect?.type === 'debunk';
 
   const consider = (r: Resident, factor: number): boolean => {
     heard.add(r.id);
-    if (!chance(rng, beliefChance(state, c, mods, r, tpl, truth) * factor)) {
+    // Who believed our debunk of this rival story is much harder to fool with it.
+    const shield = rival?.shielded.has(r.id) ? 1 - b.debunkShield : 1;
+    if (!chance(rng, beliefChance(state, c, mods, r, tpl, truth, rival ? r.rivalTrust : undefined) * factor * shield)) {
       setReaction(state, r.id, 'doubted');
       report.doubted++;
+      doubters.push(r.id);
       return false;
     }
-    setReaction(state, r.id, effect?.type === 'moodUp' || calm ? 'happy' : 'scared');
+    setReaction(state, r.id, good || calm ? 'happy' : 'scared');
     report.believed++;
     r.beliefs.push({ cardUid: card.uid, title, turn: state.turn });
     if (r.beliefs.length > b.maxBeliefs) r.beliefs.shift();
     // Impact, not reach, decides how hard the story hits this resident.
     const hit = impact * audienceMul(c, tpl, r.group, card);
     if (effect) {
-      const delta = effect.type === 'moodUp' ? b.hopePerBelief : -b.fearPerBelief;
+      const delta = good ? b.hopePerBelief : -b.fearPerBelief;
       r.outlook = clamp(r.outlook + delta * hit);
+    }
+    // A believed debunk: the rival loses this reader's trust, and its story will not fool them.
+    if (effect?.type === 'debunk' && card.debunk) {
+      r.rivalTrust = clamp(r.rivalTrust - b.debunkTrust * effect.strength * hit, 0, 100);
+      if (opts.shields) {
+        const set = opts.shields.get(card.debunk.uid) ?? new Set<number>();
+        set.add(r.id);
+        opts.shields.set(card.debunk.uid, set);
+      }
     }
     if (effect && applyEffect(state, c, rng, r, effect, b.effectScale * hit, tpl.target)) {
       report.effects[effect.type] = (report.effects[effect.type] ?? 0) + 1;
@@ -354,8 +385,8 @@ export function publish(
 
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
-    const channels = followedChannels(state, r);
-    if (channels.length === 0 || !chance(rng, b.placementRead[pub.placement])) continue;
+    const channels = rival ? [] : followedChannels(state, r);
+    if ((rival ? !r.rivalReader : channels.length === 0) || !chance(rng, b.placementRead[pub.placement])) continue;
     for (const ch of channels) report.byChannel[ch]++;
     viewers.push(r.id);
     if (consider(r, 1)) believers.push(r);
@@ -416,7 +447,7 @@ export function publish(
     if (calm) for (const id of viewers) if (memberIds.has(id)) state.residents[id].trust = clamp(state.residents[id].trust + b.calmTrust, 0, 100);
   }
 
-  return { pub, truth, impact, viewers, report };
+  return { pub, truth, impact, viewers, doubters, report };
 }
 
 /** A caught story costs reputation and ad income (CONCEPT.md §4.1); returns it for the exposure popup. */

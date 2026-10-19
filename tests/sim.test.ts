@@ -25,6 +25,9 @@ import {
   callAgency,
   hireFromAgency,
   limitSensations,
+  rivalReaders,
+  rivalTrust,
+  cardTruth,
   salesOf,
   setPrice,
   buyWillingness,
@@ -807,5 +810,57 @@ describe('group relations', () => {
     const r = playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 2, distortion: 0 }] });
     expect(r.publications[0].tension![pairKey(content, 'youth', 'workers')]).toBeGreaterThan(0);
     expect(r.tensionBefore[pairKey(content, 'youth', 'workers')]).toBe(before);
+  });
+});
+
+describe('save mode (CONCEPT.md §8)', () => {
+  it('the rival plans an issue and our sources bring a debunk for each story, true against its lies', () => {
+    const s = createGame(content, 3, 'save');
+    expect(s.mode).toBe('save');
+    expect(rivalReaders(s)).toBeGreaterThan(0);
+    expect(s.rival!.plan.length).toBeGreaterThanOrEqual(1);
+    for (const story of s.rival!.plan) {
+      const debunk = s.hand.find((x) => x.debunk?.uid === story.card.uid)!;
+      expect(debunk).toBeDefined();
+      expect(debunk.baseTruth).toBe(2 - cardTruth(story.card, story.distortion));
+      expect(s.lastFinds.some((f) => f.cardUid === debunk.uid)).toBe(true);
+    }
+    // The destroy mode has no rival.
+    expect(createGame(content, 3).rival).toBeNull();
+  });
+
+  it('a believed debunk shields its believers from the rival story and costs the rival trust', () => {
+    const run = (answer: boolean) => {
+      let shielded = 0;
+      let believed = 0;
+      for (const seed of [1, 2, 3, 4, 5, 6]) {
+        const s = createGame(content, seed, 'save');
+        for (const r of s.residents) r.follows = r.rivalReader ? ['newspaper'] : r.follows;
+        const debunks = s.hand.filter((x) => x.debunk);
+        const report = playTurn(s, content, { publish: answer ? debunks.map((x, i) => ({ cardUid: x.uid, placement: (i === 0 ? 2 : 0) as 0 | 2, distortion: 0 })) : [] });
+        shielded += report.rival!.shielded;
+        believed += report.rival!.publications.reduce((n, p) => n + p.believed, 0);
+      }
+      return { shielded, believed };
+    };
+    const quiet = run(false);
+    const answered = run(true);
+    expect(quiet.shielded).toBe(0);
+    expect(answered.shielded).toBeGreaterThan(0);
+    expect(answered.believed).toBeLessThan(quiet.believed);
+  });
+
+  it('wins when the rival closes or the town holds out, loses when the town falls', () => {
+    const s = createGame(content, 2, 'save');
+    for (const r of s.residents) r.rivalTrust = 1;
+    playTurn(s, content, { publish: [] });
+    expect(rivalTrust(s)).toBe(0);
+    expect(s.outcome).toEqual({ result: 'win', reason: 'rivalClosed' });
+
+    const t = createGame(content, 2, 'save');
+    for (const r of t.residents) r.job = null;
+    for (const r of t.residents) r.protestTurns = 5;
+    playTurn(t, content, { publish: [] });
+    expect(t.outcome).toEqual({ result: 'lose', reason: 'cityFallen' });
   });
 });

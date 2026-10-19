@@ -139,7 +139,8 @@ export interface UpgradeDef {
 
 /** stigma = dirt on the template's `target` group: other groups turn on it, it feels hunted. */
 /** fear = afraid of crime: stays at home for a few days and counts against order (CONCEPT.md §2.3). */
-export type EffectType = 'quitJob' | 'avoid' | 'leaveCity' | 'protest' | 'moodDown' | 'moodUp' | 'stigma' | 'fear';
+/** debunk = believers stop trusting the rival paper and will not believe the story it answers. */
+export type EffectType = 'quitJob' | 'avoid' | 'leaveCity' | 'protest' | 'moodDown' | 'moodUp' | 'stigma' | 'fear' | 'debunk';
 
 export interface CardEffect {
   type: EffectType;
@@ -162,7 +163,8 @@ export interface CardTemplate {
    * fact = true everyday story that needs no event, rumor = made-up or exaggerated story,
    * investigation = dirt on a social group, only from assigned reporters (CONCEPT.md §3.3а).
    */
-  source: 'event' | 'fact' | 'rumor' | 'investigation';
+  /** debunk = our answer to a story of the rival paper (save mode, CONCEPT.md §8); never found by search. */
+  source: 'event' | 'fact' | 'rumor' | 'investigation' | 'debunk';
   /** Investigations: the social group the dirt is about. */
   target?: GroupId;
   /** local = about this city (default), global = about the country or the world. */
@@ -238,6 +240,29 @@ export interface Balance {
   fearMood: number;
   /** Chance a scared resident skips the shop that day (bars are skipped always). */
   fearShopSkip: number;
+  /** Save mode (CONCEPT.md §8): the city falls when its index drops below this. */
+  saveLoseIndex: number;
+  /** Rival paper: share of the city reading it at the start, its readers' starting trust, per-group appeal. */
+  rivalStartShare: number;
+  rivalStartTrust: number;
+  rivalAffinity: Record<GroupId, number>;
+  /** Per-turn chances: a non-reader starts buying it (× trust × appeal), a reader drops it, more after doubting it. */
+  rivalJoin: number;
+  rivalChurn: number;
+  rivalChurnDoubt: number;
+  /** It prints 1..rivalStoriesMax stories a day. */
+  rivalStoriesMax: number;
+  /** Fact-check chance of its half-truths and lies, and the trust its readers lose when one is caught. */
+  rivalExposure: number;
+  rivalExposurePenalty: number;
+  /** Trust a true rival story earns from its viewers. */
+  rivalTrustGain: number;
+  /** It closes when fewer than this share of the city read it or its readers' trust falls below rivalTrustCollapse. */
+  rivalCloseShare: number;
+  rivalTrustCollapse: number;
+  /** A believed debunk: how much less likely the answered story is believed, and the rival trust lost (× impact). */
+  debunkShield: number;
+  debunkTrust: number;
   /** Most stories of sensation tier in a day's finds and in one issue. */
   maxSensations: number;
   startReporters: string[];
@@ -465,6 +490,9 @@ export interface Resident {
   protestTurns: number;
   /** Days the resident is still afraid of crime and stays at home. */
   fearTurns: number;
+  /** Save mode: buys the rival paper, and how much they trust it (0..100). */
+  rivalReader: boolean;
+  rivalTrust: number;
   /** Building types the resident avoids, with turns remaining. */
   avoid: Partial<Record<BuildingType, number>>;
   /** Building types the resident quit and won't return to. */
@@ -496,6 +524,24 @@ export interface CardInstance {
   conflict?: [GroupId, GroupId];
   /** The open building of the template's `requires` type the story is about. */
   building?: number;
+  /** Debunks: the rival's story it answers (uid in `RivalState.plan`) and its headline. */
+  debunk?: { uid: number; title: string };
+}
+
+/** A story the rival paper prints in its next issue; our sources learn it in advance. */
+export interface RivalStory {
+  card: CardInstance;
+  placement: Placement;
+  distortion: number;
+}
+
+/** The rival paper «Вечерний Набат» of the save mode (CONCEPT.md §8). */
+export interface RivalState {
+  /** Its issue going out with ours this turn. */
+  plan: RivalStory[];
+  closed: boolean;
+  /** Its stories our debunks answered, over the game. */
+  debunked: number;
 }
 
 /** An incident between two groups that happened today (it becomes a true story). */
@@ -593,9 +639,13 @@ export interface CityMetrics {
 /** Reaction to this turn's news, shown as an animation above the resident (CONCEPT.md §7.2). */
 export type Reaction = 'scared' | 'happy' | 'doubted' | 'talk' | 'outraged';
 
+/** destroy = ruin the town for the holding; save = defend it from the holding's rival paper (CONCEPT.md §8). */
+export type GameMode = 'destroy' | 'save';
+
 export interface Outcome {
   result: 'win' | 'lose';
-  reason: 'cityDestroyed' | 'bankrupt' | 'trustCollapse' | 'turnLimit';
+  /** citySaved / rivalClosed / cityFallen belong to the save mode. */
+  reason: 'cityDestroyed' | 'bankrupt' | 'trustCollapse' | 'turnLimit' | 'citySaved' | 'rivalClosed' | 'cityFallen';
 }
 
 export interface GameState {
@@ -603,6 +653,9 @@ export interface GameState {
   seed: number;
   rng: RngState;
   turn: number;
+  mode: GameMode;
+  /** Save mode only: the rival paper. */
+  rival: RivalState | null;
   money: number;
   /** Price level of the paper (index in `Balance.prices`), chosen by the player. */
   price: number;
@@ -724,4 +777,17 @@ export interface TurnReport {
   events: string[];
   notes: string[];
   outcome: Outcome | null;
+  /** Save mode: what the rival printed this turn and how it stands now. */
+  rival?: RivalReport;
+}
+
+export interface RivalReport {
+  publications: PublicationReport[];
+  /** Its stories our readers were shielded from by a believed debunk. */
+  shielded: number;
+  readersBefore: number;
+  readersAfter: number;
+  trustBefore: number;
+  trustAfter: number;
+  closed: boolean;
 }

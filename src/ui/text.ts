@@ -3,6 +3,7 @@ import {
   type CardEffect,
   type Content,
   type EffectType,
+  type GameMode,
   type NewsScope,
   type Outcome,
   type Reaction,
@@ -22,6 +23,8 @@ export const tierLabels = ['Скучная', 'Обычная', 'Интересн
 export const scopeLabels: Record<NewsScope | 'any', string> = { local: 'Город', global: 'Мир', any: 'Город и мир' };
 export const placementLabels = ['Заметка', 'Статья', 'Первая полоса'];
 export const issueLevelLabels = ['Скучный', 'Обычный', 'Интересный', 'Сенсационный'];
+/** Game modes as the title screen names them (CONCEPT.md §8). */
+export const modeLabels: Record<GameMode, string> = { destroy: 'Разрушить город', save: 'Спасти город' };
 /** Cover price levels of the paper (CONCEPT.md §3.4), from free to dear. */
 export const priceLabels = ['Бесплатно', 'Дёшево', 'Как у всех', 'Дорого'];
 /** Framing of a conflict story between two groups (CONCEPT.md §5.5): calm, as is, heat, inflate. */
@@ -47,6 +50,7 @@ export const effectLabels: Record<EffectType, string> = {
   moodUp: 'обрадовались',
   stigma: 'ополчились',
   fear: 'боятся выходить',
+  debunk: 'не поверили «Набату»',
 };
 
 export function effectText(c: Content, e: CardEffect | null, target?: string): string {
@@ -65,6 +69,8 @@ export function effectText(c: Content, e: CardEffect | null, target?: string): s
       return 'Поверившие расстраиваются';
     case 'moodUp':
       return 'Поверившие радуются';
+    case 'debunk':
+      return 'Поверившие не поверят этой новости «Набата» и меньше доверяют ему';
     case 'fear':
       return 'Поверившие боятся выходить из дома: порядок падает, бары и магазины пустеют';
     case 'stigma': {
@@ -84,5 +90,11 @@ export function outcomeText(o: Outcome): string {
       return 'Поражение: репутация упала до нуля — вам больше никто не верит. Холдинг отрекается от провалившегося редактора.';
     case 'turnLimit':
       return 'Поражение: время вышло, а город выстоял. Совет директоров разочарован: теорию придётся проверять с другим редактором.';
+    case 'citySaved':
+      return 'Победа! Город выстоял: «Набат» пугал, а люди остались, работали и ходили в бары. Опыт «Медиа-Плюс» провалился.';
+    case 'rivalClosed':
+      return 'Победа! «Вечерний Набат» закрылся: ему больше никто не верит и его никто не покупает. Холдинг ищет другой город.';
+    case 'cityFallen':
+      return 'Поражение: город не выдержал страха, ссор и безработицы. «Медиа-Плюс» празднует, «Вестник» остался без читателей.';
   }
 }

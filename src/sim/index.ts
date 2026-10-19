@@ -10,4 +10,5 @@ export { previewPublication, cardTruth, effectiveTier, framingOf, isHarmful, iss
 export { createTension, fillTitle, pairKey, pairKeys, pairOf, startTension, tensionLevel } from './relations';
 export { averageTrust, buildingDefOf, buildingName, channelOf, groupOf, templateOf } from './lookup';
 export { validateContent } from './validateContent';
+export { DEBUNK_TEMPLATE, rivalReaders, rivalTitle, rivalTrust } from './rival';
 export { isRoadTile, mapSizeFor } from './map';

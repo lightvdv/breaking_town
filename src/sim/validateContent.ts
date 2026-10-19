@@ -66,7 +66,7 @@ export function validateContent(c: Content): string[] {
     if (t.source === 'event' && t.baseTruth !== 0) errors.push(`card ${t.id}: events must be true`);
     if (t.source === 'fact' && t.baseTruth !== 0) errors.push(`card ${t.id}: facts must be true`);
     if (t.source === 'fact' && t.cityEffect) errors.push(`card ${t.id}: facts do not change the city (use an event)`);
-    if (!['event', 'fact', 'rumor', 'investigation'].includes(t.source)) errors.push(`card ${t.id}: unknown source ${t.source}`);
+    if (!['event', 'fact', 'rumor', 'investigation', 'debunk'].includes(t.source)) errors.push(`card ${t.id}: unknown source ${t.source}`);
     if (t.scope === 'global' && (t.witness || t.cityEffect)) errors.push(`card ${t.id}: global news cannot have witnesses or city effects`);
     if (t.scope && t.scope !== 'local' && t.scope !== 'global') errors.push(`card ${t.id}: unknown scope ${t.scope}`);
     for (const g of t.audience ?? []) if (!c.groups.some((x) => x.id === g)) errors.push(`card ${t.id}: unknown audience ${g}`);
@@ -121,6 +121,11 @@ export function validateContent(c: Content): string[] {
       if (n < 8) errors.push(`only ${n} ${scope} ${kind} stories, need at least 8`);
     }
   }
+  // The save mode needs exactly one debunk template, the one the rival's stories are answered with.
+  if (c.cards.filter((t) => t.source === 'debunk').length !== 1 || !c.cards.some((t) => t.id === 'debunk' && t.source === 'debunk')) {
+    errors.push('need exactly one debunk template with id "debunk"');
+  }
+  for (const id of Object.keys(b.rivalAffinity)) if (!c.groups.some((g) => g.id === id)) errors.push(`rivalAffinity: unknown group ${id}`);
   for (const g of c.groups) {
     if (!c.cards.some((t) => t.source === 'investigation' && t.target === g.id)) errors.push(`no investigation story about ${g.id}`);
   }

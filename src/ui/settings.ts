@@ -8,12 +8,13 @@ export interface Settings {
   fastSearch: boolean;
   /** Skip the city cutscenes of bright days. */
   skipCutscenes: boolean;
-  /** The opening story was shown (it plays only before the first game). */
+  /** The opening story was shown (it plays only before the first game of each mode). */
   introSeen: boolean;
+  introSeenSave: boolean;
 }
 
 const KEY = 'breaking-town-settings';
-const defaults: Settings = { theme: 'auto', fastSearch: false, skipCutscenes: false, introSeen: false };
+const defaults: Settings = { theme: 'auto', fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false };
 
 export function loadSettings(): Settings {
   try {

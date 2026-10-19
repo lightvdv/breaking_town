@@ -42,6 +42,10 @@ import {
   startInvestigation,
   templateOf,
   totalUpkeep,
+  rivalReaders,
+  rivalTitle,
+  rivalTrust,
+  type GameMode,
   type CardInstance,
   type Content,
   type ChurnReason,
@@ -69,6 +73,7 @@ import { portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './r
 import {
   framingLabels,
   priceLabels,
+  modeLabels,
   tensionLabels,
   effectLabels,
   effectText,
@@ -176,7 +181,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
   let titleOpen = !params.has('new');
   /** A game was started or continued in this tab, so «Продолжить» makes sense. */
   let hasGame = saved !== null;
-  let state: GameState = saved?.state ?? createGame(c, seedFromUrl());
+  let state: GameState = saved?.state ?? createGame(c, seedFromUrl(), params.get('mode') === 'save' ? 'save' : 'destroy');
   let drafts = new Map<number, Draft>(saved?.drafts ?? []);
   // A saved layout that no longer fits the slots (e.g. two front pages from a removed upgrade) is laid out anew.
   {
@@ -291,7 +296,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
   // Exposures and the mayor's reconciliation are announced by plaques above the paper (CONCEPT.md §7.3).
   const exposureNotice = h('section', { class: 'notice notice-exposed', hidden: true, role: 'status' });
   const reconcileNotice = h('section', { class: 'notice notice-peace', hidden: true, role: 'status' });
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, exposureNotice, reconcileNotice, paper));
+  // Save mode: what the rival paper prints today, and which of its stories we answer (CONCEPT.md §8).
+  const rivalNotice = h('section', { class: 'notice notice-rival', hidden: true, role: 'status' });
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, exposureNotice, reconcileNotice, rivalNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -568,9 +575,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
     render();
   }
 
-  const newGame = (seed = randomSeed()) => {
+  const newGame = (seed = randomSeed(), mode: GameMode = 'destroy') => {
     hasGame = true;
-    state = createGame(c, seed);
+    state = createGame(c, seed, mode);
     drafts = new Map();
     report = null;
     error = '';
@@ -782,7 +789,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
         'Индекс города',
         `${Math.round(state.metrics.cityIndex)}`,
         r ? Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex) : null,
-        `Насколько город жив. Для победы опустите ниже ${c.balance.winCityIndex}. Нажмите — подробности.`,
+        state.mode === 'save'
+          ? `Насколько город жив. Не дайте ему упасть ниже ${c.balance.saveLoseIndex}. Нажмите — подробности.`
+          : `Насколько город жив. Для победы опустите ниже ${c.balance.winCityIndex}. Нажмите — подробности.`,
         '',
         '',
         () => openModal('city'),
@@ -834,6 +843,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       .map((g) => groupOf(c, g).name.toLowerCase())
       .join(sep);
   const turnsWord = (n: number) => (n === 1 ? 'ход' : n < 5 ? 'хода' : 'ходов');
+  const peopleWord = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? 'человека' : 'человек');
 
   /** The mayor's reconciliation notice, next to the exposure notice (CONCEPT.md §5.5). */
   function renderReconcile(): void {
@@ -860,6 +870,44 @@ export function mountApp(root: HTMLElement, c: Content): void {
         ),
       ),
       h('p', { class: 'notice-note' }, `${rec.turnsLeft} ${turnsWord(rec.turnsLeft)} их вражда будет остывать, а фактчекеры проверяют прессу строже.`),
+    );
+  }
+
+  /** Save mode: the rival's issue of today, its readers and trust, and how yesterday went (CONCEPT.md §8). */
+  function renderRival(): void {
+    const rival = state.rival;
+    rivalNotice.hidden = !rival || searching || !!state.outcome;
+    if (!rival || rivalNotice.hidden) return;
+    const answered = new Set(
+      state.hand.filter((x) => x.debunk && drafts.get(x.uid)?.publish).map((x) => x.debunk!.uid),
+    );
+    const r = report?.rival;
+    const yesterday: string[] = [];
+    if (r?.shielded) yesterday.push(`Вчера опровержения уберегли ${r.shielded} ${peopleWord(r.shielded)} от его страшилок.`);
+    for (const p of r?.publications ?? []) if (p.exposed) yesterday.push(`«Набат» пойман на лжи: «${p.title}».`);
+    rivalNotice.replaceChildren(
+      h(
+        'div',
+        { class: 'notice-head' },
+        h('img', { src: `${assetBase}sprites/ui/rival.png`, alt: '', width: 24, height: 24 }),
+        h('b', {}, rival.closed ? '«Вечерний Набат» закрылся' : '«Вечерний Набат» сегодня печатает'),
+        h('span', { class: 'rival-stats' }, `читателей ${rivalReaders(state)} · доверие ${Math.round(rivalTrust(state))}%`),
+      ),
+      h(
+        'ul',
+        { class: 'rival-list' },
+        ...rival.plan.map((s) =>
+          h(
+            'li',
+            { class: answered.has(s.card.uid) ? 'answered' : '' },
+            h('span', { class: 'rival-place' }, placementLabels[s.placement]),
+            h('span', { class: 'rival-title' }, `«${rivalTitle(c, s)}»`),
+            h('span', { class: 'rival-answer' }, answered.has(s.card.uid) ? '✓ опровергаем' : 'без ответа'),
+          ),
+        ),
+      ),
+      ...yesterday.map((t) => h('p', { class: 'notice-note' }, t)),
+      h('p', { class: 'notice-note hint' }, 'Опровержения этих новостей уже в вашем выпуске: поставьте их повыше, чтобы их заметили.'),
     );
   }
 
@@ -1019,7 +1067,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       render();
     };
 
-    const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `компромат на группу «${target}»` }[tpl.source];
+    const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `компромат на группу «${target}»`, debunk: 'опровержение «Набата»' }[tpl.source];
     // Truth menu next to the headline (CONCEPT.md §7.3); the place is changed by dragging or by a tap
     // on the story and then on a place in the paper.
     const menuOpen = truthMenuFor === card.uid;
@@ -1153,6 +1201,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       .join(' ');
     const children: (HTMLElement | null)[] = [
       investigation ? h('div', { class: 'kicker' }, `Расследование · эксклюзив · ${target.toLowerCase()}`) : null,
+      card.debunk ? h('div', { class: 'kicker debunk-kicker' }, 'Опровержение · «Вечерний Набат»') : null,
       pair ? h('div', { class: `kicker conflict-kicker level-${tensionLevel(c, state.tension[pair])}` }, `Конфликт · ${pairNames}`) : null,
       // Which of the town's bars or shops the story is about.
       card.building !== undefined && state.buildings[card.building] && buildingDefOf(c, state.buildings[card.building].type).names
@@ -1613,7 +1662,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h('h3', { class: 'section' }, 'Игра'),
       row('Ход', `${Math.min(state.turn, b.turnLimit)} / ${b.turnLimit}`),
       row('Сид города', `${state.seed}`),
-      row('Индекс города', `${Math.round(m.cityIndex)} (победа < ${b.winCityIndex})`),
+      row('Индекс города', state.mode === 'save' ? `${Math.round(m.cityIndex)} (поражение < ${b.saveLoseIndex})` : `${Math.round(m.cityIndex)} (победа < ${b.winCityIndex})`),
       row('Каналы', state.ownedChannels.map((ch) => channelOf(c, ch).name).join(', ')),
       row('Расходы за ход', `${totalUpkeep(state, c)}`),
       row('Реклама после скандала', `×${state.scandal.toFixed(2)}`),
@@ -1753,9 +1802,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
         'div',
         { class: 'city-index' },
         h('img', { src: `${assetBase}sprites/ui/city.png`, alt: '', width: 48, height: 48 }),
-        h('div', {}, h('b', {}, `${Math.round(m.cityIndex)}`), h('span', {}, `Индекс города · победа ниже ${b.winCityIndex}`)),
+        h('div', {}, h('b', {}, `${Math.round(m.cityIndex)}`), h('span', {}, state.mode === 'save' ? `Индекс города · поражение ниже ${b.saveLoseIndex}` : `Индекс города · победа ниже ${b.winCityIndex}`)),
       ),
-      meter(m.cityIndex / 100, m.cityIndex < b.winCityIndex + 10 ? 'danger' : 'warn'),
+      meter(m.cityIndex / 100, m.cityIndex < (state.mode === 'save' ? b.saveLoseIndex : b.winCityIndex) + 10 ? 'danger' : 'warn'),
       h(
         'div',
         { class: 'city-index' },
@@ -2044,8 +2093,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
           'div',
           { class: 'outcome-actions' },
           state.outcome.result === 'win'
-            ? h('button', { class: 'primary big', onclick: () => void startGame() }, 'Следующий город ▸')
-            : h('button', { class: 'primary big', onclick: () => void startGame() }, 'Новая игра'),
+            ? h('button', { class: 'primary big', onclick: () => void startGame(state.mode) }, 'Следующий город ▸')
+            : h('button', { class: 'primary big', onclick: () => openModal('newgame') }, 'Новая игра'),
           h('button', { onclick: () => showTitle() }, 'Главное меню'),
         ),
       ),
@@ -2065,6 +2114,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     renderIssue();
     renderExposures();
     renderReconcile();
+    renderRival();
     renderModal();
     renderOutcome();
     renderTitle();
@@ -2095,11 +2145,11 @@ export function mountApp(root: HTMLElement, c: Content): void {
                 'button',
                 { class: 'title-item primary', onclick: continueGame },
                 h('span', {}, 'Продолжить'),
-                h('small', {}, `День ${Math.min(state.turn, c.balance.turnLimit)} · индекс города ${Math.round(state.metrics.cityIndex)} · ${state.money} монет`),
+                h('small', {}, `${modeLabels[state.mode]} · день ${Math.min(state.turn, c.balance.turnLimit)} · индекс города ${Math.round(state.metrics.cityIndex)} · ${state.money} монет`),
               )
             : null,
           // A running game is not thrown away without asking.
-          item('Новая игра', () => (hasGame && !state.outcome ? openModal('newgame') : void startGame()), hasGame && !state.outcome ? '' : 'primary'),
+          item('Новая игра', () => openModal('newgame'), hasGame && !state.outcome ? '' : 'primary'),
           item('Как играть', () => openModal('howto')),
           item('Настройки', () => openModal('settings')),
           item('Об игре', () => openModal('about')),
@@ -2126,18 +2176,18 @@ export function mountApp(root: HTMLElement, c: Content): void {
     void runSearch();
   }
 
-  /** Starts a new game; before the very first one the opening story plays (CONCEPT.md §1.1). */
-  async function startGame(seed?: number): Promise<void> {
+  /** Starts a new game; before the first one of each mode its opening story plays (CONCEPT.md §1.1, §8). */
+  async function startGame(mode: GameMode = 'destroy', seed?: number): Promise<void> {
     modal = null;
     titleOpen = false;
     render();
-    if (!settings.introSeen) await watchIntro();
+    if (!(mode === 'save' ? settings.introSeenSave : settings.introSeen)) await watchIntro(mode);
     scene?.stopTour();
-    newGame(seed);
+    newGame(seed, mode);
   }
 
   /** The opening story over the drifting city. */
-  async function watchIntro(): Promise<void> {
+  async function watchIntro(mode: GameMode = state.mode): Promise<void> {
     const wasTitle = titleOpen;
     titleOpen = false;
     modal = null;
@@ -2146,9 +2196,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
     scene?.startTour();
     // The game interface hides behind the story as it does behind the title screen.
     root.classList.add('at-title');
-    await playIntro(root, c, assetBase);
+    await playIntro(root, c, assetBase, mode);
     root.classList.remove('at-title');
-    settings.introSeen = true;
+    if (mode === 'save') settings.introSeenSave = true;
+    else settings.introSeen = true;
     saveSettings(settings);
     if (wasTitle) showTitle();
   }
@@ -2169,11 +2220,24 @@ export function mountApp(root: HTMLElement, c: Content): void {
     ].filter((x): x is HTMLElement => x !== null);
   }
 
-  /** From a running game: a confirmation that the current game will be lost. */
+  /** New game: the mode is chosen with a picture card (CONCEPT.md §8); a running game is lost. */
   function newGameContent(): HTMLElement[] {
+    const card = (mode: GameMode, art: string, title: string, text: string) =>
+      h(
+        'button',
+        { class: `mode-card mode-${mode}`, onclick: () => void startGame(mode) },
+        h('img', { src: `${assetBase}sprites/intro/${art}.png`, alt: '', width: 256, height: 144 }),
+        h('b', {}, title),
+        h('span', {}, text),
+      );
     return [
-      h('p', {}, 'Начать новую партию в новом городе? Текущая партия будет потеряна.'),
-      h('button', { class: 'primary big', onclick: () => void startGame() }, 'Начать новую партию'),
+      ...(hasGame && !state.outcome ? [h('p', { class: 'bad' }, 'Текущая партия будет потеряна.')] : []),
+      h(
+        'div',
+        { class: 'mode-cards' },
+        card('destroy', 'goal', 'Разрушить город', 'Вы — редактор газеты холдинга «Медиа-Плюс». Пугайте, стравливайте и врите, пока город не опустеет.'),
+        card('save', 'defend', 'Спасти город', 'Вы — последняя честная газета. «Вечерний Набат» холдинга пугает город — опровергайте его и не дайте городу пасть.'),
+      ),
       h('button', { class: 'ghost', onclick: () => openModal(titleOpen ? null : 'pause') }, '← Назад'),
     ];
   }
@@ -2238,7 +2302,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h('div', {}, h('b', {}, title), h('p', {}, text)),
       );
     return [
-      block('ui/city', 'Цель', `За ${b.turnLimit} дней опустите индекс города ниже ${b.winCityIndex}. Проигрыш — банкротство, потеря репутации или конец срока.`),
+      block('ui/city', 'Цель', `«Разрушить город»: за ${b.turnLimit} дней опустите индекс города ниже ${b.winCityIndex}. Проигрыш — банкротство, потеря репутации или конец срока.`),
+      block('ui/rival', 'Спасти город', `Продержитесь ${b.turnLimit} дней с индексом выше ${b.saveLoseIndex} или закройте «Вечерний Набат». Его выпуск видно над газетой заранее; опровержения его новостей сами приходят в выпуск.`),
       block('ui/readers', 'Ход', 'Репортёры приносят новости — события дня всегда, остальное как повезёт. Разложите выпуск: первая полоса, статья, заметки — и отправьте в печать.'),
       block('ui/truth_1', 'Правда и ложь', 'Каждую новость можно оставить как есть, додумать или исказить. Чем сильнее искажение, тем громче новость и выше риск разоблачения.'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, разоблачённая ложь обрушивает. Высокая репутация — вам верят и реже проверяют.'),

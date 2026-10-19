@@ -84,6 +84,7 @@
     "peace"
   ],
   "ui": [
+    "rival",
     "money",
     "readers",
     "reputation",
@@ -133,6 +134,9 @@
     "editor",
     "method",
     "goal",
+    "rival",
+    "defend",
+    "saved",
     "reward"
   ],
   "news": [
@@ -224,6 +228,7 @@
     "rumor_hoarding",
     "rumor_gangs",
     "rumor_budget",
-    "rumor_noise"
+    "rumor_noise",
+    "debunk"
   ]
 }

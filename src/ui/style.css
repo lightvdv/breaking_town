@@ -1190,14 +1190,19 @@ button.publish.level-3.bump-up {
 .masthead {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
+  grid-template-areas:
+    '. title close'
+    'row row row';
   align-items: end;
-  gap: 12px;
-  padding-bottom: 6px;
+  column-gap: 12px;
+  row-gap: 4px;
+  padding-bottom: 4px;
   margin-bottom: 12px;
   border-bottom: 4px double var(--paper-ink);
 }
 
 .masthead h2 {
+  grid-area: title;
   margin: 0;
   font-size: 34px;
   font-weight: 700;
@@ -1206,53 +1211,68 @@ button.publish.level-3.bump-up {
   color: var(--paper-ink);
 }
 
-.masthead-side {
+/* Second row of the masthead: the cover price on the left, the issue number on the right. */
+.masthead-row {
+  grid-area: row;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--paper-ink);
+}
+
+.issue-no {
   font-size: 13px;
   color: var(--paper-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
-/* Cover price under the issue number: free, cheap, middle, dear (CONCEPT.md §5.4). */
-.masthead-side {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
+/* Cover price chip and its menu, like the truth chip of a story (CONCEPT.md §3.4). */
 .price-select {
-  display: flex;
-  flex-wrap: wrap;
+  position: relative;
+}
+
+.price-chip {
+  display: inline-flex;
   align-items: center;
-  gap: 3px;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.price-select .price-label {
-  margin-right: 2px;
-}
-
-.price-select button {
-  min-width: 28px;
+  gap: 4px;
   padding: 1px 6px;
   font-size: 12px;
+  font-weight: 700;
   line-height: 18px;
-  background: transparent;
+  white-space: nowrap;
   color: var(--paper-ink);
+  background: #f3dfb2;
   border: 1px solid var(--paper-muted);
   box-shadow: none;
 }
 
-.price-select button.on {
-  font-weight: 700;
-  background: var(--paper-ink);
-  color: var(--paper);
-  border-color: var(--paper-ink);
+.price-chip img {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+}
+
+.price-chip .chip-arrow {
+  font-size: 10px;
+}
+
+.price-chip.on {
+  outline: 2px solid var(--paper-ink);
+  outline-offset: 1px;
+}
+
+.price-menu {
+  top: 26px;
+  left: 0;
+  text-align: left;
 }
 
 /* «—» in the corner of the paper folds the issue to look at the city. */
 .paper-close {
+  grid-area: close;
   justify-self: end;
   align-self: start;
   width: 32px;
@@ -3005,10 +3025,6 @@ button.publish.level-3.bump-up {
     margin: 0 0 6px;
   }
 
-  .masthead-side {
-    text-align: center !important;
-    align-items: center;
-  }
 
   .zone-out .news {
     width: 100%;
@@ -3070,20 +3086,8 @@ button.publish.level-3.bump-up {
     grid-template-columns: 1fr auto;
     grid-template-areas:
       'title close'
-      'side side';
+      'row row';
     text-align: center;
-  }
-
-  .masthead h2 {
-    grid-area: title;
-  }
-
-  .paper-close {
-    grid-area: close;
-  }
-
-  .masthead > .masthead-side {
-    grid-area: side;
   }
 
   .res {

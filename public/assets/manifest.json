@@ -99,7 +99,11 @@
     "truth_2",
     "place_0",
     "place_1",
-    "place_2"
+    "place_2",
+    "price_0",
+    "price_1",
+    "price_2",
+    "price_3"
   ],
   "reporters": [
     "petrova",

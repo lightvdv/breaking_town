@@ -68,6 +68,7 @@ import { playIntro } from './intro';
 import { portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
   framingLabels,
+  priceLabels,
   tensionLabels,
   effectLabels,
   effectText,
@@ -211,6 +212,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
   let relFocus: string | null = null;
   /** Story whose truth menu is open next to its headline. */
   let truthMenuFor: number | null = null;
+  /** The cover price menu in the masthead is open. */
+  let priceMenuOpen = false;
   /** Story picked by a tap; the next tap on a place in the paper moves it there (CONCEPT.md §7.3). */
   let selected: number | null = null;
   /** The tray of stories left out is unfolded. */
@@ -274,13 +277,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
   };
   const zones: Record<string, ReturnType<typeof makeZone>> = { 2: makeZone(2), 1: makeZone(1), 0: makeZone(0), out: makeZone('out') };
   const issueNo = h('span', { class: 'issue-no' });
-  const priceSelect = h('div', { class: 'price-select', role: 'radiogroup', 'aria-label': 'Цена выпуска' });
+  const priceSelect = h('div', { class: 'price-select' });
+  // Two rows (CONCEPT.md §7.3): the name of the paper, then the cover price on the left and the issue number on the right.
   const masthead = h(
     'header',
     { class: 'masthead' },
-    h('div', { class: 'masthead-side' }, issueNo, priceSelect),
     h('h2', {}, 'Городской Вестник'),
     h('button', { class: 'paper-close', title: 'Свернуть — посмотреть на город', onclick: () => closeIssue() }, '—'),
+    h('div', { class: 'masthead-row' }, priceSelect, issueNo),
   );
   // The tray of stories left out is the last rubric of the page, folded into one line (CONCEPT.md §7.3).
   const paper = h('div', { class: 'paper' }, masthead, h('div', { class: 'paper-grid' }, zones[2].root, zones[1].root, zones[0].root), zones.out.root);
@@ -297,8 +301,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
   });
   // A press anywhere else closes an open truth menu.
   document.addEventListener('pointerdown', (e) => {
-    if (truthMenuFor === null || (e.target as Element).closest('.place-menu, .truth-chip')) return;
+    if ((truthMenuFor === null && !priceMenuOpen) || (e.target as Element).closest('.place-menu, .truth-chip, .price-chip')) return;
     truthMenuFor = null;
+    priceMenuOpen = false;
     render();
   });
   document.addEventListener('keydown', (e) => {
@@ -431,31 +436,61 @@ export function mountApp(root: HTMLElement, c: Content): void {
    */
   function renderPrice(): void {
     const b = c.balance;
-    const classes: Record<WealthClass, string> = { working: 'работающие', pensioner: 'пенсионеры', jobless: 'безработные' };
-    priceSelect.replaceChildren(
-      h('span', { class: 'price-label' }, 'Цена:'),
-      ...b.prices.map((price, i) => {
-        const who = (Object.keys(classes) as WealthClass[]).filter((k) => (b.priceBuy[k][i] ?? 0) > 0).map((k) => classes[k]);
-        const title =
-          (price === 0 ? 'Бесплатно: доход только с рекламы. ' : `${price} за выпуск. `) +
-          `Покупают: ${who.join(', ')}${i === b.prices.length - 1 ? ', и то неохотно' : ''}.`;
-        return h(
-          'button',
-          {
-            class: state.price === i ? 'on' : '',
-            role: 'radio',
-            'aria-checked': String(state.price === i),
-            title,
-            disabled: busy || !!state.outcome,
-            onclick: () => {
-              setPrice(state, c, i);
-              render();
-            },
-          },
-          price === 0 ? 'Бесплатно' : `${price}`,
-        );
-      }),
+    const icon = (i: number) => h('img', { src: `${assetBase}sprites/ui/price_${Math.min(i, 3)}.png`, alt: '', width: 16, height: 16 });
+    const label = (i: number) => priceLabels[i] ?? priceLabels[priceLabels.length - 1];
+    // Who buys at this price, in words: no numbers in the paper (CONCEPT.md §3.4).
+    const who = (i: number) => {
+      const classes: Record<WealthClass, string> = { working: 'работающие', pensioner: 'пенсионеры', jobless: 'безработные' };
+      const buyers = (Object.keys(classes) as WealthClass[]).filter((k) => (b.priceBuy[k][i] ?? 0) > 0);
+      const text =
+        buyers.length === 3
+          ? 'Берут все, даже безработные.'
+          : `Берут ${buyers.map((k) => classes[k] + ((b.priceBuy[k][i] ?? 0) < 0.6 ? ' (неохотно)' : '')).join(' и ')}.`;
+      const extra = b.prices[i] === 0 ? ' Доход только с рекламы.' : i === b.prices.length - 1 ? ' Больше денег с каждого.' : '';
+      return text + extra;
+    };
+    const chip = h(
+      'button',
+      {
+        class: `price-chip${priceMenuOpen ? ' on' : ''}`,
+        title: `Цена выпуска: ${label(state.price).toLowerCase()}. ${who(state.price)}`,
+        'aria-haspopup': 'menu',
+        'aria-expanded': String(priceMenuOpen),
+        disabled: busy || !!state.outcome,
+        onclick: () => {
+          priceMenuOpen = !priceMenuOpen;
+          render();
+        },
+      },
+      icon(state.price),
+      h('span', { class: 'chip-label' }, label(state.price)),
+      h('span', { class: 'chip-arrow' }, '▾'),
     );
+    const menu = priceMenuOpen
+      ? h(
+          'div',
+          { class: 'place-menu truth-menu price-menu', role: 'menu' },
+          ...b.prices.map((_, i) =>
+            h(
+              'button',
+              {
+                role: 'menuitem',
+                class: state.price === i ? 'current' : '',
+                disabled: state.price === i,
+                onclick: () => {
+                  priceMenuOpen = false;
+                  setPrice(state, c, i);
+                  render();
+                },
+              },
+              h('span', { class: 'check' }, state.price === i ? '✓' : ''),
+              icon(i),
+              h('span', { class: 'opt' }, h('span', { class: 'opt-head' }, h('b', {}, label(i))), h('span', { class: 'opt-title' }, who(i))),
+            ),
+          ),
+        )
+      : null;
+    priceSelect.replaceChildren(chip, ...(menu ? [menu] : []));
   }
 
   /** One sensation per issue (CONCEPT.md §4.2а): a story brought back or moved up is toned down if needed. */
@@ -1624,7 +1659,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/money.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${state.money}`), h('span', {}, 'денег в кассе'))),
       state.brokeTurns > 0 ? h('p', { class: 'bad' }, `Касса в минусе ${state.brokeTurns} ход(а) из ${b.brokeTurnsLimit} допустимых — потом банкротство.`) : null,
       h('h3', { class: 'section' }, 'Ожидается в этом ходу'),
-      ...forecastIncome.map((x) => ledgerRow(`Продажи: ${channelOf(c, x.ch).name}`, x.sum, `${x.buyers} чит. × ${incomePerReader(state, c, x.ch)} (цена ${c.balance.prices[state.price]} + реклама ${adRateOf(state, c, x.ch)})`)),
+      ...forecastIncome.map((x) => ledgerRow(`Продажи: ${channelOf(c, x.ch).name}`, x.sum, `${x.buyers} чит. × ${incomePerReader(state, c, x.ch)} (цена «${priceLabels[state.price]}» ${c.balance.prices[state.price]} + реклама ${adRateOf(state, c, x.ch)})`)),
       scandalNext < 1 ? h('p', { class: 'hint' }, `После скандала реклама приносит ×${scandalNext.toFixed(1)}, восстанавливается на ${b.scandalRecovery} за ход.`) : null,
       ...items.map((x) => ledgerRow(upkeepLabel(x), -x.amount)),
       ledgerTotal('Итого за ход', net),
@@ -1653,7 +1688,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     };
     const out: HTMLElement[] = [
       h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${readerCount(state)}`), h('span', {}, 'постоянных читателей'))),
-      h('p', { class: 'hint' }, `Каждый читатель приносит ${state.ownedChannels.map((ch) => incomePerReader(state, c, ch)).join(', ')} за выпуск: цена ${c.balance.prices[state.price]} и реклама. Цену выбирают в шапке газеты.`),
+      h('p', { class: 'hint' }, `Каждый читатель приносит ${state.ownedChannels.map((ch) => incomePerReader(state, c, ch)).join(', ')} за выпуск: цена «${priceLabels[state.price].toLowerCase()}» и реклама. Цену выбирают в шапке газеты.`),
       h('h3', { class: 'section' }, 'По группам'),
       ...c.groups.map((g) =>
         countRow(g.name, state.residents.filter((x) => x.status === 'active' && x.group === g.id && x.follows.some((ch) => state.ownedChannels.includes(ch))).length),

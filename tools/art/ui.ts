@@ -224,6 +224,37 @@ function placement(level: 0 | 1 | 2): Raster {
   return outline(r);
 }
 
+/** One gold coin with a rim and a glint. */
+function coin(r: Raster, cx: number, cy: number, radius: number): void {
+  // Its own ink rim, so overlapping coins stay apart.
+  disc(r, cx, cy, radius + 1, 'ink');
+  disc(r, cx, cy, radius, 'amber');
+  disc(r, cx, cy, radius - 1.3, 'yellow');
+  r.set(Math.round(cx - radius / 2), Math.round(cy - radius / 2), 'white');
+}
+
+/** Cover price of the paper: an empty ring (free), then one, two and three coins (CONCEPT.md §3.4). */
+function price(level: 0 | 1 | 2 | 3): Raster {
+  const r = new Raster(16, 16);
+  if (level === 0) {
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const d = Math.hypot(x - 7.5, y - 7.5);
+        if (d >= 4.3 && d <= 5.8) r.set(x, y, 'silver');
+      }
+    }
+  } else if (level === 1) coin(r, 7.5, 7.5, 5);
+  else if (level === 2) {
+    coin(r, 5, 9.5, 4);
+    coin(r, 10.5, 6, 4);
+  } else {
+    coin(r, 4.5, 10.5, 3.6);
+    coin(r, 11, 10.5, 3.6);
+    coin(r, 7.75, 4.5, 3.6);
+  }
+  return outline(r);
+}
+
 export const uiIcons: Record<string, () => Raster> = {
   money,
   readers,
@@ -241,4 +272,8 @@ export const uiIcons: Record<string, () => Raster> = {
   place_0: () => placement(0),
   place_1: () => placement(1),
   place_2: () => placement(2),
+  price_0: () => price(0),
+  price_1: () => price(1),
+  price_2: () => price(2),
+  price_3: () => price(3),
 };

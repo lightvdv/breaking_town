@@ -7,7 +7,7 @@
     "upkeep": 20,
     "baseReach": 0.6,
     "virality": 0.1,
-    "adRate": 3.5,
+    "adRate": 1.5,
     "exposureRisk": 0.8,
     "requires": null
   }

@@ -1213,6 +1213,44 @@ button.publish.level-3.bump-up {
   letter-spacing: 1px;
 }
 
+/* Cover price under the issue number: free, cheap, middle, dear (CONCEPT.md §5.4). */
+.masthead-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.price-select {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.price-select .price-label {
+  margin-right: 2px;
+}
+
+.price-select button {
+  min-width: 28px;
+  padding: 1px 6px;
+  font-size: 12px;
+  line-height: 18px;
+  background: transparent;
+  color: var(--paper-ink);
+  border: 1px solid var(--paper-muted);
+  box-shadow: none;
+}
+
+.price-select button.on {
+  font-weight: 700;
+  background: var(--paper-ink);
+  color: var(--paper);
+  border-color: var(--paper-ink);
+}
+
 /* «—» in the corner of the paper folds the issue to look at the city. */
 .paper-close {
   justify-self: end;
@@ -2969,6 +3007,7 @@ button.publish.level-3.bump-up {
 
   .masthead-side {
     text-align: center !important;
+    align-items: center;
   }
 
   .zone-out .news {

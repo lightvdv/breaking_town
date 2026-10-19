@@ -26,6 +26,9 @@ import {
   hireFromAgency,
   limitSensations,
   salesOf,
+  setPrice,
+  buyWillingness,
+  wealthOf,
   effectiveTier,
   validateContent,
   pairKey,
@@ -204,7 +207,35 @@ describe('readers', () => {
     }
     expect(workers()).toBeGreaterThan(before);
     const report = playTurn(s, content, simpleDecision(s, 'none'));
-    expect(report.income.newspaper).toBe(Math.round(report.buyers.newspaper * content.channels[0].adRate * s.scandal));
+    expect(report.income.newspaper).toBe(Math.round(report.buyers.newspaper * (content.balance.prices[s.price] + content.channels[0].adRate) * s.scandal));
+  });
+
+  it('the cover price decides who can buy the paper: the jobless only take it free', () => {
+    const s = createGame(content, 3);
+    const jobless = s.residents.find((r) => r.status === 'active' && wealthOf(content, r) === 'jobless') ?? Object.assign(s.residents.find((r) => r.group === 'workers')!, { job: null });
+    const worker = s.residents.find((r) => r.status === 'active' && r.job !== null)!;
+    setPrice(s, content, 0);
+    expect(buyWillingness(s, content, jobless)).toBeGreaterThan(0);
+    setPrice(s, content, content.balance.prices.length - 1);
+    expect(buyWillingness(s, content, jobless)).toBe(0);
+    expect(buyWillingness(s, content, worker)).toBeGreaterThan(0);
+    // A dear paper is bought less willingly even by those who can pay.
+    expect(buyWillingness(s, content, worker)).toBeLessThan(content.balance.priceBuy.working[1]);
+    expect(() => setPrice(s, content, 99)).toThrow();
+    // Readers who cannot afford it stop buying.
+    jobless.follows = ['newspaper'];
+    playTurn(s, content, { publish: [] });
+    expect(jobless.follows).toEqual([]);
+  });
+
+  it('crime stories scare believers: they stay at home and order falls', () => {
+    const s = createGame(content, 4);
+    const before = s.metrics.order;
+    for (const r of s.residents.slice(0, 60)) r.fearTurns = 3;
+    playTurn(s, content, { publish: [] });
+    expect(s.metrics.order).toBeLessThan(before);
+    const crime = content.cards.filter((t) => t.topic === 'crime' && t.effects.some((e) => e?.type === 'fear'));
+    expect(crime.length).toBeGreaterThanOrEqual(5);
   });
 
   it('every kiosk adds to the sales per reader', () => {

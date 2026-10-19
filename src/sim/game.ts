@@ -42,6 +42,7 @@ export function createGame(c: Content, seed: number): GameState {
     rng,
     turn: 0,
     money: c.balance.startMoney,
+    price: c.balance.startPrice,
     brokeTurns: 0,
     residents,
     buildings,

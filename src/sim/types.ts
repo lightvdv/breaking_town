@@ -4,6 +4,8 @@ import type { RngState } from './rng';
 
 export type ChannelId = string;
 export type GroupId = string;
+/** Wealth class for buying the paper: with a job, on a pension, or without income. */
+export type WealthClass = 'working' | 'pensioner' | 'jobless';
 export type BuildingType =
   | 'home'
   | 'factory'
@@ -136,7 +138,8 @@ export interface UpgradeDef {
 }
 
 /** stigma = dirt on the template's `target` group: other groups turn on it, it feels hunted. */
-export type EffectType = 'quitJob' | 'avoid' | 'leaveCity' | 'protest' | 'moodDown' | 'moodUp' | 'stigma';
+/** fear = afraid of crime: stays at home for a few days and counts against order (CONCEPT.md §2.3). */
+export type EffectType = 'quitJob' | 'avoid' | 'leaveCity' | 'protest' | 'moodDown' | 'moodUp' | 'stigma' | 'fear';
 
 export interface CardEffect {
   type: EffectType;
@@ -220,6 +223,21 @@ export interface Balance {
   /** HR agency (CONCEPT.md §3.3): the fee for one search and how many candidates it offers at most. */
   agencyFee: number;
   agencyMaxOffer: number;
+  /** Price of one issue at each level the player can choose: free, cheap, middle, dear (CONCEPT.md §5.4). */
+  prices: number[];
+  startPrice: number;
+  /** How willing each wealth class is to buy at each price level (0 = cannot afford). */
+  priceBuy: Record<WealthClass, number[]>;
+  /** Per-turn chance that a reader who finds the price too high stops buying, × (1 − willingness). */
+  priceChurn: number;
+  /** Multiplies every chance to leave the city: people mostly stay, jobless and afraid. */
+  leaveScale: number;
+  /** How much a jobless resident adds to the crime that lowers order. */
+  joblessCrime: number;
+  /** Mood lost by a resident who gets scared of crime. */
+  fearMood: number;
+  /** Chance a scared resident skips the shop that day (bars are skipped always). */
+  fearShopSkip: number;
   /** Most stories of sensation tier in a day's finds and in one issue. */
   maxSensations: number;
   startReporters: string[];
@@ -445,6 +463,8 @@ export interface Resident {
   follows: ChannelId[];
   beliefs: Belief[];
   protestTurns: number;
+  /** Days the resident is still afraid of crime and stays at home. */
+  fearTurns: number;
   /** Building types the resident avoids, with turns remaining. */
   avoid: Partial<Record<BuildingType, number>>;
   /** Building types the resident quit and won't return to. */
@@ -584,6 +604,8 @@ export interface GameState {
   rng: RngState;
   turn: number;
   money: number;
+  /** Price level of the paper (index in `Balance.prices`), chosen by the player. */
+  price: number;
   brokeTurns: number;
   residents: Resident[];
   buildings: Building[];
@@ -659,7 +681,8 @@ export interface UpkeepItem {
 export type IssueLevel = 0 | 1 | 2 | 3;
 
 /** Why readers stopped buying (CONCEPT.md §5.2). */
-export type ChurnReason = 'exposed' | 'doubted' | 'boring' | 'empty';
+/** price = the issue costs more than the resident can or wants to pay (CONCEPT.md §5.4). */
+export type ChurnReason = 'exposed' | 'doubted' | 'boring' | 'empty' | 'price';
 
 export interface ReadersChange {
   lost: number;

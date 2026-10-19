@@ -254,8 +254,13 @@ function applyEffect(
       r.avoid[e.building] = Math.max(r.avoid[e.building] ?? 0, e.duration ?? 3);
       return true;
     case 'leaveCity':
-      if (!chance(rng, e.strength * mult * (1.5 - r.mood))) return false;
+      if (!chance(rng, e.strength * mult * (1.5 - r.mood) * b.leaveScale)) return false;
       leaveCity(r);
+      return true;
+    case 'fear':
+      if (!chance(rng, e.strength * mult)) return false;
+      r.fearTurns = Math.max(r.fearTurns, e.duration ?? 3);
+      r.mood = clamp(r.mood - b.fearMood);
       return true;
     case 'protest':
       if (!chance(rng, e.strength * mult)) return false;
@@ -376,7 +381,7 @@ export function publish(
     for (const r of active) {
       if (r.group !== tpl.target) continue;
       r.outlook = clamp(r.outlook - b.stigmaOutlook * pressure * impact);
-      if (chance(rng, b.stigmaLeave * pressure * impact)) {
+      if (chance(rng, b.stigmaLeave * pressure * impact * b.leaveScale)) {
         leaveCity(r);
         left++;
       }

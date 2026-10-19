@@ -449,6 +449,13 @@ export class CityScene {
     }
     if (r.status === 'left') return this.leave(agent);
     if (r.protestTurns > 0) return this.goProtest(agent, false);
+    // Afraid of crime: hurries home and stays in (CONCEPT.md §2.3).
+    if (r.fearTurns > 0) {
+      const home = this.state.buildings[r.home];
+      const door = this.doors.get(home.id)!;
+      this.goTo(agent, door, () => this.enter(agent, door, rand(12, 20), 'home'));
+      return;
+    }
 
     const visit = (b: Building | undefined, stop: Stop, seconds: number) => {
       if (!b) return false;

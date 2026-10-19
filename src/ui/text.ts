@@ -44,6 +44,7 @@ export const effectLabels: Record<EffectType, string> = {
   moodDown: 'расстроились',
   moodUp: 'обрадовались',
   stigma: 'ополчились',
+  fear: 'боятся выходить',
 };
 
 export function effectText(c: Content, e: CardEffect | null, target?: string): string {
@@ -62,6 +63,8 @@ export function effectText(c: Content, e: CardEffect | null, target?: string): s
       return 'Поверившие расстраиваются';
     case 'moodUp':
       return 'Поверившие радуются';
+    case 'fear':
+      return 'Поверившие боятся выходить из дома: порядок падает, бары и магазины пустеют';
     case 'stigma': {
       const g = c.groups.find((x) => x.id === target)?.name.toLowerCase() ?? 'группа';
       return `Город ополчится: злость и протесты, а ${g} почувствуют травлю и начнут уезжать`;

@@ -537,14 +537,14 @@
     "effects": [
       null,
       {
-        "type": "avoid",
-        "building": "entertainment",
+        "type": "fear",
         "strength": 0.15,
         "duration": 2
       },
       {
-        "type": "leaveCity",
-        "strength": 0.07
+        "type": "fear",
+        "strength": 0.3,
+        "duration": 3
       }
     ],
     "engagement": 0.5,
@@ -577,10 +577,9 @@
         "duration": 3
       },
       {
-        "type": "avoid",
-        "building": "entertainment",
-        "strength": 0.4,
-        "duration": 4
+        "type": "fear",
+        "strength": 0.25,
+        "duration": 3
       }
     ],
     "engagement": 0.5,
@@ -1257,14 +1256,14 @@
         "strength": 0.03
       },
       {
-        "type": "avoid",
+        "type": "fear",
         "strength": 0.15,
-        "building": "entertainment",
         "duration": 2
       },
       {
-        "type": "leaveCity",
-        "strength": 0.08
+        "type": "fear",
+        "strength": 0.3,
+        "duration": 3
       }
     ],
     "audience": [
@@ -1568,18 +1567,19 @@
     ],
     "effects": [
       {
-        "type": "moodDown",
-        "strength": 0.03
-      },
-      {
-        "type": "avoid",
-        "strength": 0.2,
-        "building": "shop",
+        "type": "fear",
+        "strength": 0.05,
         "duration": 2
       },
       {
-        "type": "leaveCity",
-        "strength": 0.08
+        "type": "fear",
+        "strength": 0.2,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.35,
+        "duration": 3
       }
     ],
     "audience": [
@@ -1618,14 +1618,13 @@
       },
       {
         "type": "avoid",
-        "strength": 0.25,
         "building": "entertainment",
-        "duration": 2
+        "strength": 0.25,
+        "duration": 3
       },
       {
-        "type": "avoid",
-        "strength": 0.45,
-        "building": "entertainment",
+        "type": "fear",
+        "strength": 0.3,
         "duration": 3
       }
     ],
@@ -2221,14 +2220,14 @@
     "effects": [
       null,
       {
-        "type": "avoid",
+        "type": "fear",
         "strength": 0.15,
-        "building": "entertainment",
         "duration": 2
       },
       {
-        "type": "leaveCity",
-        "strength": 0.08
+        "type": "fear",
+        "strength": 0.3,
+        "duration": 3
       }
     ],
     "audience": [
@@ -2624,9 +2623,9 @@
         "strength": 0.05
       },
       {
-        "type": "quitJob",
+        "type": "fear",
         "strength": 0.15,
-        "building": "factory"
+        "duration": 3
       }
     ],
     "audience": [
@@ -3263,13 +3262,14 @@
     "effects": [
       null,
       {
-        "type": "moodDown",
-        "strength": 0.02
+        "type": "fear",
+        "strength": 0.06,
+        "duration": 2
       },
       {
-        "type": "protest",
-        "strength": 0.04,
-        "duration": 2
+        "type": "fear",
+        "strength": 0.12,
+        "duration": 3
       }
     ],
     "engagement": 0.7,

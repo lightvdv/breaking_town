@@ -9,6 +9,7 @@ import type {
   GameState,
   GroupDef,
   Resident,
+  WealthClass,
 } from './types';
 
 export function newResident(c: Content, rng: RngState, id: number, group: GroupDef, home: number): Resident {
@@ -26,6 +27,7 @@ export function newResident(c: Content, rng: RngState, id: number, group: GroupD
     follows: [],
     beliefs: [],
     protestTurns: 0,
+    fearTurns: 0,
     avoid: {},
     quitFrom: [],
   };
@@ -74,6 +76,13 @@ export function leaveCity(r: Resident): void {
   r.job = null;
   r.follows = [];
   r.protestTurns = 0;
+  r.fearTurns = 0;
+}
+
+/** With a job, on a pension or without income: decides which price of the paper one can pay (CONCEPT.md §5.4). */
+export function wealthOf(c: Content, r: Resident): WealthClass {
+  if (r.job !== null) return 'working';
+  return groupOf(c, r.group).pension > 0 ? 'pensioner' : 'jobless';
 }
 
 export function computeMetrics(state: GameState, c: Content): CityMetrics {
@@ -90,7 +99,10 @@ export function computeMetrics(state: GameState, c: Content): CityMetrics {
   const employment = clamp(employed / Math.max(1, state.initialEmployed));
   const economy = clamp(shopTurnover / (state.initialPopulation * b.shopPrice));
   const mood = n ? active.reduce((s, r) => s + r.mood, 0) / n : 0;
-  const order = n ? 1 - active.filter((r) => r.protestTurns > 0).length / n : 0;
+  // Order falls with protests, fear of crime and the jobless who drift into it (CONCEPT.md §2.3).
+  const unrest = active.filter((r) => r.protestTurns > 0 || r.fearTurns > 0).length;
+  const jobless = active.filter((r) => r.job === null && groupOf(c, r.group).jobs.length > 0).length;
+  const order = n ? clamp(1 - (unrest + jobless * b.joblessCrime) / n) : 0;
   const w = b.cityIndexWeights;
   const cityIndex =
     100 *
@@ -143,6 +155,9 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
     if (r.status !== 'active') continue;
     const g = groupOf(c, r.group);
     if (r.protestTurns > 0) r.protestTurns--;
+    // Scared of crime: stays at home, skips the bars and often the shop too.
+    const scared = r.fearTurns > 0;
+    if (scared) r.fearTurns--;
 
     if (r.job !== null) r.money += b.wage;
     else if (g.jobs.length > 0) {
@@ -150,13 +165,13 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
       r.mood += b.moodUnemployed;
     } else r.money += g.pension;
 
-    if (!r.avoid.shop && openShops.length && r.money >= b.shopPrice) {
+    if (!r.avoid.shop && !(scared && chance(rng, b.fearShopSkip)) && openShops.length && r.money >= b.shopPrice) {
       pick(rng, openShops).turnover += b.shopPrice;
       r.money -= b.shopPrice;
       r.mood += b.moodShop;
     } else r.mood += b.moodNoShop;
 
-    if (!r.avoid.entertainment && openFuns.length && r.money >= b.funPrice && chance(rng, b.funChance)) {
+    if (!r.avoid.entertainment && !scared && openFuns.length && r.money >= b.funPrice && chance(rng, b.funChance)) {
       pick(rng, openFuns).turnover += b.funPrice;
       r.money -= b.funPrice;
       r.mood += b.moodFun;
@@ -170,7 +185,7 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
 
     r.mood += (r.outlook - r.mood) * b.moodRegression;
     r.mood = clamp(r.mood);
-    if (r.mood < b.despairMood && chance(rng, b.despairLeaveChance)) leaveCity(r);
+    if (r.mood < b.despairMood && chance(rng, b.despairLeaveChance * b.leaveScale)) leaveCity(r);
   }
 
   // Businesses: weak shops and venues lay off staff and close when nobody works there.

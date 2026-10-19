@@ -1,5 +1,6 @@
 import { chance, type RngState } from './rng';
 import { channelOf, clamp, groupOf } from './lookup';
+import { wealthOf } from './city';
 import type { Modifiers } from './modifiers';
 import type { ChannelId, ChurnReason, Content, GameState, IssueLevel, ReadersChange, Resident } from './types';
 
@@ -12,6 +13,11 @@ import type { ChannelId, ChurnReason, Content, GameState, IssueLevel, ReadersCha
 function trustFactor(c: Content, mods: Modifiers, r: Resident): number {
   const min = c.balance.reachTrustMin;
   return min + (1 - min) * clamp((r.trust + mods.trustBonus) / 100);
+}
+
+/** How willing a resident is to buy the paper at the current price: 0 = cannot afford it (CONCEPT.md §5.4). */
+export function buyWillingness(state: GameState, c: Content, r: Resident): number {
+  return c.balance.priceBuy[wealthOf(c, r)][state.price] ?? 0;
 }
 
 /** Per-turn chance that a resident who does not follow `channel` starts following it. */
@@ -34,7 +40,7 @@ export function readerCount(state: GameState): number {
 export function seedFollowers(state: GameState, c: Content, rng: RngState, mods: Modifiers): void {
   for (const r of state.residents) {
     for (const ch of state.ownedChannels) {
-      if (chance(rng, joinChance(c, mods, r, ch, c.balance.startFollowShare))) r.follows.push(ch);
+      if (chance(rng, joinChance(c, mods, r, ch, c.balance.startFollowShare) * buyWillingness(state, c, r))) r.follows.push(ch);
     }
   }
 }
@@ -42,7 +48,11 @@ export function seedFollowers(state: GameState, c: Content, rng: RngState, mods:
 /** Why a reader might leave after this turn and how likely it is, given what they experienced; null when they stay. */
 function churnOf(c: Content, mods: Modifiers, state: GameState, r: Resident, issueSize: number, level: IssueLevel): { reason: ChurnReason; chance: number } | null {
   const found = baseChurn(c, state, r, issueSize, level);
-  return found && { reason: found.reason, chance: found.chance * mods.churnMul };
+  const churn = found && { reason: found.reason, chance: found.chance * mods.churnMul };
+  // Too dear: who cannot pay stops buying, who can but grudges it drops it now and then.
+  const will = buyWillingness(state, c, r);
+  const price = will <= 0 ? 1 : Math.max(0, 1 - will) * c.balance.priceChurn;
+  return price > (churn?.chance ?? 0) ? { reason: 'price', chance: price } : churn;
 }
 
 function baseChurn(c: Content, state: GameState, r: Resident, issueSize: number, level: IssueLevel): { reason: ChurnReason; chance: number } | null {
@@ -73,7 +83,7 @@ export function updateReaders(
   const out: ReadersChange = {
     lost: 0,
     gained: 0,
-    lostBy: { exposed: 0, doubted: 0, boring: 0, empty: 0 },
+    lostBy: { exposed: 0, doubted: 0, boring: 0, empty: 0, price: 0 },
     movedAway: 0,
     gainedBy: Object.fromEntries(state.ownedChannels.map((ch) => [ch, 0])),
   };
@@ -92,7 +102,7 @@ export function updateReaders(
       continue;
     }
     for (const ch of state.ownedChannels) {
-      if (!r.follows.includes(ch) && chance(rng, joinChance(c, mods, r, ch, joinScale))) {
+      if (!r.follows.includes(ch) && chance(rng, joinChance(c, mods, r, ch, joinScale) * buyWillingness(state, c, r))) {
         r.follows.push(ch);
         out.gainedBy[ch]++;
       }

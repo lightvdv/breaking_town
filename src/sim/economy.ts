@@ -94,9 +94,21 @@ export function adRateOf(state: GameState, c: Content, channel: ChannelId): numb
   return channelOf(c, channel).adRate + getModifiers(state, c).channels[channel].adRateAdd;
 }
 
-/** Sales of one channel: its buyers × ad rate × the scandal multiplier. */
+/** Money from one reader per issue: the cover price the player set plus advertising (CONCEPT.md §5.4). */
+export function incomePerReader(state: GameState, c: Content, channel: ChannelId): number {
+  return (c.balance.prices[state.price] ?? 0) + adRateOf(state, c, channel);
+}
+
+/** Sales of one channel: its buyers × (price + ads) × the scandal multiplier. */
 export function salesOf(state: GameState, c: Content, channel: ChannelId, buyers: number, scandal = state.scandal): number {
-  return Math.round(buyers * adRateOf(state, c, channel) * scandal);
+  return Math.round(buyers * incomePerReader(state, c, channel) * scandal);
+}
+
+/** Sets the cover price of the paper (index in `Balance.prices`); it applies from this issue on. */
+export function setPrice(state: GameState, c: Content, level: number): void {
+  if (state.outcome) throw new Error('Game is over');
+  if (!Number.isInteger(level) || level < 0 || level >= c.balance.prices.length) throw new Error(`Bad price level ${level}`);
+  state.price = level;
 }
 
 /** Sales to this turn's regular readers of each channel, minus upkeep (CONCEPT.md §5.4). */

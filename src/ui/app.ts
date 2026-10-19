@@ -6,6 +6,8 @@ import {
   cancelInvestigation,
   channelOf,
   adRateOf,
+  incomePerReader,
+  setPrice,
   createGame,
   fireReporter,
   callAgency,
@@ -56,6 +58,7 @@ import {
   type Reaction,
   type Requirement,
   type UpgradeDef,
+  type WealthClass,
   type TurnReport,
 } from '../sim';
 import { h, pct, svg } from './dom';
@@ -270,10 +273,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
     return { root, items, empty, label, target };
   };
   const zones: Record<string, ReturnType<typeof makeZone>> = { 2: makeZone(2), 1: makeZone(1), 0: makeZone(0), out: makeZone('out') };
+  const issueNo = h('span', { class: 'issue-no' });
+  const priceSelect = h('div', { class: 'price-select', role: 'radiogroup', 'aria-label': 'Цена выпуска' });
   const masthead = h(
     'header',
     { class: 'masthead' },
-    h('span', { class: 'masthead-side' }),
+    h('div', { class: 'masthead-side' }, issueNo, priceSelect),
     h('h2', {}, 'Городской Вестник'),
     h('button', { class: 'paper-close', title: 'Свернуть — посмотреть на город', onclick: () => closeIssue() }, '—'),
   );
@@ -418,6 +423,39 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const ranked = [...fresh].sort((a, b) => b.tier - a.tier || impactOf(b, mods) - impactOf(a, mods));
     const places = rankedPlacements(ranked.length, mods);
     ranked.forEach((card, i) => drafts.set(card.uid, { publish: true, placement: places[i], distortion: 0 }));
+  }
+
+  /**
+   * Cover price of the paper (CONCEPT.md §5.4): free reaches even the jobless, a cheap one pensioners
+   * and workers, a dear one only those with a job, and even they buy it less willingly.
+   */
+  function renderPrice(): void {
+    const b = c.balance;
+    const classes: Record<WealthClass, string> = { working: 'работающие', pensioner: 'пенсионеры', jobless: 'безработные' };
+    priceSelect.replaceChildren(
+      h('span', { class: 'price-label' }, 'Цена:'),
+      ...b.prices.map((price, i) => {
+        const who = (Object.keys(classes) as WealthClass[]).filter((k) => (b.priceBuy[k][i] ?? 0) > 0).map((k) => classes[k]);
+        const title =
+          (price === 0 ? 'Бесплатно: доход только с рекламы. ' : `${price} за выпуск. `) +
+          `Покупают: ${who.join(', ')}${i === b.prices.length - 1 ? ', и то неохотно' : ''}.`;
+        return h(
+          'button',
+          {
+            class: state.price === i ? 'on' : '',
+            role: 'radio',
+            'aria-checked': String(state.price === i),
+            title,
+            disabled: busy || !!state.outcome,
+            onclick: () => {
+              setPrice(state, c, i);
+              render();
+            },
+          },
+          price === 0 ? 'Бесплатно' : `${price}`,
+        );
+      }),
+    );
   }
 
   /** One sensation per issue (CONCEPT.md §4.2а): a story brought back or moved up is toned down if needed. */
@@ -1271,7 +1309,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
 
     const note = searching ? 'Репортёры ищут новости… (щёлкните, чтобы пропустить)' : !visible.length ? 'Сегодня новостей нет.' : '';
     issueHead.replaceChildren(...(note ? [h('p', {}, note)] : []), ...(error ? [h('p', { class: 'bad' }, error)] : []));
-    masthead.firstElementChild!.textContent = `Выпуск № ${state.turn}`;
+    issueNo.textContent = `Выпуск № ${state.turn}`;
+    renderPrice();
 
     for (const [uid, el] of cardEls) {
       if (!visible.some((x) => x.uid === uid)) {
@@ -1583,7 +1622,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/money.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${state.money}`), h('span', {}, 'денег в кассе'))),
       state.brokeTurns > 0 ? h('p', { class: 'bad' }, `Касса в минусе ${state.brokeTurns} ход(а) из ${b.brokeTurnsLimit} допустимых — потом банкротство.`) : null,
       h('h3', { class: 'section' }, 'Ожидается в этом ходу'),
-      ...forecastIncome.map((x) => ledgerRow(`Продажи: ${channelOf(c, x.ch).name}`, x.sum, `${x.buyers} чит. × ${adRateOf(state, c, x.ch)}`)),
+      ...forecastIncome.map((x) => ledgerRow(`Продажи: ${channelOf(c, x.ch).name}`, x.sum, `${x.buyers} чит. × ${incomePerReader(state, c, x.ch)} (цена ${c.balance.prices[state.price]} + реклама ${adRateOf(state, c, x.ch)})`)),
       scandalNext < 1 ? h('p', { class: 'hint' }, `После скандала реклама приносит ×${scandalNext.toFixed(1)}, восстанавливается на ${b.scandalRecovery} за ход.`) : null,
       ...items.map((x) => ledgerRow(upkeepLabel(x), -x.amount)),
       ledgerTotal('Итого за ход', net),
@@ -1608,10 +1647,11 @@ export function mountApp(root: HTMLElement, c: Content): void {
       doubted: 'не поверили новости',
       boring: 'выпуск их не зацепил',
       empty: 'выпуска не было',
+      price: 'цена им не по карману или кажется высокой',
     };
     const out: HTMLElement[] = [
       h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${readerCount(state)}`), h('span', {}, 'постоянных читателей'))),
-      h('p', { class: 'hint' }, `Каждый читатель приносит ${state.ownedChannels.map((ch) => adRateOf(state, c, ch)).join(', ')} за выпуск.`),
+      h('p', { class: 'hint' }, `Каждый читатель приносит ${state.ownedChannels.map((ch) => incomePerReader(state, c, ch)).join(', ')} за выпуск: цена ${c.balance.prices[state.price]} и реклама. Цену выбирают в шапке газеты.`),
       h('h3', { class: 'section' }, 'По группам'),
       ...c.groups.map((g) =>
         countRow(g.name, state.residents.filter((x) => x.status === 'active' && x.group === g.id && x.follows.some((ch) => state.ownedChannels.includes(ch))).length),
@@ -1696,7 +1736,15 @@ export function mountApp(root: HTMLElement, c: Content): void {
       metric('Занятость', 'employment'),
       metric('Экономика', 'economy'),
       metric('Настроение', 'mood'),
-      metric('Порядок', 'order'),
+      metric('Порядок и безопасность', 'order'),
+      (() => {
+        // What lowers order right now: protests, fear of crime and the jobless (CONCEPT.md §2.3).
+        const active = state.residents.filter((x) => x.status === 'active');
+        const protest = active.filter((x) => x.protestTurns > 0).length;
+        const afraid = active.filter((x) => x.fearTurns > 0 && x.protestTurns === 0).length;
+        const jobless = active.filter((x) => x.job === null && groupOf(c, x.group).jobs.length > 0).length;
+        return h('p', { class: 'hint' }, `Порядок падает от протестов (${protest}), страха перед преступностью (${afraid} боятся выходить) и безработицы (${jobless} без работы).`);
+      })(),
       h('button', { class: 'primary', onclick: () => openModal('population') }, 'Жители по группам →'),
     ];
   }

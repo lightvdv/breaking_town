@@ -7,6 +7,7 @@ import {
   createResidents,
   tryAssignJob,
 } from './city';
+import { advanceArcs, pushArc } from './arcs';
 import { collectIncome } from './economy';
 import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf } from './lookup';
@@ -48,6 +49,8 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy')
     rival: { kind: rivalKindOf(mode), plan: [], printed: [], closed: false, debunked: 0 },
     rivalWatch: [],
     ourPrinted: [],
+    arcs: [],
+    arcsDone: [],
     money: c.balance.startMoney,
     price: c.balance.startPrice,
     brokeTurns: 0,
@@ -94,7 +97,7 @@ function cardAvailable(state: GameState, tpl: CardTemplate): boolean {
 function generateEvents(state: GameState, c: Content, rng: RngState): CardTemplate[] {
   const b = c.balance;
   // Conflict events (incidents) come only from tense relations (relations.ts).
-  const all = c.cards.filter((t) => t.source === 'event' && !t.conflict && scopeOf(t) === 'local' && cardAvailable(state, t));
+  const all = c.cards.filter((t) => t.source === 'event' && !t.conflict && !t.arc && scopeOf(t) === 'local' && cardAvailable(state, t));
   // The same thing does not happen again soon (CONCEPT.md §3.3).
   const fresh = all.filter((t) => !isRecent(state, c, t.id));
   const pool = fresh.length ? fresh : all;
@@ -121,6 +124,10 @@ function startTurn(state: GameState, c: Content): string[] {
   notes.push(...relations.notes);
   state.todayIncidents = relations.incidents;
   const events = generateEvents(state, c, state.rng);
+  // Story arcs move on: their stages are today's events too (CONCEPT.md §3.1а).
+  const arcs = advanceArcs(state, c, state.rng);
+  events.push(...arcs.events);
+  notes.push(...arcs.notes);
   // Incidents are today's events too: reporters may write them up as true conflict stories.
   const pairs = new Map<string, [GroupId, GroupId]>();
   for (const i of relations.incidents) {
@@ -222,6 +229,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     const card = state.hand.find((x) => x.uid === p.cardUid)!;
     const topic = templateOf(c, card.templateId).topic;
     published.push(publish(state, c, rng, mods, p, topicsThisTurn[topic] ?? 0));
+    pushArc(state, c, card, p.placement, p.distortion);
     topicsThisTurn[topic] = (topicsThisTurn[topic] ?? 0) + 1;
   }
   // Save mode (CONCEPT.md §8): our debunks answered its recent lies; its new issue comes out today.
@@ -229,6 +237,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const debunks = d.publish.map((p) => state.hand.find((x) => x.uid === p.cardUid)!).filter((x) => x.debunk);
   markDebunked(state, debunks.map((x) => x.debunk!.uid));
   const cured = published.filter((n) => debunks.some((x) => x.uid === n.pub.cardUid)).reduce((sum, n) => sum + (n.report.effects.debunk ?? 0), 0);
+  for (const s of state.rival?.closed ? [] : (state.rival?.plan ?? [])) pushArc(state, c, s.card, s.placement, s.distortion);
   const rivalNews = publishRival(state, c, rng);
   const exposures = [...lateExposures, ...verifyNews(state, c, rng, mods, published)];
   verifyRival(state, c, rng, rivalNews);

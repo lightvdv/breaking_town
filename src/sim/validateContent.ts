@@ -123,7 +123,7 @@ export function validateContent(c: Content): string[] {
   for (const scope of ['local', 'global'] as const) {
     for (const kind of ['true', 'rumor'] as const) {
       const n = c.cards.filter(
-        (t) => (t.scope ?? 'local') === scope && (kind === 'rumor' ? t.source === 'rumor' : t.source === 'fact' || t.source === 'event'),
+        (t) => !t.arc && (t.scope ?? 'local') === scope && (kind === 'rumor' ? t.source === 'rumor' : t.source === 'fact' || t.source === 'event'),
       ).length;
       if (n < 8) errors.push(`only ${n} ${scope} ${kind} stories, need at least 8`);
     }
@@ -134,6 +134,20 @@ export function validateContent(c: Content): string[] {
   for (const id of ['debunk', 'debunk_guardian', 'tabloid_debunk', 'guardian_debunk']) {
     if (!c.cards.some((t) => t.id === id && t.source === 'debunk')) errors.push(`missing debunk template ${id}`);
   }
+  // Story arcs (CONCEPT.md §3.1а): each stage and ending is a template of that arc.
+  unique('arc', c.arcs.map((x) => x.id));
+  for (const a of c.arcs) {
+    if (a.requires && !buildingTypes.has(a.requires)) errors.push(`arc ${a.id}: unknown building ${a.requires}`);
+    if (a.stages.length !== 3) errors.push(`arc ${a.id}: needs three stages`);
+    const parts: [string, unknown][] = [...a.stages.map((id, i): [string, unknown] => [id, i + 1]), [a.bad, 'bad'], [a.good, 'good']];
+    for (const [id, stage] of parts) {
+      const t = c.cards.find((x) => x.id === id);
+      if (!t) errors.push(`arc ${a.id}: unknown template ${id}`);
+      else if (t.arc !== a.id || t.arcStage !== stage) errors.push(`card ${id}: must be arc ${a.id} stage ${stage}`);
+      else if (t.conflict || t.scope === 'global' || t.source === 'investigation' || t.source === 'debunk') errors.push(`card ${id}: arc stages are local events, facts or rumors`);
+    }
+  }
+  for (const t of c.cards) if (t.arc && !c.arcs.some((a) => a.id === t.arc)) errors.push(`card ${t.id}: unknown arc ${t.arc}`);
   for (const g of c.groups) {
     if (!c.cards.some((t) => t.source === 'investigation' && t.target === g.id)) errors.push(`no investigation story about ${g.id}`);
   }

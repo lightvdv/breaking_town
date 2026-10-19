@@ -206,6 +206,20 @@ export interface CardTemplate {
   softEffects?: [CardEffect | null, CardEffect | null];
   /** Incidents: the kind of building where it happens (the city cutscene flies there). */
   place?: BuildingType;
+  /** Story arcs (CONCEPT.md §3.1а): the arc this template is a stage of; never found by ordinary search. */
+  arc?: string;
+  arcStage?: 1 | 2 | 3 | 'bad' | 'good';
+}
+
+/** A multi-day story (CONCEPT.md §3.1а): three stages on three days, then one of two endings. */
+export interface ArcDef {
+  id: string;
+  name: string;
+  /** Starts only while a building of this type is open. */
+  requires?: BuildingType;
+  stages: string[];
+  bad: string;
+  good: string;
 }
 
 export interface BuildingDef {
@@ -277,6 +291,17 @@ export interface Balance {
   rivalTrustCollapse: number;
   /** A believed debunk: the rival trust lost (× impact × the debunk's strength). */
   debunkTrust: number;
+  /** Story arcs (CONCEPT.md §3.1а): daily start chance, how many run at once, the first turn one may start. */
+  arcChance: number;
+  arcsMax: number;
+  arcStartTurn: number;
+  /** Pressure a published stage adds per distortion step, by placement (brief, article, front page). */
+  arcPlacementWeight: number[];
+  /** Mood below `arcMoodPivot` pushes the ending to the bad side by `arcMoodBias` per unit. */
+  arcMoodBias: number;
+  arcMoodPivot: number;
+  /** Chance the rival takes up a stage of a running arc on top of its own stories. */
+  rivalArcChance: number;
   /** The same for the rival's debunks of our stories: the reputation we lose. */
   rivalDebunkTrust: number;
   /** A story of the rival can be debunked this many days after it came out. */
@@ -480,6 +505,7 @@ export interface Content {
   cards: CardTemplate[];
   buildings: BuildingDef[];
   reporters: ReporterDef[];
+  arcs: ArcDef[];
   balance: Balance;
 }
 
@@ -548,6 +574,14 @@ export interface CardInstance {
   soft?: boolean;
   /** Debunks: the rival's printed story it answers (uid in `RivalState.printed`), its headline and effect. */
   debunk?: { uid: number; title: string; effect: EffectType | null };
+}
+
+/** A running story arc: `stage` stages have happened; `pressure` > 0 leans to the bad ending. */
+export interface ArcState {
+  id: string;
+  stage: number;
+  pressure: number;
+  startTurn: number;
 }
 
 /** A story the rival paper prints in its issue (it comes out the same day as ours). */
@@ -705,6 +739,9 @@ export interface GameState {
   rivalWatch: string[];
   /** What we printed in the last `debunkWindow` days: the rival may debunk our lies. */
   ourPrinted: PrintedStory[];
+  /** Running story arcs and the ids of arcs this game already had (each happens once). */
+  arcs: ArcState[];
+  arcsDone: string[];
   money: number;
   /** Price level of the paper (index in `Balance.prices`), chosen by the player. */
   price: number;

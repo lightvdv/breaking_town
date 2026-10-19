@@ -87,12 +87,15 @@ export function planRival(state: GameState, c: Content, rng: RngState, events: C
   }
   // The tabloid looks for what frightens, the guardian for what reassures.
   const fits = (t: CardTemplate) => (guardian ? reassuring(t) : frightening(t));
-  const chosen: CardTemplate[] = events.filter(fits).slice(0, count);
+  const chosen: CardTemplate[] = events.filter((t) => !t.arc && fits(t)).slice(0, count);
+  // It follows the running story arcs too, on top (CONCEPT.md §3.1а): the tabloid fans every stage, the guardian soothes what it can.
+  chosen.push(...events.filter((t) => typeof t.arcStage === 'number' && (guardian ? !!t.softTitles : true) && chance(rng, b.rivalArcChance)));
   const pool = c.cards.filter(
     (t) =>
       (t.source === 'rumor' || t.source === 'event' || t.source === 'fact') &&
       !(guardian && t.source === 'rumor') &&
       fits(t) &&
+      !t.arc &&
       available(state, t) &&
       !isRecent(state, c, t.id) &&
       !chosen.includes(t) &&

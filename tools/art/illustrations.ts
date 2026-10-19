@@ -1317,6 +1317,37 @@ export const scenes: Record<string, Scene> = {
 scenes.debunk_guardian = scenes.debunk;
 scenes.tabloid_debunk = scenes.debunk;
 scenes.guardian_debunk = scenes.debunk;
+// Story arcs (CONCEPT.md §3.1а) reuse the scenes of similar stories.
+scenes.arc_factory_1 = scenes.layoffs_coming;
+scenes.arc_factory_2 = scenes.rumor_jobs_taken;
+scenes.arc_factory_3 = scenes.conflict_factory_gate;
+scenes.arc_factory_bad = scenes.factory_sold;
+scenes.arc_factory_good = scenes.factory_order;
+scenes.arc_flu_1 = scenes.hospital_queue;
+scenes.arc_flu_2 = scenes.rumor_hoarding;
+scenes.arc_flu_3 = scenes.flu_season;
+scenes.arc_flu_bad = scenes.doctors_strike;
+scenes.arc_flu_good = scenes.new_doctor;
+scenes.arc_budget_1 = scenes.rumor_budget;
+scenes.arc_budget_2 = scenes.tax_rise;
+scenes.arc_budget_3 = scenes.conflict_hall_meeting;
+scenes.arc_budget_bad = scenes.mayor_flee;
+scenes.arc_budget_good = scenes.mayor_promise;
+scenes.arc_gang_1 = scenes.shop_robbery;
+scenes.arc_gang_2 = scenes.crime_wave;
+scenes.arc_gang_3 = scenes.rumor_gangs;
+scenes.arc_gang_bad = scenes.teen_gang;
+scenes.arc_gang_good = scenes.police_patrol;
+scenes.arc_mall_1 = scenes.factory_hiring;
+scenes.arc_mall_2 = scenes.shop_layoff;
+scenes.arc_mall_3 = scenes.conflict_hall_meeting;
+scenes.arc_mall_bad = scenes.shop_layoff;
+scenes.arc_mall_good = scenes.shop_discounts;
+scenes.arc_bus_1 = scenes.salary_delay;
+scenes.arc_bus_2 = scenes.rumor_complaints;
+scenes.arc_bus_3 = scenes.bus_schedule;
+scenes.arc_bus_bad = scenes.storm_damage;
+scenes.arc_bus_good = scenes.city_day;
 
 export const introScenes: Record<string, Scene> = {
   // A quiet town where nothing ever happens.

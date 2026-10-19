@@ -29,6 +29,7 @@ import {
   pairKeys,
   pairOf,
   tensionLevel,
+  arcInfo,
   playTurn,
   previewPublication,
   purchase,
@@ -1104,6 +1105,10 @@ export function mountApp(root: HTMLElement, c: Content): void {
     const calmIcon = () => h('img', { src: `${assetBase}sprites/fx/peace.png`, alt: '', width: 16, height: 16 });
     const pair = card.conflict ? pairKey(c, ...card.conflict) : null;
     const pairNames = card.conflict ? card.conflict.map((g) => groupOf(c, g).name.toLowerCase()).join(' ↔ ') : '';
+    // Story arcs (CONCEPT.md §3.1а): which ending the arc heads to, with this story as it is told now.
+    const arc = arcInfo(state, c, card);
+    const arcLeanNow =
+      arc && arc.lean !== null && arc.day < arc.days ? arc.lean + (where === 'out' ? 0 : d.distortion * c.balance.arcPlacementWeight[where]) : null;
     const truthButton = h(
       'button',
       {
@@ -1202,6 +1207,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
                   `Новость ${p.tension.delta > 0 ? 'разожжёт' : 'остудит'} конфликт ${Math.abs(p.tension.delta) >= 8 ? 'сильно' : Math.abs(p.tension.delta) >= 3 ? 'заметно' : 'чуть-чуть'}.`,
               )
             : null,
+          arcLeanNow !== null
+            ? h(
+                'p',
+                { class: arcLeanNow > 0 ? 'bad' : '' },
+                `Сюжет «${arc!.name}» идёт к ${arcLeanNow > 0 ? 'плохой' : 'хорошей'} развязке. Раздутая новость тянет его к плохой, успокоенная — к хорошей.`,
+              )
+            : null,
           where !== 'out' ? h('p', { class: 'hint' }, placementNote(where)) : null,
         )
       : null;
@@ -1214,6 +1226,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
       investigation ? h('div', { class: 'kicker' }, `Расследование · эксклюзив · ${target.toLowerCase()}`) : null,
       card.debunk ? h('div', { class: 'kicker debunk-kicker' }, `Опровержение · «${rivalNames[state.rival?.kind ?? 'tabloid'].name}»`) : null,
       pair ? h('div', { class: `kicker conflict-kicker level-${tensionLevel(c, state.tension[pair])}` }, `Конфликт · ${pairNames}`) : null,
+      arc
+        ? h(
+            'div',
+            { class: `kicker arc-kicker${arcLeanNow !== null ? (arcLeanNow > 0 ? ' arc-bad' : ' arc-good') : ''}` },
+            `Сюжет · ${arc.name} · ${arc.day < arc.days ? `день ${arc.day} из ${arc.days}` : 'развязка'}`,
+          )
+        : null,
       // Which of the town's bars or shops the story is about.
       card.building !== undefined && state.buildings[card.building] && buildingDefOf(c, state.buildings[card.building].type).names
         ? h('div', { class: 'kicker place-kicker' }, buildingName(state, c, card.building))

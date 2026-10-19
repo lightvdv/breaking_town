@@ -391,12 +391,15 @@ describe('reporter topics', () => {
     const share = (assign: boolean) => {
       let hits = 0;
       let total = 0;
-      for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      for (let seed = 1; seed <= 24; seed++) {
         const s = createGame(content, seed);
         for (let i = 0; i < 12 && !s.outcome; i++) {
           if (assign) setReporterTopics(s, content, s.reporters[0], ['crime']);
           playTurn(s, content, { publish: [] });
           for (const card of s.hand) {
+            // Today's events and arc stages come whatever reporters look for.
+            const tpl = templateOf(content, card.templateId);
+            if (tpl.arc || (tpl.source === 'event' && tpl.scope !== 'global')) continue;
             total++;
             if (templateOf(content, card.templateId).topic === 'crime') hits++;
           }
@@ -469,7 +472,9 @@ describe('reporters', () => {
       for (let i = 0; i < 5; i++) {
         const found = s.lastFinds.filter((f) => f.cardUid !== null).length;
         expect(found).toBeGreaterThanOrEqual(unlucky.balance.minFinds);
-        expect(found).toBeLessThanOrEqual(s.reporters.length + s.todayEvents.length);
+        // Rumor stages of a story arc come like events, though nothing has happened yet.
+        const arcRumors = s.hand.filter((x) => templateOf(unlucky, x.templateId).arc && templateOf(unlucky, x.templateId).source === 'rumor').length;
+        expect(found).toBeLessThanOrEqual(s.reporters.length + s.todayEvents.length + arcRumors);
         playTurn(s, unlucky, { publish: [] });
       }
     }
@@ -906,5 +911,42 @@ describe('the guardian of the destroy mode (CONCEPT.md §8)', () => {
     expect(answer!.card.templateId).toBe('guardian_debunk');
     // Its own stories are good news, soothed bad news or calm ones, never frightening.
     for (const story of s.rival!.plan.filter((x) => !x.card.debunk)) expect(story.distortion).toBeLessThanOrEqual(0);
+  });
+});
+
+describe('story arcs', () => {
+  const c = { ...content, balance: { ...content.balance, arcChance: 1, arcStartTurn: 1, rivalArcChance: 0 } };
+  /** Plays an arc to its end, framing every stage with `frame` (max = inflame, min = soothe). */
+  const run = (seed: number, frame: (card: CardInstance) => number) => {
+    const s = createGame(c, seed);
+    const arc = s.arcs[0];
+    const def = c.arcs.find((a) => a.id === arc.id)!;
+    const seen: string[] = [];
+    for (let day = 0; day < 4; day++) {
+      const card = s.hand.find((x) => templateOf(c, x.templateId).arc === def.id)!;
+      seen.push(card.templateId);
+      if (day < 3) playTurn(s, c, { publish: [{ cardUid: card.uid, placement: 2, distortion: frame(card) }] });
+    }
+    return { def, seen, s };
+  };
+  it('an arc runs three stages, then ends by how the press told it', () => {
+    const hot = run(5, (card) => maxDistortion(card));
+    expect(hot.seen.slice(0, 3)).toEqual(hot.def.stages);
+    expect(hot.seen[3]).toBe(hot.def.bad);
+    const calm = run(5, (card) => minDistortion(card));
+    expect(calm.seen[3]).toBe(calm.def.good);
+    // Each arc happens once a game.
+    expect(calm.s.arcsDone).toContain(calm.def.id);
+    expect(calm.s.arcs.some((a) => a.id === calm.def.id)).toBe(false);
+  });
+  it('arc stages are never found by ordinary search', () => {
+    const s = createGame(content, 3);
+    for (let i = 0; i < 15 && !s.outcome; i++) {
+      for (const card of s.hand) {
+        const tpl = templateOf(content, card.templateId);
+        if (tpl.arc) expect(s.arcsDone).toContain(tpl.arc);
+      }
+      playTurn(s, content, { publish: [] });
+    }
   });
 });

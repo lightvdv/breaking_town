@@ -1,0 +1,73 @@
+[
+  {
+    "id": "factory_closure",
+    "name": "Завод закроют?",
+    "requires": "factory",
+    "stages": [
+      "arc_factory_1",
+      "arc_factory_2",
+      "arc_factory_3"
+    ],
+    "bad": "arc_factory_bad",
+    "good": "arc_factory_good"
+  },
+  {
+    "id": "flu_epidemic",
+    "name": "Эпидемия?",
+    "requires": "hospital",
+    "stages": [
+      "arc_flu_1",
+      "arc_flu_2",
+      "arc_flu_3"
+    ],
+    "bad": "arc_flu_bad",
+    "good": "arc_flu_good"
+  },
+  {
+    "id": "mayor_budget",
+    "name": "Где бюджет?",
+    "requires": "cityHall",
+    "stages": [
+      "arc_budget_1",
+      "arc_budget_2",
+      "arc_budget_3"
+    ],
+    "bad": "arc_budget_bad",
+    "good": "arc_budget_good"
+  },
+  {
+    "id": "street_gang",
+    "name": "Банда в городе?",
+    "requires": "shop",
+    "stages": [
+      "arc_gang_1",
+      "arc_gang_2",
+      "arc_gang_3"
+    ],
+    "bad": "arc_gang_bad",
+    "good": "arc_gang_good"
+  },
+  {
+    "id": "mall_project",
+    "name": "Торговый центр",
+    "requires": "shop",
+    "stages": [
+      "arc_mall_1",
+      "arc_mall_2",
+      "arc_mall_3"
+    ],
+    "bad": "arc_mall_bad",
+    "good": "arc_mall_good"
+  },
+  {
+    "id": "bus_strike",
+    "name": "Забастовка водителей",
+    "stages": [
+      "arc_bus_1",
+      "arc_bus_2",
+      "arc_bus_3"
+    ],
+    "bad": "arc_bus_bad",
+    "good": "arc_bus_good"
+  }
+]

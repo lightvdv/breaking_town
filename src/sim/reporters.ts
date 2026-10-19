@@ -103,7 +103,7 @@ export function findNews(
         : 'global';
 
     const fresh = (t: CardTemplate) => !inHand.has(t.id) && !cards.some((x) => x.templateId === t.id);
-    const ofScope = (t: CardTemplate) => scopeOf(t) === scope && available(state, t) && fresh(t);
+    const ofScope = (t: CardTemplate) => !t.arc && scopeOf(t) === scope && available(state, t) && fresh(t);
     // Mostly true stories (CONCEPT.md §3.3); investigation stories only come from assigned reporters.
     const facts = c.cards.filter((t) => ofScope(t) && (t.source === 'fact' || (scope === 'global' && t.source === 'event')));
     const rumors = c.cards.filter((t) => ofScope(t) && t.source === 'rumor');

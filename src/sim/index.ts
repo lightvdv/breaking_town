@@ -11,4 +11,5 @@ export { createTension, fillTitle, pairKey, pairKeys, pairOf, startTension, tens
 export { averageTrust, buildingDefOf, buildingName, channelOf, groupOf, templateOf } from './lookup';
 export { validateContent } from './validateContent';
 export { DEBUNK_TEMPLATE, debunkTargets, rivalReaders, rivalTrust, setRivalWatch } from './rival';
+export { ARC_DAYS, arcInfo, arcLean, arcOf } from './arcs';
 export { isRoadTile, mapSizeFor } from './map';

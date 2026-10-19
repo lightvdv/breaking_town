@@ -28,6 +28,7 @@ import {
   rivalReaders,
   rivalTrust,
   setRivalWatch,
+  templateOf,
   type CardInstance,
   type Decision,
   type Placement,
@@ -105,6 +106,13 @@ function agitator(s: GameState): Decision {
     if (p) p.distortion = distortion;
     else d.publish.push({ cardUid: c.uid, placement: 0, distortion });
   }
+  // Story arcs are fanned one step towards the bad ending (CONCEPT.md §3.1а).
+  for (const c of s.hand.filter((x) => templateOf(content, x.templateId).arc && trust >= 35)) {
+    const distortion = Math.min(maxDistortion(c), 1);
+    const p = d.publish.find((x) => x.cardUid === c.uid);
+    if (p) p.distortion = Math.max(p.distortion, distortion);
+    else d.publish.push({ cardUid: c.uid, placement: 0, distortion });
+  }
   const top = conflicts[0] && d.publish.find((x) => x.cardUid === conflicts[0].uid);
   const front = d.publish.find((x) => x.placement === 2);
   if (top && top !== front) {
@@ -129,6 +137,10 @@ function defend(s: GameState, debunkDistortion: (c: CardInstance) => number): De
       const d = debunkDistortion(c);
       out.push({ p: { cardUid: c.uid, placement: 0, distortion: d }, score: 10 + impact(c, d) });
     } else if (c.conflict) out.push({ p: { cardUid: c.uid, placement: 0, distortion: -1 }, score: impact(c, -1) });
+    // A running story arc is calmed down «Без паники» to steer it to the good ending (CONCEPT.md §3.1а).
+    else if (c.soft && templateOf(content, c.templateId).arc && averageTrust(s, content) >= 35) {
+      out.push({ p: { cardUid: c.uid, placement: 0, distortion: -1 }, score: 6 + impact(c, -1) });
+    }
     else if (c.baseTruth === 0) {
       const p = previewPublication(s, content, mods, { cardUid: c.uid, placement: 0, distortion: 0 });
       if (!isHarmful(p.effect)) out.push({ p: { cardUid: c.uid, placement: 0, distortion: 0 }, score: p.effect ? 5 + p.impact : p.impact });

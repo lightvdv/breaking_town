@@ -3647,5 +3647,1368 @@
       "«{story}»? «Вестник» снова пугает ради тиража",
       "«{story}» — «Вестник» врёт по заказу столицы"
     ]
+  },
+  {
+    "id": "arc_factory_1",
+    "source": "event",
+    "topic": "factory",
+    "baseTruth": 0,
+    "titles": [
+      "Владельцы завода пересматривают бюджет",
+      "Владельцы завода ищут, на ком сэкономить",
+      "Владельцы завода готовят распродажу цехов"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.1
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "factory_closure",
+    "arcStage": 1,
+    "audience": [
+      "workers"
+    ],
+    "requires": "factory",
+    "witness": "factory",
+    "softTitles": [
+      "Владельцы завода планируют вложения",
+      "Завод ждёт крупный заказ"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_factory_2",
+    "source": "rumor",
+    "topic": "factory",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "На заводе шепчутся о закрытии",
+      "Завод закроют уже через неделю"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.15
+      }
+    ],
+    "engagement": 0.6,
+    "weight": 0,
+    "interest": 0.6,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "factory_closure",
+    "arcStage": 2,
+    "audience": [
+      "workers"
+    ],
+    "requires": "factory"
+  },
+  {
+    "id": "arc_factory_3",
+    "source": "event",
+    "topic": "factory",
+    "baseTruth": 0,
+    "titles": [
+      "Рабочие вышли на митинг у мэрии",
+      "Рабочие готовы перекрыть город",
+      "Рабочие штурмуют мэрию"
+    ],
+    "effects": [
+      {
+        "type": "protest",
+        "strength": 0.08
+      },
+      {
+        "type": "protest",
+        "strength": 0.18
+      },
+      {
+        "type": "protest",
+        "strength": 0.3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      3
+    ],
+    "arc": "factory_closure",
+    "arcStage": 3,
+    "audience": [
+      "workers"
+    ],
+    "requires": "factory",
+    "witness": "factory",
+    "softTitles": [
+      "Рабочие встретились с мэром",
+      "Рабочие поблагодарили мэрию за поддержку"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_factory_bad",
+    "source": "event",
+    "topic": "factory",
+    "baseTruth": 0,
+    "titles": [
+      "Завод закрыл цех: сотни без работы",
+      "Закрытие цеха — только начало",
+      "Завод умирает, город следом"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.15
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.75,
+    "tiers": [
+      2,
+      3
+    ],
+    "arc": "factory_closure",
+    "arcStage": "bad",
+    "audience": [
+      "workers"
+    ],
+    "requires": "factory",
+    "witness": "factory",
+    "cityEffect": {
+      "type": "layoff",
+      "building": "factory",
+      "amount": 20
+    },
+    "softTitles": [
+      "Цех закрыли на модернизацию",
+      "Цех закрыли, чтобы открыть новый, побольше"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_factory_good",
+    "source": "event",
+    "topic": "factory",
+    "baseTruth": 0,
+    "titles": [
+      "Мэрия и владельцы договорились: завод работает",
+      "Завод спасли, но надолго ли",
+      "Спасение завода — сделка за спиной рабочих"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.06
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.1
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "factory_closure",
+    "arcStage": "good",
+    "audience": [
+      "workers"
+    ],
+    "requires": "factory",
+    "witness": "factory",
+    "cityEffect": {
+      "type": "mood",
+      "building": "factory",
+      "amount": 0.06
+    }
+  },
+  {
+    "id": "arc_flu_1",
+    "source": "event",
+    "topic": "health",
+    "baseTruth": 0,
+    "titles": [
+      "В больнице стало больше простуженных",
+      "Больница скрывает число заболевших",
+      "В городе начинается мор"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "fear",
+        "strength": 0.15,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "flu_epidemic",
+    "arcStage": 1,
+    "audience": [
+      "pensioners"
+    ],
+    "requires": "hospital",
+    "witness": "hospital",
+    "softTitles": [
+      "Простуд в этом году меньше обычного",
+      "Город — самый здоровый в области"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_flu_2",
+    "source": "rumor",
+    "topic": "health",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "В аптеках кончаются лекарства",
+      "Лекарств не будет до весны"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "fear",
+        "strength": 0.2,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.6,
+    "weight": 0,
+    "interest": 0.6,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "flu_epidemic",
+    "arcStage": 2,
+    "audience": [
+      "pensioners"
+    ],
+    "requires": "hospital"
+  },
+  {
+    "id": "arc_flu_3",
+    "source": "event",
+    "topic": "health",
+    "baseTruth": 0,
+    "titles": [
+      "Школы закрыли на карантин",
+      "Карантин — это только начало",
+      "Город закроют на въезд и выезд"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "fear",
+        "strength": 0.2,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.35,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      3
+    ],
+    "arc": "flu_epidemic",
+    "arcStage": 3,
+    "requires": "hospital",
+    "witness": "hospital",
+    "softTitles": [
+      "Карантин в школах продлится три дня",
+      "Школьники отдохнут лишнюю неделю"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_flu_bad",
+    "source": "event",
+    "topic": "health",
+    "baseTruth": 0,
+    "titles": [
+      "Эпидемия: больница переполнена",
+      "Врачи не справляются с эпидемией",
+      "Город охватила смертельная эпидемия"
+    ],
+    "effects": [
+      {
+        "type": "fear",
+        "strength": 0.1,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.25,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.4,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.75,
+    "tiers": [
+      2,
+      3
+    ],
+    "arc": "flu_epidemic",
+    "arcStage": "bad",
+    "audience": [
+      "pensioners"
+    ],
+    "requires": "hospital",
+    "witness": "hospital",
+    "cityEffect": {
+      "type": "mood",
+      "amount": -0.06
+    },
+    "softTitles": [
+      "Больница работает с полной загрузкой",
+      "Все больные уже идут на поправку"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_flu_good",
+    "source": "event",
+    "topic": "health",
+    "baseTruth": 0,
+    "titles": [
+      "Грипп отступил: врачи справились",
+      "Грипп отступил, но может вернуться",
+      "Грипп ушёл, а новый штамм уже в пути"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "fear",
+        "strength": 0.15,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "flu_epidemic",
+    "arcStage": "good",
+    "audience": [
+      "pensioners"
+    ],
+    "requires": "hospital",
+    "witness": "hospital",
+    "cityEffect": {
+      "type": "mood",
+      "amount": 0.04
+    }
+  },
+  {
+    "id": "arc_budget_1",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Мэрия задерживает отчёт о бюджете",
+      "Мэрия прячет отчёт о бюджете",
+      "Мэрия уничтожает документы"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.1
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "mayor_budget",
+    "arcStage": 1,
+    "requires": "cityHall",
+    "witness": "cityHall",
+    "softTitles": [
+      "Отчёт о бюджете выйдет на следующей неделе",
+      "Мэрия первой в области сдала отчёт"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_budget_2",
+    "source": "rumor",
+    "topic": "power",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Из бюджета пропали деньги на дороги",
+      "Мэр вывез бюджет города за границу"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.15
+      }
+    ],
+    "engagement": 0.6,
+    "weight": 0,
+    "interest": 0.6,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "mayor_budget",
+    "arcStage": 2,
+    "requires": "cityHall"
+  },
+  {
+    "id": "arc_budget_3",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Горожане требуют отставки мэра",
+      "Город на грани бунта против мэра",
+      "Горожане готовятся штурмовать мэрию"
+    ],
+    "effects": [
+      {
+        "type": "protest",
+        "strength": 0.08
+      },
+      {
+        "type": "protest",
+        "strength": 0.18
+      },
+      {
+        "type": "protest",
+        "strength": 0.3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      3
+    ],
+    "arc": "mayor_budget",
+    "arcStage": 3,
+    "requires": "cityHall",
+    "witness": "cityHall",
+    "softTitles": [
+      "Горожане задали мэру вопросы",
+      "Горожане поддержали мэра"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_budget_bad",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Мэр ушёл в отставку: город без власти",
+      "В мэрии безвластие",
+      "Город брошен властью на произвол"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "protest",
+        "strength": 0.15
+      },
+      {
+        "type": "protest",
+        "strength": 0.3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.75,
+    "tiers": [
+      2,
+      3
+    ],
+    "arc": "mayor_budget",
+    "arcStage": "bad",
+    "requires": "cityHall",
+    "witness": "cityHall",
+    "cityEffect": {
+      "type": "mood",
+      "amount": -0.05
+    },
+    "softTitles": [
+      "Мэр ушёл, заместитель справится",
+      "Новый мэр будет лучше прежнего"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_budget_good",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Аудит: деньги нашлись, мэр извинился",
+      "Мэр извинился, но верить ли ему",
+      "Аудит купили, деньги так и не нашлись"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "protest",
+        "strength": 0.12
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "mayor_budget",
+    "arcStage": "good",
+    "requires": "cityHall",
+    "witness": "cityHall",
+    "cityEffect": {
+      "type": "mood",
+      "amount": 0.04
+    }
+  },
+  {
+    "id": "arc_gang_1",
+    "source": "event",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Ночью разбили витрину магазина",
+      "Хулиганы громят магазины по ночам",
+      "В городе орудует банда погромщиков"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "fear",
+        "strength": 0.1,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.25,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "street_gang",
+    "arcStage": 1,
+    "requires": "shop",
+    "witness": "shop",
+    "softTitles": [
+      "Витрину разбил случайный прохожий",
+      "Витрину разбил ветер, никто не пострадал"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_gang_2",
+    "source": "event",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Разбита вторая витрина за неделю",
+      "Погромы магазинов не прекращаются",
+      "Банда обложила данью все лавки"
+    ],
+    "effects": [
+      {
+        "type": "fear",
+        "strength": 0.05,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.15,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.3,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "street_gang",
+    "arcStage": 2,
+    "requires": "shop",
+    "witness": "shop",
+    "softTitles": [
+      "Витрины уже вставили",
+      "Хозяева магазинов застеклили витрины за счёт города"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_gang_3",
+    "source": "rumor",
+    "topic": "crime",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Говорят, это банда с окраины",
+      "Банда с окраины идёт громить дома"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "fear",
+        "strength": 0.15,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.3,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.6,
+    "weight": 0,
+    "interest": 0.6,
+    "tiers": [
+      1,
+      3
+    ],
+    "arc": "street_gang",
+    "arcStage": 3,
+    "requires": "shop"
+  },
+  {
+    "id": "arc_gang_bad",
+    "source": "event",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Банда держит улицы в страхе",
+      "Полиция бессильна против банды",
+      "Город захвачен бандой"
+    ],
+    "effects": [
+      {
+        "type": "fear",
+        "strength": 0.15,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.3,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.45,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.75,
+    "tiers": [
+      2,
+      3
+    ],
+    "arc": "street_gang",
+    "arcStage": "bad",
+    "requires": "shop",
+    "witness": "shop",
+    "cityEffect": {
+      "type": "layoff",
+      "building": "shop",
+      "amount": 3
+    },
+    "softTitles": [
+      "Полиция взяла улицы под контроль",
+      "Банду уже почти поймали"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_gang_good",
+    "source": "event",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Полиция поймала хулиганов",
+      "Хулиганов поймали, главарь на свободе",
+      "Поймали не тех: банда по-прежнему на воле"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "fear",
+        "strength": 0.1,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.2,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "street_gang",
+    "arcStage": "good",
+    "requires": "shop",
+    "witness": "shop",
+    "cityEffect": {
+      "type": "mood",
+      "amount": 0.04
+    }
+  },
+  {
+    "id": "arc_mall_1",
+    "source": "event",
+    "topic": "food",
+    "baseTruth": 0,
+    "titles": [
+      "Инвестор хочет построить торговый центр",
+      "Торговый центр задавит местные лавки",
+      "Инвестор скупит весь город"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.2,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.5,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "mall_project",
+    "arcStage": 1,
+    "requires": "shop",
+    "witness": "shop"
+  },
+  {
+    "id": "arc_mall_2",
+    "source": "rumor",
+    "topic": "food",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Лавочники боятся разориться",
+      "Все лавки закроются из-за торгового центра"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.25,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.6,
+    "weight": 0,
+    "interest": 0.6,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "mall_project",
+    "arcStage": 2,
+    "requires": "shop"
+  },
+  {
+    "id": "arc_mall_3",
+    "source": "event",
+    "topic": "food",
+    "baseTruth": 0,
+    "titles": [
+      "В мэрии прошли слушания о торговом центре",
+      "На слушаниях о центре чуть не дошло до драки",
+      "Слушания о центре сорваны: город расколот"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "protest",
+        "strength": 0.12
+      },
+      {
+        "type": "protest",
+        "strength": 0.25
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      3
+    ],
+    "arc": "mall_project",
+    "arcStage": 3,
+    "requires": "shop",
+    "witness": "shop",
+    "softTitles": [
+      "Слушания прошли спокойно",
+      "Горожане единогласно поддержали торговый центр"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_mall_bad",
+    "source": "event",
+    "topic": "food",
+    "baseTruth": 0,
+    "titles": [
+      "Стройку отменили, инвестор ушёл",
+      "Инвестор ушёл, лавки всё равно разоряются",
+      "Город остался и без центра, и без лавок"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.2,
+        "duration": 3
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.35,
+        "duration": 3
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.7,
+    "tiers": [
+      2,
+      3
+    ],
+    "arc": "mall_project",
+    "arcStage": "bad",
+    "requires": "shop",
+    "witness": "shop",
+    "cityEffect": {
+      "type": "layoff",
+      "building": "shop",
+      "amount": 3
+    },
+    "softTitles": [
+      "Инвестор найдёт другой участок",
+      "Инвестор вернётся с лучшим предложением"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_mall_good",
+    "source": "event",
+    "topic": "food",
+    "baseTruth": 0,
+    "titles": [
+      "Торговый центр даст городу новые рабочие места",
+      "Работа в центре — только для приезжих",
+      "Центр построят на месте городского парка"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.06
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.12
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "mall_project",
+    "arcStage": "good",
+    "requires": "shop",
+    "witness": "shop",
+    "cityEffect": {
+      "type": "money",
+      "amount": 3
+    }
+  },
+  {
+    "id": "arc_bus_1",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Водители автобусов требуют прибавки",
+      "Водители автобусов на грани бунта",
+      "Водители автобусов готовят диверсию"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.1
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "bus_strike",
+    "arcStage": 1,
+    "audience": [
+      "workers"
+    ],
+    "softTitles": [
+      "Водители и мэрия обсуждают прибавку",
+      "Водители довольны зарплатой"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_bus_2",
+    "source": "rumor",
+    "topic": "power",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Водители грозят забастовкой",
+      "Автобусы встанут на месяц"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.12
+      }
+    ],
+    "engagement": 0.6,
+    "weight": 0,
+    "interest": 0.6,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "bus_strike",
+    "arcStage": 2,
+    "audience": [
+      "workers"
+    ]
+  },
+  {
+    "id": "arc_bus_3",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Автобусы встали: забастовка",
+      "Город парализован забастовкой",
+      "Забастовка перерастает в бунт"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "protest",
+        "strength": 0.15
+      },
+      {
+        "type": "protest",
+        "strength": 0.28
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      3
+    ],
+    "arc": "bus_strike",
+    "arcStage": 3,
+    "audience": [
+      "workers"
+    ],
+    "softTitles": [
+      "Часть автобусов всё же вышла на линию",
+      "Забастовка отменена: автобусы ходят"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_bus_bad",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Забастовка затянулась: город без транспорта",
+      "Город отрезан: автобусов нет вторую неделю",
+      "Город вымирает без транспорта"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.08
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.15
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.7,
+    "tiers": [
+      2,
+      3
+    ],
+    "arc": "bus_strike",
+    "arcStage": "bad",
+    "audience": [
+      "workers"
+    ],
+    "cityEffect": {
+      "type": "money",
+      "amount": -3
+    },
+    "softTitles": [
+      "Мэрия пустит временные автобусы",
+      "Город прекрасно обходится без автобусов"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "arc_bus_good",
+    "source": "event",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Мэрия договорилась с водителями",
+      "Водителям прибавили — за счёт пенсий",
+      "Мэрия купила водителей деньгами из бюджета больницы"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.12
+      }
+    ],
+    "engagement": 0.5,
+    "weight": 0,
+    "interest": 0.55,
+    "tiers": [
+      1,
+      2
+    ],
+    "arc": "bus_strike",
+    "arcStage": "good",
+    "audience": [
+      "workers"
+    ],
+    "cityEffect": {
+      "type": "mood",
+      "amount": 0.03
+    }
   }
 ]

@@ -27,6 +27,9 @@ export function validateContent(c: Content): string[] {
   if (lotsNeeded(c) > lots) errors.push(`buildings need ${lotsNeeded(c)} lots, the map has ${lots}`);
   for (const b of c.buildings) if (b.size !== 1 && b.size !== 2) errors.push(`building ${b.type}: size must be 1 or 2`);
   if (c.balance.smallPerLot < 1 || c.balance.smallPerLot > 4) errors.push('smallPerLot must be 1..4');
+  const stages = c.balance.cityStates.map((s) => s.min);
+  if (!stages.length || stages[stages.length - 1] !== 0 || stages.some((m, i) => i > 0 && m >= stages[i - 1])) errors.push('cityStates: min must go down to 0');
+  for (const key of ['winCityIndex', 'saveLoseIndex'] as const) if (!stages.includes(c.balance[key])) errors.push(`${key} must be a cityStates bound`);
 
   const formKeys = ['one', 'oneAcc', 'oneDat', 'oneIns', 'many', 'manyGen', 'manyDat', 'manyIns'];
   for (const g of c.groups) {

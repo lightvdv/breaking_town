@@ -116,6 +116,12 @@ export function computeMetrics(state: GameState, c: Content): CityMetrics {
   return { population, employment, economy, mood, order, cityIndex, activeResidents: n };
 }
 
+/** Index of the city's stage in `balance.cityStates` (0 is the best) for a city index. */
+export function cityStateOf(c: Content, cityIndex: number): number {
+  const i = c.balance.cityStates.findIndex((s) => cityIndex >= s.min);
+  return i < 0 ? c.balance.cityStates.length - 1 : i;
+}
+
 function layOffOne(state: GameState, rng: RngState, building: Building): boolean {
   const staff = state.residents.filter((r) => r.status === 'active' && r.job === building.id);
   if (staff.length === 0) return false;

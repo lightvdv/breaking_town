@@ -9,6 +9,13 @@
   "agencyMaxOffer": 2,
   "maxSensations": 1,
   "saveLoseIndex": 67,
+  "cityStates": [
+    { "name": "Процветает", "min": 85 },
+    { "name": "Спокойно", "min": 67 },
+    { "name": "Кризис", "min": 50 },
+    { "name": "Упадок", "min": 30 },
+    { "name": "Руины", "min": 0 }
+  ],
   "rivalStartShare": 0.3,
   "rivalStartTrust": 55,
   "rivalAffinity": {

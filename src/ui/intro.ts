@@ -14,6 +14,8 @@ export interface IntroSlide {
 
 export function introSlides(c: Content, mode: GameMode = 'destroy'): IntroSlide[] {
   const b = c.balance;
+  // The stage a city falls into below a bound: goals speak of stages, never of the index (CONCEPT.md §2.3).
+  const below = (bound: number) => b.cityStates.find((s) => s.min < bound)!.name;
   const reporter = reporterOf(c, b.startReporters[0]).name;
   // The other side of the same story (CONCEPT.md §8): the holding's tabloid against the town paper.
   if (mode === 'save') {
@@ -41,7 +43,7 @@ export function introSlides(c: Content, mode: GameMode = 'destroy'): IntroSlide[
       {
         art: 'saved',
         kicker: 'Задание',
-        text: `Продержитесь ${b.turnLimit} дней и не дайте индексу города упасть ниже ${b.saveLoseIndex}. Или разорите «Набат»: без читателей и доверия он закроется.`,
+        text: `Продержитесь ${b.turnLimit} дней и не дайте городу скатиться в «${below(b.saveLoseIndex)}». Или разорите «Набат»: без читателей и доверия он закроется.`,
       },
     ];
   }
@@ -69,7 +71,7 @@ export function introSlides(c: Content, mode: GameMode = 'destroy'): IntroSlide[
     {
       art: 'goal',
       kicker: 'Задание',
-      text: `За ${b.turnLimit} дней опустите индекс города ниже ${b.winCityIndex}. Не обанкротьтесь и не потеряйте репутацию: разоблачённая газета никому не нужна.`,
+      text: `За ${b.turnLimit} дней доведите город до стадии «${below(b.winCityIndex)}». Не обанкротьтесь и не потеряйте репутацию: разоблачённая газета никому не нужна.`,
     },
     {
       art: 'reward',

@@ -4,7 +4,7 @@ export { createGame, playTurn, checkOutcome } from './game';
 export { fireReporter, listPurchases, purchase, adRateOf, incomePerReader, salesOf, setPrice, totalUpkeep, upkeepItems, type PurchaseOption } from './economy';
 export { callAgency, cancelInvestigation, hireFromAgency, investigationTurns, onSpecialty, reporterLuck, reporterOf, searchLuck, setReporterTopics, startInvestigation, tierWeights } from './reporters';
 export { buyWillingness, followersOf, readerCount } from './readers';
-export { wealthOf } from './city';
+export { cityStateOf, wealthOf } from './city';
 export { getModifiers, placementSlots, rankedPlacements, type Modifiers } from './modifiers';
 export { previewPublication, cardTruth, effectiveTier, framingOf, isHarmful, issueLevel, limitSensations, issueScore, isSoothed, maxDistortion, minDistortion, outletReach, storyTitle, type IssueStory, type PublicationPreview } from './news';
 export { createTension, fillTitle, pairKey, pairKeys, pairOf, startTension, tensionLevel } from './relations';

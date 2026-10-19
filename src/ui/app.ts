@@ -44,6 +44,7 @@ import {
   totalUpkeep,
   rivalReaders,
   rivalTrust,
+  cityStateOf,
   setRivalWatch,
   type GameMode,
   type CardInstance,
@@ -268,7 +269,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     2: ['Первая полоса', 'Перетащите сюда главную новость'],
     1: ['Статья', 'Перетащите сюда статью'],
     0: ['Заметки', 'Перетащите сюда заметки'],
-    out: ['Не печатать', 'Перетащите сюда новость, чтобы не печатать её — она сгорит'],
+    out: ['Не печатать', 'Перетащите сюда новость, чтобы не печатать её'],
   };
   const targetTexts: Record<string, string> = { 2: 'На первую полосу', 1: 'Статьёй', 0: 'Заметкой', out: 'Не печатать' };
   const makeZone = (key: ZoneKey) => {
@@ -724,11 +725,26 @@ export function mountApp(root: HTMLElement, c: Content): void {
     h('div', { class: 'card-stat' }, h('span', {}, label), meter(v, cls), h('em', {}, pct(v)));
 
   /** Green arrow up / red arrow down next to a resource after a turn; nothing when it did not change. */
-  function trend(delta: number | null, unit = ''): HTMLElement | null {
+  /** A trend arrow; `unit` null hides the number (the city index is never shown). */
+  function trend(delta: number | null, unit: string | null = ''): HTMLElement | null {
     if (delta === null || delta === 0) return null;
     const up = delta > 0;
-    return h('span', { class: `trend ${up ? 'up' : 'down'}`, title: `${up ? '+' : ''}${delta}${unit} за ход` }, up ? '▲' : '▼');
+    const title = unit === null ? (up ? 'Городу стало лучше за ход' : 'Городу стало хуже за ход') : `${up ? '+' : ''}${delta}${unit} за ход`;
+    return h('span', { class: `trend ${up ? 'up' : 'down'}`, title }, up ? '▲' : '▼');
   }
+
+  /** The city's stage: what the player sees instead of the city index (CONCEPT.md §2.3). */
+  const cityStage = () => c.balance.cityStates[cityStateOf(c, state.metrics.cityIndex)];
+  /** The stage a city falls into below an index bound (the win or lose line of a mode). */
+  const stageBelow = (bound: number) => c.balance.cityStates.find((s) => s.min < bound)!.name;
+  const stageChange = (before: number, after: number) => {
+    const [was, now] = [cityStateOf(c, before), cityStateOf(c, after)].map((i) => c.balance.cityStates[i].name.toLowerCase());
+    return was === now ? now : `${was} → ${now}`;
+  };
+  const cityGoal = () =>
+    state.mode === 'save'
+      ? `Не дайте городу скатиться в «${stageBelow(c.balance.saveLoseIndex)}»`
+      : `Цель — довести город до стадии «${stageBelow(c.balance.winCityIndex)}»`;
 
   function resource(
     icon: string,
@@ -737,7 +753,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     delta: number | null,
     hint: string,
     cls = '',
-    unit = '',
+    unit: string | null = '',
     onclick?: () => void,
   ): HTMLElement {
     return h(
@@ -785,15 +801,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
         () => openModal('reputation'),
       ),
       resource(
-        'city',
-        'Индекс города',
-        `${Math.round(state.metrics.cityIndex)}`,
+        `city_state_${cityStateOf(c, state.metrics.cityIndex)}`,
+        'Город',
+        cityStage().name,
         r ? Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex) : null,
-        state.mode === 'save'
-          ? `Насколько город жив. Не дайте ему упасть ниже ${c.balance.saveLoseIndex}. Нажмите — подробности.`
-          : `Насколько город жив. Для победы опустите ниже ${c.balance.winCityIndex}. Нажмите — подробности.`,
-        '',
-        '',
+        `${cityGoal()}. Нажмите — подробности.`,
+        'city-state',
+        null,
         () => openModal('city'),
       ),
     );
@@ -879,18 +893,18 @@ export function mountApp(root: HTMLElement, c: Content): void {
    */
   function renderRival(): void {
     const rival = state.rival;
-    rivalNotice.hidden = !rival || searching || !!state.outcome;
+    const r = report?.rival;
+    const notes: string[] = [];
+    if (r?.cured) notes.push(`Вчера опровержения разубедили ${r.cured} ${peopleWord(r.cured)}.`);
+    for (const p of r?.publications ?? []) if (p.exposed) notes.push(`«Набат» пойман на лжи: «${p.title}».`);
+    // Nothing printed yet and nothing to tell: no notice at all.
+    rivalNotice.hidden = !rival || searching || !!state.outcome || (!rival.closed && !rival.printed.length && !notes.length);
     if (!rival || rivalNotice.hidden) return;
     const inIssue = new Set(state.hand.filter((x) => x.debunk && drafts.get(x.uid)?.publish).map((x) => x.debunk!.uid));
     const inHand = new Set(state.hand.filter((x) => x.debunk).map((x) => x.debunk!.uid));
     const day = (turn: number) => (state.turn - turn === 1 ? 'вчера' : state.turn - turn === 2 ? 'позавчера' : `день ${turn}`);
     const status = (uid: number, debunked: boolean, exposed?: boolean) =>
       debunked ? '✓ опровергнуто' : exposed ? '✓ пойман на лжи' : inIssue.has(uid) ? 'опровержение в выпуске' : inHand.has(uid) ? 'опровержение не в выпуске' : '';
-    const r = report?.rival;
-    const notes: string[] = [];
-    if (r?.cured) notes.push(`Вчера опровержения разубедили ${r.cured} ${peopleWord(r.cured)}.`);
-    for (const p of r?.publications ?? []) if (p.exposed) notes.push(`«Набат» пойман на лжи: «${p.title}».`);
-    const watchers = state.rivalWatch.filter((id) => state.reporters.includes(id)).map((id) => reporterOf(c, id).name);
     rivalNotice.replaceChildren(
       h(
         'div',
@@ -899,30 +913,24 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h('b', {}, rival.closed ? '«Вечерний Набат» закрылся' : '«Вечерний Набат» напечатал'),
         h('span', { class: 'rival-stats' }, `читателей ${rivalReaders(state)} · доверие ${Math.round(rivalTrust(state))}%`),
       ),
-      rival.printed.length
-        ? h(
-            'ul',
-            { class: 'rival-list' },
-            ...rival.printed.map((p) =>
-              h(
-                'li',
-                { class: p.debunked || p.exposed || inIssue.has(p.uid) ? 'answered' : '' },
-                h('span', { class: 'rival-place' }, `${day(p.turn)} · ${placementLabels[p.placement].toLowerCase()}`),
-                h('span', { class: 'rival-title' }, `«${p.title}»`),
-                h('span', { class: 'rival-answer' }, status(p.uid, p.debunked, p.exposed)),
+      ...(rival.printed.length
+        ? [
+            h(
+              'ul',
+              { class: 'rival-list' },
+              ...rival.printed.map((p) =>
+                h(
+                  'li',
+                  { class: p.debunked || p.exposed || inIssue.has(p.uid) ? 'answered' : '' },
+                  h('span', { class: 'rival-place' }, `${day(p.turn)} · ${placementLabels[p.placement].toLowerCase()}`),
+                  h('span', { class: 'rival-title' }, `«${p.title}»`),
+                  h('span', { class: 'rival-answer' }, status(p.uid, p.debunked, p.exposed)),
+                ),
               ),
             ),
-          )
-        : h('p', { class: 'notice-note' }, 'Он выходит в один день с нами: его выпуск появится здесь завтра.'),
+          ]
+        : []),
       ...notes.map((t) => h('p', { class: 'notice-note' }, t)),
-      h(
-        'p',
-        { class: 'notice-note hint' },
-        `Опровергнуть можно его ложь и полуправду не позже чем через ${c.balance.debunkWindow} дня. ` +
-          (watchers.length
-            ? `За «Набатом» следит: ${watchers.join(', ')}.`
-            : 'Опровержения находят репортёры — отправьте кого-нибудь следить за «Набатом» (нажмите на портрет).'),
-      ),
     );
   }
 
@@ -998,44 +1006,26 @@ export function mountApp(root: HTMLElement, c: Content): void {
       ...lines,
       ...nodes,
     );
-    const before = report?.tensionBefore;
-    const rows = pairKeys(c)
-      .filter((key) => !relFocus || pairOf(key).includes(relFocus))
-      .sort((x, y) => (state.tension[y] ?? 0) - (state.tension[x] ?? 0))
-      .map((key) => {
-        const t = state.tension[key] ?? 0;
-        const level = tensionLevel(c, t);
-        const delta = before ? t - (before[key] ?? t) : 0;
-        return h(
-          'div',
-          { class: 'ledger-row rel-row' },
-          h('span', {}, h('span', { class: `rel-dot level-${Math.min(2, level)}` }), pairOf(key).map((g) => groupOf(c, g).name).join(' ↔ ')),
-          // Only the state and where it is heading, no numbers.
-          h(
-            'b',
-            {},
-            tensionLabels[level],
-            // Arrows follow the relations, not the tension: worse is a red arrow down, better a green one up.
-            Math.abs(delta) >= 1 ? h('span', { class: delta > 0 ? 'bad' : 'good', title: delta > 0 ? 'отношения ухудшаются' : 'отношения налаживаются' }, ` ${delta > 0 ? '▼' : '▲'}`) : '',
-          ),
-        );
-      });
+    // Pairs whose relations changed state over the last turn, in the chart's free corner.
+    const r = report;
+    const changes = r
+      ? pairKeys(c).flatMap((key) => {
+          const was = tensionLevel(c, r.tensionBefore[key] ?? 0);
+          const now = tensionLevel(c, r.tensionAfter[key] ?? 0);
+          if (was === now) return [];
+          return [
+            h(
+              'div',
+              { class: `rel-change ${now > was ? 'worse' : 'better'}` },
+              h('span', {}, pairOf(key).map((g) => groupOf(c, g).name).join(' ↔ ')),
+              h('b', {}, `${tensionLabels[was].toLowerCase()} → ${tensionLabels[now].toLowerCase()}`),
+            ),
+          ];
+        })
+      : [];
     const out: (HTMLElement | null)[] = [
       h('h3', { class: 'section' }, 'Отношения между группами'),
-      h(
-        'p',
-        { class: 'hint-line' },
-        relFocus ? `Связи группы «${groupOf(c, relFocus).name}». Нажмите на неё ещё раз, чтобы увидеть всех.` : 'Нажмите на группу, чтобы выделить её связи.',
-      ),
-      h('div', { class: 'relations-box' }, chart),
-      h(
-        'div',
-        { class: 'rel-legend' },
-        h('span', {}, h('span', { class: 'rel-dot level-0' }), 'мир'),
-        h('span', {}, h('span', { class: 'rel-dot level-1' }), 'трения'),
-        h('span', {}, h('span', { class: 'rel-dot level-2' }), 'вражда, на грани срыва'),
-      ),
-      ...rows,
+      h('div', { class: 'relations-box' }, chart, changes.length ? h('div', { class: 'rel-changes' }, ...changes) : null),
       state.reconciliation ? h('p', { class: 'hint-line' }, `☮ Мэрия мирит: ${pairNames(state.reconciliation.pair, ' и ')}.`) : null,
     ];
     return out.filter((x): x is HTMLElement => x !== null);
@@ -1443,7 +1433,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
         },
         left ? `Не печатать (${left}) ${trayOpen ? '▴' : '▾'}` : 'Не печатать',
       ),
-      left ? '' : h('span', { class: 'tray-hint' }, 'перетащите сюда новость или нажмите ✕ — она сгорит'),
+      left ? '' : h('span', { class: 'tray-hint' }, 'перетащите сюда новость или нажмите ✕'),
     );
     for (const key of [2, 1, 0, 'out'] as const) {
       const here = ordered.filter((card) => whereOf(card) === key);
@@ -1735,7 +1725,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
         ledgerTotal('Итого', r.moneyDelta),
       );
     }
-    out.push(h('p', { class: 'hint' }, 'Доход приносят постоянные читатели: каждый покупает выпуск. Улучшения и найм оплачиваются сразу.'));
     return out.filter((x): x is HTMLElement => x !== null);
   }
 
@@ -1751,7 +1740,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
     };
     const out: HTMLElement[] = [
       h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${readerCount(state)}`), h('span', {}, 'постоянных читателей'))),
-      h('p', { class: 'hint' }, `Каждый читатель приносит ${state.ownedChannels.map((ch) => incomePerReader(state, c, ch)).join(', ')} за выпуск: цена «${priceLabels[state.price].toLowerCase()}» и реклама. Цену выбирают в шапке газеты.`),
       h('h3', { class: 'section' }, 'По группам'),
       ...c.groups.map((g) =>
         countRow(g.name, state.residents.filter((x) => x.status === 'active' && x.group === g.id && x.follows.some((ch) => state.ownedChannels.includes(ch))).length),
@@ -1769,13 +1757,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
         ledgerTotal('Итого', rd.after - rd.before),
       );
     }
-    out.push(
-      h(
-        'p',
-        { class: 'hint' },
-        'Поверившие новости остаются. Уходят не поверившие и увидевшие разоблачение, а равнодушные — если выпуск скучный. Новых приводят киоски и другие улучшения газеты, репутация и интересный выпуск.',
-      ),
-    );
     return out;
   }
 
@@ -1799,15 +1780,14 @@ export function mountApp(root: HTMLElement, c: Content): void {
         ledgerTotal('Итого', Math.round(delta * 10) / 10, '%'),
       );
     }
-    out.push(h('p', { class: 'hint' }, 'Правда понемногу поднимает репутацию у тех, кто её видел; разоблачённая ложь резко роняет. Ноль — поражение.'));
     return out;
   }
 
-  /** City window behind the city index tile: what the index is made of. */
+  /** City window behind the city tile: the city's stage in words and what it is made of; the index itself stays hidden. */
   function cityContent(): HTMLElement[] {
     const m = state.metrics;
-    const b = c.balance;
     const r = report;
+    const stage = cityStateOf(c, m.cityIndex);
     const delta = (after: number, before: number) => trend(Math.round((after - before) * 100), '%');
     const metric = (label: string, key: 'population' | 'employment' | 'economy' | 'mood' | 'order') =>
       h('div', { class: 'city-metric' }, bar(label, m[key]), r ? delta(r.metricsAfter[key], r.metricsBefore[key]) : null);
@@ -1815,10 +1795,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
       h(
         'div',
         { class: 'city-index' },
-        h('img', { src: `${assetBase}sprites/ui/city.png`, alt: '', width: 48, height: 48 }),
-        h('div', {}, h('b', {}, `${Math.round(m.cityIndex)}`), h('span', {}, state.mode === 'save' ? `Индекс города · поражение ниже ${b.saveLoseIndex}` : `Индекс города · победа ниже ${b.winCityIndex}`)),
+        h('img', { src: `${assetBase}sprites/ui/city_state_${stage}.png`, alt: '', width: 48, height: 48 }),
+        h('div', {}, h('b', {}, c.balance.cityStates[stage].name), h('span', {}, cityGoal())),
       ),
-      meter(m.cityIndex / 100, m.cityIndex < (state.mode === 'save' ? b.saveLoseIndex : b.winCityIndex) + 10 ? 'danger' : 'warn'),
       h(
         'div',
         { class: 'city-index' },
@@ -1831,20 +1810,12 @@ export function mountApp(root: HTMLElement, c: Content): void {
         ),
         r ? trend(r.metricsAfter.activeResidents - r.metricsBefore.activeResidents) : null,
       ),
-      h('h3', { class: 'section' }, 'Из чего складывается индекс'),
+      h('h3', { class: 'section' }, 'Подробности'),
       metric('Население', 'population'),
       metric('Занятость', 'employment'),
       metric('Экономика', 'economy'),
       metric('Настроение', 'mood'),
       metric('Порядок и безопасность', 'order'),
-      (() => {
-        // What lowers order right now: protests, fear of crime and the jobless (CONCEPT.md §2.3).
-        const active = state.residents.filter((x) => x.status === 'active');
-        const protest = active.filter((x) => x.protestTurns > 0).length;
-        const afraid = active.filter((x) => x.fearTurns > 0 && x.protestTurns === 0).length;
-        const jobless = active.filter((x) => x.job === null && groupOf(c, x.group).jobs.length > 0).length;
-        return h('p', { class: 'hint' }, `Порядок падает от протестов (${protest}), страха перед преступностью (${afraid} боятся выходить) и безработицы (${jobless} без работы).`);
-      })(),
       h('button', { class: 'primary', onclick: () => openModal('population') }, 'Жители по группам →'),
     ];
   }
@@ -1949,7 +1920,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h(
           'p',
           {},
-          `Индекс города ${signed(Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex))}, жителей ${signed(
+          `Город: ${stageChange(r.metricsBefore.cityIndex, r.metricsAfter.cityIndex)}, жителей ${signed(
             r.metricsAfter.activeResidents - r.metricsBefore.activeResidents,
           )}, разоблачено ${r.exposures.length}, репутация ${signed(Math.round(r.trustAfter - r.trustBefore))}`,
         ),
@@ -2115,7 +2086,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
         { class: `modal ${state.outcome.result}` },
         h('h2', {}, state.outcome.result === 'win' ? 'Победа' : 'Поражение'),
         h('p', {}, outcomeText(state.outcome)),
-        h('p', { class: 'muted' }, `Сыграно ходов: ${Math.min(state.turn - 1, c.balance.turnLimit)}. Индекс города: ${Math.round(state.metrics.cityIndex)}.`),
+        h('p', { class: 'muted' }, `Сыграно ходов: ${Math.min(state.turn - 1, c.balance.turnLimit)}. Город: ${cityStage().name.toLowerCase()}.`),
         h(
           'div',
           { class: 'outcome-actions' },
@@ -2163,7 +2134,6 @@ export function mountApp(root: HTMLElement, c: Content): void {
         'div',
         { class: 'title-box' },
         h('h1', { class: 'title-logo' }, 'BREAKING TOWN'),
-        h('p', { class: 'title-sub' }, 'Газета, которая разрушит город'),
         h(
           'nav',
           { class: 'title-menu' },
@@ -2172,7 +2142,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
                 'button',
                 { class: 'title-item primary', onclick: continueGame },
                 h('span', {}, 'Продолжить'),
-                h('small', {}, `${modeLabels[state.mode]} · день ${Math.min(state.turn, c.balance.turnLimit)} · индекс города ${Math.round(state.metrics.cityIndex)} · ${state.money} монет`),
+                h('small', {}, `${modeLabels[state.mode]} · день ${Math.min(state.turn, c.balance.turnLimit)} · ${cityStage().name.toLowerCase()} · ${state.money} монет`),
               )
             : null,
           // A running game is not thrown away without asking.
@@ -2329,8 +2299,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h('div', {}, h('b', {}, title), h('p', {}, text)),
       );
     return [
-      block('ui/city', 'Цель', `«Разрушить город»: за ${b.turnLimit} дней опустите индекс города ниже ${b.winCityIndex}. Проигрыш — банкротство, потеря репутации или конец срока.`),
-      block('ui/rival', 'Спасти город', `Продержитесь ${b.turnLimit} дней с индексом выше ${b.saveLoseIndex} или закройте «Вечерний Набат». Что он напечатал, видно над газетой; опровержения его свежей лжи приносят репортёры — особенно тот, кого отправили следить за «Набатом».`),
+      block('ui/city', 'Цель', `«Разрушить город»: за ${b.turnLimit} дней доведите город до стадии «${stageBelow(b.winCityIndex)}». Проигрыш — банкротство, потеря репутации или конец срока.`),
+      block('ui/rival', 'Спасти город', `Продержитесь ${b.turnLimit} дней, не дав городу скатиться в «${stageBelow(b.saveLoseIndex)}», или закройте «Вечерний Набат». Что он напечатал, видно над газетой; опровержения его свежей лжи приносят репортёры — особенно тот, кого отправили следить за «Набатом».`),
       block('ui/readers', 'Ход', 'Репортёры приносят новости — события дня всегда, остальное как повезёт. Разложите выпуск: первая полоса, статья, заметки — и отправьте в печать.'),
       block('ui/truth_1', 'Правда и ложь', 'Каждую новость можно оставить как есть, додумать или исказить. Чем сильнее искажение, тем громче новость и выше риск разоблачения.'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, разоблачённая ложь обрушивает. Высокая репутация — вам верят и реже проверяют.'),

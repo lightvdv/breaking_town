@@ -187,6 +187,10 @@ select {
   color: var(--danger);
 }
 
+.res.city-state b {
+  font-size: 15px;
+}
+
 button.res {
   font: inherit;
   color: inherit;
@@ -671,7 +675,7 @@ button.publish.level-3.bump-up {
 }
 
 .title-logo {
-  margin: 0;
+  margin: 0 0 18px;
   font-size: clamp(40px, 9vw, 72px);
   font-weight: 700;
   line-height: 1;
@@ -685,12 +689,6 @@ button.publish.level-3.bump-up {
     -2px 2px 0 #181425;
 }
 
-.title-sub {
-  margin: 0 0 14px;
-  font-size: 17px;
-  color: #fff;
-  text-shadow: 2px 2px 0 #181425;
-}
 
 .title-menu,
 .pause-menu {
@@ -955,6 +953,7 @@ button.publish.level-3.bump-up {
 
 /* ---------- Relations between groups (CONCEPT.md §5.5) ---------- */
 .relations-box {
+  position: relative;
   background: var(--panel-2);
   border: 2px solid var(--ink);
 }
@@ -1014,36 +1013,38 @@ button.publish.level-3.bump-up {
   stroke-width: 5;
 }
 
-.rel-legend {
+/* Last turn's changes in relations, in the chart's free top-right corner. */
+.rel-changes {
+  position: absolute;
+  top: 6px;
+  right: 6px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  font-size: 13px;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 46%;
+  pointer-events: none;
 }
 
-.rel-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 6px;
+.rel-change {
+  display: flex;
+  flex-direction: column;
+  padding: 3px 6px;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: right;
+  background: var(--panel);
   border: 2px solid var(--ink);
-  border-radius: 50%;
-  vertical-align: -1px;
 }
 
-.rel-dot.level-0 {
-  background: #63c74d;
+.rel-change b {
+  font-size: 12px;
 }
 
-.rel-dot.level-1 {
-  background: #feae34;
+.rel-change.worse b {
+  color: var(--danger);
 }
 
-.rel-dot.level-2 {
-  background: #e43b44;
-}
-
-.rel-row .good {
+.rel-change.better b {
   color: var(--ok);
 }
 
@@ -3202,6 +3203,27 @@ button.publish.level-3.bump-up {
 
   .res b {
     font-size: 15px;
+  }
+
+  /* The chart fills the phone's width: relation changes go under it instead of over its corner. */
+  .rel-changes {
+    position: static;
+    flex-flow: row wrap;
+    max-width: none;
+    padding: 0 6px 6px;
+  }
+
+  .rel-change {
+    text-align: left;
+  }
+
+  /* No room for the stage's name on a phone: its icon tells it. */
+  .res.city-state b {
+    display: none;
+  }
+
+  .res.city-state {
+    justify-content: center;
   }
 
   .trend {

@@ -112,6 +112,63 @@ function city(): Raster {
   return outline(r);
 }
 
+/**
+ * City stages shown instead of the index (CONCEPT.md §2.3, `balance.cityStates`): thriving with a
+ * sun and a tree, calm, crisis with smoke and dark windows, decline with a broken tower and boarded
+ * windows, ruins on fire.
+ */
+function cityState(level: 0 | 1 | 2 | 3 | 4): Raster {
+  const r = new Raster(16, 16);
+  if (level === 4) {
+    r.art(0, 4, [
+      '.....ssss.......',
+      '....sssssss.....',
+      '.....sss.sss....',
+      '.......ry.......',
+      '......ryyr......',
+      '.....rryyor.....',
+      '..g..roooor..g..',
+      '.ggg..rrrr..gdg.',
+      'gdgdg.dggd.ggdgg',
+      'ggdggdggggdggdgg',
+      'gggggggggggggggg',
+    ], { s: 'grey', r: 'red', o: 'orange', y: 'yellow', g: 'darkGrey', d: 'slate' });
+    return outline(r);
+  }
+  const dark = level >= 3;
+  r.rect(1, 7, 4, 8, dark ? 'darkGrey' : 'grey');
+  if (level === 3) {
+    // The tall tower broke off: a jagged top.
+    r.rect(5, 5, 5, 10, 'grey');
+    r.art(5, 3, ['.g...', 'gg.g.'], { g: 'grey' });
+  } else {
+    r.rect(5, 2, 5, 13, 'silver');
+    r.rect(7, 0, 1, 2, 'silver');
+  }
+  r.rect(10, 5, 5, 10, dark ? 'slate' : 'darkGrey');
+  const windows: [number, number][] = [
+    [2, 9],
+    [2, 12],
+    [6, 7],
+    [8, 10],
+    [6, 13],
+    [11, 7],
+    [13, 10],
+    [11, 12],
+    ...(level === 3 ? [] : ([[6, 4], [8, 4]] as [number, number][])),
+  ];
+  // Fewer lit windows as the city falls; in decline the dark ones are boarded up.
+  const lit = [10, 8, 4, 1][level];
+  windows.forEach(([x, y], i) => r.set(x, y, i < lit ? 'yellow' : level === 3 ? 'brown' : 'navy'));
+  if (level === 0) {
+    disc(r, 1.5, 1.5, 1.6, 'yellow');
+    r.rect(12, 12, 1, 3, 'brown');
+    disc(r, 12.5, 10.5, 2, 'green');
+  }
+  if (level >= 2) r.art(10, 0, level === 2 ? ['.ss.', 'ss..', '.s..'] : ['.sss', 'sss.', '.ss.', '..s.'], { s: level === 2 ? 'silver' : 'grey' });
+  return outline(r);
+}
+
 /** World news: a globe with continents. */
 function globe(): Raster {
   const r = new Raster(16, 16);
@@ -270,6 +327,11 @@ export const uiIcons: Record<string, () => Raster> = {
   reputation,
   residents,
   city,
+  city_state_0: () => cityState(0),
+  city_state_1: () => cityState(1),
+  city_state_2: () => cityState(2),
+  city_state_3: () => cityState(3),
+  city_state_4: () => cityState(4),
   globe,
   issue_0: () => issue(0),
   issue_1: () => issue(1),

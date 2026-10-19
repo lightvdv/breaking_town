@@ -248,6 +248,11 @@ export interface Balance {
   fearShopSkip: number;
   /** Save mode (CONCEPT.md §8): the city falls when its index drops below this. */
   saveLoseIndex: number;
+  /**
+   * What the player sees instead of the city index (CONCEPT.md §2.3): stages from the best down,
+   * each from its `min` index; `winCityIndex` and `saveLoseIndex` must be one of these bounds.
+   */
+  cityStates: { name: string; min: number }[];
   /** Rival paper: share of the city reading it at the start, its readers' starting trust, per-group appeal. */
   rivalStartShare: number;
   rivalStartTrust: number;

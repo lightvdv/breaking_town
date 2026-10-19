@@ -1,4 +1,5 @@
 import { debunkTargets, makeDebunk } from './rival';
+import { skilledReporter } from './staff';
 import { chance, int, pick, weightedPick, type RngState } from './rng';
 import { clamp } from './lookup';
 import type { Modifiers } from './modifiers';
@@ -152,7 +153,8 @@ export function findNews(
 
   // Reporters busy with an investigation skip the ordinary search.
   const busy = new Set(state.investigations.map((x) => x.reporterId));
-  const hired = state.reporters.filter((id) => !busy.has(id)).map((id) => reporterOf(c, id));
+  // Each works with the skills their experience has grown (CONCEPT.md §3.3б).
+  const hired = state.reporters.filter((id) => !busy.has(id)).map((id) => skilledReporter(state, c, reporterOf(c, id)));
 
   // Today's events always make the news: the reporter on the topic, otherwise the next in turn.
   const writers = hired.length ? hired : state.reporters.slice(0, 1).map((id) => reporterOf(c, id));
@@ -271,5 +273,6 @@ export function hireFromAgency(state: GameState, c: Content, id: string): void {
   if (state.money < cost) throw new Error(`Not enough money to hire ${id}`);
   state.money -= cost;
   state.reporters.push(id);
+  state.staff[id] = { xp: 0, loyalty: c.balance.startLoyalty };
   state.agencyOffer = state.agencyOffer.filter((x) => x !== id);
 }

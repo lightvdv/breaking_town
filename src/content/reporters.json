@@ -6,6 +6,9 @@
     "weight": 0,
     "hireCost": 0,
     "salary": 10,
+    "female": true,
+    "honesty": 0.6,
+    "tie": { "topic": "factory", "text": "У Петровой сын работает на заводе." },
     "skills": { "luck": 0.75, "nose": 0, "scope": "any", "topics": [] },
     "portrait": { "bg": "blue", "skin": "skin", "hair": "amber", "hairStyle": "bob", "clothes": "white", "accessory": "none" }
   },
@@ -16,6 +19,8 @@
     "weight": 5,
     "hireCost": 120,
     "salary": 12,
+    "honesty": 0.7,
+    "tie": { "topic": "factory", "text": "Соколов тридцать лет простоял у станка: на заводе все его друзья." },
     "skills": { "luck": 0.6, "nose": 1, "scope": "local", "topics": ["factory"] },
     "portrait": { "bg": "darkGrey", "skin": "skinDark", "hair": "ink", "hairStyle": "short", "clothes": "orange", "accessory": "helmet" }
   },
@@ -26,6 +31,9 @@
     "weight": 3,
     "hireCost": 150,
     "salary": 14,
+    "female": true,
+    "honesty": 0.2,
+    "tie": { "topic": "fun", "text": "Волкова дружит с хозяевами всех баров города." },
     "skills": { "luck": 0.7, "nose": 1, "scope": "local", "topics": ["fun", "food"] },
     "portrait": { "bg": "magenta", "skin": "skin", "hair": "darkRed", "hairStyle": "long", "clothes": "plum", "accessory": "earrings" }
   },
@@ -36,6 +44,8 @@
     "weight": 3,
     "hireCost": 200,
     "salary": 18,
+    "honesty": 0.5,
+    "tie": { "topic": "power", "text": "Брат Лебедева работает заместителем мэра." },
     "skills": { "luck": 0.55, "nose": 2, "scope": "local", "topics": ["power"] },
     "portrait": { "bg": "navyBlue", "skin": "skin", "hair": "silver", "hairStyle": "short", "clothes": "slate", "accessory": "glasses" }
   },
@@ -46,6 +56,8 @@
     "weight": 3,
     "hireCost": 180,
     "salary": 16,
+    "honesty": 0.4,
+    "tie": { "topic": "crime", "text": "Ким знает всех участковых по имени." },
     "skills": { "luck": 0.65, "nose": 1, "scope": "local", "topics": ["crime"] },
     "portrait": { "bg": "darkRed", "skin": "skinDark", "hair": "ink", "hairStyle": "slick", "clothes": "ink", "accessory": "fedora" }
   },
@@ -56,6 +68,9 @@
     "weight": 3,
     "hireCost": 170,
     "salary": 15,
+    "female": true,
+    "honesty": 0.8,
+    "tie": { "topic": "health", "text": "Мать Орловой — главврач городской больницы." },
     "skills": { "luck": 0.65, "nose": 1, "scope": "any", "topics": ["health"] },
     "portrait": { "bg": "green", "skin": "skin", "hair": "brown", "hairStyle": "bun", "clothes": "white", "accessory": "glasses" }
   },
@@ -66,6 +81,7 @@
     "weight": 2,
     "hireCost": 220,
     "salary": 18,
+    "honesty": 0.3,
     "skills": { "luck": 0.7, "nose": 1, "scope": "global", "topics": [] },
     "portrait": { "bg": "cyan", "skin": "skin", "hair": "brown", "hairStyle": "curly", "clothes": "navyBlue", "accessory": "headphones" }
   },
@@ -76,6 +92,8 @@
     "weight": 1,
     "hireCost": 450,
     "salary": 35,
+    "female": true,
+    "honesty": 0.5,
     "skills": { "luck": 0.6, "nose": 3, "scope": "any", "topics": [] },
     "portrait": { "bg": "amber", "skin": "skin", "hair": "ink", "hairStyle": "long", "clothes": "red", "accessory": "camera" }
   },
@@ -86,6 +104,7 @@
     "weight": 5,
     "hireCost": 90,
     "salary": 8,
+    "honesty": 0.1,
     "skills": { "luck": 0.9, "nose": 0, "scope": "any", "topics": ["fun"] },
     "portrait": { "bg": "pink", "skin": "skinDark", "hair": "green", "hairStyle": "mohawk", "clothes": "magenta", "accessory": "none" }
   },
@@ -96,6 +115,8 @@
     "weight": 2,
     "hireCost": 300,
     "salary": 24,
+    "honesty": 0.9,
+    "tie": { "topic": "food", "text": "Жена Белова держит пекарню на главной улице." },
     "skills": { "luck": 0.5, "nose": 2, "scope": "global", "topics": ["power", "food"] },
     "portrait": { "bg": "wood", "skin": "skin", "hair": "white", "hairStyle": "bald", "clothes": "brown", "accessory": "beard" }
   },
@@ -106,6 +127,9 @@
     "weight": 3,
     "hireCost": 160,
     "salary": 14,
+    "female": true,
+    "honesty": 1.0,
+    "tie": { "topic": "health", "text": "Никитину в детстве выходили врачи городской больницы." },
     "skills": { "luck": 0.65, "nose": 1, "scope": "local", "topics": ["health"] },
     "portrait": { "bg": "cyan", "skin": "skin", "hair": "brown", "hairStyle": "bun", "clothes": "white", "accessory": "glasses" }
   },
@@ -116,6 +140,7 @@
     "weight": 5,
     "hireCost": 100,
     "salary": 11,
+    "honesty": 0.1,
     "skills": { "luck": 0.8, "nose": 0, "scope": "any", "topics": ["fun"] },
     "portrait": { "bg": "pink", "skin": "skin", "hair": "amber", "hairStyle": "curly", "clothes": "magenta", "accessory": "camera" }
   },
@@ -126,6 +151,8 @@
     "weight": 2,
     "hireCost": 260,
     "salary": 20,
+    "honesty": 0.8,
+    "tie": { "topic": "crime", "text": "Сын Сергеева служит в городской полиции." },
     "skills": { "luck": 0.55, "nose": 2, "scope": "local", "topics": ["crime"] },
     "portrait": { "bg": "navyBlue", "skin": "skinDark", "hair": "grey", "hairStyle": "short", "clothes": "ink", "accessory": "beard" }
   },
@@ -136,6 +163,9 @@
     "weight": 2,
     "hireCost": 280,
     "salary": 22,
+    "female": true,
+    "honesty": 0.4,
+    "tie": { "topic": "power", "text": "Федорова училась с мэром в одном классе." },
     "skills": { "luck": 0.6, "nose": 2, "scope": "any", "topics": ["power"] },
     "portrait": { "bg": "darkRed", "skin": "skin", "hair": "ink", "hairStyle": "slick", "clothes": "plum", "accessory": "earrings" }
   }

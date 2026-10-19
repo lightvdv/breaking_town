@@ -35,6 +35,12 @@ export interface ReporterDef {
   hireCost: number;
   /** Paid every turn while hired. */
   salary: number;
+  /** For Russian verb forms in the UI: «уволилась» / «уволился». */
+  female?: boolean;
+  /** 0..1: how much printing their stories as lies hurts their loyalty (CONCEPT.md §3.3б). */
+  honesty: number;
+  /** A personal story: bad news on this topic hurts them (e.g. a son at the factory). */
+  tie?: { topic: Topic; text: string };
   skills: {
     /** Chance to find a story each turn. */
     luck: number;
@@ -216,7 +222,7 @@ export interface CardTemplate {
  * Offers with a catch (CONCEPT.md §3.5а): silence = paid not to write bad news about one place,
  * subsidy = paid daily for no bad news on a topic, kompromat = a sensation that may be a setup.
  */
-export type OfferKind = 'silence' | 'subsidy' | 'kompromat';
+export type OfferKind = 'silence' | 'subsidy' | 'kompromat' | 'poach';
 
 export interface OfferDef {
   id: string;
@@ -249,6 +255,14 @@ export interface Offer {
   id: string;
   /** silence: the building the deal is about. */
   building?: number;
+  /** poach: the reporter the rival lures away. */
+  reporterId?: string;
+}
+
+/** A hired reporter's own record (CONCEPT.md §3.3б): experience from printed stories and loyalty 0..1. */
+export interface StaffState {
+  xp: number;
+  loyalty: number;
 }
 
 /** An accepted deal that lasts until `untilTurn`. */
@@ -351,6 +365,27 @@ export interface Balance {
   offerChance: number;
   offerStartTurn: number;
   offerCooldown: number;
+  /** Reporters with character (CONCEPT.md §3.3б): xp needed for each level and what a level adds. */
+  reporterLevels: number[];
+  levelLuck: number;
+  levelNose: number;
+  /** xp for a printed story by placement (brief, article, front page). */
+  xpPerPlacement: number[];
+  startLoyalty: number;
+  /** Loyalty lost per step of lying × honesty; gained for a story printed as true; lost for bad news on their tie. */
+  lieLoyalty: number;
+  truthLoyalty: number;
+  tieLoyalty: number;
+  loyaltyRecovery: number;
+  /** Below this loyalty a reporter quits; with `leakChance` they tell the rival about our lies. */
+  quitLoyalty: number;
+  leakChance: number;
+  /** The rival lures a reporter of level ≥ 1: daily chance × (1.5 − loyalty), from `poachStartTurn`; keeping them costs salary × `poachRetain`. */
+  poachChance: number;
+  poachStartTurn: number;
+  poachRetain: number;
+  /** A reporter who went over to the rival: its readers trust it this much more. */
+  poachRivalTrust: number;
   /** A fake kompromat caught by the fact-checkers costs this many times the usual reputation. */
   setupPenaltyMul: number;
   /** Chance the rival takes up a stage of a running arc on top of its own stories. */
@@ -754,6 +789,10 @@ export interface ExposedStory {
   conflict?: [GroupId, GroupId];
   /** The anonymous kompromat was a fake. */
   setup?: boolean;
+  /** Who wrote it (a reporter who quits may leak our lies). */
+  reporterId?: string;
+  /** Leaked to the rival by a reporter who quit. */
+  leaked?: boolean;
 }
 
 export interface PendingLie {
@@ -803,6 +842,8 @@ export interface GameState {
   /** Offers with a catch (CONCEPT.md §3.5а): today's offer, the deals in force, the turn of the last offer. */
   offer: Offer | null;
   deals: Deal[];
+  /** Experience and loyalty of the reporters, by id. */
+  staff: Record<string, StaffState>;
   lastOfferTurn: number;
   money: number;
   /** Price level of the paper (index in `Balance.prices`), chosen by the player. */
@@ -908,6 +949,8 @@ export interface TurnReport {
   upkeepItems: UpkeepItem[];
   /** Offers with a catch (CONCEPT.md §3.5а): money the deals paid this turn and the deals we broke. */
   deals: { paid: number; broken: string[] };
+  /** Reporters with character (CONCEPT.md §3.3б): who rose a level, who quit, who leaked our lies. */
+  staff: { levelUps: string[]; quit: string[]; leaked: string[] };
   moneyDelta: number;
   /** Followers of at least one channel: at the start of the turn, lost and gained after it. */
   readers: ReadersChange & { before: number; after: number };

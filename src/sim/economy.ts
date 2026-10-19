@@ -1,3 +1,4 @@
+import { removeReporter } from './staff';
 import { channelOf } from './lookup';
 import { getModifiers } from './modifiers';
 import { reporterOf } from './reporters';
@@ -59,10 +60,7 @@ export function fireReporter(state: GameState, id: string): void {
   if (state.outcome) throw new Error('Game is over');
   if (!state.reporters.includes(id)) throw new Error(`Reporter ${id} is not hired`);
   if (state.reporters.length <= 1) throw new Error('The last reporter cannot be fired');
-  state.reporters = state.reporters.filter((x) => x !== id);
-  state.investigations = state.investigations.filter((x) => x.reporterId !== id);
-  delete state.reporterTopics[id];
-  state.rivalWatch = state.rivalWatch.filter((x) => x !== id);
+  removeReporter(state, id);
 }
 
 export function purchase(state: GameState, c: Content, id: string): void {

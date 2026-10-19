@@ -611,6 +611,18 @@ button.publish.level-3.bump-up {
   color: #265c42;
 }
 
+/* The newsroom's news: level-ups and who quit. */
+.notice-staff {
+  border-left-color: #4b5a8a;
+}
+
+.notice-head .notice-portrait {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  image-rendering: pixelated;
+}
+
 /* Offers with a catch: an envelope on the desk, with yes and no. */
 .notice-offer {
   border-left-color: #c79a2e;

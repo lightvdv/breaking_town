@@ -1,4 +1,4 @@
-import { getModifiers, groupOf, reporterOf, searchLuck, type Content, type Find, type GameState, type ReporterDef } from '../sim';
+import { getModifiers, groupOf, levelOf, reporterOf, searchLuck, skilledReporter, staffOf, type Content, type Find, type GameState, type ReporterDef } from '../sim';
 import { h, pct } from './dom';
 import { rivalNames, scopeLabels, tierLabels, topicLabels } from './text';
 
@@ -8,12 +8,27 @@ export type RepStatus = { phase: 'searching' } | { phase: 'done'; find: Find; ti
 const portraitUrl = (id: string) => `${import.meta.env.BASE_URL}assets/sprites/reporters/${id}.png`;
 
 export function stars(nose: number): string {
-  return '★'.repeat(nose) + '☆'.repeat(3 - nose);
+  const n = Math.round(nose);
+  return '★'.repeat(n) + '☆'.repeat(3 - n);
 }
 
 export function skillLine(c: Content, state: GameState, r: ReporterDef): string {
-  const luck = searchLuck(state, c, r, getModifiers(state, c));
-  return `Удача ${pct(luck)} · Чутьё ${stars(r.skills.nose)} · ${scopeLabels[r.skills.scope]}`;
+  // Skills as experience has grown them (CONCEPT.md §3.3б).
+  const s = state.reporters.includes(r.id) ? skilledReporter(state, c, r) : r;
+  const luck = searchLuck(state, c, s, getModifiers(state, c));
+  return `Удача ${pct(luck)} · Чутьё ${stars(s.skills.nose)} · ${scopeLabels[s.skills.scope]}`;
+}
+
+const levelNames = ['Новичок', 'Опытный', 'Мастер', 'Легенда'];
+
+/** Experience and loyalty of a hired reporter, and their personal story (CONCEPT.md §3.3б). */
+export function characterLine(c: Content, state: GameState, r: ReporterDef): string {
+  const s = staffOf(state, c, r.id);
+  const level = levelOf(c, s.xp);
+  const next = c.balance.reporterLevels[level + 1];
+  const loyalty = s.loyalty >= 0.6 ? (r.female ? 'предана газете' : 'предан газете') : s.loyalty >= 0.4 ? 'сомневается' : 'на грани ухода';
+  const honest = r.honesty >= 0.7 ? 'Не терпит лжи.' : r.honesty <= 0.2 ? `Ложь ${r.female ? 'её' : 'его'} не смущает.` : '';
+  return [`${levelNames[level]}${next !== undefined ? ` (опыт ${s.xp}/${next})` : ''} · ${loyalty}.`, honest, r.tie?.text ?? ''].filter(Boolean).join(' ');
 }
 
 export function topicLine(r: ReporterDef): string {

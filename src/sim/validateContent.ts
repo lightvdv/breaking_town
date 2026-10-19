@@ -150,7 +150,7 @@ export function validateContent(c: Content): string[] {
   // Offers with a catch (CONCEPT.md §3.5а).
   unique('offer', c.offers.map((x) => x.id));
   for (const o of c.offers) {
-    if (!['silence', 'subsidy', 'kompromat'].includes(o.kind)) errors.push(`offer ${o.id}: unknown kind ${o.kind}`);
+    if (!['silence', 'subsidy', 'kompromat', 'poach'].includes(o.kind)) errors.push(`offer ${o.id}: unknown kind ${o.kind}`);
     if (o.requires && !buildingTypes.has(o.requires)) errors.push(`offer ${o.id}: unknown building ${o.requires}`);
     if (o.kind === 'silence' && (!o.requires || !(o.amount! > 0) || !(o.days! > 0))) errors.push(`offer ${o.id}: silence needs a building, amount and days`);
     if (o.kind === 'subsidy' && (!o.topic || !(o.amount! > 0) || !(o.days! > 0))) errors.push(`offer ${o.id}: subsidy needs a topic, amount and days`);

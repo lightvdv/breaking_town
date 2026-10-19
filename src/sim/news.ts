@@ -520,6 +520,7 @@ export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Mo
       placement: n.pub.placement,
       turn: state.turn,
       ...(fake ? { setup: true } : {}),
+      ...(card.reporterId ? { reporterId: card.reporterId } : {}),
     };
     const risk = exposureRiskOf(state, c, mods, story.truth, n.pub.placement, n.viewers.length / active);
     if (chance(rng, risk)) {

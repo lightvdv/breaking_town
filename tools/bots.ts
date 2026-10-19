@@ -30,6 +30,7 @@ import {
   setRivalWatch,
   answerOffer,
   offerOf,
+  retainCost,
   templateOf,
   type CardInstance,
   type Decision,
@@ -305,6 +306,8 @@ function answerOffers(s: GameState, strategy: Strategy): void {
   const trust = averageTrust(s, content);
   const thoughtful = strategy === mixed || strategy === agitator;
   const defending = strategy === defender || strategy === liarDefender || strategy === soother;
+  // A lured reporter is kept when the money allows.
+  if (kind === 'poach') return void answerOffer(s, content, (thoughtful || defending) && s.money >= 2 * retainCost(content, s.offer.reporterId!));
   answerOffer(s, content, (thoughtful && kind === 'kompromat' && trust >= 45) || (defending && ((kind === 'subsidy' && trust >= 45) || kind === 'kompromat')));
 }
 

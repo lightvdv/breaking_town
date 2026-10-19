@@ -10,6 +10,7 @@ import {
 import { advanceArcs, pushArc } from './arcs';
 import { collectIncome } from './economy';
 import { advanceOffers, settleDeals } from './offers';
+import { updateStaff } from './staff';
 import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf } from './lookup';
 import { getModifiers, placementSlots, type Modifiers } from './modifiers';
@@ -55,6 +56,7 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy')
     offer: null,
     deals: [],
     lastOfferTurn: 0,
+    staff: Object.fromEntries(c.balance.startReporters.map((id) => [id, { xp: 0, loyalty: c.balance.startLoyalty }])),
     money: c.balance.startMoney,
     price: c.balance.startPrice,
     brokeTurns: 0,
@@ -248,6 +250,9 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   verifyRival(state, c, rng, rivalNews);
   // The rival may answer our lies over the next days.
   recordOurIssue(state, c, published);
+  // Reporters grow, take our lies to heart, and may quit (CONCEPT.md §3.3б).
+  const staff = updateStaff(state, c, rng, mods, published);
+  exposures.push(...staff.exposures);
 
   // Deals with a catch (CONCEPT.md §3.5а): a bad story about what we promised to keep quiet about costs us.
   const deals = settleDeals(state, c, d.publish);
@@ -290,6 +295,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     upkeep,
     upkeepItems,
     deals,
+    staff: { levelUps: staff.levelUps, quit: staff.quit, leaked: staff.leaked },
     moneyDelta: state.money - moneyBefore,
     readers: { before: readersBefore, ...readers, after: readersAfter },
     issue,

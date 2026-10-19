@@ -29,6 +29,9 @@ import {
   rivalTrust,
   setRivalWatch,
   answerOffer,
+  levelOf,
+  skilledReporter,
+  staffOf,
   cardTruth,
   minDistortion,
   salesOf,
@@ -996,5 +999,60 @@ describe('offers with a catch', () => {
       caught += report.exposures.filter((x) => x.setup && x.truth === 2).length;
     }
     expect(caught).toBeGreaterThan(0);
+  });
+});
+
+describe('reporters with character', () => {
+  const story = (s: GameState, reporterId: string, templateId: string): CardInstance => {
+    const tpl = templateOf(content, templateId);
+    const x: CardInstance = { uid: s.nextUid++, templateId, baseTruth: tpl.baseTruth, createdTurn: s.turn, tier: 1, scope: 'local', reporterId };
+    s.hand = [x];
+    return x;
+  };
+  it('printed stories give experience; a level makes the reporter better', () => {
+    const s = createGame(content, 2);
+    const id = s.reporters[0];
+    const before = skilledReporter(s, content, reporterOf(content, id)).skills.luck;
+    staffOf(s, content, id).xp = content.balance.reporterLevels[1] - 1;
+    const card = story(s, id, 'bakery_award');
+    const report = playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 2, distortion: 0 }] });
+    expect(report.staff.levelUps).toContain(id);
+    expect(levelOf(content, staffOf(s, content, id).xp)).toBe(1);
+    expect(skilledReporter(s, content, reporterOf(content, id)).skills.luck).toBeGreaterThan(before);
+  });
+  it('an honest reporter forced to lie quits; the last one stays', () => {
+    const s = createGame(content, 2);
+    s.reporters = ['petrova', 'nikitina'];
+    s.staff.nikitina = { xp: 0, loyalty: content.balance.quitLoyalty + 0.05 };
+    const card = story(s, 'nikitina', 'bakery_award');
+    const report = playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 0, distortion: 2 }] });
+    expect(report.staff.quit).toEqual(['nikitina']);
+    expect(s.reporters).toEqual(['petrova']);
+    s.staff.petrova.loyalty = 0;
+    const own = story(s, 'petrova', 'bakery_award');
+    playTurn(s, content, { publish: [{ cardUid: own.uid, placement: 0, distortion: 2 }] });
+    expect(s.reporters).toEqual(['petrova']);
+  });
+  it('scary untruth on a personal tie hurts the reporter', () => {
+    const s = createGame(content, 2);
+    const tie = reporterOf(content, 'petrova').tie!;
+    const tpl = content.cards.find((t) => t.topic === tie.topic && t.source === 'event' && !t.arc && t.effects[0] && !['moodUp'].includes(t.effects[0]!.type))!;
+    const before = staffOf(s, content, 'petrova').loyalty;
+    const card = story(s, 'petrova', tpl.id);
+    playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 0, distortion: 1 }] });
+    expect(staffOf(s, content, 'petrova').loyalty).toBeLessThan(before);
+  });
+  it('the rival lures a reporter: keep them for a bonus or lose them', () => {
+    const s = createGame(content, 2);
+    s.reporters = ['petrova', 'kim'];
+    s.offer = { id: 'poach_guardian', reporterId: 'kim' };
+    answerOffer(s, content, false);
+    expect(s.reporters).toEqual(['petrova']);
+    s.reporters.push('kim');
+    s.offer = { id: 'poach_guardian', reporterId: 'kim' };
+    const money = s.money;
+    answerOffer(s, content, true);
+    expect(s.reporters).toContain('kim');
+    expect(s.money).toBe(money - reporterOf(content, 'kim').salary * content.balance.poachRetain);
   });
 });

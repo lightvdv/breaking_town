@@ -32,6 +32,7 @@ import {
   arcInfo,
   answerOffer,
   dealBrokenBy,
+  retainCost,
   offerOf,
   offerText,
   playTurn,
@@ -75,7 +76,7 @@ import { h, pct, svg } from './dom';
 import { loadSave, writeSave } from './save';
 import { applyTheme, loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
-import { portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
+import { characterLine, portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
   priceLabels,
   modeLabels,
@@ -220,6 +221,8 @@ export function mountApp(root: HTMLElement, c: Content): void {
   let exposuresSeen = false;
   /** The mayor's reconciliation notice of the last report was closed. */
   let reconcileSeen = false;
+  let staffSeen = false;
+  let offerError = '';
   /** Group picked on the relations circle: its lines stand out, the rest dim. */
   let relFocus: string | null = null;
   /** Story whose truth menu is open next to its headline. */
@@ -305,8 +308,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
   const reconcileNotice = h('section', { class: 'notice notice-peace', hidden: true, role: 'status' });
   // Save mode: what the rival paper prints today, and which of its stories we answer (CONCEPT.md §8).
   const rivalNotice = h('section', { class: 'notice notice-rival', hidden: true, role: 'status' });
+  const staffNotice = h('section', { class: 'notice notice-staff', hidden: true, role: 'status' });
   const offerNotice = h('section', { class: 'notice notice-offer', hidden: true, role: 'status' });
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, exposureNotice, reconcileNotice, offerNotice, rivalNotice, paper));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, exposureNotice, reconcileNotice, staffNotice, offerNotice, rivalNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -394,6 +398,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     issueOpen = true;
     exposuresSeen = false;
     reconcileSeen = false;
+    staffSeen = false;
     repStatus = new Map();
     revealed = new Set();
     flyQueue = new Set();
@@ -894,6 +899,45 @@ export function mountApp(root: HTMLElement, c: Content): void {
     );
   }
 
+  /** The newsroom's news of the day (CONCEPT.md §3.3б): who grew, who quit, who leaked our lies. */
+  function renderStaff(): void {
+    const st = report?.staff;
+    const lines = st
+      ? [
+          ...st.levelUps.map((id) => `${reporterOf(c, id).name} набирается опыта: пишет лучше и находит больше.`),
+          ...st.quit.map((id) => {
+            const r = reporterOf(c, id);
+            const a = r.female ? 'а' : '';
+            return st.leaked.includes(id)
+              ? `${r.name} уволил${r.female ? 'ась' : 'ся'} из-за лжи в газете — и рассказал${a} конкурентам, что мы врали.`
+              : `${r.name} не выдержал${a} и уволил${r.female ? 'ась' : 'ся'}.`;
+          }),
+        ]
+      : [];
+    staffNotice.hidden = !lines.length || staffSeen || searching;
+    if (staffNotice.hidden) return;
+    staffNotice.replaceChildren(
+      h(
+        'div',
+        { class: 'notice-head' },
+        h('b', {}, 'Редакция'),
+        h(
+          'button',
+          {
+            class: 'icon-btn',
+            title: 'Закрыть',
+            onclick: () => {
+              staffSeen = true;
+              render();
+            },
+          },
+          '×',
+        ),
+      ),
+      ...lines.map((t) => h('p', { class: 'notice-note' }, t)),
+    );
+  }
+
   /** Today's offer with a catch (CONCEPT.md §3.5а): what is offered, what can go wrong, yes or no. */
   function renderOffer(): void {
     const offer = state.offer;
@@ -901,24 +945,35 @@ export function mountApp(root: HTMLElement, c: Content): void {
     if (!offer || offerNotice.hidden) return;
     const def = offerOf(c, offer.id);
     const answer = (accept: boolean) => () => {
-      const card = answerOffer(state, c, accept);
-      if (card) revealed.add(card.uid);
+      try {
+        const card = answerOffer(state, c, accept);
+        if (card) revealed.add(card.uid);
+        offerError = '';
+      } catch {
+        offerError = 'Не хватает денег.';
+      }
       render();
     };
+    const poach = def.kind === 'poach' && offer.reporterId;
     offerNotice.replaceChildren(
       h(
         'div',
         { class: 'notice-head' },
-        h('img', { src: `${assetBase}sprites/ui/offer.png`, alt: '', width: 24, height: 24 }),
+        poach ? portrait(offer.reporterId!, 'portrait notice-portrait') : h('img', { src: `${assetBase}sprites/ui/offer.png`, alt: '', width: 24, height: 24 }),
         h('b', {}, def.title),
       ),
-      h('p', { class: 'notice-note' }, offerText(state, c, def, offer.building)),
+      h('p', { class: 'notice-note' }, offerText(state, c, def, offer)),
       h('p', { class: 'notice-note offer-catch' }, def.catch),
       h(
         'div',
         { class: 'offer-buttons' },
-        h('button', { class: 'primary', onclick: answer(true) }, def.kind === 'kompromat' ? 'Взять документы' : 'Согласиться'),
-        h('button', { onclick: answer(false) }, 'Отказаться'),
+        h(
+          'button',
+          { class: 'primary', onclick: answer(true) },
+          poach ? `Удержать за ${retainCost(c, offer.reporterId!)}` : def.kind === 'kompromat' ? 'Взять документы' : 'Согласиться',
+        ),
+        h('button', { onclick: answer(false) }, poach ? 'Отпустить' : 'Отказаться'),
+        offerError ? h('span', { class: 'bad' }, offerError) : null,
       ),
     );
   }
@@ -1551,7 +1606,13 @@ export function mountApp(root: HTMLElement, c: Content): void {
         'div',
         { class: 'exposed-text' },
         h('b', { class: 'headline' }, x.title),
-        h('span', {}, `${truthLabels[x.truth]} · выпуск дня ${x.turn}, ${placementLabels[x.placement].toLowerCase()}`),
+        h(
+          'span',
+          {},
+          `${truthLabels[x.truth]} · выпуск дня ${x.turn}, ${placementLabels[x.placement].toLowerCase()}` +
+            (x.setup ? ' · документы оказались фальшивкой' : '') +
+            (x.leaked ? ' · слил ушедший репортёр' : ''),
+        ),
       ),
       h('b', { class: 'exposed-loss' }, `−${x.trustLoss.toFixed(1)}%`),
     );
@@ -1598,7 +1659,15 @@ export function mountApp(root: HTMLElement, c: Content): void {
         'div',
         { class: 'shop-item reporter-item' },
         portrait(id),
-        h('div', {}, h('strong', {}, r.name), h('p', {}, r.bio), h('p', {}, skillLine(c, state, r)), h('p', {}, `${topicLine(r)} · ${price}`)),
+        h(
+          'div',
+          {},
+          h('strong', {}, r.name),
+          h('p', {}, r.bio),
+          h('p', {}, skillLine(c, state, r)),
+          h('p', {}, `${topicLine(r)} · ${price}`),
+          state.reporters.includes(id) ? h('p', { class: 'hint' }, characterLine(c, state, r)) : r.tie ? h('p', { class: 'hint' }, r.tie.text) : null,
+        ),
         action,
       );
     };
@@ -2031,7 +2100,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       'div',
       { class: 'shop-item reporter-item' },
       portrait(id),
-      h('div', {}, h('strong', {}, r.name), h('p', {}, r.bio), h('p', {}, skillLine(c, state, r))),
+      h('div', {}, h('strong', {}, r.name), h('p', {}, r.bio), h('p', {}, skillLine(c, state, r)), h('p', { class: 'hint' }, characterLine(c, state, r))),
     );
     const errorLine = error ? [h('p', { class: 'bad' }, error)] : [];
     // Search topics (CONCEPT.md §3.3): the reporter is sent after them and brings them more often.
@@ -2192,6 +2261,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
     renderIssue();
     renderExposures();
     renderReconcile();
+    renderStaff();
     renderOffer();
     renderRival();
     renderModal();

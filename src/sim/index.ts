@@ -12,5 +12,6 @@ export { averageTrust, buildingDefOf, buildingName, channelOf, groupOf, template
 export { validateContent } from './validateContent';
 export { DEBUNK_TEMPLATE, debunkTargets, rivalReaders, rivalTrust, setRivalWatch } from './rival';
 export { ARC_DAYS, arcInfo, arcLean, arcOf } from './arcs';
-export { answerOffer, dealBrokenBy, offerOf, offerText } from './offers';
+export { answerOffer, dealBrokenBy, offerOf, offerText, retainCost } from './offers';
+export { levelOf, skilledReporter, staffOf } from './staff';
 export { isRoadTile, mapSizeFor } from './map';

@@ -1,6 +1,8 @@
 import { buildingDefOf, clamp, templateOf } from './lookup';
 import { isHarmful, storyEffect } from './news';
+import { reporterOf } from './reporters';
 import { chance, pick, type RngState } from './rng';
+import { poachTarget, removeReporter, staffOf } from './staff';
 import type { CardInstance, Content, Deal, GameState, OfferDef, Publication } from './types';
 
 export function offerOf(c: Content, id: string): OfferDef {
@@ -17,11 +19,18 @@ function placeName(state: GameState, c: Content, id: number): string {
   return def.names?.length ? def.names[k % def.names.length] : def.name;
 }
 
-/** The offer's text with the place, the money and the days filled in. */
-export function offerText(state: GameState, c: Content, def: OfferDef, building?: number): string {
+/** What keeping a lured reporter costs: a bonus of a few salaries. */
+export function retainCost(c: Content, reporterId: string): number {
+  return reporterOf(c, reporterId).salary * c.balance.poachRetain;
+}
+
+/** The offer's text with the place, the reporter, the money and the days filled in. */
+export function offerText(state: GameState, c: Content, def: OfferDef, offer: { building?: number; reporterId?: string }): string {
+  const amount = def.kind === 'poach' && offer.reporterId ? retainCost(c, offer.reporterId) : (def.amount ?? 0);
   return def.text
-    .replace('{place}', building !== undefined ? placeName(state, c, building) : '')
-    .replace('{amount}', `${def.amount ?? 0} ₽`)
+    .replace('{place}', offer.building !== undefined ? placeName(state, c, offer.building) : '')
+    .replace('{reporter}', offer.reporterId ? reporterOf(c, offer.reporterId).name : '')
+    .replace('{amount}', `${amount} ₽`)
     .replace('{days}', String(def.days ?? 0));
 }
 
@@ -32,12 +41,26 @@ export function offerText(state: GameState, c: Content, def: OfferDef, building?
 export function advanceOffers(state: GameState, c: Content, rng: RngState): string[] {
   const b = c.balance;
   const notes: string[] = [];
+  // A lured reporter we did not answer for goes over to the rival.
+  if (state.offer && offerOf(c, state.offer.id).kind === 'poach') {
+    const id = state.offer.reporterId!;
+    if (state.reporters.includes(id)) notes.push(`${reporterOf(c, id).name} ${reporterOf(c, id).female ? 'ушла' : 'ушёл'} к конкуренту`);
+    defect(state, c, id);
+  }
   state.offer = null;
   for (const deal of state.deals.filter((x) => x.untilTurn < state.turn)) notes.push(`Сделка «${offerOf(c, deal.id).title}» закончилась`);
   state.deals = state.deals.filter((x) => x.untilTurn >= state.turn);
+  // The rival lures our best reporter: that offer comes first.
+  const lured = poachTarget(state, c, rng);
+  const poach = lured && c.offers.find((o) => o.kind === 'poach' && (!o.mode || o.mode === state.mode));
+  if (lured && poach) {
+    state.offer = { id: poach.id, reporterId: lured };
+    return notes;
+  }
   if (state.turn < b.offerStartTurn || state.turn - state.lastOfferTurn < b.offerCooldown || !chance(rng, b.offerChance)) return notes;
   const pool = c.offers.filter(
     (o) =>
+      o.kind !== 'poach' &&
       (!o.mode || o.mode === state.mode) &&
       (!o.requires || state.buildings.some((x) => x.type === o.requires && x.open)) &&
       !state.deals.some((d) => d.id === o.id) &&
@@ -60,8 +83,22 @@ export function answerOffer(state: GameState, c: Content, accept: boolean): Card
   const offer = state.offer;
   if (!offer) throw new Error('No offer today');
   state.offer = null;
-  if (!accept) return null;
   const def = offerOf(c, offer.id);
+  if (def.kind === 'poach') {
+    const id = offer.reporterId!;
+    const cost = retainCost(c, id);
+    if (accept && state.money < cost) {
+      state.offer = offer;
+      throw new Error('Not enough money to keep the reporter');
+    }
+    if (accept) {
+      state.money -= cost;
+      const s = staffOf(state, c, id);
+      s.loyalty = clamp(s.loyalty + 0.3);
+    } else defect(state, c, id);
+    return null;
+  }
+  if (!accept) return null;
   if (def.kind === 'kompromat') {
     const tpl = templateOf(c, def.template!);
     state.lastSeen[tpl.id] = state.turn;
@@ -123,4 +160,11 @@ export function settleDeals(state: GameState, c: Content, published: Publication
   }
   state.money += paid;
   return { paid, broken };
+}
+
+/** A reporter goes over to the rival: its readers trust it more (CONCEPT.md §3.3б). */
+function defect(state: GameState, c: Content, id: string): void {
+  if (!state.reporters.includes(id) || state.reporters.length <= 1) return;
+  removeReporter(state, id);
+  for (const r of state.residents) if (r.rivalReader) r.rivalTrust = clamp(r.rivalTrust + c.balance.poachRivalTrust, 0, 100);
 }

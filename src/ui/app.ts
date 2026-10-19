@@ -43,8 +43,8 @@ import {
   templateOf,
   totalUpkeep,
   rivalReaders,
-  rivalTitle,
   rivalTrust,
+  setRivalWatch,
   type GameMode,
   type CardInstance,
   type Content,
@@ -873,41 +873,56 @@ export function mountApp(root: HTMLElement, c: Content): void {
     );
   }
 
-  /** Save mode: the rival's issue of today, its readers and trust, and how yesterday went (CONCEPT.md §8). */
+  /**
+   * Save mode (CONCEPT.md §8): what the rival printed in the last days, which of it we can still
+   * answer, its readers and trust, and how our debunks went yesterday.
+   */
   function renderRival(): void {
     const rival = state.rival;
     rivalNotice.hidden = !rival || searching || !!state.outcome;
     if (!rival || rivalNotice.hidden) return;
-    const answered = new Set(
-      state.hand.filter((x) => x.debunk && drafts.get(x.uid)?.publish).map((x) => x.debunk!.uid),
-    );
+    const inIssue = new Set(state.hand.filter((x) => x.debunk && drafts.get(x.uid)?.publish).map((x) => x.debunk!.uid));
+    const inHand = new Set(state.hand.filter((x) => x.debunk).map((x) => x.debunk!.uid));
+    const day = (turn: number) => (state.turn - turn === 1 ? 'вчера' : state.turn - turn === 2 ? 'позавчера' : `день ${turn}`);
+    const status = (uid: number, debunked: boolean, exposed?: boolean) =>
+      debunked ? '✓ опровергнуто' : exposed ? '✓ пойман на лжи' : inIssue.has(uid) ? 'опровержение в выпуске' : inHand.has(uid) ? 'опровержение не в выпуске' : '';
     const r = report?.rival;
-    const yesterday: string[] = [];
-    if (r?.shielded) yesterday.push(`Вчера опровержения уберегли ${r.shielded} ${peopleWord(r.shielded)} от его страшилок.`);
-    for (const p of r?.publications ?? []) if (p.exposed) yesterday.push(`«Набат» пойман на лжи: «${p.title}».`);
+    const notes: string[] = [];
+    if (r?.cured) notes.push(`Вчера опровержения разубедили ${r.cured} ${peopleWord(r.cured)}.`);
+    for (const p of r?.publications ?? []) if (p.exposed) notes.push(`«Набат» пойман на лжи: «${p.title}».`);
+    const watchers = state.rivalWatch.filter((id) => state.reporters.includes(id)).map((id) => reporterOf(c, id).name);
     rivalNotice.replaceChildren(
       h(
         'div',
         { class: 'notice-head' },
         h('img', { src: `${assetBase}sprites/ui/rival.png`, alt: '', width: 24, height: 24 }),
-        h('b', {}, rival.closed ? '«Вечерний Набат» закрылся' : '«Вечерний Набат» сегодня печатает'),
+        h('b', {}, rival.closed ? '«Вечерний Набат» закрылся' : '«Вечерний Набат» напечатал'),
         h('span', { class: 'rival-stats' }, `читателей ${rivalReaders(state)} · доверие ${Math.round(rivalTrust(state))}%`),
       ),
+      rival.printed.length
+        ? h(
+            'ul',
+            { class: 'rival-list' },
+            ...rival.printed.map((p) =>
+              h(
+                'li',
+                { class: p.debunked || p.exposed || inIssue.has(p.uid) ? 'answered' : '' },
+                h('span', { class: 'rival-place' }, `${day(p.turn)} · ${placementLabels[p.placement].toLowerCase()}`),
+                h('span', { class: 'rival-title' }, `«${p.title}»`),
+                h('span', { class: 'rival-answer' }, status(p.uid, p.debunked, p.exposed)),
+              ),
+            ),
+          )
+        : h('p', { class: 'notice-note' }, 'Он выходит в один день с нами: его выпуск появится здесь завтра.'),
+      ...notes.map((t) => h('p', { class: 'notice-note' }, t)),
       h(
-        'ul',
-        { class: 'rival-list' },
-        ...rival.plan.map((s) =>
-          h(
-            'li',
-            { class: answered.has(s.card.uid) ? 'answered' : '' },
-            h('span', { class: 'rival-place' }, placementLabels[s.placement]),
-            h('span', { class: 'rival-title' }, `«${rivalTitle(c, s)}»`),
-            h('span', { class: 'rival-answer' }, answered.has(s.card.uid) ? '✓ опровергаем' : 'без ответа'),
-          ),
-        ),
+        'p',
+        { class: 'notice-note hint' },
+        `Опровергнуть можно его ложь и полуправду не позже чем через ${c.balance.debunkWindow} дня. ` +
+          (watchers.length
+            ? `За «Набатом» следит: ${watchers.join(', ')}.`
+            : 'Опровержения находят репортёры — отправьте кого-нибудь следить за «Набатом» (нажмите на портрет).'),
       ),
-      ...yesterday.map((t) => h('p', { class: 'notice-note' }, t)),
-      h('p', { class: 'notice-note hint' }, 'Опровержения этих новостей уже в вашем выпуске: поставьте их повыше, чтобы их заметили.'),
     );
   }
 
@@ -1998,6 +2013,19 @@ export function mountApp(root: HTMLElement, c: Content): void {
           (onSpecialty(state, r) ? ' Сейчас он работает по специальности.' : ''),
       ),
     ];
+    // Save mode: watching the rival paper instead of the topics (CONCEPT.md §8).
+    if (state.rival && !state.rival.closed) {
+      const watching = state.rivalWatch.includes(id);
+      topicSection.push(
+        h('h3', { class: 'section' }, '«Вечерний Набат»'),
+        h('div', { class: 'chips' }, chip('Следить за «Набатом»', watching, () => setRivalWatch(state, id, !watching))),
+        h(
+          'p',
+          { class: 'hint' },
+          `Следящий репортёр с шансом ${pct(b.assignFocus)} приносит опровержение свежей лжи «Набата» вместо обычной новости; остальные находят его случайно, с шансом ${pct(b.debunkFindChance)}.`,
+        ),
+      );
+    }
     if (inv) {
       const done = inv.total - inv.turnsLeft;
       return [
@@ -2303,7 +2331,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
       );
     return [
       block('ui/city', 'Цель', `«Разрушить город»: за ${b.turnLimit} дней опустите индекс города ниже ${b.winCityIndex}. Проигрыш — банкротство, потеря репутации или конец срока.`),
-      block('ui/rival', 'Спасти город', `Продержитесь ${b.turnLimit} дней с индексом выше ${b.saveLoseIndex} или закройте «Вечерний Набат». Его выпуск видно над газетой заранее; опровержения его новостей сами приходят в выпуск.`),
+      block('ui/rival', 'Спасти город', `Продержитесь ${b.turnLimit} дней с индексом выше ${b.saveLoseIndex} или закройте «Вечерний Набат». Что он напечатал, видно над газетой; опровержения его свежей лжи приносят репортёры — особенно тот, кого отправили следить за «Набатом».`),
       block('ui/readers', 'Ход', 'Репортёры приносят новости — события дня всегда, остальное как повезёт. Разложите выпуск: первая полоса, статья, заметки — и отправьте в печать.'),
       block('ui/truth_1', 'Правда и ложь', 'Каждую новость можно оставить как есть, додумать или исказить. Чем сильнее искажение, тем громче новость и выше риск разоблачения.'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, разоблачённая ложь обрушивает. Высокая репутация — вам верят и реже проверяют.'),

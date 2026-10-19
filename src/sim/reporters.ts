@@ -1,3 +1,4 @@
+import { debunkTargets, makeDebunk } from './rival';
 import { chance, int, pick, weightedPick, type RngState } from './rng';
 import { clamp } from './lookup';
 import type { Modifiers } from './modifiers';
@@ -79,7 +80,16 @@ export function findNews(
     return list.filter((t) => (state.lastSeen[t.id] ?? -Infinity) === oldest);
   };
 
+  // Save mode: the rival's recent lies wait for a debunk (CONCEPT.md §8).
+  const targets = debunkTargets(state);
+
   const make = (r: ReporterDef, forcedTier: NewsTier | null): CardInstance | null => {
+    // A reporter watching the rival mostly brings a debunk of its lies; anyone else may stumble on one.
+    if (targets.length && chance(rng, state.rivalWatch.includes(r.id) ? b.assignFocus : b.debunkFindChance)) {
+      const card = makeDebunk(state, targets.shift()!, r.id);
+      cards.push(card);
+      return card;
+    }
     const s = r.skills;
     const own = s.scope === 'any' ? null : s.scope;
     const scope: NewsScope = own

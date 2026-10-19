@@ -38,6 +38,8 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     }
     s.mode ??= 'destroy';
     s.rival ??= null;
+    if (s.rival) s.rival.printed ??= [];
+    s.rivalWatch ??= [];
     // Channels and upgrades that left the game (radio, TV, social networks) are dropped; the rest stays.
     s.ownedChannels = s.ownedChannels.filter((id) => c.channels.some((x) => x.id === id));
     s.upgrades = s.upgrades.filter((id) => c.upgrades.some((x) => x.id === id));

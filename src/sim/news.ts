@@ -297,9 +297,7 @@ export interface PublishedNews {
 
 export interface PublishOptions {
   /** Prints a story of the rival paper: its readers see it, judged by their trust in it (CONCEPT.md §8). */
-  rival?: { card: CardInstance; shielded: Set<number> };
-  /** Our debunks: who believed a debunk, by the uid of the rival story it answers (filled here). */
-  shields?: Map<number, Set<number>>;
+  rival?: { card: CardInstance };
 }
 
 /** The story goes out on every owned channel; a resident sees it if any channel reaches them. */
@@ -350,9 +348,7 @@ export function publish(
 
   const consider = (r: Resident, factor: number): boolean => {
     heard.add(r.id);
-    // Who believed our debunk of this rival story is much harder to fool with it.
-    const shield = rival?.shielded.has(r.id) ? 1 - b.debunkShield : 1;
-    if (!chance(rng, beliefChance(state, c, mods, r, tpl, truth, rival ? r.rivalTrust : undefined) * factor * shield)) {
+    if (!chance(rng, beliefChance(state, c, mods, r, tpl, truth, rival ? r.rivalTrust : undefined) * factor)) {
       setReaction(state, r.id, 'doubted');
       report.doubted++;
       doubters.push(r.id);
@@ -364,17 +360,20 @@ export function publish(
     if (r.beliefs.length > b.maxBeliefs) r.beliefs.shift();
     // Impact, not reach, decides how hard the story hits this resident.
     const hit = impact * audienceMul(c, tpl, r.group, card);
-    if (effect) {
+    if (effect && effect.type !== 'debunk') {
       const delta = good ? b.hopePerBelief : -b.fearPerBelief;
       r.outlook = clamp(r.outlook + delta * hit);
     }
-    // A believed debunk: the rival loses this reader's trust, and its story will not fool them.
+    // A believed debunk: the rival loses this reader's trust, and who believed its story stops
+    // believing it — the fear it brought goes away (CONCEPT.md §8).
     if (effect?.type === 'debunk' && card.debunk) {
       r.rivalTrust = clamp(r.rivalTrust - b.debunkTrust * effect.strength * hit, 0, 100);
-      if (opts.shields) {
-        const set = opts.shields.get(card.debunk.uid) ?? new Set<number>();
-        set.add(r.id);
-        opts.shields.set(card.debunk.uid, set);
+      if (r.beliefs.some((x) => x.cardUid === card.debunk!.uid)) {
+        r.beliefs = r.beliefs.filter((x) => x.cardUid !== card.debunk!.uid);
+        r.outlook = clamp(r.outlook + b.fearPerBelief * hit);
+        if (card.debunk.effect === 'fear') r.fearTurns = 0;
+        if (card.debunk.effect === 'protest') r.protestTurns = 0;
+        report.effects.debunk = (report.effects.debunk ?? 0) + 1;
       }
     }
     if (effect && applyEffect(state, c, rng, r, effect, b.effectScale * hit, tpl.target)) {

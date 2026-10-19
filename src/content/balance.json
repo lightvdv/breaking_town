@@ -8,7 +8,7 @@
   "agencyFee": 50,
   "agencyMaxOffer": 2,
   "maxSensations": 1,
-  "saveLoseIndex": 70,
+  "saveLoseIndex": 67,
   "rivalStartShare": 0.3,
   "rivalStartTrust": 55,
   "rivalAffinity": {
@@ -26,8 +26,9 @@
   "rivalTrustGain": 1,
   "rivalCloseShare": 0.03,
   "rivalTrustCollapse": 12,
-  "debunkShield": 0.5,
-  "debunkTrust": 2,
+  "debunkWindow": 2,
+  "debunkFindChance": 0.2,
+  "debunkTrust": 3,
   "prices": [0, 2, 3, 5],
   "startPrice": 1,
   "priceBuy": {

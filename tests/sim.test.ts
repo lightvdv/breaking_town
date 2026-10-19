@@ -27,7 +27,7 @@ import {
   limitSensations,
   rivalReaders,
   rivalTrust,
-  cardTruth,
+  setRivalWatch,
   salesOf,
   setPrice,
   buyWillingness,
@@ -814,40 +814,46 @@ describe('group relations', () => {
 });
 
 describe('save mode (CONCEPT.md §8)', () => {
-  it('the rival plans an issue and our sources bring a debunk for each story, true against its lies', () => {
+  it('the rival prints with us; its lies can be debunked for two days, found by a reporter who watches it', () => {
     const s = createGame(content, 3, 'save');
     expect(s.mode).toBe('save');
     expect(rivalReaders(s)).toBeGreaterThan(0);
-    expect(s.rival!.plan.length).toBeGreaterThanOrEqual(1);
-    for (const story of s.rival!.plan) {
-      const debunk = s.hand.find((x) => x.debunk?.uid === story.card.uid)!;
-      expect(debunk).toBeDefined();
-      expect(debunk.baseTruth).toBe(2 - cardTruth(story.card, story.distortion));
-      expect(s.lastFinds.some((f) => f.cardUid === debunk.uid)).toBe(true);
-    }
-    // The destroy mode has no rival.
+    // Nothing is known of its issue before it comes out.
+    expect(s.hand.some((x) => x.debunk)).toBe(false);
     expect(createGame(content, 3).rival).toBeNull();
+    setRivalWatch(s, s.reporters[0], true);
+    let found = 0;
+    for (let t = 0; t < 8 && !s.outcome; t++) {
+      playTurn(s, content, { publish: [] });
+      for (const p of s.rival!.printed) expect(s.turn - p.turn).toBeLessThanOrEqual(content.balance.debunkWindow);
+      for (const card of s.hand.filter((x) => x.debunk)) {
+        found++;
+        const story = s.rival!.printed.find((p) => p.uid === card.debunk!.uid)!;
+        // Only half-truths and lies are debunked, and the debunk tells the truth about them.
+        expect(story.truth).toBeGreaterThan(0);
+        expect(card.baseTruth).toBe(2 - story.truth);
+      }
+    }
+    expect(found).toBeGreaterThan(0);
   });
 
-  it('a believed debunk shields its believers from the rival story and costs the rival trust', () => {
-    const run = (answer: boolean) => {
-      let shielded = 0;
-      let believed = 0;
-      for (const seed of [1, 2, 3, 4, 5, 6]) {
-        const s = createGame(content, seed, 'save');
-        for (const r of s.residents) r.follows = r.rivalReader ? ['newspaper'] : r.follows;
+  it('a believed debunk talks people out of the rival story and costs the rival trust', () => {
+    let cured = 0;
+    let trustDrop = 0;
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const s = createGame(content, seed, 'save');
+      for (const r of s.residents) if (r.rivalReader) r.follows = ['newspaper'];
+      setRivalWatch(s, s.reporters[0], true);
+      for (let t = 0; t < 4 && !s.outcome; t++) {
         const debunks = s.hand.filter((x) => x.debunk);
-        const report = playTurn(s, content, { publish: answer ? debunks.map((x, i) => ({ cardUid: x.uid, placement: (i === 0 ? 2 : 0) as 0 | 2, distortion: 0 })) : [] });
-        shielded += report.rival!.shielded;
-        believed += report.rival!.publications.reduce((n, p) => n + p.believed, 0);
+        const before = rivalTrust(s);
+        const report = playTurn(s, content, { publish: debunks.map((x, i) => ({ cardUid: x.uid, placement: (i === 0 ? 2 : 0) as 0 | 2, distortion: 0 })) });
+        cured += report.rival!.cured;
+        if (debunks.length) trustDrop += before - rivalTrust(s);
       }
-      return { shielded, believed };
-    };
-    const quiet = run(false);
-    const answered = run(true);
-    expect(quiet.shielded).toBe(0);
-    expect(answered.shielded).toBeGreaterThan(0);
-    expect(answered.believed).toBeLessThan(quiet.believed);
+    }
+    expect(cured).toBeGreaterThan(0);
+    expect(trustDrop).toBeGreaterThan(0);
   });
 
   it('wins when the rival closes or the town holds out, loses when the town falls', () => {

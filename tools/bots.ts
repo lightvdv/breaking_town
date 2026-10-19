@@ -27,6 +27,7 @@ import {
   pairKey,
   rivalReaders,
   rivalTrust,
+  setRivalWatch,
   type CardInstance,
   type Decision,
   type Placement,
@@ -139,14 +140,22 @@ function defend(s: GameState, debunkDistortion: (c: CardInstance) => number): De
   return { publish: out.map((x) => x.p) };
 }
 
-/** Answers every rival story with the plain truth (a true story's debunk is skipped: it would be a lie). */
+/** One reporter watches the rival (two once the newsroom has four) and brings debunks of its lies. */
+function watchRival(s: GameState): void {
+  const watchers = s.reporters.length >= 4 ? 2 : 1;
+  s.reporters.forEach((id, i) => setRivalWatch(s, id, i < watchers));
+}
+
+/** Debunks the rival's lies with the plain truth. */
 const defender: Strategy = (s) => {
-  const d = defend(s, () => 0);
-  d.publish = d.publish.filter((p) => s.hand.find((x) => x.uid === p.cardUid)!.baseTruth === 0 || !s.hand.find((x) => x.uid === p.cardUid)!.debunk);
-  return d;
+  watchRival(s);
+  return defend(s, () => 0);
 };
-/** Answers everything, true stories too, and blows the debunks up while it is trusted. */
-const liarDefender: Strategy = (s) => defend(s, (c) => (averageTrust(s, content) >= 40 ? maxDistortion(c) : 0));
+/** The same, but blows the debunks up («„…“ — «Набат» врёт по заказу») while it is trusted. */
+const liarDefender: Strategy = (s) => {
+  watchRival(s);
+  return defend(s, (c) => (averageTrust(s, content) >= 40 ? maxDistortion(c) : 0));
+};
 /** Prints only harmless truth and never answers the rival. */
 const bystander: Strategy = (s) => {
   const d = defend(s, () => 0);

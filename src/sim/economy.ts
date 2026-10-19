@@ -62,6 +62,7 @@ export function fireReporter(state: GameState, id: string): void {
   state.reporters = state.reporters.filter((x) => x !== id);
   state.investigations = state.investigations.filter((x) => x.reporterId !== id);
   delete state.reporterTopics[id];
+  state.rivalWatch = state.rivalWatch.filter((x) => x !== id);
 }
 
 export function purchase(state: GameState, c: Content, id: string): void {

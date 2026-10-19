@@ -15,7 +15,7 @@ import { effectiveTier, issueLevel, issueScore, maxDistortion, minDistortion, pr
 import { advanceRelations, createTension, fillTitle, pairKeys, pairOf, tensionLevel } from './relations';
 import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
 import { advanceInvestigations, findNews, isRecent, scopeOf } from './reporters';
-import { planRival, publishRival, rivalReaders, rivalTrust, seedRival, updateRivalReaders, verifyRival } from './rival';
+import { markDebunked, planRival, pruneRival, publishRival, rivalReaders, rivalTrust, seedRival, updateRivalReaders, verifyRival } from './rival';
 import type {
   CardTemplate,
   ChannelId,
@@ -44,7 +44,8 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy')
     rng,
     turn: 0,
     mode,
-    rival: mode === 'save' ? { plan: [], closed: false, debunked: 0 } : null,
+    rival: mode === 'save' ? { plan: [], printed: [], closed: false, debunked: 0 } : null,
+    rivalWatch: [],
     money: c.balance.startMoney,
     price: c.balance.startPrice,
     brokeTurns: 0,
@@ -125,12 +126,13 @@ function startTurn(state: GameState, c: Content): string[] {
     events.push(c.cards.find((t) => t.id === i.templateId)!);
     pairs.set(i.templateId, i.pair);
   }
+  pruneRival(state, c);
   const dug = advanceInvestigations(state, c, state.rng);
   const { cards, finds } = findNews(state, c, state.rng, getModifiers(state, c), events, pairs);
-  // Save mode: the rival plans its issue, and our sources bring a debunk for each story (CONCEPT.md §8).
-  const tips = planRival(state, c, state.rng, events, pairs);
-  state.hand = [...state.hand, ...dug.cards, ...cards, ...tips.cards];
-  state.lastFinds = [...dug.finds, ...finds, ...tips.finds];
+  state.hand = [...state.hand, ...dug.cards, ...cards];
+  state.lastFinds = [...dug.finds, ...finds];
+  // Save mode: the rival writes today's issue; it comes out with ours (CONCEPT.md §8).
+  planRival(state, c, state.rng, events, pairs);
   // At most one sensation a day (CONCEPT.md §4.2а): the others come out as interesting stories.
   let sensations = 0;
   for (const card of state.hand) if (card.tier === 3 && ++sensations > c.balance.maxSensations) card.tier = 2;
@@ -213,18 +215,20 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
 
   const published: PublishedNews[] = [];
   const topicsThisTurn: Partial<Record<Topic, number>> = {};
-  const shields = new Map<number, Set<number>>();
   for (const p of d.publish) {
     const card = state.hand.find((x) => x.uid === p.cardUid)!;
     const topic = templateOf(c, card.templateId).topic;
-    published.push(publish(state, c, rng, mods, p, topicsThisTurn[topic] ?? 0, { shields }));
+    published.push(publish(state, c, rng, mods, p, topicsThisTurn[topic] ?? 0));
     topicsThisTurn[topic] = (topicsThisTurn[topic] ?? 0) + 1;
   }
-  // The rival's issue comes out the same day; our debunks went first (CONCEPT.md §8).
+  // Save mode (CONCEPT.md §8): our debunks answered its recent lies; its new issue comes out today.
   const rivalBefore = state.rival ? { readers: rivalReaders(state), trust: rivalTrust(state) } : null;
-  const rivalIssue = publishRival(state, c, rng, shields);
+  const debunks = d.publish.map((p) => state.hand.find((x) => x.uid === p.cardUid)!).filter((x) => x.debunk);
+  markDebunked(state, debunks.map((x) => x.debunk!.uid));
+  const cured = published.filter((n) => debunks.some((x) => x.uid === n.pub.cardUid)).reduce((sum, n) => sum + (n.report.effects.debunk ?? 0), 0);
+  const rivalNews = publishRival(state, c, rng);
   const exposures = [...lateExposures, ...verifyNews(state, c, rng, mods, published)];
-  verifyRival(state, c, rng, rivalIssue.news);
+  verifyRival(state, c, rng, rivalNews);
 
   const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
@@ -232,7 +236,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const stories = d.publish.map((p) => ({ tier: effectiveTier(state.hand.find((x) => x.uid === p.cardUid)!, p.distortion), placement: p.placement }));
   const issue = { score: issueScore(c, stories), level: issueLevel(c, stories) };
   const readers = updateReaders(state, c, rng, mods, published.length, issue.level, readerIds);
-  updateRivalReaders(state, c, rng, rivalIssue.news);
+  updateRivalReaders(state, c, rng, rivalNews);
   const readersAfter = readerCount(state);
 
   const streak: Partial<Record<Topic, number>> = {};
@@ -281,8 +285,8 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     ...(state.rival && rivalBefore
       ? {
           rival: {
-            publications: rivalIssue.news.map((n) => n.report),
-            shielded: rivalIssue.shielded,
+            publications: rivalNews.map((n) => n.report),
+            cured,
             readersBefore: rivalBefore.readers,
             readersAfter: rivalReaders(state),
             trustBefore: rivalBefore.trust,

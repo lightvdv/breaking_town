@@ -260,9 +260,12 @@ export interface Balance {
   /** It closes when fewer than this share of the city read it or its readers' trust falls below rivalTrustCollapse. */
   rivalCloseShare: number;
   rivalTrustCollapse: number;
-  /** A believed debunk: how much less likely the answered story is believed, and the rival trust lost (× impact). */
-  debunkShield: number;
+  /** A believed debunk: the rival trust lost (× impact × the debunk's strength). */
   debunkTrust: number;
+  /** A story of the rival can be debunked this many days after it came out. */
+  debunkWindow: number;
+  /** Chance a reporter who does not watch the rival stumbles on a debunk instead of a story. */
+  debunkFindChance: number;
   /** Most stories of sensation tier in a day's finds and in one issue. */
   maxSensations: number;
   startReporters: string[];
@@ -524,21 +527,38 @@ export interface CardInstance {
   conflict?: [GroupId, GroupId];
   /** The open building of the template's `requires` type the story is about. */
   building?: number;
-  /** Debunks: the rival's story it answers (uid in `RivalState.plan`) and its headline. */
-  debunk?: { uid: number; title: string };
+  /** Debunks: the rival's printed story it answers (uid in `RivalState.printed`), its headline and effect. */
+  debunk?: { uid: number; title: string; effect: EffectType | null };
 }
 
-/** A story the rival paper prints in its next issue; our sources learn it in advance. */
+/** A story the rival paper prints in its issue (it comes out the same day as ours). */
 export interface RivalStory {
   card: CardInstance;
   placement: Placement;
   distortion: number;
 }
 
+/** A story the rival already printed: it can be debunked for `debunkWindow` days. */
+export interface PrintedStory {
+  uid: number;
+  templateId: string;
+  title: string;
+  truth: TruthLevel;
+  placement: Placement;
+  /** The turn of the issue it came out in. */
+  turn: number;
+  effect: EffectType | null;
+  debunked: boolean;
+  /** Caught by the fact-checkers: nobody believes it any more, there is nothing left to debunk. */
+  exposed?: boolean;
+}
+
 /** The rival paper «Вечерний Набат» of the save mode (CONCEPT.md §8). */
 export interface RivalState {
-  /** Its issue going out with ours this turn. */
+  /** Its issue being written; it comes out with ours and nobody sees it before. */
   plan: RivalStory[];
+  /** What it printed in the last `debunkWindow` days, newest first. */
+  printed: PrintedStory[];
   closed: boolean;
   /** Its stories our debunks answered, over the game. */
   debunked: number;
@@ -656,6 +676,8 @@ export interface GameState {
   mode: GameMode;
   /** Save mode only: the rival paper. */
   rival: RivalState | null;
+  /** Save mode: reporters sent to watch the rival paper; they mostly bring debunks of its lies. */
+  rivalWatch: string[];
   money: number;
   /** Price level of the paper (index in `Balance.prices`), chosen by the player. */
   price: number;
@@ -783,8 +805,8 @@ export interface TurnReport {
 
 export interface RivalReport {
   publications: PublicationReport[];
-  /** Its stories our readers were shielded from by a believed debunk. */
-  shielded: number;
+  /** Residents our debunks talked out of believing its stories. */
+  cured: number;
   readersBefore: number;
   readersAfter: number;
   trustBefore: number;

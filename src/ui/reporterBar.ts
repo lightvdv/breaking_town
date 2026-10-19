@@ -158,5 +158,6 @@ export class ReporterBar {
 /** What the reporter is looking for: the player's topics, or their own specialties. */
 export function searchLine(state: GameState, r: ReporterDef): string {
   const assigned = state.reporterTopics[r.id] ?? [];
+  if (state.rival && !state.rival.closed && state.rivalWatch.includes(r.id)) return 'Следит за «Набатом»';
   return assigned.length ? `Ищет: ${assigned.map((t) => topicLabels[t].toLowerCase()).join(', ')}` : topicLine(r);
 }

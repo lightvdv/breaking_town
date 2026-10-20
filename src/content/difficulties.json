@@ -1,0 +1,48 @@
+[
+  {
+    "id": "easy",
+    "name": "Легко",
+    "text": "Фактчекеры ленивы, соперник слабее, денег больше, а спасать город нужно меньше дней.",
+    "balance": {
+      "startMoney": 140,
+      "checkerBase": 0.17,
+      "rivalCloseShare": 0.03,
+      "rivalTrustCollapse": 12,
+      "debunkTrust": 3
+    },
+    "modes": {
+      "destroy": {},
+      "save": {
+        "turnLimit": 34
+      }
+    }
+  },
+  {
+    "id": "normal",
+    "name": "Нормально",
+    "text": "Как задумано.",
+    "balance": {},
+    "modes": {}
+  },
+  {
+    "id": "hard",
+    "name": "Сложно",
+    "text": "Фактчекеры не спят, соперник цепкий, касса почти пуста, а время работает против вас.",
+    "balance": {
+      "startMoney": 70,
+      "checkerBase": 0.22,
+      "rivalCloseShare": 0.015,
+      "rivalTrustCollapse": 8,
+      "debunkTrust": 2
+    },
+    "modes": {
+      "destroy": {
+        "turnLimit": 37
+      },
+      "save": {
+        "turnLimit": 46,
+        "rivalStoriesMax": 4
+      }
+    }
+  }
+]

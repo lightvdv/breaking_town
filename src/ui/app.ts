@@ -30,6 +30,7 @@ import {
   pairOf,
   tensionLevel,
   arcInfo,
+  withDifficulty,
   answerOffer,
   dealBrokenBy,
   retainCost,
@@ -179,20 +180,23 @@ function flightFrames(tier: NewsTier, dx: number, dy: number): { frames: Keyfram
   }
 }
 
-export function mountApp(root: HTMLElement, c: Content): void {
+export function mountApp(root: HTMLElement, base: Content): void {
   // Continue a saved game if there is one; the seed in the URL only picks the city of a new game
   // (add &new to the URL to start over in that city).
   const params = new URLSearchParams(location.search);
-  const saved = params.has('new') ? null : loadSave<Draft>(c);
   const settings = loadSettings();
   applyTheme(settings);
+  const saved = params.has('new') ? null : loadSave<Draft>(base);
   // The debug window is a pause menu item only with ?debug in the address.
   const debugMode = params.has('debug');
   /** The title screen is up (CONCEPT.md §7.3 «Меню»); &new in the address starts a game at once. */
   let titleOpen = !params.has('new');
   /** A game was started or continued in this tab, so «Продолжить» makes sense. */
   let hasGame = saved !== null;
-  let state: GameState = saved?.state ?? createGame(c, seedFromUrl(), params.get('mode') === 'save' ? 'save' : 'destroy');
+  const urlMode: GameMode = params.get('mode') === 'save' ? 'save' : 'destroy';
+  // The game runs on the content of its difficulty (CONCEPT.md §4.6); `c` follows the current game.
+  let c = withDifficulty(base, saved?.state.difficulty ?? settings.difficulty, saved?.state.mode ?? urlMode);
+  let state: GameState = saved?.state ?? createGame(c, seedFromUrl(), urlMode, settings.difficulty);
   let drafts = new Map<number, Draft>(saved?.drafts ?? []);
   // A saved layout that no longer fits the slots (e.g. two front pages from a removed upgrade) is laid out anew.
   {
@@ -595,7 +599,9 @@ export function mountApp(root: HTMLElement, c: Content): void {
 
   const newGame = (seed = randomSeed(), mode: GameMode = 'destroy') => {
     hasGame = true;
-    state = createGame(c, seed, mode);
+    c = withDifficulty(base, settings.difficulty, mode);
+    reporterBar.c = c;
+    state = createGame(c, seed, mode, settings.difficulty);
     drafts = new Map();
     report = null;
     error = '';
@@ -2454,6 +2460,7 @@ export function mountApp(root: HTMLElement, c: Content): void {
         item('Главное меню', () => showTitle()),
         debugMode ? item('Отладка', () => openModal('debug'), 'ghost') : null,
       ),
+      hasGame ? h('p', { class: 'hint pause-difficulty' }, `Сложность: ${base.difficulties.find((d) => d.id === state.difficulty)?.name ?? ''}`) : null,
     ].filter((x): x is HTMLElement => x !== null);
   }
 
@@ -2467,8 +2474,36 @@ export function mountApp(root: HTMLElement, c: Content): void {
         h('b', {}, title),
         h('span', {}, text),
       );
+    // Difficulty (CONCEPT.md §4.6): remembered in the settings for the next games.
+    const levels = h(
+      'div',
+      { class: 'difficulty' },
+      h('span', { class: 'difficulty-label' }, 'Сложность'),
+      h(
+        'div',
+        { class: 'chips' },
+        ...base.difficulties.map((d) =>
+          h(
+            'button',
+            {
+              class: `chip${settings.difficulty === d.id ? ' on' : ''}`,
+              'aria-pressed': String(settings.difficulty === d.id),
+              title: d.text,
+              onclick: () => {
+                settings.difficulty = d.id;
+                saveSettings(settings);
+                render();
+              },
+            },
+            d.name,
+          ),
+        ),
+      ),
+      h('small', { class: 'hint' }, base.difficulties.find((d) => d.id === settings.difficulty)?.text ?? ''),
+    );
     return [
       ...(hasGame && !state.outcome ? [h('p', { class: 'bad' }, 'Текущая партия будет потеряна.')] : []),
+      levels,
       h(
         'div',
         { class: 'mode-cards' },

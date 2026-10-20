@@ -728,6 +728,27 @@ button.publish.level-3.bump-up {
   color: #265c42;
 }
 
+/* New game: the difficulty chips above the mode cards. */
+.difficulty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 4px 0 8px;
+}
+
+.difficulty-label {
+  font-weight: 700;
+}
+
+.difficulty .hint {
+  flex-basis: 100%;
+}
+
+.pause-difficulty {
+  text-align: center;
+}
+
 /* New game: the mode is chosen with a picture card. */
 .mode-cards {
   display: grid;

@@ -33,9 +33,11 @@ import type {
   Topic,
   TurnReport,
   GameMode,
+  Difficulty,
 } from './types';
 
-export function createGame(c: Content, seed: number, mode: GameMode = 'destroy'): GameState {
+/** `c` must already be the content of this difficulty (`withDifficulty`). */
+export function createGame(c: Content, seed: number, mode: GameMode = 'destroy', difficulty: Difficulty = 'normal'): GameState {
   const rng = createRng(seed);
   const { buildings, mapSize } = createBuildings(c, rng);
   const residents = createResidents(c, rng, buildings);
@@ -48,6 +50,7 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy')
     rng,
     turn: 0,
     mode,
+    difficulty,
     // Either mode has a rival paper: the tabloid when we defend the town, the guardian when we ruin it.
     rival: { kind: rivalKindOf(mode), plan: [], printed: [], closed: false, debunked: 0 },
     rivalWatch: [],

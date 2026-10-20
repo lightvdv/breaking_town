@@ -1,3 +1,4 @@
+import type { Difficulty } from '../sim';
 /**
  * Player settings (CONCEPT.md §7.3 «Настройки»): kept in the browser apart from the save, so a new
  * game keeps them. Reads and writes never throw.
@@ -11,10 +12,12 @@ export interface Settings {
   /** The opening story was shown (it plays only before the first game of each mode). */
   introSeen: boolean;
   introSeenSave: boolean;
+  /** The difficulty of new games (CONCEPT.md §4.6). */
+  difficulty: Difficulty;
 }
 
 const KEY = 'breaking-town-settings';
-const defaults: Settings = { theme: 'auto', fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false };
+const defaults: Settings = { theme: 'auto', fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal' };
 
 export function loadSettings(): Settings {
   try {

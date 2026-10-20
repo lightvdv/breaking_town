@@ -4,7 +4,7 @@
  *
  *   npm run bots -- --games 200 --seed 1
  */
-import { content } from '../src/content';
+import { content as baseContent } from '../src/content';
 import {
   averageTrust,
   callAgency,
@@ -28,6 +28,8 @@ import {
   rivalReaders,
   rivalTrust,
   setRivalWatch,
+  withDifficulty,
+  type Difficulty,
   answerOffer,
   offerOf,
   retainCost,
@@ -41,6 +43,12 @@ import {
   type RngState,
 } from '../src/sim';
 import { next } from '../src/sim/rng';
+
+// --difficulty easy|normal|hard (CONCEPT.md §4.6): every game runs on that level's balance.
+const difficultyIndex = process.argv.indexOf('--difficulty');
+const difficulty = (difficultyIndex >= 0 ? process.argv[difficultyIndex + 1] : 'normal') as Difficulty;
+if (!baseContent.difficulties.some((d) => d.id === difficulty)) throw new Error(`Unknown difficulty ${difficulty}`);
+const content = withDifficulty(baseContent, difficulty, process.argv.includes('save') && process.argv.includes('--mode') ? 'save' : 'destroy');
 
 interface Choice {
   distortion: 'none' | 'half' | 'max';
@@ -312,7 +320,7 @@ function answerOffers(s: GameState, strategy: Strategy): void {
 }
 
 function playGame(seed: number, strategy: Strategy, trace = false): Result {
-  const s = createGame(content, seed, saveMode ? 'save' : 'destroy');
+  const s = createGame(content, seed, saveMode ? 'save' : 'destroy', difficulty);
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
     if ((strategy === mixed || strategy === agitator) && !noInvestigations) manageInvestigations(s);

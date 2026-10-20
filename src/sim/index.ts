@@ -15,4 +15,5 @@ export { ARC_DAYS, arcInfo, arcLean, arcOf } from './arcs';
 export { answerOffer, dealBrokenBy, offerOf, offerText, retainCost } from './offers';
 export { levelOf, skilledReporter, staffOf } from './staff';
 export { personResident } from './people';
+export { withDifficulty } from './difficulty';
 export { isRoadTile, mapSizeFor } from './map';

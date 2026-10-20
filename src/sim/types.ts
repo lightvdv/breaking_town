@@ -638,6 +638,7 @@ export interface Content {
   arcs: ArcDef[];
   offers: OfferDef[];
   people: PersonDef[];
+  difficulties: DifficultyDef[];
   letters: LetterTemplates;
   balance: Balance;
 }
@@ -862,6 +863,18 @@ export type Reaction = 'scared' | 'happy' | 'doubted' | 'talk' | 'outraged';
 /** destroy = ruin the town for the holding; save = defend it from the holding's rival paper (CONCEPT.md §8). */
 export type GameMode = 'destroy' | 'save';
 
+/** Difficulty levels (CONCEPT.md §4.6): each overrides some balance numbers. */
+export type Difficulty = 'easy' | 'normal' | 'hard';
+
+export interface DifficultyDef {
+  id: Difficulty;
+  name: string;
+  text: string;
+  balance: Partial<Balance>;
+  /** Overrides for one mode only, e.g. the turn limit (more days help the defender, hurt the destroyer). */
+  modes: Partial<Record<GameMode, Partial<Balance>>>;
+}
+
 export interface Outcome {
   result: 'win' | 'lose';
   /** citySaved / rivalClosed / cityFallen belong to the save mode. */
@@ -886,6 +899,8 @@ export interface GameState {
   /** Offers with a catch (CONCEPT.md §3.5а): today's offer, the deals in force, the turn of the last offer. */
   offer: Offer | null;
   deals: Deal[];
+  /** The level the game is played at; its content comes from `withDifficulty`. */
+  difficulty: Difficulty;
   /** Named residents (CONCEPT.md §2.2а): person id → resident id; today's letters; what happened to them. */
   people: Record<string, number>;
   letters: Letter[];

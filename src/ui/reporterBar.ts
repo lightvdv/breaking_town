@@ -60,7 +60,8 @@ export class ReporterBar {
   private animating = false;
 
   constructor(
-    private c: Content,
+    /** The content of the current game's difficulty; swapped when a new game starts. */
+    public c: Content,
     private onHire: () => void,
     private onSkip: () => void,
     private onInvestigate: (id: string) => void,

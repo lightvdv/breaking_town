@@ -30,6 +30,7 @@ import {
   rivalTrust,
   setRivalWatch,
   answerOffer,
+  withDifficulty,
   levelOf,
   skilledReporter,
   staffOf,
@@ -1088,5 +1089,18 @@ describe('named residents and letters', () => {
     updatePeople(s, content, s.rng, before, [], []);
     expect(s.fates[0]).toMatchObject({ person: 'nikolay', kind: 'lostJob' });
     expect(s.letters.some((l) => l.from === 'nikolay' && l.kind === 'lostJob')).toBe(true);
+  });
+});
+
+describe('difficulty', () => {
+  it('a level overrides balance numbers, some only in one mode; normal changes nothing', () => {
+    expect(withDifficulty(content, 'normal', 'destroy').balance).toEqual(content.balance);
+    const hard = withDifficulty(content, 'hard', 'destroy');
+    expect(hard.balance.checkerBase).toBeGreaterThan(content.balance.checkerBase);
+    expect(hard.balance.turnLimit).toBeLessThan(content.balance.turnLimit);
+    expect(withDifficulty(content, 'hard', 'save').balance.turnLimit).toBeGreaterThan(content.balance.turnLimit);
+    const s = createGame(hard, 3, 'destroy', 'hard');
+    expect(s.difficulty).toBe('hard');
+    expect(s.money).toBe(hard.balance.startMoney);
   });
 });

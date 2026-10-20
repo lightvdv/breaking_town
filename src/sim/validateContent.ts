@@ -147,6 +147,11 @@ export function validateContent(c: Content): string[] {
       else if (t.conflict || t.scope === 'global' || t.source === 'investigation' || t.source === 'debunk') errors.push(`card ${id}: arc stages are local events, facts or rumors`);
     }
   }
+  // Difficulty levels (CONCEPT.md §4.6): the three levels, overriding only known balance numbers.
+  for (const id of ['easy', 'normal', 'hard']) if (!c.difficulties.some((d) => d.id === id)) errors.push(`missing difficulty ${id}`);
+  for (const d of c.difficulties) {
+    for (const [k, v] of Object.entries({ ...d.balance, ...d.modes.destroy, ...d.modes.save })) if (typeof (c.balance as unknown as Record<string, unknown>)[k] !== typeof v) errors.push(`difficulty ${d.id}: bad balance key ${k}`);
+  }
   // Named residents and their letters (CONCEPT.md §2.2а).
   unique('person', c.people.map((x) => x.id));
   for (const p of c.people) {

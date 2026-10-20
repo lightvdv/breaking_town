@@ -466,6 +466,38 @@ button.publish.level-3.bump-up {
   margin-left: auto;
 }
 
+/* «Наши репортёры»: the caption over the portraits, with «Улучшения» at the end of their row. */
+.hud-team {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.team-label {
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.team-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.team-row .reporter-bar {
+  flex: 0 1 auto;
+}
+
+.team-row .shop-btn {
+  flex: none;
+  margin-top: 6px;
+}
+
 .shop-btn {
   display: inline-flex;
   align-items: center;
@@ -617,14 +649,19 @@ button.publish.level-3.bump-up {
 
 .notice-head .rival-hide {
   flex: none;
-  padding: 0 4px;
-  border: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--paper-muted);
+  border-radius: 50%;
   box-shadow: none;
   background: none;
   color: var(--paper-muted);
   font: inherit;
-  font-size: 12px;
-  text-decoration: underline;
+  font-size: 14px;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -3400,7 +3437,7 @@ button.publish.level-3.bump-up {
     grid-template-areas:
       'day menu'
       'res res'
-      'reps reps';
+      'team team';
     gap: 6px 8px;
     min-height: 0;
     padding: 6px 10px 2px;
@@ -3424,6 +3461,14 @@ button.publish.level-3.bump-up {
     font-size: 20px;
   }
 
+  .hud-team {
+    grid-area: team;
+  }
+
+  .team-row {
+    justify-content: space-between;
+  }
+
   .issue {
     padding-bottom: 84px;
   }
@@ -3441,43 +3486,28 @@ button.publish.level-3.bump-up {
 
   /* Up to ten reporters: their own row, wrapping if needed. */
   .reporter-bar {
-    grid-area: reps;
     flex-wrap: wrap;
     gap: 4px;
   }
 
+  /* «В печать» / «Выпуск»: a solid bar along the whole bottom edge, like the top bar. */
   .hud-buttons {
     position: fixed;
     z-index: 20;
-    left: 10px;
-    right: 74px;
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    left: 0;
+    right: 0;
+    bottom: 0;
     margin: 0;
-  }
-
-  .hud .shop-btn {
-    flex: none;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-    width: 64px;
-    height: 52px;
-    padding: 0;
-    font-size: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  }
-
-  .hud .shop-icon {
-    width: 24px;
-    height: 24px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: var(--bg);
+    border-top: 2px solid var(--ink);
   }
 
   .hud .publish,
   .hud .issue-btn {
     flex: 1;
     justify-content: center;
-    min-height: 52px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    min-height: 48px;
   }
 
   .masthead {

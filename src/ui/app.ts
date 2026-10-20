@@ -261,7 +261,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
   );
   // Phones: the day and the goal on the first row, next to ☰ in the top right corner.
   const hudDay = h('div', { class: 'hud-day' });
-  const hud = h('header', { class: 'hud' }, hudDay, hudRes, reporterBar.el, hudActions, hudMenu);
+  // The reporters with a caption saying whose they are, and «Улучшения» next to them.
+  const hudShop = h(
+    'button',
+    { class: 'shop-btn', title: 'Улучшения газеты', onclick: () => openModal('shop') },
+    h('img', { class: 'shop-icon', src: `${assetBase}sprites/ui/price_3.png`, alt: '', width: 16, height: 16 }),
+    h('span', {}, 'Улучшения'),
+  );
+  const hudTeam = h('div', { class: 'hud-team' }, h('span', { class: 'team-label' }, 'Наши репортёры'), h('div', { class: 'team-row' }, reporterBar.el, hudShop));
+  const hud = h('header', { class: 'hud' }, hudDay, hudRes, hudTeam, hudActions, hudMenu);
   const cityHost = h('div', { class: 'city-host' });
   const cityEvents = h('div', { class: 'city-events' });
   const loading = h('div', { class: 'city-loading' }, 'Строим город…');
@@ -842,12 +850,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const publishing = issueOpen && !state.outcome;
     hudDay.replaceChildren(h('b', {}, `День ${state.turn}`), ` из ${c.balance.turnLimit} · ${state.mode === 'save' ? 'спасти город' : 'разрушить город'}`);
     hudActions.replaceChildren(
-      h(
-        'button',
-        { class: 'shop-btn', title: 'Улучшения газеты', onclick: () => openModal('shop') },
-        h('img', { class: 'shop-icon', src: `${assetBase}sprites/ui/price_3.png`, alt: '', width: 16, height: 16 }),
-        h('span', {}, 'Улучшения'),
-      ),
       publishing ? publishButton() : h('button', { class: 'primary issue-btn', onclick: () => ((issueOpen = true), render()) }, 'Выпуск'),
     );
   }
@@ -1114,7 +1116,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'button',
           { class: 'rival-toggle', onclick: toggle(true) },
           icon,
-          h('span', {}, rival.closed ? `«${rn.name}» закрылся` : `Что напечатал «${rn.name}»`),
+          h('span', {}, rival.closed ? `«${rn.name}» закрылся` : `«${rn.name}»`),
           fresh ? h('span', { class: 'rival-count' }, `${fresh} ${fresh === 1 ? 'новая' : fresh < 5 ? 'новые' : 'новых'}`) : null,
           h('span', { class: 'chip-arrow' }, '▾'),
         ),
@@ -1123,7 +1125,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     }
     const inIssue = new Set(state.hand.filter((x) => x.debunk && drafts.get(x.uid)?.publish).map((x) => x.debunk!.uid));
     const inHand = new Set(state.hand.filter((x) => x.debunk).map((x) => x.debunk!.uid));
-    const day = (turn: number) => (state.turn - turn === 1 ? 'вчера' : state.turn - turn === 2 ? 'позавчера' : `день ${turn}`);
     const status = (uid: number, debunked: boolean, exposed?: boolean) =>
       debunked ? '✓ опровергнуто' : exposed ? '✓ пойман на лжи' : inIssue.has(uid) ? 'опровержение в выпуске' : inHand.has(uid) ? 'опровержение не в выпуске' : '';
     rivalNotice.replaceChildren(
@@ -1131,9 +1132,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'notice-head' },
         icon,
-        h('b', {}, rival.closed ? `«${rn.name}» закрылся` : `«${rn.name}» напечатал`),
+        h('b', {}, rival.closed ? `«${rn.name}» закрылся` : `«${rn.name}»`),
         h('span', { class: 'rival-stats' }, `читателей ${rivalReaders(state)} · доверие ${Math.round(rivalTrust(state))}%`),
-        h('button', { class: 'rival-hide', onclick: toggle(false) }, 'скрыть'),
+        h('button', { class: 'rival-hide', title: 'Свернуть', 'aria-label': 'Свернуть', onclick: toggle(false) }, '▴'),
       ),
       ...(rival.printed.length
         ? [
@@ -1144,7 +1145,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
                 h(
                   'li',
                   { class: p.debunked || p.exposed || inIssue.has(p.uid) ? 'answered' : '' },
-                  h('span', { class: 'rival-place' }, `${day(p.turn)} · ${placementLabels[p.placement].toLowerCase()}`),
+                  h('span', { class: 'rival-place' }, placementLabels[p.placement].toLowerCase()),
                   h('span', { class: 'rival-title' }, `«${p.title}»`),
                   h('span', { class: 'rival-answer' }, status(p.uid, p.debunked, p.exposed)),
                 ),

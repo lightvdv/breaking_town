@@ -4,7 +4,6 @@ import type { Difficulty } from '../sim';
  * game keeps them. Reads and writes never throw.
  */
 export interface Settings {
-  theme: 'auto' | 'light' | 'dark';
   /** Show the reporters' finds at once instead of one by one. */
   fastSearch: boolean;
   /** Skip the city cutscenes of bright days. */
@@ -19,7 +18,7 @@ export interface Settings {
 }
 
 const KEY = 'breaking-town-settings';
-const defaults: Settings = { theme: 'auto', fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false };
 
 export function loadSettings(): Settings {
   try {
@@ -35,11 +34,4 @@ export function saveSettings(s: Settings): void {
   } catch {
     // Private mode or full storage: settings just are not remembered.
   }
-  applyTheme(s);
-}
-
-/** Light or dark palette; "auto" follows the system. */
-export function applyTheme(s: Settings): void {
-  if (s.theme === 'auto') delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = s.theme;
 }

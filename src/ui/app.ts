@@ -78,7 +78,7 @@ import {
 } from '../sim';
 import { h, pct, svg } from './dom';
 import { loadSave, writeSave } from './save';
-import { applyTheme, loadSettings, saveSettings } from './settings';
+import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
 import { characterLine, portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
@@ -185,7 +185,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // (add &new to the URL to start over in that city).
   const params = new URLSearchParams(location.search);
   const settings = loadSettings();
-  applyTheme(settings);
   const saved = params.has('new') ? null : loadSave<Draft>(base);
   // The debug window is a pause menu item only with ?debug in the address.
   const debugMode = params.has('debug');
@@ -2563,31 +2562,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         }),
         h('span', {}, h('b', {}, label), h('small', {}, hint)),
       );
-    const themes: [typeof settings.theme, string][] = [
-      ['auto', 'Как в системе'],
-      ['light', 'Светлая'],
-      ['dark', 'Тёмная'],
-    ];
     return [
-      h('h3', { class: 'section' }, 'Оформление'),
-      h(
-        'div',
-        { class: 'chips' },
-        ...themes.map(([t, label]) =>
-          h(
-            'button',
-            {
-              class: `chip${settings.theme === t ? ' on' : ''}`,
-              onclick: () => {
-                settings.theme = t;
-                saveSettings(settings);
-                render();
-              },
-            },
-            label,
-          ),
-        ),
-      ),
       h('h3', { class: 'section' }, 'Анимации'),
       toggle('Быстрый поиск', 'находки репортёров появляются сразу, без анимации', 'fastSearch'),
       toggle('Без роликов дня', 'не показывать драки, протесты и другие яркие события перед выпуском', 'skipCutscenes'),

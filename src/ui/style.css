@@ -1,5 +1,5 @@
 /*
- * All look-and-feel goes through these variables so a designer can restyle without touching code.
+ * The game has one, dark look (CONCEPT.md §7.3). All look-and-feel goes through these variables so a designer can restyle without touching code.
  * Colors come from the game palette (ENDESGA 32, see public/assets/palette).
  */
 :root {
@@ -27,33 +27,6 @@
   /* The one font of the game (CONCEPT.md §7.3): change it here only. */
   --font: 'PT Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --sidebar: 420px;
-}
-
-/* Light palette: from the system, unless the settings force a theme (CONCEPT.md §7.3 «Настройки»). */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) {
-    --bg: #c0cbdc;
-    --bg-deep: #8b9bb4;
-    --panel: #ffffff;
-    --panel-2: #ead4aa;
-    --line: #8b9bb4;
-    --text: #181425;
-    --muted: #3a4466;
-    --city-1: #8b9bb4;
-    --city-2: #5a6988;
-  }
-}
-
-:root[data-theme='light'] {
-  --bg: #c0cbdc;
-  --bg-deep: #8b9bb4;
-  --panel: #ffffff;
-  --panel-2: #ead4aa;
-  --line: #8b9bb4;
-  --text: #181425;
-  --muted: #3a4466;
-  --city-1: #8b9bb4;
-  --city-2: #5a6988;
 }
 
 * {

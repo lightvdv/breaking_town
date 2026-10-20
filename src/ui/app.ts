@@ -259,7 +259,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
       openModal('investigate');
     },
   );
-  const hud = h('header', { class: 'hud' }, hudRes, reporterBar.el, hudActions, hudMenu);
+  // Phones: the day and the goal on the first row, next to ☰ in the top right corner.
+  const hudDay = h('div', { class: 'hud-day' });
+  const hud = h('header', { class: 'hud' }, hudDay, hudRes, reporterBar.el, hudActions, hudMenu);
   const cityHost = h('div', { class: 'city-host' });
   const cityEvents = h('div', { class: 'city-events' });
   const loading = h('div', { class: 'city-loading' }, 'Строим город…');
@@ -519,7 +521,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           ),
         )
       : null;
-    priceSelect.replaceChildren(chip, ...(menu ? [menu] : []));
+    priceSelect.replaceChildren(h('span', { class: 'price-label' }, 'Цена газеты:'), chip, ...(menu ? [menu] : []));
   }
 
   /** One sensation per issue (CONCEPT.md §4.2а): a story brought back or moved up is toned down if needed. */
@@ -782,7 +784,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h(
       onclick ? 'button' : 'div',
       { class: `res ${cls}${onclick ? ' clickable' : ''}`, title: `${label}. ${hint}`, onclick },
-      h('img', { class: 'res-icon', src: `${assetBase}sprites/ui/${icon}.png`, alt: label, width: 32, height: 32 }),
+      // A caption over every value, so the panel reads without hovering (CONCEPT.md §7.3).
+      h('span', { class: 'res-label' }, label),
+      h('img', { class: 'res-icon', src: `${assetBase}sprites/ui/${icon}.png`, alt: '', width: 32, height: 32 }),
       h('b', {}, value),
       trend(delta, unit),
     );
@@ -836,8 +840,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
     );
     // While the issue is open: its level and «В печать»; folded: «Выпуск» brings it back.
     const publishing = issueOpen && !state.outcome;
+    hudDay.replaceChildren(h('b', {}, `День ${state.turn}`), ` из ${c.balance.turnLimit} · ${state.mode === 'save' ? 'спасти город' : 'разрушить город'}`);
     hudActions.replaceChildren(
-      h('button', { class: 'shop-btn', onclick: () => openModal('shop') }, 'Улучшения'),
+      h(
+        'button',
+        { class: 'shop-btn', title: 'Улучшения газеты', onclick: () => openModal('shop') },
+        h('img', { class: 'shop-icon', src: `${assetBase}sprites/ui/price_3.png`, alt: '', width: 16, height: 16 }),
+        h('span', {}, 'Улучшения'),
+      ),
       publishing ? publishButton() : h('button', { class: 'primary issue-btn', onclick: () => ((issueOpen = true), render()) }, 'Выпуск'),
     );
   }
@@ -1089,6 +1099,28 @@ export function mountApp(root: HTMLElement, base: Content): void {
     // Nothing printed yet and nothing to tell: no notice at all.
     rivalNotice.hidden = !rival || searching || !!state.outcome || (!rival.closed && !rival.printed.length && !notes.length);
     if (!rival || rivalNotice.hidden) return;
+    const icon = h('img', { src: `${assetBase}sprites/ui/${rival.kind === 'guardian' ? 'guardian' : 'rival'}.png`, alt: '', width: 24, height: 24 });
+    const toggle = (open: boolean) => () => {
+      settings.rivalOpen = open;
+      saveSettings(settings);
+      render();
+    };
+    rivalNotice.classList.toggle('folded', !settings.rivalOpen);
+    // Folded by default: one line with how many stories it printed yesterday (CONCEPT.md §7.3).
+    if (!settings.rivalOpen) {
+      const fresh = rival.printed.filter((p) => p.turn === state.turn - 1).length;
+      rivalNotice.replaceChildren(
+        h(
+          'button',
+          { class: 'rival-toggle', onclick: toggle(true) },
+          icon,
+          h('span', {}, rival.closed ? `«${rn.name}» закрылся` : `Что напечатал «${rn.name}»`),
+          fresh ? h('span', { class: 'rival-count' }, `${fresh} ${fresh === 1 ? 'новая' : fresh < 5 ? 'новые' : 'новых'}`) : null,
+          h('span', { class: 'chip-arrow' }, '▾'),
+        ),
+      );
+      return;
+    }
     const inIssue = new Set(state.hand.filter((x) => x.debunk && drafts.get(x.uid)?.publish).map((x) => x.debunk!.uid));
     const inHand = new Set(state.hand.filter((x) => x.debunk).map((x) => x.debunk!.uid));
     const day = (turn: number) => (state.turn - turn === 1 ? 'вчера' : state.turn - turn === 2 ? 'позавчера' : `день ${turn}`);
@@ -1098,9 +1130,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'div',
         { class: 'notice-head' },
-        h('img', { src: `${assetBase}sprites/ui/${rival.kind === 'guardian' ? 'guardian' : 'rival'}.png`, alt: '', width: 24, height: 24 }),
+        icon,
         h('b', {}, rival.closed ? `«${rn.name}» закрылся` : `«${rn.name}» напечатал`),
         h('span', { class: 'rival-stats' }, `читателей ${rivalReaders(state)} · доверие ${Math.round(rivalTrust(state))}%`),
+        h('button', { class: 'rival-hide', onclick: toggle(false) }, 'скрыть'),
       ),
       ...(rival.printed.length
         ? [

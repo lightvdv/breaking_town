@@ -52,7 +52,7 @@ export function portrait(id: string, cls = 'portrait'): HTMLImageElement {
  */
 export class ReporterBar {
   readonly el = h('div', { class: 'reporter-bar' });
-  private cards = new Map<string, { root: HTMLElement; status: HTMLElement; key: string }>();
+  private cards = new Map<string, { root: HTMLElement; status: HTMLElement; name: HTMLElement; key: string }>();
   private layoutKey = '';
   /** Reporter whose search result was shown last: only its clipping pops out under the bar. */
   private front: string | null = null;
@@ -83,6 +83,8 @@ export class ReporterBar {
       const slots: HTMLElement[] = [];
       for (const id of state.reporters) {
         const status = h('div', { class: 'rep-status' });
+        // The surname and what the reporter is up to, under the portrait.
+        const name = h('div', { class: 'rep-name' });
         const root = h(
           'div',
           {
@@ -96,8 +98,9 @@ export class ReporterBar {
           },
           h('div', { class: 'rep-portrait' }, portrait(id), h('span', { class: 'rep-dot' })),
           status,
+          name,
         );
-        this.cards.set(id, { root, status, key: '' });
+        this.cards.set(id, { root, status, name, key: '' });
         slots.push(root);
       }
       // One "+" for all free places.
@@ -135,6 +138,19 @@ export class ReporterBar {
         'Щёлкните — темы поиска и расследование.',
       ].join('\n');
       const s = statuses.get(id);
+      const found = state.hand.filter((x) => x.reporterId === id).length;
+      const doing = s?.phase === 'searching'
+        ? 'ищет…'
+        : animating && !s
+          ? ''
+          : inv
+            ? 'копает'
+            : state.rivalWatch.includes(id)
+              ? 'следит'
+              : found
+                ? `${r.female ? 'нашла' : 'нашёл'} ${found}`
+                : 'пусто';
+      card.name.replaceChildren(h('b', {}, r.name.split(' ').pop() ?? r.name), h('small', {}, doing));
       const statusKey = !s ? `idle:${invLine}` : s.phase === 'searching' ? 'searching' : `done:${s.find.kind}:${s.find.tier ?? 'empty'}`;
       if (statusKey === card.key) continue;
       card.key = statusKey;

@@ -159,9 +159,10 @@ select {
 
 .res {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 6px;
+  column-gap: 6px;
   min-width: 96px;
   padding: 2px 18px 2px 4px;
   background: var(--panel);
@@ -170,6 +171,16 @@ select {
     inset 2px 2px 0 rgba(255, 255, 255, 0.18),
     inset -2px -2px 0 rgba(0, 0, 0, 0.28);
   cursor: default;
+}
+
+/* The caption over a value: «Деньги», «Читатели»… */
+.res-label {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .res-icon {
@@ -455,6 +466,23 @@ button.publish.level-3.bump-up {
   margin-left: auto;
 }
 
+.shop-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shop-icon {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+}
+
+/* The day and the goal: phones only (the city stage shows the day on wide screens). */
+.hud-day {
+  display: none;
+}
+
 
 .debug-actions {
   display: flex;
@@ -551,6 +579,53 @@ button.publish.level-3.bump-up {
 
 .notice-guardian {
   border-left-color: #124e89;
+}
+
+/* Folded rival notice: one line, opened by a tap; the choice is remembered. */
+.notice-rival.folded {
+  padding: 0;
+}
+
+.rival-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rival-count {
+  margin-left: auto;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: #a22633;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.notice-guardian .rival-count {
+  background: #124e89;
+}
+
+.notice-head .rival-hide {
+  flex: none;
+  padding: 0 4px;
+  border: 0;
+  box-shadow: none;
+  background: none;
+  color: var(--paper-muted);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .notice-guardian .rival-title {
@@ -1478,6 +1553,15 @@ button.publish.level-3.bump-up {
 /* Cover price chip and its menu, like the truth chip of a story (CONCEPT.md §3.4). */
 .price-select {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* «Цена газеты:» before the price chip, so it reads as the cover price at once. */
+.price-label {
+  font-size: 12px;
+  color: var(--paper-muted);
 }
 
 .price-chip {
@@ -2683,8 +2767,34 @@ button.publish.level-3.bump-up {
   flex: 1;
   min-width: 0;
   display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 26px;
+}
+
+/* The surname and what the reporter does, under the portrait. */
+.rep-name {
+  position: absolute;
+  top: calc(100% + 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  font-size: 11px;
+  line-height: 1.1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.rep-name b {
+  font-weight: 400;
+  color: var(--text);
+}
+
+.rep-name small {
+  font-size: 10px;
+  color: var(--muted);
 }
 
 .reporter-bar.animating {
@@ -2797,7 +2907,7 @@ button.publish.level-3.bump-up {
 
 .rep-status {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 30px);
   left: -4px;
   width: 210px;
   min-height: 52px;
@@ -3281,24 +3391,47 @@ button.publish.level-3.bump-up {
   }
 
 
-  /* Phone top bar: resources; the reporters; «Покупки», «В печать» (or «Выпуск») and ☰ — nothing
-     important sits in the bottom corners, where the host's badge may cover it. */
+  /* Phone top bar: the day and ☰ in the top right corner; the resources with captions; the
+     reporters with names. «Улучшения» and «В печать» sit at the bottom under the thumb, leaving
+     the bottom-right corner free for the host's badge. */
   .hud {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      'res res res'
-      'reps reps reps'
-      'shop pub menu';
-    gap: 4px 8px;
+      'day menu'
+      'res res'
+      'reps reps';
+    gap: 6px 8px;
     min-height: 0;
-    padding: 4px 8px;
+    padding: 6px 10px 2px;
+  }
+
+  .hud-day {
+    grid-area: day;
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .hud-day b {
+    font-size: 15px;
+    color: var(--text);
+  }
+
+  .hud-menu {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .issue {
+    padding-bottom: 84px;
   }
 
   .resources {
     grid-area: res;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: 1fr 1fr 1fr 1.25fr;
     gap: 4px;
   }
 
@@ -3314,18 +3447,37 @@ button.publish.level-3.bump-up {
   }
 
   .hud-buttons {
-    display: contents;
+    position: fixed;
+    z-index: 20;
+    left: 10px;
+    right: 74px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    margin: 0;
   }
 
   .hud .shop-btn {
-    grid-area: shop;
+    flex: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    width: 64px;
+    height: 52px;
+    padding: 0;
+    font-size: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .hud .shop-icon {
+    width: 24px;
+    height: 24px;
   }
 
   .hud .publish,
   .hud .issue-btn {
-    grid-area: pub;
+    flex: 1;
     justify-content: center;
-    min-height: 40px;
+    min-height: 52px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   }
 
   .masthead {
@@ -3363,13 +3515,32 @@ button.publish.level-3.bump-up {
     text-align: left;
   }
 
-  /* No room for the stage's name on a phone: its icon tells it. */
-  .res.city-state b {
-    display: none;
+  /* The rival's notice: its stats on their own line, every story's place above its headline. */
+  .notice-rival .notice-head {
+    flex-wrap: wrap;
   }
 
-  .res.city-state {
-    justify-content: center;
+  .notice-rival .rival-stats {
+    order: 3;
+    flex-basis: 100%;
+    font-size: 12px;
+  }
+
+  .rival-list li {
+    grid-template-columns: 1fr auto;
+    row-gap: 0;
+  }
+
+  .rival-list .rival-place {
+    grid-column: 1 / -1;
+  }
+
+  /* The stage's name fits small on a phone. */
+  .res.city-state b {
+    overflow: hidden;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .trend {
@@ -3404,6 +3575,11 @@ button.publish.level-3.bump-up {
 
   .city-events {
     max-width: calc(100% - 72px);
+  }
+
+  /* The day is in the top bar on phones. */
+  .city-events .day {
+    display: none;
   }
 
   .city-legend {

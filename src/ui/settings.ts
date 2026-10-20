@@ -14,10 +14,12 @@ export interface Settings {
   introSeenSave: boolean;
   /** The difficulty of new games (CONCEPT.md §4.6). */
   difficulty: Difficulty;
+  /** The rival paper's stories are unfolded above the issue; once opened they stay open on the next days. */
+  rivalOpen: boolean;
 }
 
 const KEY = 'breaking-town-settings';
-const defaults: Settings = { theme: 'auto', fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal' };
+const defaults: Settings = { theme: 'auto', fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false };
 
 export function loadSettings(): Settings {
   try {

@@ -1,3 +1,4 @@
+import { ASSET_BASE } from '../assets';
 import { AnimatedSprite, Application, Container, Sprite, Texture, type Spritesheet } from 'pixi.js';
 import { isRoadTile, type Building, type Content, type GameState, type Highlight, type Reaction, type Resident } from '../sim';
 import { loadArt, type ArtAssets } from './assets';
@@ -128,7 +129,7 @@ export class CityScene {
       roundPixels: true,
     });
     host.appendChild(app.canvas);
-    const art = await loadArt(`${import.meta.env.BASE_URL}assets/`);
+    const art = await loadArt(ASSET_BASE);
     const scene = new CityScene(app, art, c, onHover);
     scene.world.addChild(scene.ground, scene.objects, scene.overlay);
     scene.objects.sortableChildren = true;

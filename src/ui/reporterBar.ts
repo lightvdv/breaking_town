@@ -1,3 +1,4 @@
+import { ASSET_BASE } from '../assets';
 import { getModifiers, groupOf, levelOf, reporterOf, searchLuck, skilledReporter, staffOf, type Content, type Find, type GameState, type ReporterDef } from '../sim';
 import { h, pct } from './dom';
 import { rivalNames, scopeLabels, tierLabels, topicLabels } from './text';
@@ -5,7 +6,7 @@ import { rivalNames, scopeLabels, tierLabels, topicLabels } from './text';
 /** A reporter's state during the start-of-turn search animation (CONCEPT.md §7.3). */
 export type RepStatus = { phase: 'searching' } | { phase: 'done'; find: Find; title: string | null };
 
-const portraitUrl = (id: string) => `${import.meta.env.BASE_URL}assets/sprites/reporters/${id}.png`;
+const portraitUrl = (id: string) => `${ASSET_BASE}sprites/reporters/${id}.png`;
 
 export function stars(nose: number): string {
   const n = Math.round(nose);
@@ -116,7 +117,9 @@ export class ReporterBar {
                 this.onHire();
               },
             },
-            '+',
+            h('span', { class: 'rep-plus' }, '+'),
+            // Like a reporter's surname: what the empty place is for.
+            h('span', { class: 'rep-name' }, h('b', {}, 'Нанять')),
           ),
         );
       }

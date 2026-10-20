@@ -2888,14 +2888,33 @@ button.publish.level-3.bump-up {
   margin-right: 4px;
 }
 
+/* The free place: exactly a portrait's square, dashed, with «Нанять» where a surname would be. */
 .rep-slot {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
   padding: 0;
   font-size: 22px;
   line-height: 1;
   border: 2px dashed var(--line);
-  background: transparent;
+  background: var(--panel-2);
   color: var(--muted);
   box-shadow: none;
+}
+
+.rep-plus {
+  line-height: 1;
+}
+
+.rep-slot .rep-name b {
+  color: var(--muted);
+}
+
+.rep-slot:hover .rep-name b {
+  color: var(--accent);
 }
 
 .rep-slot:hover {

@@ -1,3 +1,4 @@
+import { ASSET_BASE } from '../assets';
 import { CityScene, REACTION_ICON, type HoverTarget } from '../render/scene';
 import {
   averageTrust,
@@ -126,7 +127,7 @@ type Modal =
 const REACTION_SECONDS = 2.6;
 /** How an upgrade series is called in the upgrades window. */
 const seriesNames: Record<string, string> = { kiosks: 'Киоски' };
-const assetBase = `${import.meta.env.BASE_URL}assets/`;
+const assetBase = ASSET_BASE;
 
 function seedFromUrl(): number {
   const s = Number(new URLSearchParams(location.search).get('seed'));

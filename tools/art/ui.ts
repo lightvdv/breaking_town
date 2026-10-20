@@ -331,6 +331,28 @@ function guardian(): Raster {
   return outline(r);
 }
 
+/** Upgrades: a shopping cart with goods in it. */
+function cart(): Raster {
+  const r = new Raster(16, 16);
+  r.art(0, 1, [
+    'ss..............',
+    '.s..............',
+    '.ssssssssssssss.',
+    '.saaaaaaaaaaaas.',
+    '..saaoaaoaaoas..',
+    '..saaaaaaaaaas..',
+    '...saaoaaoaas...',
+    '...ssssssssss...',
+    '...s............',
+    '...sssssssssss..',
+    '................',
+    '....ss.....ss...',
+    '...sggs...sggs..',
+    '....ss.....ss...',
+  ], { s: 'white', a: 'amber', o: 'orange', g: 'grey' });
+  return outline(r);
+}
+
 /** An offer with a catch: a sealed envelope with a red wax seal. */
 function offer(): Raster {
   const r = new Raster(16, 16);
@@ -343,6 +365,7 @@ function offer(): Raster {
 export const uiIcons: Record<string, () => Raster> = {
   rival,
   offer,
+  cart,
   guardian,
   money,
   readers,

@@ -119,15 +119,13 @@ select {
   gap: 14px;
   min-height: 56px;
   padding: 6px 12px;
-  background: var(--bg);
-  border-bottom: 2px solid var(--ink);
+  background: var(--bg-deep);
 }
 
-/* Four resources with pixel icons. */
+/* Four resources: no boxes, only thin dividers — icon, value with yesterday's change, caption. */
 .resources {
   flex: none;
   display: flex;
-  gap: 6px;
 }
 
 .res {
@@ -136,35 +134,51 @@ select {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   column-gap: 6px;
-  min-width: 96px;
-  padding: 2px 18px 2px 4px;
-  background: var(--panel);
-  border: 2px solid var(--ink);
-  box-shadow:
-    inset 2px 2px 0 rgba(255, 255, 255, 0.18),
-    inset -2px -2px 0 rgba(0, 0, 0, 0.28);
+  min-width: 0;
+  padding: 0 10px;
+  background: none;
+  border: 0;
+  border-left: 1px solid var(--panel);
+  box-shadow: none;
   cursor: default;
 }
 
-/* The caption over a value: «Деньги», «Читатели»… */
-.res-label {
-  grid-column: 1 / -1;
-  font-size: 10px;
-  line-height: 1.2;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--muted);
+.res:first-child {
+  border-left: 0;
 }
 
 .res-icon {
-  width: 24px;
-  height: 24px;
+  grid-row: span 2;
+  width: 20px;
+  height: 20px;
   image-rendering: pixelated;
 }
 
 .res b {
-  font-size: 18px;
+  font-size: 17px;
+  line-height: 1.1;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.res-delta {
+  margin-left: 3px;
+  font-size: 11px;
+}
+
+.res-delta.up {
+  color: #8fd17e;
+}
+
+.res-delta.down {
+  color: #f07b80;
+}
+
+/* The caption under a value: «деньги», «читатели»… */
+.res-label {
+  font-size: 10px;
+  line-height: 1.2;
+  color: #8b9bb4;
 }
 
 .res.bad b {
@@ -172,7 +186,9 @@ select {
 }
 
 .res.city-state b {
-  font-size: 15px;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
 }
 
 button.res {
@@ -182,8 +198,8 @@ button.res {
   cursor: pointer;
 }
 
-button.res:hover {
-  border-color: var(--accent);
+button.res:hover b {
+  color: var(--accent);
 }
 
 /* City window. */
@@ -439,55 +455,37 @@ button.publish.level-3.bump-up {
   margin-left: auto;
 }
 
-/* «Наши репортёры»: the caption over the portraits, with «Улучшения» at the end of their row. */
-.hud-team {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+/* The control row: reporters' square portraits, the upgrades cart and ☰. On wide screens it
+   melts into the one-row top bar; on phones it is its own dark row on top. */
+.hud-controls {
+  display: contents;
 }
 
-.team-label {
-  font-size: 10px;
-  line-height: 1.2;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--muted);
+.hud-controls .reporter-bar {
+  order: 1;
 }
 
-.team-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
+.resources {
+  order: 0;
 }
 
-.team-row .reporter-bar {
-  flex: 0 1 auto;
+.hud-shop {
+  order: 3;
 }
 
-.team-row .shop-btn {
-  flex: none;
-  margin-top: 6px;
+.hud-buttons {
+  order: 4;
 }
 
-.shop-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.hud-menu {
+  order: 5;
 }
 
 .shop-icon {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   image-rendering: pixelated;
 }
-
-/* The day and the goal: phones only (the city stage shows the day on wide screens). */
-.hud-day {
-  display: none;
-}
-
 
 .debug-actions {
   display: flex;
@@ -2815,9 +2813,9 @@ button.publish.level-3.bump-up {
 .rep-slot {
   position: relative;
   flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
 }
 
 .rep-card {
@@ -2838,9 +2836,9 @@ button.publish.level-3.bump-up {
 }
 
 .rep-card .portrait {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
 }
 
 /* Status dot: green — will search, red — investigating, grey — found nothing, orange — searching. */
@@ -3401,45 +3399,67 @@ button.publish.level-3.bump-up {
   }
 
 
-  /* Phone top bar: the day and ☰ in the top right corner; the resources with captions; the
-     reporters with names. «Улучшения» and «В печать» sit at the bottom under the thumb, leaving
-     the bottom-right corner free for the host's badge. */
+  /* Phone top bar: a dark control row on top — the reporters' square portraits with surnames,
+     the upgrades cart and ☰ in the top right corner; then the four resources right on the panel. */
   .hud {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'day menu'
-      'res res'
-      'team team';
-    gap: 6px 8px;
-    min-height: 0;
-    padding: 6px 10px 2px;
-  }
-
-  .hud-day {
-    grid-area: day;
     display: block;
-    font-size: 13px;
-    color: var(--muted);
+    min-height: 0;
+    padding: 0 0 6px;
   }
 
-  .hud-day b {
-    font-size: 15px;
-    color: var(--text);
+  .hud-controls {
+    display: flex;
+    align-items: stretch;
+    min-height: 56px;
+    border-bottom: 1px solid var(--panel);
   }
 
+  .hud-controls .reporter-bar {
+    flex: 1;
+    flex-wrap: nowrap;
+    gap: 14px;
+    padding: 5px 10px 14px;
+    overflow: hidden;
+  }
+
+  .hud-shop,
   .hud-menu {
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
+    flex: none;
+    width: 52px;
+    height: auto;
+    margin: 0;
+    border: 0;
+    border-left: 1px solid var(--panel);
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    font-size: 22px;
   }
 
-  .hud-team {
-    grid-area: team;
+  .hud-shop .shop-icon {
+    width: 26px;
+    height: 26px;
   }
 
-  .team-row {
-    justify-content: space-between;
+  .rep-card,
+  .rep-slot {
+    width: 34px;
+    height: 34px;
+  }
+
+  .rep-portrait,
+  .rep-card .portrait {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Only the surname under a portrait on a phone. */
+  .rep-name small {
+    display: none;
+  }
+
+  .rep-name b {
+    font-size: 10px;
   }
 
   .issue {
@@ -3447,20 +3467,9 @@ button.publish.level-3.bump-up {
   }
 
   .resources {
-    grid-area: res;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1.25fr;
-    gap: 4px;
-  }
-
-  .hud-menu {
-    grid-area: menu;
-  }
-
-  /* Up to ten reporters: their own row, wrapping if needed. */
-  .reporter-bar {
-    flex-wrap: wrap;
-    gap: 4px;
+    grid-template-columns: 1fr 0.9fr 1.1fr 1.2fr;
+    padding: 8px 4px 0;
   }
 
   /* «В печать» / «Выпуск»: a solid bar along the whole bottom edge, like the top bar. */
@@ -3472,8 +3481,7 @@ button.publish.level-3.bump-up {
     bottom: 0;
     margin: 0;
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
-    background: var(--bg);
-    border-top: 2px solid var(--ink);
+    background: var(--bg-deep);
   }
 
   .hud .publish,
@@ -3492,18 +3500,7 @@ button.publish.level-3.bump-up {
   }
 
   .res {
-    min-width: 0;
-    gap: 4px;
-    padding: 2px 16px 2px 3px;
-  }
-
-  .res-icon {
-    width: 20px;
-    height: 20px;
-  }
-
-  .res b {
-    font-size: 15px;
+    padding: 0 6px;
   }
 
   /* The chart fills the phone's width: relation changes go under it instead of over its corner. */
@@ -3540,10 +3537,7 @@ button.publish.level-3.bump-up {
 
   /* The stage's name fits small on a phone. */
   .res.city-state b {
-    overflow: hidden;
-    font-size: 11px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 13px;
   }
 
   .trend {
@@ -3564,25 +3558,8 @@ button.publish.level-3.bump-up {
     grid-column: 2;
   }
 
-  .rep-card,
-  .rep-slot {
-    width: 36px;
-    height: 36px;
-  }
-
-  .rep-portrait,
-  .rep-card .portrait {
-    width: 32px;
-    height: 32px;
-  }
-
   .city-events {
     max-width: calc(100% - 72px);
-  }
-
-  /* The day is in the top bar on phones. */
-  .city-events .day {
-    display: none;
   }
 
   .city-legend {

@@ -86,6 +86,7 @@
   "ui": [
     "rival",
     "offer",
+    "cart",
     "guardian",
     "money",
     "readers",

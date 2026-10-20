@@ -258,17 +258,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
       openModal('investigate');
     },
   );
-  // Phones: the day and the goal on the first row, next to ☰ in the top right corner.
-  const hudDay = h('div', { class: 'hud-day' });
-  // The reporters with a caption saying whose they are, and «Улучшения» next to them.
+  // The control row: our reporters' square portraits, then «Улучшения» (a cart) and ☰ on the right.
   const hudShop = h(
     'button',
-    { class: 'shop-btn', title: 'Улучшения газеты', onclick: () => openModal('shop') },
-    h('img', { class: 'shop-icon', src: `${assetBase}sprites/ui/price_3.png`, alt: '', width: 16, height: 16 }),
-    h('span', {}, 'Улучшения'),
+    { class: 'icon-btn hud-shop', title: 'Улучшения газеты', 'aria-label': 'Улучшения', onclick: () => openModal('shop') },
+    h('img', { class: 'shop-icon', src: `${assetBase}sprites/ui/cart.png`, alt: '', width: 16, height: 16 }),
   );
-  const hudTeam = h('div', { class: 'hud-team' }, h('span', { class: 'team-label' }, 'Наши репортёры'), h('div', { class: 'team-row' }, reporterBar.el, hudShop));
-  const hud = h('header', { class: 'hud' }, hudDay, hudRes, hudTeam, hudActions, hudMenu);
+  const hudControls = h('div', { class: 'hud-controls' }, reporterBar.el, hudShop, hudMenu);
+  const hud = h('header', { class: 'hud' }, hudControls, hudRes, hudActions);
   const cityHost = h('div', { class: 'city-host' });
   const cityEvents = h('div', { class: 'city-events' });
   const loading = h('div', { class: 'city-loading' }, 'Строим город…');
@@ -765,6 +762,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h('span', { class: `trend ${up ? 'up' : 'down'}`, title }, up ? '▲' : '▼');
   }
 
+  /** Yesterday's change next to a value: «+28», «−2»; the city only gets an arrow. */
+  function deltaTag(delta: number | null, unit: string | null = ''): HTMLElement | null {
+    if (delta === null || delta === 0) return null;
+    const up = delta > 0;
+    const text = unit === null ? (up ? '▲' : '▼') : `${up ? '+' : '−'}${Math.abs(delta)}`;
+    return h('small', { class: `res-delta ${up ? 'up' : 'down'}`, title: unit === null ? (up ? 'Городу стало лучше за ход' : 'Городу стало хуже за ход') : `${up ? '+' : '−'}${Math.abs(delta)}${unit} за ход` }, text);
+  }
+
   /** The city's stage: what the player sees instead of the city index (CONCEPT.md §2.3). */
   const cityStage = () => c.balance.cityStates[cityStateOf(c, state.metrics.cityIndex)];
   /** The stage a city falls into below an index bound (the win or lose line of a mode). */
@@ -791,11 +796,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h(
       onclick ? 'button' : 'div',
       { class: `res ${cls}${onclick ? ' clickable' : ''}`, title: `${label}. ${hint}`, onclick },
-      // A caption over every value, so the panel reads without hovering (CONCEPT.md §7.3).
-      h('span', { class: 'res-label' }, label),
+      // Icon, the value with yesterday's change, and a caption under it (CONCEPT.md §7.3).
       h('img', { class: 'res-icon', src: `${assetBase}sprites/ui/${icon}.png`, alt: '', width: 32, height: 32 }),
-      h('b', {}, value),
-      trend(delta, unit),
+      h('b', {}, value, deltaTag(delta, unit)),
+      h('span', { class: 'res-label' }, label.toLowerCase()),
     );
   }
 
@@ -847,7 +851,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     );
     // While the issue is open: its level and «В печать»; folded: «Выпуск» brings it back.
     const publishing = issueOpen && !state.outcome;
-    hudDay.replaceChildren(h('b', {}, `День ${state.turn}`), ` из ${c.balance.turnLimit} · ${state.mode === 'save' ? 'спасти город' : 'разрушить город'}`);
     hudActions.replaceChildren(
       publishing ? publishButton() : h('button', { class: 'primary issue-btn', onclick: () => ((issueOpen = true), render()) }, 'Выпуск'),
     );

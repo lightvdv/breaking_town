@@ -12,6 +12,7 @@ import {
   createGame,
   fireReporter,
   callAgency,
+  agencyCost,
   hireFromAgency,
   getModifiers,
   groupOf,
@@ -763,6 +764,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h('span', { class: `trend ${up ? 'up' : 'down'}`, title }, up ? '▲' : '▼');
   }
 
+  /** A story's level as a meter (CONCEPT.md §7.3): three bars, the lit ones by tier, and the word. */
+  function tierMeter(tier: number, title: string, raised = false): HTMLElement {
+    return h(
+      'span',
+      { class: `tier-meter t${tier}`, title },
+      h('span', { class: 'tier-bars', 'aria-hidden': 'true' }, ...[1, 2, 3].map((i) => h('i', { class: i <= tier ? 'on' : '' }))),
+      h('b', {}, raised ? `${tierLabels[tier]} ↑` : tierLabels[tier]),
+    );
+  }
+
   /** Yesterday's change next to a value: «+28», «−2»; the city only gets an arrow. */
   function deltaTag(delta: number | null, unit: string | null = ''): HTMLElement | null {
     if (delta === null || delta === 0) return null;
@@ -1342,6 +1353,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           selected = null;
         }),
       },
+      h('span', { class: 'chip-prefix' }, 'Подача:'),
       d.distortion < 0 && card.conflict ? calmIcon() : truthIcon(p.truth),
       h('span', { class: 'chip-label' }, toneOf(card, d.distortion)),
       h('span', { class: 'chip-arrow' }, '▾'),
@@ -1397,11 +1409,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
         )
       : null;
     // The better the story, the louder its label looks (CONCEPT.md §7.3).
-    const tierLabel = h(
-      'span',
-      { class: `tier-label t${tier}`, title: raised ? `Было: ${tierLabels[card.tier].toLowerCase()} — уровень поднят искажением` : `${tierLabels[tier]} новость` },
-      raised ? `${tierLabels[tier]} ↑` : tierLabels[tier],
-    );
+    // The level is not a control: three bars and a word right after the headline.
+    const tierLabel = tierMeter(tier, raised ? `Было: ${tierLabels[card.tier].toLowerCase()} — уровень поднят искажением` : `${tierLabels[tier]} новость`, raised);
     const info = open
       ? h(
           'div',
@@ -1463,8 +1472,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'news-head' },
         // The controls sit in a row above the headline: level, truth, and «✕» on the right.
-        h('div', { class: 'head-tools' }, tierLabel, truthButton, outButton),
-        h('h3', { class: 'headline' }, p.title),
+        h('div', { class: 'head-tools' }, truthButton, outButton),
+        h('h3', { class: 'headline' }, p.title, ' ', tierLabel),
         truthMenu,
       ),
       h(
@@ -1509,7 +1518,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'ghost-top' },
         h('img', { src: `${assetBase}sprites/ui/truth_${p.truth}.png`, alt: '', width: 16, height: 16 }),
-        h('span', { class: `tier-label t${p.tier}` }, tierLabels[p.tier]),
+        tierMeter(p.tier, `${tierLabels[p.tier]} новость`),
       ),
       h('b', { class: 'ghost-title' }, p.title),
     );
@@ -1823,7 +1832,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const b = c.balance;
     const full = state.reporters.length >= b.maxReporters;
     const pool = c.reporters.filter((r) => r.weight > 0 && !state.reporters.includes(r.id)).length;
-    const canCall = !full && pool > 0 && state.money >= b.agencyFee && !state.outcome;
+    // The first search a day is free (CONCEPT.md §3.3).
+    const fee = agencyCost(state, c);
+    const price = fee ? `−${fee}` : 'бесплатно';
+    const canCall = !full && pool > 0 && state.money >= fee && !state.outcome;
     const act = (f: () => void) => () => {
       try {
         f();
@@ -1840,7 +1852,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         { class: 'hint' },
         full
           ? `В редакции не больше ${b.maxReporters} репортёров. Чтобы нанять другого, кого-то придётся уволить.`
-          : `За ${b.agencyFee} агентство подберёт одного или двух случайных репортёров. У каждого своя цена найма и своя зарплата. Предложение действует до конца хода.`,
+          : `Агентство подберёт одного или двух случайных репортёров: первый поиск за ход бесплатно, каждый следующий — ${b.agencyFee}. У каждого репортёра своя цена найма и своя зарплата. Предложение действует до конца хода.`,
       ),
       ...state.agencyOffer.map((id) => {
         const r = reporterOf(c, id);
@@ -1857,7 +1869,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'button',
         { class: state.agencyOffer.length ? '' : 'primary', disabled: !canCall, onclick: act(() => callAgency(state, c)) },
-        state.agencyOffer.length ? `Искать других (−${b.agencyFee})` : `Найти репортёров (−${b.agencyFee})`,
+        state.agencyOffer.length ? `Искать других (${price})` : `Найти репортёров (${price})`,
       ),
     ];
   }

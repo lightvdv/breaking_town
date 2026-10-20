@@ -510,7 +510,7 @@ describe('reporters', () => {
     expect(s.hand.length).toBeLessThanOrEqual(content.balance.maxReporters);
   });
 
-  it('the HR agency offers one or two new reporters for a fee; only they can be hired', () => {
+  it('the HR agency offers one or two new reporters, the first search a day free; only they can be hired', () => {
     const b = content.balance;
     const sizes = new Set<number>();
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
@@ -518,7 +518,7 @@ describe('reporters', () => {
       s.money = 1000;
       const offer = callAgency(s, content);
       sizes.add(offer.length);
-      expect(s.money).toBe(1000 - b.agencyFee);
+      expect(s.money).toBe(1000);
       expect(offer.length).toBeGreaterThanOrEqual(1);
       expect(offer.length).toBeLessThanOrEqual(b.agencyMaxOffer);
       for (const id of offer) expect(s.reporters).not.toContain(id);
@@ -527,11 +527,16 @@ describe('reporters', () => {
       hireFromAgency(s, content, offer[0]);
       expect(s.reporters).toContain(offer[0]);
       // The reporter's own price on top of the fee; the salary goes into the upkeep.
-      expect(s.money).toBe(1000 - b.agencyFee - reporterOf(content, offer[0]).hireCost);
+      expect(s.money).toBe(1000 - reporterOf(content, offer[0]).hireCost);
+      // A second search the same day costs the fee.
+      const before = s.money;
+      callAgency(s, content);
+      expect(s.money).toBe(before - b.agencyFee);
       expect(totalUpkeep(s, content)).toBeGreaterThanOrEqual(reporterOf(content, offer[0]).salary);
       // The offer lapses at the end of the turn.
       playTurn(s, content, { publish: [] });
       expect(s.agencyOffer).toEqual([]);
+      expect(s.agencyCalls).toBe(0);
     }
     expect([...sizes].sort()).toEqual([1, 2]);
   });

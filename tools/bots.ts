@@ -8,6 +8,7 @@ import { content as baseContent } from '../src/content';
 import {
   averageTrust,
   callAgency,
+  agencyCost,
   hireFromAgency,
   createGame,
   createRng,
@@ -283,7 +284,7 @@ function shop(s: GameState): void {
     const step = buyOrder.find((x) => (typeof x === 'number' ? s.reporters.length < x : options.some((p) => p.id === x)));
     if (typeof step === 'number') {
       // Enough for the fee and a typical hire on top of the reserve.
-      if (s.money - content.balance.agencyFee - 200 < reserve) return;
+      if (s.money - agencyCost(s, content) - 200 < reserve) return;
       const offer = callAgency(s, content);
       const best = offer.filter((id) => reporterOf(content, id).hireCost <= s.money).sort((a, b) => score(b) - score(a))[0];
       if (best) hireFromAgency(s, content, best);

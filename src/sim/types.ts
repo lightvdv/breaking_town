@@ -925,6 +925,8 @@ export interface GameState {
   reporters: string[];
   /** Candidates the HR agency offered this turn; hiring them costs nothing more. Cleared each turn. */
   agencyOffer: string[];
+  /** Agency searches made this turn: the first is free, the next ones cost `agencyFee`. */
+  agencyCalls: number;
   lastFinds: Find[];
   /** Ad-rate multiplier of the outlet, drops after a scandal. */
   scandal: number;

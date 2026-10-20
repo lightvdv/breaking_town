@@ -245,14 +245,21 @@ export function advanceInvestigations(state: GameState, c: Content, rng: RngStat
  * Pays the HR agency for a search: it offers one or two random reporters who are not on the staff
  * (common ones more often, by `weight`). A new search replaces the previous offer.
  */
+/** What the next agency search costs this turn: the first one a day is free (CONCEPT.md §3.3). */
+export function agencyCost(state: GameState, c: Content): number {
+  return state.agencyCalls > 0 ? c.balance.agencyFee : 0;
+}
+
 export function callAgency(state: GameState, c: Content): string[] {
   const b = c.balance;
   if (state.outcome) throw new Error('Game is over');
   if (state.reporters.length >= b.maxReporters) throw new Error('The newsroom is full');
-  if (state.money < b.agencyFee) throw new Error('Not enough money for the agency');
+  const fee = agencyCost(state, c);
+  if (state.money < fee) throw new Error('Not enough money for the agency');
   const pool = c.reporters.filter((r) => r.weight > 0 && !state.reporters.includes(r.id));
   if (!pool.length) throw new Error('The agency has nobody left to offer');
-  state.money -= b.agencyFee;
+  state.money -= fee;
+  state.agencyCalls++;
   const count = Math.min(pool.length, 1 + int(state.rng, b.agencyMaxOffer));
   const offer: string[] = [];
   for (let i = 0; i < count; i++) {

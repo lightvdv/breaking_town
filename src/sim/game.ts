@@ -77,6 +77,7 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy',
     upgrades: [],
     reporters: [...c.balance.startReporters],
     agencyOffer: [],
+    agencyCalls: 0,
     lastFinds: [],
     scandal: 1,
     investigations: [],
@@ -132,6 +133,7 @@ function startTurn(state: GameState, c: Content): string[] {
   state.turn++;
   // The agency's candidates take other jobs if nobody hires them the same day.
   state.agencyOffer = [];
+  state.agencyCalls = 0;
   state.todayEvents = [];
   const notes = advanceCity(state, c, state.rng);
   const relations = advanceRelations(state, c, state.rng);

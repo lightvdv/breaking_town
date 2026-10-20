@@ -30,6 +30,7 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.lastSeen ??= {};
     s.reporterTopics ??= {};
     s.agencyOffer ??= [];
+    s.agencyCalls ??= 0;
     s.price ??= c.balance.startPrice;
     for (const r of s.residents) {
       r.fearTurns ??= 0;

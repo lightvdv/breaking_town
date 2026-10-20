@@ -1866,18 +1866,32 @@ button.publish.level-3.bump-up {
 }
 
 /* Truth chip above the headline: icon, the current level in words and «▾» (CONCEPT.md §7.3). */
+/* The framing button: raised, rounded, «Подача:» first and the arrow behind a divider. */
 .truth-chip {
   flex: none;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 1px 6px;
-  font-size: 12px;
+  padding: 3px 8px 3px 8px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 18px;
   white-space: nowrap;
   border: 1px solid;
-  box-shadow: none;
+  border-radius: 6px;
+  box-shadow:
+    0 2px 0 rgba(62, 39, 49, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+
+.truth-chip:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 rgba(62, 39, 49, 0.55);
+}
+
+.truth-chip .chip-prefix {
+  font-weight: 400;
 }
 
 .truth-chip img {
@@ -1887,7 +1901,11 @@ button.publish.level-3.bump-up {
 }
 
 .truth-chip .chip-arrow {
+  margin-left: 2px;
+  padding-left: 6px;
+  border-left: 1px solid currentColor;
   font-size: 10px;
+  opacity: 0.8;
 }
 
 .truth-chip.t0 {
@@ -2057,12 +2075,9 @@ button.publish.level-3.bump-up {
   line-height: 16px;
 }
 
-.at-1 .tier-label,
-.at-0 .tier-label,
-.at-out .tier-label {
-  padding: 0 5px;
-  font-size: 11px;
-  line-height: 18px;
+.at-0 .tier-bars,
+.at-out .tier-bars {
+  height: 11px;
 }
 
 .at-0 .headline,
@@ -2100,54 +2115,76 @@ button.publish.level-3.bump-up {
 }
 
 /* Tier label: the better the story, the louder it looks (CONCEPT.md §7.3). */
-.tier-label {
-  padding: 1px 7px;
-  font-size: 12px;
-  line-height: 1.4;
+/* A story's level: three bars after the headline, lit by tier, and the word — not a button. */
+.tier-meter {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
+  vertical-align: baseline;
   white-space: nowrap;
   cursor: help;
 }
 
-.tier-label.t0 {
-  color: #8b9bb4;
-  border: 1px dashed #8b9bb4;
-  font-style: italic;
+.tier-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
 }
 
-.tier-label.t1 {
-  color: var(--paper-ink);
-  border: 1px solid var(--paper-ink);
+.tier-bars i {
+  width: 4px;
+  border-radius: 1px;
+  background: #c9a77c;
 }
 
-.tier-label.t2 {
-  color: #fff;
-  background: #0099db;
-  border: 1px solid #124e89;
+.tier-bars i:nth-child(1) {
+  height: 5px;
+}
+
+.tier-bars i:nth-child(2) {
+  height: 9px;
+}
+
+.tier-bars i:nth-child(3) {
+  height: 14px;
+}
+
+.tier-meter b {
+  font-size: 10px;
   font-weight: 700;
-  box-shadow: 0 0 8px rgba(44, 232, 245, 0.7);
-}
-
-.tier-label.t3 {
-  position: relative;
-  overflow: hidden;
-  color: #fee761;
-  background: linear-gradient(135deg, #a22633, #e43b44 50%, #a22633);
-  border: 1px solid #feae34;
-  font-weight: 700;
+  line-height: 1;
   letter-spacing: 1px;
   text-transform: uppercase;
-  text-shadow: 1px 1px 0 #3e2731;
-  box-shadow: 0 0 10px rgba(254, 174, 52, 0.8);
-  animation: pulse 0.9s ease-in-out infinite alternate;
 }
 
-.tier-label.t3::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.6) 50%, transparent 65%);
-  background-size: 250% 100%;
-  animation: shimmer 2s linear infinite;
+.tier-meter.t0 b {
+  color: #8b9bb4;
+}
+
+.tier-meter.t1 b {
+  color: var(--paper-muted);
+}
+
+.tier-meter.t1 .on {
+  background: var(--paper-muted);
+}
+
+.tier-meter.t2 b {
+  color: #0069aa;
+}
+
+.tier-meter.t2 .on {
+  background: #0099db;
+}
+
+.tier-meter.t3 b {
+  color: #e43b44;
+}
+
+.tier-meter.t3 .on {
+  background: #e43b44;
+  animation: pulse 0.9s ease-in-out infinite alternate;
 }
 
 .place-menu .check {

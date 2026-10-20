@@ -193,7 +193,7 @@
   "trustGain": 3,
   "trustPenaltyMul": 5,
   "trustPenaltyBystanderShare": 0.33,
-  "checkerBase": 0.21,
+  "checkerBase": 0.215,
   "truthRisk": [
     0,
     0.5,

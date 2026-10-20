@@ -41,7 +41,8 @@
       },
       "save": {
         "turnLimit": 46,
-        "rivalStoriesMax": 4
+        "rivalStoriesMax": 4,
+        "assignFocus": 0.6
       }
     }
   }

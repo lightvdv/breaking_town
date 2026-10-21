@@ -115,6 +115,7 @@ select {
   position: relative;
   z-index: 8;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
   min-height: 56px;
@@ -172,6 +173,128 @@ select {
 
 .res-delta.down {
   color: #f07b80;
+}
+
+/* What the laid-out issue is expected to do: «≈+37», grey-tinted and dotted. */
+.res-forecast {
+  margin-left: 2px;
+  font-size: 10px;
+  letter-spacing: -0.3px;
+  font-weight: 400;
+  border-bottom: 1px dotted currentColor;
+}
+
+.res-forecast.up {
+  color: rgba(143, 209, 126, 0.8);
+}
+
+.res-forecast.down {
+  color: rgba(240, 123, 128, 0.8);
+}
+
+/* The goal track under the resources: five stages, where the city is and where it goes, the goal. */
+.hud-goal {
+  order: 6;
+  flex-basis: 100%;
+  max-width: 620px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  padding: 4px 0 0;
+}
+
+.goal-title {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.goal-track {
+  position: relative;
+  display: flex;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.goal-step {
+  flex: 1;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.goal-step.s0 {
+  background: #3e8948;
+}
+
+.goal-step.s1 {
+  background: #63c74d;
+}
+
+.goal-step.s2 {
+  background: #feae34;
+}
+
+.goal-step.s3 {
+  background: #f77622;
+}
+
+.goal-step.s4 {
+  background: #a22633;
+}
+
+.goal-step.dim {
+  opacity: 0.35;
+}
+
+.goal-marker {
+  position: absolute;
+  top: -7px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid #fff;
+  transform: translateX(-6px);
+  transition: left 0.5s ease;
+}
+
+.goal-marker.ghost {
+  border-top-color: rgba(255, 255, 255, 0.4);
+}
+
+.goal-flag {
+  position: absolute;
+  top: -14px;
+  font-size: 12px;
+  font-style: normal;
+  transform: translateX(-4px);
+}
+
+.goal-line {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: #fff;
+}
+
+.goal-names {
+  grid-column: 2;
+  display: flex;
+  padding-top: 2px;
+  font-size: 9px;
+  color: #8b9bb4;
+}
+
+.goal-names span {
+  flex: 1;
+  text-align: center;
+}
+
+.goal-names .here {
+  color: var(--text);
+  font-weight: 700;
 }
 
 /* The caption under a value: «деньги», «читатели»… */
@@ -3526,6 +3649,11 @@ button.publish.level-3.bump-up {
     display: grid;
     grid-template-columns: 1fr 0.9fr 1.1fr 1.2fr;
     padding: 8px 4px 0;
+  }
+
+  .hud-goal {
+    max-width: none;
+    padding: 6px 10px 0;
   }
 
   /* «В печать» / «Выпуск»: a solid bar along the whole bottom edge, like the top bar. */

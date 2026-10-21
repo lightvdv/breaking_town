@@ -16,4 +16,5 @@ export { answerOffer, dealBrokenBy, offerOf, offerText, retainCost } from './off
 export { levelOf, skilledReporter, staffOf } from './staff';
 export { personResident } from './people';
 export { withDifficulty } from './difficulty';
+export { forecastTurn, type Forecast } from './forecast';
 export { isRoadTile, mapSizeFor } from './map';

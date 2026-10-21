@@ -31,6 +31,7 @@ import {
   setRivalWatch,
   answerOffer,
   withDifficulty,
+  forecastTurn,
   levelOf,
   skilledReporter,
   staffOf,
@@ -1107,5 +1108,19 @@ describe('difficulty', () => {
     const s = createGame(hard, 3, 'destroy', 'hard');
     expect(s.difficulty).toBe('hard');
     expect(s.money).toBe(hard.balance.startMoney);
+  });
+});
+
+describe('forecast', () => {
+  it('rehearses the turn without touching the game, the same layout always forecasts the same', () => {
+    const s = createGame(content, 4);
+    const before = JSON.stringify(s);
+    const d = { publish: s.hand.slice(0, 1).map((x) => ({ cardUid: x.uid, placement: 2 as const, distortion: 0 })) };
+    const a = forecastTurn(s, content, d)!;
+    expect(JSON.stringify(s)).toBe(before);
+    expect(forecastTurn(s, content, d)).toEqual(a);
+    expect(Number.isFinite(a.cityIndex)).toBe(true);
+    // A layout the rules forbid has no forecast.
+    expect(forecastTurn(s, content, { publish: [{ cardUid: -1, placement: 0, distortion: 0 }] })).toBeNull();
   });
 });

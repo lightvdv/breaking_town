@@ -33,6 +33,8 @@ import {
   tensionLevel,
   arcInfo,
   withDifficulty,
+  forecastTurn,
+  type Forecast,
   answerOffer,
   dealBrokenBy,
   retainCost,
@@ -267,7 +269,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     h('img', { class: 'shop-icon', src: `${assetBase}sprites/ui/cart.png`, alt: '', width: 16, height: 16 }),
   );
   const hudControls = h('div', { class: 'hud-controls' }, reporterBar.el, hudShop, hudMenu);
-  const hud = h('header', { class: 'hud' }, hudControls, hudRes, hudActions);
+  const hudGoal = h('div', { class: 'hud-goal' });
+  const hud = h('header', { class: 'hud' }, hudControls, hudRes, hudGoal, hudActions);
   const cityHost = h('div', { class: 'city-host' });
   const cityEvents = h('div', { class: 'city-events' });
   const loading = h('div', { class: 'city-loading' }, 'Строим город…');
@@ -641,12 +644,32 @@ export function mountApp(root: HTMLElement, base: Content): void {
     render();
   };
 
-  const endTurn = () => {
+  /** The issue as the player has laid it out now. */
+  const currentDecision = (): Decision => {
     const decision: Decision = { publish: [] };
     for (const card of state.hand) {
       const d = draftOf(card);
       if (d.publish) decision.publish.push({ cardUid: card.uid, placement: d.placement, distortion: d.distortion });
     }
+    return decision;
+  };
+
+  /** What the current layout is expected to do (CONCEPT.md §7.3): rehearsed once per layout. */
+  let forecastKey = '';
+  let forecast: Forecast | null = null;
+  const currentForecast = (): Forecast | null => {
+    if (!issueOpen || searching || busy || state.outcome) return null;
+    const decision = currentDecision();
+    const key = `${state.turn}|${state.price}|${state.money}|${state.upgrades.length}|${state.reporters.join()}|${JSON.stringify(decision)}`;
+    if (key !== forecastKey) {
+      forecastKey = key;
+      forecast = forecastTurn(state, c, decision);
+    }
+    return forecast;
+  };
+
+  const endTurn = () => {
+    const decision = currentDecision();
     try {
       report = playTurn(state, c, decision);
       error = '';
@@ -764,6 +787,43 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h('span', { class: `trend ${up ? 'up' : 'down'}`, title }, up ? '▲' : '▼');
   }
 
+  /** The expected change of a value if the issue goes out as laid out: «≈+37», grey and dotted. */
+  function forecastTag(expected: number): HTMLElement | null {
+    const n = Math.round(expected);
+    if (n === 0) return null;
+    return h('small', { class: `res-forecast ${n > 0 ? 'up' : 'down'}`, title: 'Ожидается, если выпустить газету так' }, `≈${n > 0 ? '+' : '−'}${Math.abs(n)}`);
+  }
+
+  /**
+   * The goal track (CONCEPT.md §7.3): the city's five stages from «Процветает» to «Руины», a marker
+   * where the city is, a ghost marker where the laid-out issue will move it, and the mode's goal —
+   * a flag on the stage to reach (destroy) or a line not to fall past (save).
+   */
+  function renderGoal(fc: Forecast | null): void {
+    const stages = c.balance.cityStates;
+    const here = cityStateOf(c, state.metrics.cityIndex);
+    const next = fc ? cityStateOf(c, fc.cityIndex) : here;
+    const save = state.mode === 'save';
+    // The goal stage: the first one below the mode's bound.
+    const goal = stages.findIndex((x) => x.min < (save ? c.balance.saveLoseIndex : c.balance.winCityIndex));
+    const pos = (i: number) => `${((i + 0.5) / stages.length) * 100}%`;
+    hudGoal.replaceChildren(
+      h('b', { class: 'goal-title' }, save ? 'Не дать упасть' : 'Цель'),
+      h(
+        'div',
+        { class: 'goal-track' },
+        ...stages.map((_, i) => h('span', { class: `goal-step s${i}${(save ? i >= goal : i < here) ? ' dim' : ''}` })),
+        save
+          ? h('i', { class: 'goal-line', style: `left: calc(${(goal / stages.length) * 100}% - 2px)` })
+          : h('i', { class: 'goal-flag', style: `left: ${pos(goal)}` }, '🏁'),
+        next !== here ? h('i', { class: 'goal-marker ghost', style: `left: ${pos(next)}` }) : null,
+        h('i', { class: 'goal-marker', style: `left: ${pos(here)}` }),
+      ),
+      h('div', { class: 'goal-names' }, ...stages.map((x, i) => h('span', { class: i === here ? 'here' : '' }, x.name))),
+    );
+    hudGoal.title = `${cityGoal()}.`;
+  }
+
   /** A story's level as a meter (CONCEPT.md §7.3): three bars, the lit ones by tier, and the word. */
   function tierMeter(tier: number, title: string, raised = false): HTMLElement {
     return h(
@@ -804,13 +864,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
     cls = '',
     unit: string | null = '',
     onclick?: () => void,
+    expected: number | null = null,
   ): HTMLElement {
     return h(
       onclick ? 'button' : 'div',
       { class: `res ${cls}${onclick ? ' clickable' : ''}`, title: `${label}. ${hint}`, onclick },
       // Icon, the value with yesterday's change, and a caption under it (CONCEPT.md §7.3).
       h('img', { class: 'res-icon', src: `${assetBase}sprites/ui/${icon}.png`, alt: '', width: 32, height: 32 }),
-      h('b', {}, value, deltaTag(delta, unit)),
+      // While the issue is being laid out, the expected change replaces yesterday's.
+      h('b', {}, value, expected !== null ? forecastTag(expected) : deltaTag(delta, unit)),
       h('span', { class: 'res-label' }, label.toLowerCase()),
     );
   }
@@ -819,6 +881,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function renderHud(): void {
     const trust = averageTrust(state, c);
     const r = report;
+    const fc = currentForecast();
+    renderGoal(fc);
     hudRes.replaceChildren(
       resource(
         'money',
@@ -829,6 +893,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         state.money < 0 ? 'bad' : '',
         '',
         () => openModal('money'),
+        fc?.money ?? null,
       ),
       resource(
         'readers',
@@ -839,6 +904,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         '',
         '',
         () => openModal('readers'),
+        fc?.readers ?? null,
       ),
       resource(
         'reputation',
@@ -849,6 +915,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         trust < 20 ? 'bad' : '',
         '%',
         () => openModal('reputation'),
+        fc?.trust ?? null,
       ),
       resource(
         `city_state_${cityStateOf(c, state.metrics.cityIndex)}`,

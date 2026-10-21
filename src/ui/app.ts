@@ -195,7 +195,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** The title screen is up (CONCEPT.md §7.3 «Меню»); &new in the address starts a game at once. */
   let titleOpen = !params.has('new');
   /** A game was started or continued in this tab, so «Продолжить» makes sense. */
-  let hasGame = saved !== null;
+  // Only a game with at least one turn played counts: a city nobody touched is not offered to continue.
+  let hasGame = saved !== null && saved.state.turn > 1;
   const urlMode: GameMode = params.get('mode') === 'save' ? 'save' : 'destroy';
   // The game runs on the content of its difficulty (CONCEPT.md §4.6); `c` follows the current game.
   let c = withDifficulty(base, saved?.state.difficulty ?? settings.difficulty, saved?.state.mode ?? urlMode);
@@ -2692,7 +2693,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     modal = null;
     titleOpen = false;
     render();
-    if (!(mode === 'save' ? settings.introSeenSave : settings.introSeen)) await watchIntro(mode);
+    // For now the opening story plays before every new game (CONCEPT.md §1.1).
+    await watchIntro(mode);
     scene?.stopTour();
     newGame(seed, mode);
   }
@@ -2846,6 +2848,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let saveTimer = 0;
   const saveNow = () => {
     window.clearTimeout(saveTimer);
+    // Nothing is written until the player has actually played a turn: the title screen's fresh city
+    // must not turn into a «Продолжить» on the next visit.
+    if (!hasGame || state.turn <= 1) return;
     writeSave<Draft>({ state, report, drafts: [...drafts] });
   };
   /** Every change is saved shortly after it (renders come in bursts during animations). */

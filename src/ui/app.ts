@@ -296,20 +296,32 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // stories left out; stories are dragged between them (CONCEPT.md §7.3).
   type ZoneKey = Placement | 'out';
   const zoneTexts: Record<string, [string, string]> = {
-    2: ['Первая полоса', 'Перетащите сюда главную новость'],
-    1: ['Статья', 'Перетащите сюда статью'],
-    0: ['Заметки', 'Перетащите сюда заметки'],
-    out: ['Не печатать', 'Перетащите сюда новость, чтобы не печатать её'],
+    2: ['Первая полоса', 'главную новость'],
+    1: ['Статья', 'статью'],
+    0: ['Заметки', 'заметку'],
+    out: ['Не печатать', 'новость, чтобы не печатать её'],
   };
+  /** The empty place whose «choose a story» list is open. */
+  let chooserFor: ZoneKey | null = null;
   const targetTexts: Record<string, string> = { 2: 'На первую полосу', 1: 'Статьёй', 0: 'Заметкой', out: 'Не печатать' };
   const makeZone = (key: ZoneKey) => {
     const items = h('div', { class: 'zone-items' });
-    const empty = h('p', { class: 'zone-empty' }, zoneTexts[key][1]);
+    // An empty place is a button: it lists the stories that can go here.
+    const empty = h('button', {
+      class: 'zone-empty',
+      onclick: () => {
+        chooserFor = chooserFor === key ? null : key;
+        truthMenuFor = null;
+        moveMenuFor = null;
+        render();
+      },
+    });
+    const chooser = h('div', { class: 'zone-chooser' });
     const label = h('h4', { class: 'zone-label' }, zoneTexts[key][0]);
     // While a story is picked, every other place shows a big target; a tap on it moves the story.
     const target = h('button', { class: 'zone-target', onclick: () => moveSelected(key) }, h('span', {}, `Сюда: ${targetTexts[key]}`));
-    const root = h('section', { class: `zone zone-${key}`, 'data-zone': String(key) }, label, items, empty, target);
-    return { root, items, empty, label, target };
+    const root = h('section', { class: `zone zone-${key}`, 'data-zone': String(key) }, label, items, empty, chooser, target);
+    return { root, items, empty, chooser, label, target };
   };
   const zones: Record<string, ReturnType<typeof makeZone>> = { 2: makeZone(2), 1: makeZone(1), 0: makeZone(0), out: makeZone('out') };
   const issueNo = h('span', { class: 'issue-no' });
@@ -349,9 +361,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
   });
   // A press anywhere else closes an open truth menu.
   document.addEventListener('pointerdown', (e) => {
-    if ((truthMenuFor === null && moveMenuFor === null && !priceMenuOpen) || (e.target as Element).closest('.place-menu, .truth-chip, .price-chip')) return;
+    if ((truthMenuFor === null && moveMenuFor === null && chooserFor === null && !priceMenuOpen) || (e.target as Element).closest('.place-menu, .truth-chip, .price-chip, .zone-empty')) return;
     truthMenuFor = null;
     moveMenuFor = null;
+    chooserFor = null;
     priceMenuOpen = false;
     render();
   });
@@ -841,6 +854,37 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const worse = next !== here ? next > here : diff < 0;
     const text = next !== here ? `≈→ ${c.balance.cityStates[next].name.toLowerCase()}` : `город ≈${worse ? '▼' : '▲'}`;
     return h('small', { class: `res-forecast ${worse ? 'down' : 'up'}`, title: 'Ожидается, если выпустить газету так' }, text);
+  }
+
+  /** The list of stories that can fill an empty place: every other story of today, best first. */
+  function storyChooser(key: Placement, ordered: CardInstance[], whereOf: (card: CardInstance) => Placement | 'out'): HTMLElement {
+    const others = ordered.filter((x) => whereOf(x) !== key);
+    const placeName = (w: Placement | 'out') => (w === 'out' ? 'не в печати' : `сейчас: ${placementLabels[w].toLowerCase()}`);
+    return h(
+      'div',
+      { class: 'place-menu chooser-menu', role: 'menu' },
+      ...(others.length
+        ? others.map((x) =>
+            h(
+              'button',
+              {
+                role: 'menuitem',
+                onclick: () => {
+                  chooserFor = null;
+                  place(x, key);
+                  render();
+                },
+              },
+              h(
+                'span',
+                { class: 'opt' },
+                h('span', { class: 'opt-title' }, storyTitle(c, x, draftOf(x).distortion)),
+                h('span', { class: 'opt-head' }, tierMeter(x.tier, tierLabels[x.tier]), h('small', {}, placeName(whereOf(x)))),
+              ),
+            ),
+          )
+        : [h('p', { class: 'hint' }, 'Других новостей сегодня нет.')]),
+    );
   }
 
   /** The expected change of a value if the issue goes out as laid out: «≈+37», grey and dotted. */
@@ -1852,11 +1896,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
         },
         left ? `Не печатать (${left}) ${trayOpen ? '▴' : '▾'}` : 'Не печатать',
       ),
-      left ? '' : h('span', { class: 'tray-hint' }, 'перетащите сюда новость или нажмите ✕'),
+      left ? '' : h('span', { class: 'tray-hint' }, isPhone() ? 'нажмите ✕ у новости' : 'перетащите сюда новость или нажмите ✕'),
     );
     for (const key of [2, 1, 0, 'out'] as const) {
       const here = ordered.filter((card) => whereOf(card) === key);
       zones[key].empty.hidden = here.length > 0 || key === 'out';
+      // Phones tap, wide screens drag or tap (CONCEPT.md §7.3).
+      zones[key].empty.textContent = isPhone() ? `＋ Выбрать ${zoneTexts[key][1]}` : `Перетащите сюда ${zoneTexts[key][1]} — или нажмите и выберите`;
+      if (zones[key].empty.hidden && chooserFor === key) chooserFor = null;
+      zones[key].chooser.replaceChildren(...(chooserFor === key && key !== 'out' ? [storyChooser(key, ordered, whereOf)] : []));
       zones[key].root.classList.toggle('here', !!picked && whereOf(picked) === key);
       for (const card of here) {
         const { cls, children } = newsContent(card, mods, key);

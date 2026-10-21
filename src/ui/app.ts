@@ -629,13 +629,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     // The icon is laid out (invisible) to learn where the paper flies.
     issueFab.hidden = false;
     issueFab.style.visibility = 'hidden';
-    const anim = issue.animate(foldFrames(), { duration: 380, easing: 'cubic-bezier(0.5, 0, 0.75, 0)' });
+    const anim = issue.animate(foldFrames(), { duration: 190, easing: 'cubic-bezier(0.5, 0, 0.75, 0)' });
     anim.onfinish = () => {
       folding = false;
       issueFab.style.visibility = '';
       issueOpen = false;
       render();
-      issueFab.animate([{ transform: 'scale(0.4)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 300, easing: 'ease-out' });
+      issueFab.animate([{ transform: 'scale(0.4)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 150, easing: 'ease-out' });
     };
   }
 

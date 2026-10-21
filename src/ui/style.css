@@ -2355,6 +2355,48 @@ button.publish.level-3.bump-up {
   animation: pulse 0.9s ease-in-out infinite alternate;
 }
 
+/* Phones: «where to» menu of a tapped story. */
+.move-menu {
+  top: 40px;
+  left: auto;
+  right: 0;
+  min-width: 220px;
+}
+
+.move-menu img {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+}
+
+.move-menu [role='menuitem'] {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+}
+
+.move-menu .opt-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.move-menu .opt-head small {
+  font-size: 11px;
+  color: var(--paper-muted);
+}
+
+.move-out {
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+  font-weight: 700;
+}
+
 .place-menu .check {
   display: inline-block;
   width: 14px;

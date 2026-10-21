@@ -237,6 +237,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let relFocus: string | null = null;
   /** Story whose truth menu is open next to its headline. */
   let truthMenuFor: number | null = null;
+  /** Phones: the story whose «where to» menu is open (stories are not dragged on a phone). */
+  let moveMenuFor: number | null = null;
+  const isPhone = () => window.matchMedia('(max-width: 900px)').matches;
   /** The cover price menu in the masthead is open. */
   let priceMenuOpen = false;
   /** Story picked by a tap; the next tap on a place in the paper moves it there (CONCEPT.md §7.3). */
@@ -346,8 +349,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
   });
   // A press anywhere else closes an open truth menu.
   document.addEventListener('pointerdown', (e) => {
-    if ((truthMenuFor === null && !priceMenuOpen) || (e.target as Element).closest('.place-menu, .truth-chip, .price-chip')) return;
+    if ((truthMenuFor === null && moveMenuFor === null && !priceMenuOpen) || (e.target as Element).closest('.place-menu, .truth-chip, .price-chip')) return;
     truthMenuFor = null;
+    moveMenuFor = null;
     priceMenuOpen = false;
     render();
   });
@@ -1447,12 +1451,43 @@ export function mountApp(root: HTMLElement, base: Content): void {
           disabled: current || disabled,
           onclick: act(() => {
             truthMenuFor = null;
+            moveMenuFor = null;
             choose();
           }),
         },
         h('span', { class: 'check' }, current ? '✓' : ''),
         ...content,
       );
+    // Phones: where the story can go, opened by a tap on it (CONCEPT.md §7.3).
+    const placeIcon = (i: number) => h('img', { src: `${assetBase}sprites/ui/place_${i}.png`, alt: '', width: 16, height: 16 });
+    const moveTo = (key: ZoneKey) => () => {
+      moveMenuFor = null;
+      if (key === 'out') unpublish(card);
+      else place(card, key);
+    };
+    const slots = placementSlots(getModifiers(state, c));
+    const taken = (pl: Placement) => state.hand.filter((x) => x.uid !== card.uid && drafts.get(x.uid)?.publish && drafts.get(x.uid)!.placement === pl).length >= slots[pl];
+    const moveMenu =
+      moveMenuFor === card.uid
+        ? h(
+            'div',
+            { class: 'place-menu move-menu', role: 'menu' },
+            ...([2, 1, 0] as Placement[]).map((pl) =>
+              menuItem(
+                where === pl,
+                false,
+                moveTo(pl),
+                placeIcon(pl),
+                h(
+                  'span',
+                  { class: 'opt' },
+                  h('span', { class: 'opt-head' }, h('b', {}, placementLabels[pl]), taken(pl) && where !== pl ? h('small', {}, 'поменяется местами') : null),
+                ),
+              ),
+            ),
+            menuItem(where === 'out', false, moveTo('out'), h('span', { class: 'move-out' }, '✕'), h('span', { class: 'opt' }, h('span', { class: 'opt-head' }, h('b', {}, 'Не печатать')))),
+          )
+        : null;
     // Truth: the icon shows the current level; a story can only be made less true.
     const truthIcon = (t: number) => h('img', { src: `${assetBase}sprites/ui/truth_${t}.png`, alt: '', width: 16, height: 16 });
     // Conflict stories: the menu is a framing scale with a calming step below the truth (CONCEPT.md §5.5).
@@ -1475,6 +1510,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         disabled: busy,
         onclick: act(() => {
           truthMenuFor = menuOpen ? null : card.uid;
+          moveMenuFor = null;
           selected = null;
         }),
       },
@@ -1600,6 +1636,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('div', { class: 'head-tools' }, truthButton, outButton),
         h('h3', { class: 'headline' }, p.title, ' ', tierLabel),
         truthMenu,
+        moveMenu,
       ),
       h(
         'div',
@@ -1828,7 +1865,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
         if (!el) {
           el = h('article', { 'data-uid': String(card.uid), tabindex: '0' });
           const self = el;
-          el.addEventListener('pointerdown', (e) => startDrag(e, card, self));
+          el.addEventListener('pointerdown', (e) => {
+            // Phones never drag: a tap (a click) opens the «where to» menu.
+            if (!isPhone()) startDrag(e, card, self);
+          });
+          el.addEventListener('click', (e) => {
+            if (!isPhone() || busy || (e.target as Element).closest('button, .news-info, .place-menu')) return;
+            truthMenuFor = null;
+            moveMenuFor = moveMenuFor === card.uid ? null : card.uid;
+            render();
+          });
           // From the keyboard: Enter picks the story, then Tab to a place and Enter moves it.
           el.addEventListener('keydown', (e) => {
             if (e.target !== self || (e.key !== 'Enter' && e.key !== ' ') || busy) return;

@@ -302,6 +302,7 @@ select {
   font-size: 10px;
   line-height: 1.2;
   color: #8b9bb4;
+  white-space: nowrap;
 }
 
 .res.bad b {
@@ -1594,6 +1595,50 @@ button.publish.level-3.bump-up {
 
 .issue.open {
   display: block;
+}
+
+/* The folded issue: a newspaper floating over the city; a tap unfolds the paper. */
+.issue-fab {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 20px;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-left: -32px;
+  padding: 0;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  animation: fab-bob 1.6s ease-in-out infinite alternate;
+  cursor: pointer;
+}
+
+.issue-fab[hidden] {
+  display: none;
+}
+
+.issue-fab img {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+}
+
+@keyframes fab-bob {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: 0 -5px;
+  }
+}
+
+/* Nothing to press in the bottom bar while the issue is folded: the bar goes too. */
+.hud-buttons:empty {
+  display: none;
 }
 
 .issue.searching {

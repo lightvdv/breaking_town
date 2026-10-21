@@ -330,6 +330,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const rivalNotice = h('section', { class: 'notice notice-rival', hidden: true, role: 'status' });
   const staffNotice = h('section', { class: 'notice notice-staff', hidden: true, role: 'status' });
   const offerNotice = h('section', { class: 'notice notice-offer', hidden: true, role: 'status' });
+  // The folded issue: a newspaper over the city; a tap unfolds it.
+  const issueFab = h(
+    'button',
+    { class: 'issue-fab', title: 'Вернуться к выпуску', 'aria-label': 'Вернуться к выпуску', hidden: true, onclick: () => openIssue() },
+    h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
+  );
   const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, exposureNotice, reconcileNotice, staffNotice, offerNotice, rivalNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
@@ -365,7 +371,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const titleLayer = h('div', { class: 'title-screen', hidden: true });
   root.replaceChildren(
     hud,
-    h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, cutscene, issue),
+    h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, cutscene, issue, issueFab),
     tooltip,
     titleLayer,
     modalLayer,
@@ -603,9 +609,42 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (anchor) document.getElementById(anchor)?.scrollIntoView({ block: 'start' });
   }
 
+  /** The issue folds into the newspaper icon over the city (and unfolds from it). */
+  let folding = false;
+  const foldFrames = (): Keyframe[] => {
+    const from = issue.getBoundingClientRect();
+    const to = issueFab.getBoundingClientRect();
+    const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+    const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+    const scale = Math.max(0.04, to.width / from.width);
+    return [
+      { transform: 'none', opacity: 1 },
+      { transform: `translate(${dx}px, ${dy}px) scale(${scale})`, opacity: 0.3 },
+    ];
+  };
+
   function closeIssue(): void {
-    issueOpen = false;
+    if (folding || !issueOpen) return;
+    folding = true;
+    // The icon is laid out (invisible) to learn where the paper flies.
+    issueFab.hidden = false;
+    issueFab.style.visibility = 'hidden';
+    const anim = issue.animate(foldFrames(), { duration: 380, easing: 'cubic-bezier(0.5, 0, 0.75, 0)' });
+    anim.onfinish = () => {
+      folding = false;
+      issueFab.style.visibility = '';
+      issueOpen = false;
+      render();
+      issueFab.animate([{ transform: 'scale(0.4)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 300, easing: 'ease-out' });
+    };
+  }
+
+  function openIssue(): void {
+    if (folding || issueOpen) return;
+    const frames = foldFrames().reverse();
+    issueOpen = true;
     render();
+    issue.animate(frames, { duration: 320, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' });
   }
 
   const newGame = (seed = randomSeed(), mode: GameMode = 'destroy') => {
@@ -787,6 +826,19 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h('span', { class: `trend ${up ? 'up' : 'down'}`, title }, up ? '▲' : '▼');
   }
 
+  /** Where the laid-out issue takes the city: «→ кризис» when the stage changes, an arrow otherwise. */
+  function cityForecastNote(fc: Forecast | null): HTMLElement | null {
+    if (!fc) return null;
+    const here = cityStateOf(c, state.metrics.cityIndex);
+    const next = cityStateOf(c, fc.cityIndex);
+    const diff = Math.round(fc.cityIndex - state.metrics.cityIndex);
+    if (next === here && diff === 0) return null;
+    // Stage numbers grow towards ruin: a bigger one is worse for the city.
+    const worse = next !== here ? next > here : diff < 0;
+    const text = next !== here ? `≈→ ${c.balance.cityStates[next].name.toLowerCase()}` : `город ≈${worse ? '▼' : '▲'}`;
+    return h('small', { class: `res-forecast ${worse ? 'down' : 'up'}`, title: 'Ожидается, если выпустить газету так' }, text);
+  }
+
   /** The expected change of a value if the issue goes out as laid out: «≈+37», grey and dotted. */
   function forecastTag(expected: number): HTMLElement | null {
     const n = Math.round(expected);
@@ -865,6 +917,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     unit: string | null = '',
     onclick?: () => void,
     expected: number | null = null,
+    note: HTMLElement | null = null,
   ): HTMLElement {
     return h(
       onclick ? 'button' : 'div',
@@ -873,7 +926,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('img', { class: 'res-icon', src: `${assetBase}sprites/ui/${icon}.png`, alt: '', width: 32, height: 32 }),
       // While the issue is being laid out, the expected change replaces yesterday's.
       h('b', {}, value, expected !== null ? forecastTag(expected) : deltaTag(delta, unit)),
-      h('span', { class: 'res-label' }, label.toLowerCase()),
+      // A forecast note (the city's) takes the caption's place while the issue is laid out.
+      h('span', { class: 'res-label' }, note ?? label.toLowerCase()),
     );
   }
 
@@ -926,13 +980,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'city-state',
         null,
         () => openModal('city'),
+        null,
+        cityForecastNote(fc),
       ),
     );
     // While the issue is open: its level and «В печать»; folded: «Выпуск» brings it back.
     const publishing = issueOpen && !state.outcome;
     hudActions.replaceChildren(
-      publishing ? publishButton() : h('button', { class: 'primary issue-btn', onclick: () => ((issueOpen = true), render()) }, 'Выпуск'),
+      ...(publishing ? [publishButton()] : []),
     );
+    // A folded issue waits as a newspaper icon over the city.
+    issueFab.hidden = issueOpen || folding || titleOpen || busy || !!state.outcome;
   }
 
   /**

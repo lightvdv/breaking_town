@@ -20,6 +20,24 @@ export const reactionLabels: Record<Reaction, string> = {
   outraged: 'возмущён разоблачением',
 };
 
+/** Russian plural by number: 1 читатель, 2 читателя, 5 читателей. */
+export function plural(n: number, one: string, few: string, many: string): string {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
+
+/** How the morning after the issue counts the reactions (CONCEPT.md §7.3). */
+export const morningLabels: Record<Reaction, string> = {
+  scared: 'испугались',
+  happy: 'обрадовались',
+  doubted: 'не поверили',
+  talk: 'пересказывают',
+  outraged: 'возмутились',
+};
+
 export const truthLabels = ['Правда', 'Полуправда', 'Ложь'];
 export const tierLabels = ['Скучная', 'Обычная', 'Интересная', 'Сенсация'];
 export const scopeLabels: Record<NewsScope | 'any', string> = { local: 'Город', global: 'Мир', any: 'Город и мир' };

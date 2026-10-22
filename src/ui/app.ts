@@ -84,6 +84,7 @@ import { h, pct, svg } from './dom';
 import { loadSave, writeSave } from './save';
 import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
+import { pendingNotes, unlockDay, type Feature } from './guide';
 import { characterLine, portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
   priceLabels,
@@ -97,6 +98,8 @@ import {
   issueLevelLabels,
   outcomeText,
   reactionLabels,
+  morningLabels,
+  plural,
   scopeLabels,
   tierLabels,
   topicLabels,
@@ -210,6 +213,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (used.some((n, i) => n > slots[i])) drafts = new Map();
   }
   let report: TurnReport | null = saved?.report ?? null;
+  /** A novice's game opens the paper's controls day by day (CONCEPT.md §7.3 «Постепенное открытие»). */
+  let guided = saved ? saved.guided : settings.experience === 'novice';
+  /** A control is there for a veteran from the start, for a novice from its day. */
+  const unlocked = (f: Feature) => !guided || state.turn >= unlockDay(f, state.mode);
+  /** On the day it opens, a control carries a «Новое» badge. */
+  const isNew = (f: Feature) => guided && state.turn === unlockDay(f, state.mode);
   let error = '';
   let busy = false;
   let issueOpen = true;
@@ -340,6 +349,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const lettersBox = h('section', { class: 'letters', hidden: true });
   const paper = h('div', { class: 'paper' }, masthead, h('div', { class: 'paper-grid' }, zones[2].root, zones[1].root, zones[0].root), lettersBox, zones.out.root);
   // Exposures and the mayor's reconciliation are announced by plaques above the paper (CONCEPT.md §7.3).
+  // The novice's note of the day: a sticker above the paper (CONCEPT.md §7.3 «Постепенное открытие»).
+  const guideNote = h('section', { class: 'guide-note', hidden: true, role: 'status' });
   const exposureNotice = h('section', { class: 'notice notice-exposed', hidden: true, role: 'status' });
   const reconcileNotice = h('section', { class: 'notice notice-peace', hidden: true, role: 'status' });
   // Save mode: what the rival paper prints today, and which of its stories we answer (CONCEPT.md §8).
@@ -352,7 +363,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     { class: 'issue-fab', title: 'Вернуться к выпуску', 'aria-label': 'Вернуться к выпуску', hidden: true, onclick: () => openIssue() },
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
   );
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, exposureNotice, reconcileNotice, staffNotice, offerNotice, rivalNotice, paper));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, reconcileNotice, staffNotice, offerNotice, rivalNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -555,6 +566,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
         )
       : null;
     priceSelect.replaceChildren(h('span', { class: 'price-label' }, 'Цена газеты:'), chip, ...(menu ? [menu] : []));
+    priceSelect.hidden = !unlocked('price');
+    chip.classList.toggle('is-new', isNew('price'));
   }
 
   /** One sensation per issue (CONCEPT.md §4.2а): a story brought back or moved up is toned down if needed. */
@@ -670,6 +683,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     c = withDifficulty(base, settings.difficulty, mode);
     reporterBar.c = c;
     state = createGame(c, seed, mode, settings.difficulty);
+    guided = settings.experience === 'novice';
     drafts = new Map();
     report = null;
     error = '';
@@ -739,16 +753,18 @@ export function mountApp(root: HTMLElement, base: Content): void {
       busy = true;
       scene?.setState(state, true);
       render();
-      // Let the city react first (CONCEPT.md §7.3), show the day's bright moments if there were
-      // any, then reporters look for the next stories.
-      const highlights = report.highlights;
-      window.setTimeout(async () => {
-        if (highlights.length && scene && !settings.skipCutscenes) await playCutscene(highlights);
+      // The morning after the issue (CONCEPT.md §7.3): the camera goes where the main story hit and the
+      // day's result is summed up; then the day's bright moments if there were any, then reporters
+      // look for the next stories.
+      const r = report;
+      void (async () => {
+        await playMorning(r);
+        if (r.highlights.length && scene && !settings.skipCutscenes) await playCutscene(r.highlights);
         if (state.outcome) {
           busy = false;
           render();
         } else void runSearch();
-      }, REACTION_SECONDS * 1000);
+      })();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
       render();
@@ -767,6 +783,47 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** A story's illustration; a conflict story about any pair shows exactly its two groups. */
   const newsArt = (templateId: string, pair?: [string, string]) =>
     `${assetBase}sprites/news/${templateId}${pair && templateOf(c, templateId).conflict === 'any' ? `__${pair[0]}__${pair[1]}` : ''}.png`;
+
+  /** The day's result in a few chips: readers, money and how the town took the issue. */
+  function morningChips(r: TurnReport): HTMLElement {
+    const chip = (icon: string, text: string, cls = '') => h('span', { class: `morning-chip ${cls}` }, h('img', { src: icon, alt: '', width: 16, height: 16 }), text);
+    const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n)}`;
+    const readers = r.readers.after - r.readers.before;
+    const chips = [
+      chip(`${assetBase}sprites/ui/readers.png`, `${signed(readers)} ${plural(Math.abs(readers), 'читатель', 'читателя', 'читателей')}`, readers > 0 ? 'up' : readers < 0 ? 'down' : ''),
+      chip(`${assetBase}sprites/ui/money.png`, `${signed(r.moneyDelta)} ₽`, r.moneyDelta > 0 ? 'up' : r.moneyDelta < 0 ? 'down' : ''),
+    ];
+    const counts = new Map<Reaction, number>();
+    for (const x of Object.values(state.lastReactions)) counts.set(x, (counts.get(x) ?? 0) + 1);
+    const ranked = [...counts.entries()].filter(([x]) => x !== 'talk').sort((a, b) => b[1] - a[1]).slice(0, 3);
+    for (const [x, n] of ranked) chips.push(chip(`${assetBase}sprites/fx/${REACTION_ICON[x]}.png`, `${n} ${morningLabels[x]}`, `react-${x}`));
+    return h('span', { class: 'morning-chips' }, ...chips);
+  }
+
+  /**
+   * The morning after the issue (CONCEPT.md §7.3): the camera flies to where the main story hit and a
+   * caption sums up the day; without cutscenes only the caption shows while the town reacts.
+   */
+  async function playMorning(r: TurnReport): Promise<void> {
+    const main = [...r.publications].sort((a, b) => b.placement - a.placement || b.believed - a.believed)[0];
+    cutsceneCaption.className = 'cutscene-caption kind-morning';
+    cutsceneCaption.replaceChildren(
+      h('span', { class: 'cutscene-kicker' }, `Утро · выпуск № ${r.turn} · ${issueLevelLabels[r.issue.level].toLowerCase()}`),
+      h('b', {}, main ? main.title : 'Газета не вышла'),
+      morningChips(r),
+    );
+    cutsceneCaption.hidden = false;
+    cutscene.hidden = false;
+    tooltip.hidden = true;
+    const camera = !!scene && !settings.skipCutscenes;
+    cutscene.classList.toggle('caption-only', !camera);
+    cutscene.parentElement!.classList.add('in-cutscene');
+    if (camera) await scene!.playMorning(main?.building ?? null);
+    else await new Promise((done) => window.setTimeout(done, REACTION_SECONDS * 1000));
+    cutscene.hidden = true;
+    cutscene.classList.remove('caption-only');
+    cutscene.parentElement!.classList.remove('in-cutscene');
+  }
 
   /** Plays the city cutscene with a caption for each bright moment. */
   async function playCutscene(highlights: Highlight[]): Promise<void> {
@@ -986,7 +1043,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const r = report;
     const fc = currentForecast();
     renderGoal(fc);
-    hudRes.replaceChildren(
+    const items: (HTMLElement | null)[] = [
       resource(
         'money',
         'Деньги',
@@ -1009,17 +1066,20 @@ export function mountApp(root: HTMLElement, base: Content): void {
         () => openModal('readers'),
         fc?.readers ?? null,
       ),
-      resource(
-        'reputation',
-        'Репутация',
-        `${Math.round(trust)}%`,
-        r ? Math.round(r.trustAfter - r.trustBefore) : null,
-        'Чем выше, тем больше верят и реже проверяют. Упадёт до нуля — игра проиграна. Нажмите — подробности.',
-        trust < 20 ? 'bad' : '',
-        '%',
-        () => openModal('reputation'),
-        fc?.trust ?? null,
-      ),
+      // A novice meets reputation together with the framing of stories (CONCEPT.md §7.3).
+      !unlocked('framing')
+        ? null
+        : resource(
+            'reputation',
+            'Репутация',
+            `${Math.round(trust)}%`,
+            r ? Math.round(r.trustAfter - r.trustBefore) : null,
+            'Чем выше, тем больше верят и реже проверяют. Упадёт до нуля — игра проиграна. Нажмите — подробности.',
+            `${trust < 20 ? 'bad' : ''}${isNew('framing') ? ' is-new' : ''}`,
+            '%',
+            () => openModal('reputation'),
+            fc?.trust ?? null,
+          ),
       resource(
         `city_state_${cityStateOf(c, state.metrics.cityIndex)}`,
         'Город',
@@ -1032,7 +1092,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
         null,
         cityForecastNote(fc),
       ),
-    );
+    ];
+    hudRes.replaceChildren(...items.filter((x): x is HTMLElement => x !== null));
+    hudShop.hidden = !unlocked('shop');
+    hudShop.classList.toggle('is-new', isNew('shop'));
     // While the issue is open: its level and «В печать»; folded: «Выпуск» brings it back.
     const publishing = issueOpen && !state.outcome;
     hudActions.replaceChildren(
@@ -1059,7 +1122,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ' Нажмите — опубликовать и завершить ход.';
     return h(
       'button',
-      { class: `publish level-${level}${levelBump ? ` ${levelBump}` : ''}`, title: hint, onclick: endTurn, disabled },
+      // A novice's first day: the button glows, it is the one thing to press (CONCEPT.md §7.3).
+      { class: `publish level-${level}${levelBump ? ` ${levelBump}` : ''}${guided && state.turn === 1 ? ' nudge' : ''}`, title: hint, onclick: endTurn, disabled },
       h('img', { src: `${assetBase}sprites/ui/issue_${level}.png`, alt: '', width: 24, height: 24 }),
       h('span', {}, 'В печать · ', h('b', {}, level === 3 ? 'СЕНСАЦИЯ!' : issueLevelLabels[level])),
       h('span', { 'aria-hidden': 'true' }, '▸'),
@@ -1081,6 +1145,31 @@ export function mountApp(root: HTMLElement, base: Content): void {
       .join(sep);
   const turnsWord = (n: number) => (n === 1 ? 'ход' : n < 5 ? 'хода' : 'ходов');
   const peopleWord = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? 'человека' : 'человек');
+
+  /** The novice's notes, one at a time: the day's new control, then what is on screen for the first time. */
+  function renderGuide(): void {
+    const show = guided && issueOpen && !searching && !busy && !state.outcome;
+    const notes = show ? pendingNotes({ state, c, report, rivalShown: !rivalNotice.hidden }, settings.notesSeen) : [];
+    guideNote.hidden = !notes.length;
+    if (!notes.length) return;
+    const n = notes[0];
+    guideNote.replaceChildren(
+      h('div', { class: 'guide-day' }, ...(n.day !== null ? [String(n.day), h('small', {}, 'день')] : ['!'])),
+      h('div', { class: 'guide-text' }, h('b', { class: 'guide-title' }, n.title), n.text),
+      h(
+        'button',
+        {
+          class: 'guide-ok',
+          onclick: () => {
+            settings.notesSeen = [...settings.notesSeen, n.id];
+            saveSettings(settings);
+            render();
+          },
+        },
+        notes.length > 1 ? 'Дальше ▸' : 'Понятно',
+      ),
+    );
+  }
 
   /** The mayor's reconciliation notice, next to the exposure notice (CONCEPT.md §5.5). */
   function renderReconcile(): void {
@@ -1548,7 +1637,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const truthButton = h(
       'button',
       {
-        class: `truth-chip ${d.distortion < 0 && card.conflict ? 'calm' : `t${p.truth}`}${menuOpen ? ' on' : ''}`,
+        class: `truth-chip ${d.distortion < 0 && card.conflict ? 'calm' : `t${p.truth}`}${menuOpen ? ' on' : ''}${isNew('framing') && where === 2 ? ' is-new' : ''}`,
         title: `${toneOf(card, d.distortion)} (${truthLabels[p.truth].toLowerCase()}) — изменить подачу`,
         'aria-haspopup': 'menu',
         'aria-expanded': String(menuOpen),
@@ -1678,7 +1767,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'news-head' },
         // The controls sit in a row above the headline: level, truth, and «✕» on the right.
-        h('div', { class: 'head-tools' }, truthButton, outButton),
+        h('div', { class: 'head-tools' }, unlocked('framing') ? truthButton : null, outButton),
         h('h3', { class: 'headline' }, p.title, ' ', tierLabel),
         truthMenu,
         moveMenu,
@@ -2619,6 +2708,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     levelBump = level === null || shownLevel === null || level === shownLevel ? '' : level > shownLevel ? 'bump-up' : 'bump-down';
     shownLevel = level;
     renderHud();
+    reporterBar.hiring = unlocked('hire') ? (isNew('hire') ? 'new' : 'open') : 'closed';
     reporterBar.render(state, repStatus, searching);
     renderCityEvents();
     renderIssue();
@@ -2628,6 +2718,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderLetters();
     renderOffer();
     renderRival();
+    renderGuide();
     renderModal();
     renderOutcome();
     renderTitle();
@@ -2771,8 +2862,40 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ),
       h('small', { class: 'hint' }, base.difficulties.find((d) => d.id === settings.difficulty)?.text ?? ''),
     );
+    // Novice or veteran (CONCEPT.md §7.3 «Постепенное открытие»): remembered for the next games too.
+    const kinds = [
+      { id: 'novice', name: 'Новичок', text: 'Возможности газеты открываются в первые дни по одной, с короткими записками.' },
+      { id: 'veteran', name: 'Опытный', text: 'Всё доступно сразу, без подсказок.' },
+    ] as const;
+    const experience = h(
+      'div',
+      { class: 'difficulty' },
+      h('span', { class: 'difficulty-label' }, 'Опыт'),
+      h(
+        'div',
+        { class: 'chips' },
+        ...kinds.map((k) =>
+          h(
+            'button',
+            {
+              class: `chip${settings.experience === k.id ? ' on' : ''}`,
+              'aria-pressed': String(settings.experience === k.id),
+              title: k.text,
+              onclick: () => {
+                settings.experience = k.id;
+                saveSettings(settings);
+                render();
+              },
+            },
+            k.name,
+          ),
+        ),
+      ),
+      h('small', { class: 'hint' }, kinds.find((k) => k.id === settings.experience)!.text),
+    );
     return [
       ...(hasGame && !state.outcome ? [h('p', { class: 'bad' }, 'Текущая партия будет потеряна.')] : []),
+      experience,
       levels,
       h(
         'div',
@@ -2903,7 +3026,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     // Nothing is written until the player has actually played a turn: the title screen's fresh city
     // must not turn into a «Продолжить» on the next visit.
     if (!hasGame || state.turn <= 1) return;
-    writeSave<Draft>({ state, report, drafts: [...drafts] });
+    writeSave<Draft>({ state, report, drafts: [...drafts], guided });
   };
   /** Every change is saved shortly after it (renders come in bursts during animations). */
   function saveSoon(): void {

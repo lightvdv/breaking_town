@@ -1,5 +1,5 @@
 import { chance, int, next, weightedPick, type RngState } from './rng';
-import { clamp, templateOf } from './lookup';
+import { clamp, conflictsStarted, rivalStarted, templateOf } from './lookup';
 import { modifiersOf } from './modifiers';
 import { effectiveTier, isSoothed, limitSensations, maxDistortion, minDistortion, publish, storyTitle, type PublishedNews } from './news';
 import { pickPair } from './relations';
@@ -53,9 +53,12 @@ function reassuring(t: CardTemplate): boolean {
 }
 
 /** Our recent lies the rival answers: the tabloid our soothing ones, the guardian our scary ones. */
-function counterTargets(state: GameState): PrintedStory[] {
+function counterTargets(state: GameState, c: Content): PrintedStory[] {
   const kind = state.rival?.kind;
-  return state.ourPrinted.filter((p) => p.truth > 0 && !p.debunked && !p.exposed && (kind === 'tabloid' ? !!p.soothed : !p.soothed));
+  // The lies of the forgiven first days are forgiven by the rival too.
+  return state.ourPrinted.filter(
+    (p) => p.truth > 0 && !p.debunked && !p.exposed && p.turn >= c.balance.factCheckStartTurn && (kind === 'tabloid' ? !!p.soothed : !p.soothed),
+  );
 }
 
 /** Something people could be scared with: the story's worst version does harm. */
@@ -77,12 +80,12 @@ export function planRival(state: GameState, c: Content, rng: RngState, events: C
   const rival = state.rival;
   if (!rival) return;
   rival.plan = [];
-  if (rival.closed) return;
+  if (!rivalStarted(state, c)) return;
   const b = c.balance;
   const guardian = rival.kind === 'guardian';
   const count = 1 + int(rng, guardian ? b.guardianStoriesMax : b.rivalStoriesMax);
   // It answers our freshest lies that work against it, on top of its own stories.
-  for (const story of counterTargets(state).slice(0, Math.min(count, c.balance.rivalCountersMax))) {
+  for (const story of counterTargets(state, c).slice(0, Math.min(count, c.balance.rivalCountersMax))) {
     rival.plan.push({ card: { ...makeDebunk(state, story, ''), templateId: RIVAL_TEMPLATES[rival.kind].theirs }, placement: 0, distortion: 0 });
   }
   // The tabloid looks for what frightens, the guardian for what reassures.
@@ -96,6 +99,7 @@ export function planRival(state: GameState, c: Content, rng: RngState, events: C
       !(guardian && t.source === 'rumor') &&
       fits(t) &&
       !t.arc &&
+      (!t.conflict || conflictsStarted(state, c)) &&
       available(state, t) &&
       !isRecent(state, c, t.id) &&
       !chosen.includes(t) &&
@@ -265,7 +269,8 @@ export function verifyRival(state: GameState, c: Content, rng: RngState, news: P
 /** Readers come and go: those who doubted it drop it more often, trusting non-readers start buying it. */
 export function updateRivalReaders(state: GameState, c: Content, rng: RngState, news: PublishedNews[]): void {
   const rival = state.rival;
-  if (!rival || rival.closed) return;
+  // Before it starts printing its readers stay as they are.
+  if (!rival || !rivalStarted(state, c)) return;
   const b = c.balance;
   const doubted = new Set(news.flatMap((n) => n.doubters));
   for (const r of state.residents) {

@@ -59,6 +59,8 @@ export class ReporterBar {
   private front: string | null = null;
 
   private animating = false;
+  /** Hiring for a novice opens on its day (CONCEPT.md §7.3): no «+» before, a «Новое» badge that day. */
+  hiring: 'closed' | 'open' | 'new' = 'open';
 
   constructor(
     /** The content of the current game's difficulty; swapped when a new game starts. */
@@ -77,7 +79,7 @@ export class ReporterBar {
 
   render(state: GameState, statuses: Map<string, RepStatus>, animating: boolean): void {
     const max = this.c.balance.maxReporters;
-    const key = `${state.reporters.join(',')}|${max}`;
+    const key = `${state.reporters.join(',')}|${max}|${this.hiring}`;
     if (key !== this.layoutKey) {
       this.layoutKey = key;
       this.cards.clear();
@@ -105,12 +107,12 @@ export class ReporterBar {
         slots.push(root);
       }
       // One "+" for all free places.
-      if (state.reporters.length < max) {
+      if (state.reporters.length < max && this.hiring !== 'closed') {
         slots.push(
           h(
             'button',
             {
-              class: 'rep-slot',
+              class: `rep-slot${this.hiring === 'new' ? ' is-new' : ''}`,
               title: `Нанять репортёра (свободно мест: ${max - state.reporters.length})`,
               onclick: (e: Event) => {
                 e.stopPropagation();

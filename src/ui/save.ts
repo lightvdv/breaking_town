@@ -13,6 +13,8 @@ export interface SaveData<D> {
   report: TurnReport | null;
   /** The player's layout of the current issue, by card uid. */
   drafts: [number, D][];
+  /** The game opens its controls day by day (a novice's game, CONCEPT.md §7.3). */
+  guided: boolean;
 }
 
 /** Returns the saved game, or null when there is none or it does not fit the current content. */
@@ -66,7 +68,7 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.todayIncidents ??= [];
     // Upgrades removed from the content (e.g. the extra front page) are dropped.
     s.upgrades = s.upgrades.filter((id) => c.upgrades.some((u) => u.id === id));
-    return { state: s, report: data.report ?? null, drafts: Array.isArray(data.drafts) ? data.drafts : [] };
+    return { state: s, report: data.report ?? null, drafts: Array.isArray(data.drafts) ? data.drafts : [], guided: data.guided === true };
   } catch {
     return null;
   }

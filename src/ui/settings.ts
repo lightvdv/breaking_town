@@ -16,10 +16,17 @@ export interface Settings {
   difficulty: Difficulty;
   /** The rival paper's stories are unfolded above the issue; once opened they stay open on the next days. */
   rivalOpen: boolean;
+  /**
+   * Novice: the paper's controls open day by day with notes (CONCEPT.md §7.3); veteran: all at once.
+   * Chosen in the new game window and remembered for the next games.
+   */
+  experience: 'novice' | 'veteran';
+  /** Notes of the gradual opening already read: they are never shown again, in any game. */
+  notesSeen: string[];
 }
 
 const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
-const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, experience: 'novice', notesSeen: [] };
 
 export function loadSettings(): Settings {
   try {

@@ -394,6 +394,13 @@ export interface Balance {
   arcChance: number;
   arcsMax: number;
   arcStartTurn: number;
+  /**
+   * The first days are gentle for everyone (CONCEPT.md §4.7): incidents and conflict stories start on
+   * `conflictStartTurn`, the rival prints from `rivalStartTurn` (by mode), lies are checked from `factCheckStartTurn`.
+   */
+  conflictStartTurn: number;
+  rivalStartTurn: Record<GameMode, number>;
+  factCheckStartTurn: number;
   /** Pressure a published stage adds per distortion step, by placement (brief, article, front page). */
   arcPlacementWeight: number[];
   /** Mood below `arcMoodPivot` pushes the ending to the bad side by `arcMoodBias` per unit. */
@@ -970,6 +977,8 @@ export interface PublicationReport {
   wordOfMouth: number;
   effects: Partial<Record<EffectType, number>>;
   exposed: boolean;
+  /** The place the story is about, if any: the morning after the issue starts there (CONCEPT.md §7.3). */
+  building?: number;
   /** Investigations: who was targeted and what the stigma did to them. */
   stigma?: { target: GroupId; pressure: number; left: number };
   /** Conflict stories and investigations: how they moved the tension of each pair. */

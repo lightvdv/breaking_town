@@ -55,3 +55,18 @@ export function averageTrust(state: GameState, c: Content): number {
   }
   return weight > 0 ? sum / weight : 0;
 }
+
+/** The gentle first days (CONCEPT.md §4.7): conflicts between groups begin on this day. */
+export function conflictsStarted(state: GameState, c: Content): boolean {
+  return state.turn >= c.balance.conflictStartTurn;
+}
+
+/** The rival paper starts printing on its day (by mode) and until it closes. */
+export function rivalStarted(state: GameState, c: Content): boolean {
+  return !!state.rival && !state.rival.closed && state.turn >= c.balance.rivalStartTurn[state.mode];
+}
+
+/** Fact-checkers look at our stories from this day on: the first lies are forgiven. */
+export function factCheckStarted(state: GameState, c: Content): boolean {
+  return state.turn >= c.balance.factCheckStartTurn;
+}

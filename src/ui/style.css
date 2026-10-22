@@ -195,7 +195,8 @@ select {
 /* The goal track under the resources: five stages, where the city is and where it goes, the goal. */
 .hud-goal {
   order: 6;
-  flex-basis: 100%;
+  /* Shares the top row while it fits (narrower than its 620px best), else takes a row of its own. */
+  flex: 1 1 440px;
   max-width: 620px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -587,6 +588,8 @@ button.publish.level-3.bump-up {
 
 .hud-controls .reporter-bar {
   order: 1;
+  /* As wide as its portraits: squeezed, the «+» slid under the cart. */
+  flex: none;
 }
 
 .resources {
@@ -595,6 +598,10 @@ button.publish.level-3.bump-up {
 
 .hud-shop {
   order: 3;
+}
+
+.hud-shop[hidden] {
+  display: none;
 }
 
 .hud-buttons {
@@ -1340,6 +1347,71 @@ button.publish.level-3.bump-up {
   pointer-events: auto;
 }
 
+/* The morning after the issue: the day's result under the main headline (CONCEPT.md §7.3). */
+.cutscene-caption.kind-morning .cutscene-kicker {
+  color: var(--paper-muted);
+}
+
+.cutscene.caption-only .letterbox,
+.cutscene.caption-only .cutscene-skip {
+  display: none;
+}
+
+.cutscene.caption-only .cutscene-caption {
+  bottom: 24px;
+}
+
+.morning-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 4px;
+}
+
+.morning-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  animation: chip-in 0.3s ease-out both;
+}
+
+.morning-chip:nth-child(2) {
+  animation-delay: 0.25s;
+}
+
+.morning-chip:nth-child(3) {
+  animation-delay: 0.5s;
+}
+
+.morning-chip:nth-child(4) {
+  animation-delay: 0.75s;
+}
+
+.morning-chip:nth-child(5) {
+  animation-delay: 1s;
+}
+
+.morning-chip img {
+  image-rendering: pixelated;
+}
+
+.morning-chip.up {
+  color: var(--truth-0);
+}
+
+.morning-chip.down {
+  color: var(--truth-2);
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+}
+
 /* ---------- Relations between groups (CONCEPT.md §5.5) ---------- */
 .relations-box {
   position: relative;
@@ -1763,6 +1835,10 @@ button.publish.level-3.bump-up {
 }
 
 /* Cover price chip and its menu, like the truth chip of a story (CONCEPT.md §3.4). */
+.price-select[hidden] {
+  display: none;
+}
+
 .price-select {
   position: relative;
   display: flex;
@@ -3922,5 +3998,127 @@ button.publish.level-3.bump-up {
 
   .city-legend {
     display: none;
+  }
+}
+
+/* ---------- Gradual opening for novices (CONCEPT.md §7.3) ---------- */
+.is-new {
+  position: relative;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+  box-shadow: 0 0 0 7px rgba(254, 174, 52, 0.18);
+}
+
+.is-new::after {
+  content: 'Новое';
+  position: absolute;
+  top: -10px;
+  right: -12px;
+  z-index: 5;
+  padding: 3px 5px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 700 9px/1 var(--font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  box-shadow: 0 2px 0 rgba(24, 20, 37, 0.35);
+  transform: rotate(6deg);
+  pointer-events: none;
+}
+
+.guide-note {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto 10px;
+  padding: 10px 14px 10px 12px;
+  background: #fff6c8;
+  color: var(--paper-ink);
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 1.35;
+  box-shadow: 0 4px 0 rgba(24, 20, 37, 0.35);
+  transform: rotate(-0.6deg);
+  animation: caption-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.guide-note[hidden] {
+  display: none;
+}
+
+/* A strip of tape holds it to the desk. */
+.guide-note::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 56px;
+  height: 14px;
+  margin-left: -28px;
+  background: rgba(255, 255, 255, 0.55);
+  transform: rotate(2deg);
+}
+
+.guide-day {
+  min-width: 34px;
+  padding-top: 2px;
+  color: var(--paper-muted);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+
+.guide-day small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.guide-title {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--paper-muted);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.guide-ok {
+  align-self: center;
+  margin-left: auto;
+  padding: 6px 10px;
+  background: var(--paper-ink);
+  color: #fff6c8;
+  border: 0;
+  border-radius: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+button.publish.nudge {
+  animation: nudge 1.6s ease-in-out infinite;
+}
+
+@keyframes nudge {
+  50% {
+    box-shadow:
+      0 0 0 4px var(--accent),
+      0 0 22px var(--accent);
+  }
+}
+
+@media (max-width: 900px) {
+  /* No tilt on a phone: the sticker would stick out of the screen. */
+  .guide-note {
+    transform: none;
+    font-size: 14px;
   }
 }

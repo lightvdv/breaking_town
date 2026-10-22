@@ -37,7 +37,8 @@
     },
     "modes": {
       "destroy": {
-        "turnLimit": 37
+        "turnLimit": 37,
+        "conflictStartTurn": 2
       },
       "save": {
         "turnLimit": 46,

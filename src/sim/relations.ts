@@ -1,5 +1,5 @@
 import { chance, int, pick, weightedPick, type RngState } from './rng';
-import { clamp, groupOf } from './lookup';
+import { clamp, conflictsStarted, groupOf } from './lookup';
 import { isRecent } from './reporters';
 import type { CardTemplate, Content, GameState, GroupId, Incident } from './types';
 
@@ -128,7 +128,7 @@ export function advanceRelations(state: GameState, c: Content, rng: RngState): {
     const j = int(rng, i + 1);
     [keys[i], keys[j]] = [keys[j], keys[i]];
   }
-  for (const key of keys) {
+  for (const key of conflictsStarted(state, c) ? keys : []) {
     if (incidents.length >= b.incidentsMax) break;
     const t = state.tension[key];
     if (t < friction) continue;

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { content } from '../src/content';
+import { content as realContent } from '../src/content';
+
+// Most tests look at the mechanics themselves: everything starts on day 1 there (the gentle first days are tested apart).
+const content = {
+  ...realContent,
+  balance: { ...realContent.balance, conflictStartTurn: 1, rivalStartTurn: { destroy: 1, save: 1 }, factCheckStartTurn: 1 },
+};
 import { snapshotPeople, updatePeople } from '../src/sim/people';
 import {
   averageTrust,
@@ -1122,5 +1128,23 @@ describe('forecast', () => {
     expect(Number.isFinite(a.cityIndex)).toBe(true);
     // A layout the rules forbid has no forecast.
     expect(forecastTurn(s, content, { publish: [{ cardUid: -1, placement: 0, distortion: 0 }] })).toBeNull();
+  });
+});
+
+describe('gentle first days (CONCEPT.md §4.7)', () => {
+  it('no fact-checks, rival or conflicts before their days, for every seed and mode', () => {
+    const b = realContent.balance;
+    for (const mode of ['destroy', 'save'] as const) {
+      for (let seed = 1; seed <= 6; seed++) {
+        const s = createGame(realContent, seed, mode);
+        while (s.turn < Math.max(b.conflictStartTurn, b.rivalStartTurn[mode], b.factCheckStartTurn) && !s.outcome) {
+          const turn = s.turn;
+          if (turn < b.conflictStartTurn) expect(s.hand.some((x) => templateOf(realContent, x.templateId).conflict)).toBe(false);
+          const r = playTurn(s, realContent, simpleDecision(s, 'max'));
+          if (turn < b.factCheckStartTurn) expect(r.exposures).toEqual([]);
+          if (turn < b.rivalStartTurn[mode]) expect(r.rival?.publications ?? []).toEqual([]);
+        }
+      }
+    }
   });
 });

@@ -8,10 +8,10 @@
   "agencyFee": 50,
   "agencyMaxOffer": 2,
   "maxSensations": 1,
-  "saveLoseIndex": 67,
+  "saveLoseIndex": 71,
   "cityStates": [
     { "name": "Процветает", "min": 85 },
-    { "name": "Спокойно", "min": 67 },
+    { "name": "Спокойно", "min": 71 },
     { "name": "Кризис", "min": 50 },
     { "name": "Упадок", "min": 30 },
     { "name": "Руины", "min": 0 }
@@ -39,6 +39,9 @@
   "arcChance": 0.2,
   "arcsMax": 1,
   "arcStartTurn": 3,
+  "conflictStartTurn": 6,
+  "rivalStartTurn": { "destroy": 7, "save": 2 },
+  "factCheckStartTurn": 3,
   "arcPlacementWeight": [0.5, 1, 1.5],
   "arcMoodBias": 4,
   "arcMoodPivot": 0.55,

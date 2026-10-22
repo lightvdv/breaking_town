@@ -1,6 +1,6 @@
 import { chance, int, type RngState } from './rng';
 import { leaveCity } from './city';
-import { averageTrust, channelOf, clamp, groupOf, templateOf } from './lookup';
+import { averageTrust, channelOf, clamp, factCheckStarted, groupOf, templateOf } from './lookup';
 import { addTension, fillTitle, pairKey } from './relations';
 import type { Modifiers } from './modifiers';
 import type {
@@ -159,6 +159,8 @@ export function exposureRiskOf(
   reachShare: number,
 ): number {
   const b = c.balance;
+  // The first issues are forgiven: nobody checks a paper nobody reads yet.
+  if (!factCheckStarted(state, c)) return 0;
   const defense = state.metrics.cityIndex < b.defenseCityIndex ? 1 + b.defenseCheckerBoost : 1;
   const checkersOpen = state.buildings.some((x) => x.type === 'factCheckers' && x.open);
   const base = checkersOpen ? b.checkerBase : b.checkerBase * 0.5;
@@ -357,6 +359,7 @@ export function publish(
     wordOfMouth: 0,
     effects: {},
     exposed: false,
+    ...(card.building !== undefined ? { building: card.building } : {}),
   };
   const heard = new Set<number>();
   const viewers: number[] = [];
@@ -526,7 +529,7 @@ export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Mo
     if (chance(rng, risk)) {
       n.report.exposed = true;
       exposed.push(exposeNews(state, c, mods, story, n.viewers));
-    } else {
+    } else if (risk > 0) {
       state.pendingLies.push({ story, viewers: n.viewers, risk: risk * b.lateExposureFactor, turnsLeft: b.lateExposureTurns });
     }
   }

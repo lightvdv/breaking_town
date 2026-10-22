@@ -50,6 +50,13 @@ const difficultyIndex = process.argv.indexOf('--difficulty');
 const difficulty = (difficultyIndex >= 0 ? process.argv[difficultyIndex + 1] : 'normal') as Difficulty;
 if (!baseContent.difficulties.some((d) => d.id === difficulty)) throw new Error(`Unknown difficulty ${difficulty}`);
 const content = withDifficulty(baseContent, difficulty, process.argv.includes('save') && process.argv.includes('--mode') ? 'save' : 'destroy');
+// --set key=json (any number): tries a balance value without editing balance.json.
+process.argv.forEach((a, i) => {
+  if (a !== '--set') return;
+  const [key, value] = process.argv[i + 1].split(/=(.*)/s);
+  if (!(key in content.balance)) throw new Error(`Unknown balance key ${key}`);
+  (content.balance as unknown as Record<string, unknown>)[key] = JSON.parse(value);
+});
 
 interface Choice {
   distortion: 'none' | 'half' | 'max';

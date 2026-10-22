@@ -861,11 +861,78 @@ export class CityScene {
       this.clearActors();
     }
     onShow(null);
+    await this.endCutscene(home);
+  }
+
+  /** Back from a cutscene to the player's view. */
+  private async endCutscene(home: CameraView): Promise<void> {
     if (!this.skipping) await this.flyTo(home, 0.7);
     this.skipping = false;
     this.camera = null;
     this.tween = null;
     this.clearActors();
     this.layout();
+  }
+
+  /** The thickest crowd of the given residents: where most of them stand close together. */
+  private crowdOf(ids: number[]): Pt | null {
+    const pts = ids.map((id) => this.agents.get(id)).filter((a): a is Agent => !!a && !a.leaving).map((a) => a.pos);
+    let best: Pt | null = null;
+    let most = -1;
+    for (const p of pts) {
+      const near = pts.filter((q) => Math.hypot(q.x - p.x, q.y - p.y) < 3).length;
+      if (near > most) {
+        most = near;
+        best = p;
+      }
+    }
+    return best && { ...best };
+  }
+
+  /**
+   * The morning after the issue (CONCEPT.md §7.3): the camera flies to where the main story hit —
+   * its place, or the thickest crowd of readers reacting —, the readers there react again in close-up
+   * and a few figures act out the day's main reaction under its icon; then the camera returns.
+   * Resolves when done or skipped.
+   */
+  async playMorning(building: number | null): Promise<void> {
+    this.skipping = false;
+    const home = this.currentView();
+    const zoom = Math.max(3, Math.min(6, Math.floor(Math.max(1, this.fitZoom())) + 3));
+    const reacted = Object.entries(this.state.lastReactions)
+      .map(([id, reaction]) => ({ r: this.state.residents[Number(id)], reaction }))
+      .filter((x) => x.r && x.r.status === 'active');
+    const n = this.state.mapSize;
+    const spot =
+      (building !== null && this.doors.has(building) ? { ...this.doors.get(building)! } : null) ??
+      this.crowdOf(reacted.map((x) => x.r.id)) ?? { x: n / 2, y: n / 2 };
+    // The day's main reaction: the most common one, chatter only when there is nothing else.
+    const counts = new Map<Reaction, number>();
+    for (const x of reacted) counts.set(x.reaction, (counts.get(x.reaction) ?? 0) + 1);
+    const ranked = [...counts.entries()].sort((a, b) => (a[0] === 'talk' ? 1 : 0) - (b[0] === 'talk' ? 1 : 0) || b[1] - a[1]);
+    const main = ranked[0]?.[0] ?? null;
+    const center = screenOf(spot.x, spot.y);
+    await this.flyTo(this.viewAt({ x: center.x, y: center.y - 12 }, zoom), 0.9);
+    if (!this.skipping) {
+      // The readers close by react again, now that the camera is there.
+      for (const x of reacted) {
+        const agent = this.agents.get(x.r.id);
+        if (!agent || agent.leaving || agent.mode === 'react' || Math.hypot(agent.pos.x - spot.x, agent.pos.y - spot.y) > 5) continue;
+        agent.pendingReaction = x.reaction;
+        agent.reactDelay = rand(0, 0.5);
+      }
+      if (main) {
+        const groups = reacted.filter((x) => x.reaction === main).map((x) => x.r.group);
+        const spots = [
+          { x: spot.x - 0.35, y: spot.y + 0.25 },
+          { x: spot.x + 0.3, y: spot.y - 0.15 },
+          { x: spot.x + 0.05, y: spot.y + 0.5 },
+        ];
+        spots.forEach((at, i) => this.addActor(groups[i % groups.length], at, REACTION_ANIM[main], i === 1, main === 'happy' ? 'cheer' : 'still', i));
+        this.addFx(REACTION_ICON[main], { x: spot.x, y: spot.y + 0.1 });
+      }
+      await this.wait(2800);
+    }
+    await this.endCutscene(home);
   }
 }

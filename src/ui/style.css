@@ -4186,3 +4186,18 @@ button.publish.nudge {
     font-size: 14px;
   }
 }
+
+@media (max-width: 900px) {
+  /* On a phone the control row touches the screen edge: there the «Новое» badge sits at the bottom
+     (inside the «+» square, which is clipped by the reporter row, and above its caption). */
+  .hud-controls .is-new::after {
+    top: auto;
+    right: 50%;
+    bottom: -7px;
+    transform: translateX(50%) rotate(-3deg);
+  }
+
+  .hud-controls .rep-slot.is-new::after {
+    bottom: 2px;
+  }
+}

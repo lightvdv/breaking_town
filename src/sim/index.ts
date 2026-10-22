@@ -17,4 +17,6 @@ export { levelOf, skilledReporter, staffOf } from './staff';
 export { personResident } from './people';
 export { withDifficulty } from './difficulty';
 export { forecastTurn, type Forecast } from './forecast';
+export { scoreOf, taskOf, taskProgress, taskReward } from './tasks';
+export { electionLeader, runningTwist, twistOf } from './twists';
 export { isRoadTile, mapSizeFor } from './map';

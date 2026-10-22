@@ -4,6 +4,7 @@
  */
 :root {
   --ink: #181425;
+  --blue: #0099db;
   --bg: #262b44;
   --bg-deep: #181425;
   --panel: #3a4466;
@@ -4200,4 +4201,111 @@ button.publish.nudge {
   .hud-controls .rep-slot.is-new::after {
     bottom: 2px;
   }
+}
+
+/* ---------- Tasks, the twist, stars (CONCEPT.md §4.8, §4.9) ---------- */
+.notice-tasks,
+.notice-twist {
+  border-left: 6px solid var(--accent);
+}
+
+.notice-twist {
+  border-left-color: var(--blue);
+}
+
+.task-list {
+  margin: 0;
+  padding: 0 10px 8px;
+  list-style: none;
+}
+
+.task {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: baseline;
+  padding: 3px 0;
+  font-size: 14px;
+}
+
+.task-mark {
+  width: 14px;
+  font-weight: 700;
+}
+
+.task-title {
+  font-weight: 700;
+}
+
+.task-line {
+  margin-left: auto;
+  color: var(--paper-muted);
+  font-size: 13px;
+}
+
+.task-done .task-mark,
+.task-done .task-line {
+  color: var(--truth-0);
+}
+
+.task-failed .task-mark,
+.task-failed .task-line {
+  color: var(--truth-2);
+}
+
+.task-count {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.twist-lead {
+  font-weight: 700;
+}
+
+.summary-events .good {
+  color: var(--truth-0);
+}
+
+.outcome-stars {
+  margin: 4px 0 12px;
+}
+
+.outcome-stars .stars {
+  color: var(--accent);
+  font-size: 34px;
+  letter-spacing: 4px;
+  line-height: 1;
+}
+
+.outcome-stars ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--paper-muted);
+}
+
+/* A missed star is pale, a won one bold. */
+.outcome-stars li {
+  opacity: 0.6;
+}
+
+.outcome-stars li.ok {
+  color: var(--paper-ink);
+  font-weight: 700;
+  opacity: 1;
+}
+
+.outcome-stars .record {
+  margin: 8px 0 0;
+  color: var(--paper-muted);
+}
+
+.outcome-stars .record.new {
+  color: var(--truth-1);
+  font-weight: 700;
+}
+
+.mode-record {
+  color: var(--accent);
+  font-weight: 700;
 }

@@ -43,7 +43,9 @@
       "save": {
         "turnLimit": 46,
         "rivalStoriesMax": 4,
-        "assignFocus": 0.6
+        "assignFocus": 0.6,
+        "electionPivot": 0.6,
+        "taskRewardMul": 0.6
       }
     }
   }

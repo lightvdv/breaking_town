@@ -33,6 +33,14 @@ import {
   tensionLevel,
   arcInfo,
   withDifficulty,
+  scoreOf,
+  taskOf,
+  taskProgress,
+  taskReward,
+  electionLeader,
+  runningTwist,
+  twistOf,
+  type TaskState,
   forecastTurn,
   type Forecast,
   answerOffer,
@@ -85,6 +93,7 @@ import { loadSave, writeSave } from './save';
 import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
 import { pendingNotes, unlockDay, type Feature } from './guide';
+import { recordOf, starLine, submitRecord } from './records';
 import { characterLine, portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
   priceLabels,
@@ -212,6 +221,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (used.some((n, i) => n > slots[i])) drafts = new Map();
   }
   let report: TurnReport | null = saved?.report ?? null;
+  /** The game just ended with a result better than the record (CONCEPT.md §4.8). */
+  let newRecord = false;
   /** A novice's game opens the paper's controls day by day (CONCEPT.md §7.3 «Постепенное открытие»). */
   let guided = saved ? saved.guided : settings.experience === 'novice';
   /** A control is there for a veteran from the start, for a novice from its day. */
@@ -356,13 +367,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const rivalNotice = h('section', { class: 'notice notice-rival', hidden: true, role: 'status' });
   const staffNotice = h('section', { class: 'notice notice-staff', hidden: true, role: 'status' });
   const offerNotice = h('section', { class: 'notice notice-offer', hidden: true, role: 'status' });
+  // Tasks of the game and the mid-game twist (CONCEPT.md §4.8, §4.9).
+  const tasksNotice = h('section', { class: 'notice notice-tasks', hidden: true, role: 'status' });
+  const twistNotice = h('section', { class: 'notice notice-twist', hidden: true, role: 'status' });
   // The folded issue: a newspaper over the city; a tap unfolds it.
   const issueFab = h(
     'button',
     { class: 'issue-fab', title: 'Вернуться к выпуску', 'aria-label': 'Вернуться к выпуску', hidden: true, onclick: () => openIssue() },
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
   );
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, reconcileNotice, staffNotice, offerNotice, rivalNotice, paper));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, rivalNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -685,6 +699,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     reporterBar.c = c;
     state = createGame(c, seed, mode, settings.difficulty);
     guided = settings.experience === 'novice';
+    newRecord = false;
     drafts = new Map();
     report = null;
     error = '';
@@ -745,6 +760,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     try {
       report = playTurn(state, c, decision);
       error = '';
+      // A won game may beat the record of its mode and difficulty.
+      if (state.outcome?.result === 'win') newRecord = submitRecord(state.mode, state.difficulty, { stars: scoreOf(state, c).stars, days: report.turn });
       drafts = new Map();
       details.clear();
       // The exposure and reconciliation notices wait for the start of the next turn.
@@ -835,6 +852,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
     cutscene.parentElement!.classList.remove('in-cutscene');
   }
 
+  /** The twist's news for the day's summary: it began, the town elected a mayor, the audit ended. */
+  function twistLines(r: TurnReport): string[] {
+    const t = state.twist;
+    if (!r.twist || !t) return [];
+    const def = twistOf(c, t.id);
+    if (r.twist.started) return [`Начинается: ${def.title.toLowerCase()}`];
+    if (t.result === 'peacemaker' || t.result === 'hardliner') return [`Выборы: новый мэр — ${mayorName()}`];
+    if (def.kind === 'governor') return ['Губернатор уехал'];
+    return [t.result === 'passed' ? `${def.title} пройдена` : `${def.title} провалена: бюджет урезан`];
+  }
+
   /**
    * The day's summary after the scenes (CONCEPT.md §7.3): the main story, what it brought and what
    * happened in town. It stays until the player presses «Следующий день» (or Enter).
@@ -847,6 +875,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...r.deals.broken.map((x) => h('li', { class: 'bad' }, `Сделка «${x}» сорвана`)),
       ...r.staff.quit.map((id) => h('li', { class: 'bad' }, `${reporterOf(c, id).name} ${reporterOf(c, id).female ? 'уволилась' : 'уволился'}`)),
       ...(r.rival?.cured ? [h('li', {}, `Опровержения разубедили ${r.rival.cured} ${peopleWord(r.rival.cured)}`)] : []),
+      ...r.tasks.done.map((id) => h('li', { class: 'good' }, `✓ Задание выполнено: ${taskOf(c, id).title} (+${taskReward(c, taskOf(c, id))} ₽)`)),
+      ...r.tasks.failed.map((id) => h('li', { class: 'bad' }, `✗ Задание провалено: ${taskOf(c, id).title}`)),
+      ...twistLines(r).map((x) => h('li', {}, x)),
     ];
     return new Promise((done) => {
       const finish = () => {
@@ -1185,6 +1216,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('div', { class: 'day' }, `День ${state.turn}`),
       ...state.todayEvents.map((e) => h('div', { class: 'event' }, `• ${e}`)),
       ...(rec ? [h('div', { class: 'event peace' }, `☮ Примирение: ${pairNames(rec.pair, ' и ')} · ещё ${rec.turnsLeft} ${turnsWord(rec.turnsLeft)}`)] : []),
+      ...(mayorName() ? [h('div', { class: 'event' }, `Мэр: ${mayorName()}`)] : []),
     );
   }
 
@@ -1194,6 +1226,95 @@ export function mountApp(root: HTMLElement, base: Content): void {
       .join(sep);
   const turnsWord = (n: number) => (n === 1 ? 'ход' : n < 5 ? 'хода' : 'ходов');
   const peopleWord = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? 'человека' : 'человек');
+
+  /** The mayor elected mid-game, if any. */
+  const mayorName = () => {
+    const t = state.twist;
+    if (!t || (t.result !== 'peacemaker' && t.result !== 'hardliner')) return null;
+    return twistOf(c, t.id).candidates?.[t.result === 'peacemaker' ? 0 : 1] ?? null;
+  };
+  const daysWord = (n: number) => plural(n, 'день', 'дня', 'дней');
+
+  /** Where a task stands, in a few words: «3 из 8», «сейчас 52%», «ещё 4 дня». */
+  function taskLine(t: TaskState): string {
+    const def = taskOf(c, t.id);
+    if (t.status === 'done') return `выполнено · +${taskReward(c, def)} ₽`;
+    if (t.status === 'failed') return def.penalty ? `провалено · бюджет −${def.penalty} ₽ в день` : 'провалено';
+    const p = taskProgress(state, c, t);
+    const left = t.untilTurn - state.turn + 1;
+    const days = `${left > 1 ? `ещё ${left} ${daysWord(left)}` : 'последний день'}`;
+    const ch = def.check.type;
+    const now =
+      ch === 'noExposure' || ch === 'closed'
+        ? ''
+        : ch === 'cityBelow'
+          ? `сейчас: ${cityStage().name.toLowerCase()} · `
+        : ch === 'trust' || ch === 'mood'
+          ? `сейчас ${p.value}% · `
+          : `${Math.max(0, p.value)} из ${p.target} · `;
+    return `${now}${days} · +${taskReward(c, def)} ₽`;
+  }
+
+  /** The game's tasks: folded to one line by default, like the rival's plaque (CONCEPT.md §4.8). */
+  function renderTasks(): void {
+    const list = state.tasks.filter((t) => t.status === 'active' || t.endTurn === state.turn - 1);
+    tasksNotice.hidden = !list.length || searching || !!state.outcome;
+    if (tasksNotice.hidden) return;
+    const own = state.tasks.filter((t) => !taskOf(c, t.id).twist);
+    const giver = state.mode === 'save' ? 'Задания редакции' : 'Задания «Медиа-Плюс»';
+    const icon = h('img', { src: `${assetBase}sprites/ui/task.png`, alt: '', width: 24, height: 24 });
+    const toggle = (open: boolean) => (e: Event) => {
+      e.stopPropagation();
+      settings.tasksOpen = open;
+      saveSettings(settings);
+      render();
+    };
+    const doneCount = `${own.filter((t) => t.status === 'done').length} из ${own.length}`;
+    tasksNotice.classList.toggle('folded', !settings.tasksOpen);
+    if (!settings.tasksOpen) {
+      tasksNotice.replaceChildren(
+        h('button', { class: 'rival-toggle', onclick: toggle(true) }, icon, h('span', {}, giver), h('span', { class: 'rival-count task-count' }, doneCount), h('span', { class: 'chip-arrow' }, '▾')),
+      );
+      return;
+    }
+    tasksNotice.replaceChildren(
+      h('div', { class: 'notice-head' }, icon, h('b', {}, giver), h('span', { class: 'rival-stats' }, `выполнено ${doneCount}`), h('button', { class: 'rival-hide', title: 'Свернуть', 'aria-label': 'Свернуть', onclick: toggle(false) }, '▴')),
+      h(
+        'ul',
+        { class: 'task-list' },
+        ...list.map((t) =>
+          h(
+            'li',
+            { class: `task task-${t.status}` },
+            h('span', { class: 'task-mark' }, t.status === 'done' ? '✓' : t.status === 'failed' ? '✗' : '○'),
+            h('span', { class: 'task-title' }, taskOf(c, t.id).title),
+            h('span', { class: 'task-line' }, taskLine(t)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /** The mid-game twist while it runs: what it is, how long, and who would win the election today. */
+  function renderTwist(): void {
+    const t = runningTwist(state);
+    twistNotice.hidden = !t || searching || !!state.outcome;
+    if (!t || twistNotice.hidden) return;
+    const def = twistOf(c, t.id);
+    const left = t.untilTurn - state.turn;
+    const icon = h('img', { src: `${assetBase}sprites/ui/${def.kind === 'election' ? 'ballot' : def.kind}.png`, alt: '', width: 24, height: 24 });
+    const when =
+      def.kind === 'election' ? (left > 1 ? `голосование через ${left} ${daysWord(left)}` : 'голосование завтра') : def.kind === 'governor' ? `ещё ${left} ${daysWord(left)}` : 'задание — в списке заданий';
+    const lead =
+      def.kind === 'election' && def.candidates
+        ? h('p', { class: 'notice-note twist-lead' }, `Если бы голосовали сегодня, победил бы ${def.candidates[electionLeader(state, c) === 'peacemaker' ? 0 : 1]}: город ${electionLeader(state, c) === 'peacemaker' ? 'спокоен' : 'напуган'}.`)
+        : null;
+    twistNotice.replaceChildren(
+      h('div', { class: 'notice-head' }, icon, h('b', {}, def.title), h('span', { class: 'rival-stats' }, when)),
+      h('p', { class: 'notice-note' }, def.text),
+      ...(lead ? [lead] : []),
+    );
+  }
 
   /** The novice's notes, one at a time: the day's new control, then what is on screen for the first time. */
   function renderGuide(): void {
@@ -2350,6 +2471,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function upkeepLabel(x: UpkeepItem): string {
     if (x.kind === 'channel') return `Содержание: ${channelOf(c, x.id).name}`;
     if (x.kind === 'salary') return `Зарплата: ${reporterOf(c, x.id).name}`;
+    if (x.kind === 'budget') return 'Урезанный бюджет (проверка провалена)';
     return `Расследование: ${reporterOf(c, x.id).name}`;
   }
 
@@ -2746,8 +2868,23 @@ export function mountApp(root: HTMLElement, base: Content): void {
     modalLayer.querySelector('.modal-body')!.scrollTop = scroll;
   }
 
+  /** The game's stars and what each was for (CONCEPT.md §4.8), and whether it is a new record. */
+  function outcomeStars(): HTMLElement {
+    const s = scoreOf(state, c);
+    const row = (ok: boolean, text: string) => h('li', { class: ok ? 'ok' : '' }, `${ok ? '★' : '☆'} ${text}`);
+    const best = recordOf(state.mode, state.difficulty);
+    return h(
+      'div',
+      { class: 'outcome-stars' },
+      h('div', { class: 'stars' }, starLine(s.stars)),
+      h('ul', {}, row(s.win, 'Победа'), row(s.tasks, 'Все задания выполнены'), row(s.clean, 'Ни одного разоблачения')),
+      newRecord ? h('p', { class: 'record new' }, 'Новый рекорд!') : best ? h('p', { class: 'record' }, `Рекорд: ${starLine(best.stars)} · ${best.days} ${daysWord(best.days)}`) : null,
+    );
+  }
+
   function renderOutcome(): void {
-    if (!state.outcome || busy) {
+    // The main menu covers the finished game: its result is not shown over it.
+    if (!state.outcome || busy || titleOpen) {
       outcomeLayer.replaceChildren();
       return;
     }
@@ -2758,6 +2895,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('h2', {}, state.outcome.result === 'win' ? 'Победа' : 'Поражение'),
         h('p', {}, outcomeText(state.outcome, state.mode)),
         h('p', { class: 'muted' }, `Сыграно ходов: ${Math.min(state.turn - 1, c.balance.turnLimit)}. Город: ${cityStage().name.toLowerCase()}.`),
+        outcomeStars(),
         h(
           'div',
           { class: 'outcome-actions' },
@@ -2788,6 +2926,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderLetters();
     renderOffer();
     renderRival();
+    renderTwist();
+    renderTasks();
     renderGuide();
     renderModal();
     renderOutcome();
@@ -2904,7 +3044,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('img', { src: `${assetBase}sprites/intro/${art}.png`, alt: '', width: 256, height: 144 }),
         h('b', {}, title),
         h('span', {}, text),
+        // The record of this mode at the chosen difficulty (CONCEPT.md §4.8).
+        h('small', { class: 'mode-record' }, recordLine(mode)),
       );
+    const recordLine = (mode: GameMode) => {
+      const r = recordOf(mode, settings.difficulty);
+      return r ? `Рекорд: ${starLine(r.stars)} · ${r.days} ${daysWord(r.days)}` : 'Рекорда пока нет';
+    };
     // Difficulty (CONCEPT.md §4.6): remembered in the settings for the next games.
     const levels = h(
       'div',

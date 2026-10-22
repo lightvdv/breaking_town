@@ -1,6 +1,7 @@
 import { chance, int, pick, weightedPick, type RngState } from './rng';
 import { clamp, conflictsStarted, groupOf } from './lookup';
 import { isRecent } from './reporters';
+import { twistMods } from './twists';
 import type { CardTemplate, Content, GameState, GroupId, Incident } from './types';
 
 /**
@@ -82,10 +83,12 @@ export function advanceRelations(state: GameState, c: Content, rng: RngState): {
   const notes: string[] = [];
   const incidents: Incident[] = [];
   const active = state.residents.filter((r) => r.status === 'active');
+  // The mayor elected mid-game changes how the town lives with its quarrels (CONCEPT.md §4.9).
+  const mayor = twistMods(state, c);
 
   for (const key of pairKeys(c)) {
     const t = state.tension[key] ?? startTension(c, key);
-    state.tension[key] = clamp(t + (startTension(c, key) - t) * b.tensionDecay, 0, 100);
+    state.tension[key] = clamp(t + (startTension(c, key) - t) * Math.min(1, b.tensionDecay * mayor.decayMul), 0, 100);
   }
 
   // The mayor steps in when a conflict gets out of hand.
@@ -94,9 +97,9 @@ export function advanceRelations(state: GameState, c: Content, rng: RngState): {
     addTension(state, rec.pair, -b.reconcileDrop);
     rec.turnsLeft--;
     if (rec.turnsLeft <= 0) state.reconciliation = null;
-  } else if (state.turn >= state.reconcileReadyTurn) {
+  } else if (mayor.reconcile && state.turn >= state.reconcileReadyTurn) {
     const worst = pairKeys(c).reduce((x, y) => ((state.tension[y] ?? 0) > (state.tension[x] ?? 0) ? y : x));
-    if ((state.tension[worst] ?? 0) >= b.reconcileThreshold) {
+    if ((state.tension[worst] ?? 0) >= b.reconcileThreshold - mayor.reconcileDrop) {
       state.reconciliation = { pair: worst, turnsLeft: b.reconcileTurns, startedTurn: state.turn };
       state.reconcileReadyTurn = state.turn + b.reconcileCooldown;
       addTension(state, worst, -b.reconcileDrop);
@@ -132,7 +135,7 @@ export function advanceRelations(state: GameState, c: Content, rng: RngState): {
     if (incidents.length >= b.incidentsMax) break;
     const t = state.tension[key];
     if (t < friction) continue;
-    const odds = b.incidentChance * (0.25 + (0.75 * (t - friction)) / (100 - friction));
+    const odds = b.incidentChance * mayor.incidentMul * (0.25 + (0.75 * (t - friction)) / (100 - friction));
     if (!chance(rng, odds)) continue;
     const pair: [GroupId, GroupId] = chance(rng, 0.5) ? pairOf(key) : [pairOf(key)[1], pairOf(key)[0]];
     const all = c.cards.filter((x) => x.source === 'event' && fits(x, pair));

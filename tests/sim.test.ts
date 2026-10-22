@@ -7,6 +7,8 @@ const content = {
   balance: { ...realContent.balance, conflictStartTurn: 1, rivalStartTurn: { destroy: 1, save: 1 }, factCheckStartTurn: 1 },
 };
 import { snapshotPeople, updatePeople } from '../src/sim/people';
+import { giveTask, scoreOf, taskOf, updateTasks } from '../src/sim/tasks';
+import { twistMods } from '../src/sim/twists';
 import {
   averageTrust,
   createGame,
@@ -1146,5 +1148,75 @@ describe('gentle first days (CONCEPT.md §4.7)', () => {
         }
       }
     }
+  });
+});
+
+describe('tasks and stars (CONCEPT.md §4.8)', () => {
+  it('gives the mode its tasks on their day, pays done ones and fails broken ones', () => {
+    const b = content.balance;
+    for (const mode of ['destroy', 'save'] as const) {
+      const s = createGame(content, 11, mode);
+      while (s.turn < b.taskStartTurn) playTurn(s, content, simpleDecision(s, 'none'));
+      const own = s.tasks.filter((t) => !taskOf(content, t.id).twist);
+      expect(own).toHaveLength(b.taskCount);
+      expect(new Set(own.map((t) => t.id)).size).toBe(b.taskCount);
+      for (const t of own) expect([undefined, mode]).toContain(taskOf(content, t.id).mode);
+    }
+    // A reach task is done the day its check holds and pays its reward.
+    const s = createGame(content, 12);
+    s.tasks = [];
+    giveTask(s, content, 'money_destroy');
+    s.turn++;
+    s.money = 10_000;
+    const money = s.money;
+    const r = updateTasks(s, content, []);
+    expect(r.done).toEqual(['money_destroy']);
+    expect(s.money).toBe(money + Math.round(taskOf(content, 'money_destroy').reward * content.balance.taskRewardMul));
+    // A keep task fails on the first exposure.
+    giveTask(s, content, 'clean_destroy');
+    s.turn++;
+    expect(updateTasks(s, content, [{ title: 'x' } as never]).failed).toEqual(['clean_destroy']);
+  });
+
+  it('stars: a win, all tasks, a clean game; a lost game has none', () => {
+    const s = createGame(content, 13);
+    s.tasks = [{ id: 'money_destroy', startTurn: 1, untilTurn: 5, status: 'done', base: 0 }];
+    s.exposedTotal = 0;
+    s.outcome = { result: 'win', reason: 'cityDestroyed' };
+    expect(scoreOf(s, content).stars).toBe(3);
+    s.exposedTotal = 2;
+    expect(scoreOf(s, content).stars).toBe(2);
+    s.outcome = { result: 'lose', reason: 'bankrupt' };
+    expect(scoreOf(s, content).stars).toBe(0);
+  });
+});
+
+describe('the mid-game twist (CONCEPT.md §4.9)', () => {
+  it('begins on its day; the election picks a mayor by mood, the audit gives a task with a penalty', () => {
+    const b = content.balance;
+    const kinds = new Set<string>();
+    for (let seed = 1; seed <= 12; seed++) {
+      const s = createGame(content, seed);
+      while (s.turn < b.twistTurn && !s.outcome) playTurn(s, content, simpleDecision(s, 'none'));
+      if (s.outcome) continue;
+      expect(s.twist?.startTurn).toBe(b.twistTurn);
+      kinds.add(content.twists.find((t) => t.id === s.twist!.id)!.kind);
+    }
+    expect(kinds.size).toBeGreaterThan(1);
+    // A gloomy town elects the hardliner: tension fades slower and nobody reconciles.
+    const s = createGame(content, 3);
+    s.twist = { id: 'election', startTurn: s.turn, untilTurn: s.turn, result: null };
+    for (const r of s.residents) r.mood = 0.1;
+    s.metrics.mood = 0.1;
+    playTurn(s, content, simpleDecision(s, 'none'));
+    expect(s.twist.result).toBe('hardliner');
+    expect(twistMods(s, content).reconcileDrop).toBeLessThan(0);
+    // A failed audit cuts the budget for the rest of the game.
+    const a = createGame(content, 4);
+    giveTask(a, content, 'audit_city');
+    a.tasks[a.tasks.length - 1].untilTurn = a.turn;
+    a.turn++;
+    updateTasks(a, content, []);
+    expect(a.budgetCut).toBe(taskOf(content, 'audit_city').penalty);
   });
 });

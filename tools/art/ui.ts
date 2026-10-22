@@ -362,7 +362,52 @@ function offer(): Raster {
   return outline(r);
 }
 
+/** A task: a clipboard with a tick (CONCEPT.md §4.8). */
+function task(): Raster {
+  const r = new Raster(16, 16);
+  r.rect(3, 2, 10, 13, 'sand');
+  r.rect(6, 1, 4, 3, 'grey');
+  r.art(5, 6, ['......g', '.....g.', 'g...g..', '.g.g...', '..g....'], { g: 'darkGreen' });
+  r.rect(5, 12, 6, 1, 'grey');
+  return outline(r);
+}
+
+/** The election: a ballot going into a box (CONCEPT.md §4.9). */
+function ballot(): Raster {
+  const r = new Raster(16, 16);
+  r.rect(4, 2, 8, 6, 'white');
+  r.rect(6, 4, 4, 1, 'grey');
+  r.rect(2, 8, 12, 7, 'blue');
+  r.rect(5, 8, 6, 1, 'ink');
+  r.rect(2, 10, 12, 1, 'navyBlue');
+  return outline(r);
+}
+
+/** The audit: a magnifying glass over a page. */
+function audit(): Raster {
+  const r = new Raster(16, 16);
+  r.rect(2, 2, 9, 11, 'sand');
+  r.rect(4, 4, 5, 1, 'grey');
+  r.rect(4, 6, 5, 1, 'grey');
+  r.art(7, 7, ['.sss.', 's...s', 's...s', 's...s', '.sss.'], { s: 'slate' });
+  r.rect(8, 8, 3, 3, 'cyan');
+  r.art(11, 11, ['b..', '.b.', '..b'], { b: 'brown' });
+  return outline(r);
+}
+
+/** The governor's visit: a crown. */
+function governor(): Raster {
+  const r = new Raster(16, 16);
+  r.art(2, 4, ['a....a....a.', 'aa..aaa..aa.', 'aaaaaaaaaaa.', 'aaaaaaaaaaa.', 'aarraaarraa.', 'aaaaaaaaaaa.'], { a: 'amber', r: 'red' });
+  r.rect(2, 10, 11, 2, 'orange');
+  return outline(r);
+}
+
 export const uiIcons: Record<string, () => Raster> = {
+  task,
+  ballot,
+  audit,
+  governor,
   rival,
   offer,
   cart,

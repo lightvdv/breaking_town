@@ -399,6 +399,23 @@ export interface Balance {
    * `conflictStartTurn`, the rival prints from `rivalStartTurn` (by mode), lies are checked from `factCheckStartTurn`.
    */
   conflictStartTurn: number;
+  /** Tasks (CONCEPT.md §4.8): how many a game gets and on which day. */
+  taskCount: number;
+  taskStartTurn: number;
+  /** Scales every task's reward (and the audit's premium) for balance by difficulty. */
+  taskRewardMul: number;
+  /** The mid-game twist (CONCEPT.md §4.9): its day; the election's mood line (at or above it the peacemaker wins). */
+  twistTurn: number;
+  electionPivot: number;
+  /** The new mayor for the rest of the game: how fast tension fades, how often incidents happen, reconciliation. */
+  peacemakerDecayMul: number;
+  peacemakerReconcileDrop: number;
+  hardlinerDecayMul: number;
+  hardlinerIncidentMul: number;
+  hardlinerReconcileRise: number;
+  /** The governor's visit: stricter fact-checkers, and the town gets help every day (mood). */
+  governorCheckerMul: number;
+  governorMood: number;
   rivalStartTurn: Record<GameMode, number>;
   factCheckStartTurn: number;
   /** Pressure a published stage adds per distortion step, by placement (brief, article, front page). */
@@ -635,6 +652,74 @@ export interface Balance {
   };
 }
 
+// ---------- Tasks and the mid-game twist (CONCEPT.md §4.8, §4.9) ----------
+
+/** What a task checks, after every turn. */
+export type TaskCheck =
+  | { type: 'closed'; building: BuildingType }
+  | { type: 'left'; group: GroupId; share: number }
+  | { type: 'protesters'; count: number }
+  | { type: 'readers'; count: number }
+  | { type: 'readersGain'; count: number }
+  | { type: 'money'; amount: number }
+  | { type: 'noExposure' }
+  | { type: 'trust'; min: number }
+  | { type: 'mood'; min: number }
+  | { type: 'debunks'; count: number }
+  | { type: 'cityDrop'; amount: number }
+  | { type: 'cityBelow'; index: number }
+  | { type: 'scared'; count: number };
+
+export interface TaskDef {
+  id: string;
+  title: string;
+  /** Only in this mode; none = both. */
+  mode?: GameMode;
+  /** reach = done once the check holds before the deadline; keep = done if it holds every day until it. */
+  kind: 'reach' | 'keep';
+  check: TaskCheck;
+  days: number;
+  /** Money paid when it is done. */
+  reward: number;
+  /** A twist's task (the audit): never among the ordinary tasks; failing it costs this much upkeep a day. */
+  penalty?: number;
+  twist?: boolean;
+}
+
+export interface TaskState {
+  id: string;
+  startTurn: number;
+  /** The last day it can be done on. */
+  untilTurn: number;
+  status: 'active' | 'done' | 'failed';
+  /** The value the check counts from (debunks, readers or the city index when it was given). */
+  base: number;
+  /** The day it was done or failed. */
+  endTurn?: number;
+}
+
+export interface TwistDef {
+  id: string;
+  /** election = the town chooses a mayor; audit = a check with a task; governor = a visit. */
+  kind: 'election' | 'audit' | 'governor';
+  mode?: GameMode;
+  title: string;
+  text: string;
+  days: number;
+  /** The audit's task (a `twist` task). */
+  task?: string;
+  /** Election: the candidates' names, peacemaker first. */
+  candidates?: [string, string];
+}
+
+export interface TwistState {
+  id: string;
+  startTurn: number;
+  untilTurn: number;
+  /** Election: who won; audit: passed or failed; governor: passed. Null while it runs. */
+  result: 'peacemaker' | 'hardliner' | 'passed' | 'failed' | null;
+}
+
 export interface Content {
   groups: GroupDef[];
   channels: ChannelDef[];
@@ -646,6 +731,8 @@ export interface Content {
   offers: OfferDef[];
   people: PersonDef[];
   difficulties: DifficultyDef[];
+  tasks: TaskDef[];
+  twists: TwistDef[];
   letters: LetterTemplates;
   balance: Balance;
 }
@@ -958,6 +1045,14 @@ export interface GameState {
   /** Reactions to the last turn's news, by resident id (for the UI). */
   lastReactions: Record<number, Reaction>;
   todayEvents: string[];
+  /** Tasks of this game (CONCEPT.md §4.8): the ordinary ones and the audit's. */
+  tasks: TaskState[];
+  /** Stories of ours exposed this game: a clean game earns a star. */
+  exposedTotal: number;
+  /** The mid-game twist (CONCEPT.md §4.9), once it began. */
+  twist: TwistState | null;
+  /** Upkeep a day added by a failed audit. */
+  budgetCut: number;
   outcome: Outcome | null;
 }
 
@@ -987,7 +1082,7 @@ export interface PublicationReport {
 
 /** One line of the per-turn expenses: a channel, a reporter's salary or a running investigation. */
 export interface UpkeepItem {
-  kind: 'channel' | 'salary' | 'investigation';
+  kind: 'channel' | 'salary' | 'investigation' | 'budget';
   /** Channel id or reporter id. */
   id: string;
   amount: number;
@@ -1044,6 +1139,10 @@ export interface TurnReport {
   events: string[];
   notes: string[];
   outcome: Outcome | null;
+  /** Tasks done and failed this turn (ids) and the money they paid. */
+  tasks: { done: string[]; failed: string[]; reward: number };
+  /** The twist began or ended this turn. */
+  twist?: { started: boolean; ended: boolean };
   /** Save mode: what the rival printed this turn and how it stands now. */
   rival?: RivalReport;
 }

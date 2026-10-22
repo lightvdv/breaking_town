@@ -52,6 +52,8 @@ const firstSeen: Record<string, (v: GuideView) => boolean> = {
   arc: (v) => v.state.hand.some((x) => !!templateOf(v.c, x.templateId).arc),
   offer: (v) => !!v.state.offer,
   letters: (v) => v.state.letters.length > 0,
+  tasks: (v) => v.state.tasks.length > 0,
+  twist: (v) => v.state.twist !== null && v.state.twist.result === null,
   investigation: (v) => v.state.hand.some((x) => templateOf(v.c, x.templateId).source === 'investigation'),
 };
 

@@ -25,10 +25,12 @@ export interface Settings {
   notesSeen: string[];
   /** The novice's notes are unfolded; folded (the default) they are one line until opened. */
   guideOpen: boolean;
+  /** The tasks plaque is unfolded (the default); folded it is one line. */
+  tasksOpen: boolean;
 }
 
 const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
-const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, experience: 'novice', notesSeen: [], guideOpen: false };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, experience: 'novice', notesSeen: [], guideOpen: false, tasksOpen: true };
 
 export function loadSettings(): Settings {
   try {

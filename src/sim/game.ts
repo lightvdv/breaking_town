@@ -11,6 +11,8 @@ import { advanceArcs, pushArc } from './arcs';
 import { collectIncome } from './economy';
 import { advanceOffers, settleDeals } from './offers';
 import { updateStaff } from './staff';
+import { assignTasks, updateTasks } from './tasks';
+import { advanceTwist, settleAudit } from './twists';
 import { assignPeople, snapshotPeople, updatePeople } from './people';
 import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf } from './lookup';
@@ -94,6 +96,10 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy',
     metrics: { population: 1, employment: 1, economy: 1, mood: 0.6, order: 1, cityIndex: 100, activeResidents: residents.length },
     lastReactions: {},
     todayEvents: [],
+    tasks: [],
+    exposedTotal: 0,
+    twist: null,
+    budgetCut: 0,
     outcome: null,
   };
   state.metrics = computeMetrics(state, c);
@@ -129,13 +135,16 @@ function generateEvents(state: GameState, c: Content, rng: RngState): CardTempla
   return out;
 }
 
-function startTurn(state: GameState, c: Content): string[] {
+function startTurn(state: GameState, c: Content): { notes: string[]; twist: { started: boolean; ended: boolean } } {
   state.turn++;
   // The agency's candidates take other jobs if nobody hires them the same day.
   state.agencyOffer = [];
   state.agencyCalls = 0;
   state.todayEvents = [];
   const notes = advanceCity(state, c, state.rng);
+  // The mid-game twist (CONCEPT.md §4.9): before relations, so a new mayor rules from his first day.
+  const twist = advanceTwist(state, c, state.rng);
+  notes.push(...twist.notes);
   const relations = advanceRelations(state, c, state.rng);
   notes.push(...relations.notes);
   state.todayIncidents = relations.incidents;
@@ -164,7 +173,9 @@ function startTurn(state: GameState, c: Content): string[] {
   for (const card of state.hand) if (card.tier === 3 && ++sensations > c.balance.maxSensations) card.tier = 2;
   for (const f of state.lastFinds) if (f.cardUid !== null) f.tier = state.hand.find((x) => x.uid === f.cardUid)?.tier ?? f.tier;
   state.metrics = computeMetrics(state, c);
-  return notes;
+  // The game's tasks are given on their day (CONCEPT.md §4.8).
+  assignTasks(state, c, state.rng);
+  return { notes, twist: { started: twist.started, ended: twist.ended } };
 }
 
 export function validateDecision(state: GameState, c: Content, d: Decision, mods: Modifiers): void {
@@ -285,7 +296,12 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   state.hand = [];
 
   const tensionMid = { ...state.tension };
-  const notes = startTurn(state, c);
+  state.exposedTotal += exposures.length;
+  const day = startTurn(state, c);
+  const notes = day.notes;
+  // Tasks are settled for the day that ended; the audit ends with its task.
+  const tasks = updateTasks(state, c, exposures);
+  const auditEnded = settleAudit(state, c, tasks.done, tasks.failed);
   // The named residents: what the day did to them, and their letters to the paper (CONCEPT.md §2.2а).
   updatePeople(state, c, rng, peopleBefore, published, exposures);
   state.outcome = checkOutcome(state, c);
@@ -323,6 +339,8 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     events: [...state.todayEvents],
     notes,
     outcome: state.outcome,
+    tasks,
+    ...(day.twist.started || day.twist.ended || auditEnded ? { twist: { started: day.twist.started, ended: day.twist.ended || auditEnded } } : {}),
     ...(state.rival && rivalBefore
       ? {
           rival: {

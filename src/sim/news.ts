@@ -3,6 +3,7 @@ import { leaveCity } from './city';
 import { averageTrust, channelOf, clamp, factCheckStarted, groupOf, templateOf } from './lookup';
 import { addTension, fillTitle, pairKey } from './relations';
 import type { Modifiers } from './modifiers';
+import { twistMods } from './twists';
 import type {
   CardEffect,
   CardInstance,
@@ -177,6 +178,8 @@ export function exposureRiskOf(
       mods.checkerMul *
       defense *
       reconcile *
+      // The governor's visit: the press is watched closely (CONCEPT.md §4.9).
+      twistMods(state, c).checkerMul *
       shield,
     0,
     0.95,

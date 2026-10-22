@@ -81,6 +81,8 @@ export function upkeepItems(state: GameState, c: Content): UpkeepItem[] {
     ...state.reporters.map((id) => ({ kind: 'salary' as const, id, amount: reporterOf(c, id).salary })),
     // Digging dirt costs money every turn: sources, bribes, stakeouts (CONCEPT.md §3.3а).
     ...state.investigations.map((x) => ({ kind: 'investigation' as const, id: x.reporterId, amount: c.balance.investigationCost })),
+    // A failed audit cut the budget for the rest of the game (CONCEPT.md §4.9).
+    ...(state.budgetCut > 0 ? [{ kind: 'budget' as const, id: 'audit', amount: state.budgetCut }] : []),
   ];
 }
 

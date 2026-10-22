@@ -50,6 +50,9 @@ const difficultyIndex = process.argv.indexOf('--difficulty');
 const difficulty = (difficultyIndex >= 0 ? process.argv[difficultyIndex + 1] : 'normal') as Difficulty;
 if (!baseContent.difficulties.some((d) => d.id === difficulty)) throw new Error(`Unknown difficulty ${difficulty}`);
 const content = withDifficulty(baseContent, difficulty, process.argv.includes('save') && process.argv.includes('--mode') ? 'save' : 'destroy');
+// --twist id: every game gets only this mid-game twist (to see what one twist does to the balance).
+const twistIndex = process.argv.indexOf('--twist');
+if (twistIndex >= 0) content.twists = content.twists.filter((t) => t.id === process.argv[twistIndex + 1]);
 // --set key=json (any number): tries a balance value without editing balance.json.
 process.argv.forEach((a, i) => {
   if (a !== '--set') return;

@@ -180,5 +180,19 @@ export function validateContent(c: Content): string[] {
     const iy = c.groups.findIndex((g) => g.id === y);
     if (ix < 0 || iy < 0 || ix >= iy) errors.push(`tensionStart: bad pair key ${key} (two groups in content order)`);
   }
+  // Tasks and twists (CONCEPT.md §4.8, §4.9).
+  for (const mode of ['destroy', 'save'] as const) {
+    if (c.tasks.filter((t) => !t.twist && (!t.mode || t.mode === mode)).length < c.balance.taskCount + 2) errors.push(`too few tasks for ${mode}`);
+    if (!c.twists.some((t) => !t.mode || t.mode === mode)) errors.push(`no twist for ${mode}`);
+  }
+  for (const t of c.tasks) {
+    const ch = t.check;
+    if (ch.type === 'closed' && !c.buildings.some((x) => x.type === ch.building)) errors.push(`task ${t.id}: unknown building ${ch.building}`);
+    if (ch.type === 'left' && !c.groups.some((g) => g.id === ch.group)) errors.push(`task ${t.id}: unknown group ${ch.group}`);
+  }
+  for (const t of c.twists) {
+    if (t.kind === 'audit' && !c.tasks.some((x) => x.id === t.task && x.twist)) errors.push(`twist ${t.id}: needs a twist task`);
+    if (t.kind === 'election' && t.candidates?.length !== 2) errors.push(`twist ${t.id}: needs two candidates`);
+  }
   return errors;
 }

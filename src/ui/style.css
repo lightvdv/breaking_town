@@ -1352,13 +1352,55 @@ button.publish.level-3.bump-up {
   color: var(--paper-muted);
 }
 
-.cutscene.caption-only .letterbox,
-.cutscene.caption-only .cutscene-skip {
+/* The day's summary after the scenes: it waits for «Следующий день». */
+.day-summary {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(520px, calc(100% - 32px));
+  padding: 14px 18px 16px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 rgba(24, 20, 37, 0.55);
+  transform: translateX(-50%);
+  animation: caption-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.day-summary[hidden] {
   display: none;
 }
 
-.cutscene.caption-only .cutscene-caption {
-  bottom: 24px;
+.summary-kicker {
+  color: var(--paper-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.summary-title {
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.summary-events {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 15px;
+}
+
+.summary-events .bad {
+  color: var(--truth-2);
+}
+
+.summary-next {
+  align-self: flex-end;
+  margin-top: 4px;
 }
 
 .morning-chips {
@@ -4002,30 +4044,30 @@ button.publish.level-3.bump-up {
 }
 
 /* ---------- Gradual opening for novices (CONCEPT.md §7.3) ---------- */
+/* Something new: a small yellow dot in the corner, nothing more. */
 .is-new {
   position: relative;
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-  border-radius: 4px;
-  box-shadow: 0 0 0 7px rgba(254, 174, 52, 0.18);
 }
 
 .is-new::after {
-  content: 'Новое';
+  content: '';
   position: absolute;
-  top: -10px;
-  right: -12px;
+  top: -4px;
+  right: -4px;
   z-index: 5;
-  padding: 3px 5px;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font: 700 9px/1 var(--font);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border-radius: 3px;
-  box-shadow: 0 2px 0 rgba(24, 20, 37, 0.35);
-  transform: rotate(6deg);
+  width: 10px;
+  height: 10px;
+  background: #ffe478;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
   pointer-events: none;
+  animation: new-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes new-dot {
+  50% {
+    box-shadow: 0 0 0 4px rgba(255, 228, 120, 0.35);
+  }
 }
 
 .guide-note {

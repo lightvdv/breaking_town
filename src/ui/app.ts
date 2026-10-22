@@ -130,7 +130,6 @@ type Modal =
   | 'newgame'
   | null;
 
-const REACTION_SECONDS = 2.6;
 /** How an upgrade series is called in the upgrades window. */
 const seriesNames: Record<string, string> = { kiosks: 'Киоски' };
 const assetBase = ASSET_BASE;
@@ -384,6 +383,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (e.key === 'Escape' && selected !== null) pick(null);
   });
   // Start-of-turn notice about exposed stories; hovering it shows the cards (CONCEPT.md §7.3).
+  // The day's summary after the scenes; it waits for «Следующий день» (CONCEPT.md §7.3).
+  const daySummary = h('section', { class: 'day-summary', hidden: true, role: 'dialog', 'aria-label': 'Итоги дня' });
   // City cutscene before the issue: letterbox bars and a caption of the bright moment (CONCEPT.md §7.3).
   const cutsceneCaption = h('div', { class: 'cutscene-caption' });
   const cutscene = h(
@@ -400,7 +401,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const titleLayer = h('div', { class: 'title-screen', hidden: true });
   root.replaceChildren(
     hud,
-    h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, cutscene, issue, issueFab),
+    h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, cutscene, daySummary, issue, issueFab),
     tooltip,
     titleLayer,
     modalLayer,
@@ -753,13 +754,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
       busy = true;
       scene?.setState(state, true);
       render();
-      // The morning after the issue (CONCEPT.md §7.3): the camera goes where the main story hit and the
-      // day's result is summed up; then the day's bright moments if there were any, then reporters
-      // look for the next stories.
+      // The morning after the issue (CONCEPT.md §7.3): first the scenes — where the main story hit, then
+      // the day's bright moments if there were any —, then the day's summary, which waits for the
+      // player; then reporters look for the next stories.
       const r = report;
       void (async () => {
-        await playMorning(r);
-        if (r.highlights.length && scene && !settings.skipCutscenes) await playCutscene(r.highlights);
+        if (scene && !settings.skipCutscenes) {
+          await playMorning(r);
+          if (r.highlights.length) await playCutscene(r.highlights);
+        }
+        await showSummary(r);
         if (state.outcome) {
           busy = false;
           render();
@@ -793,6 +797,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
       chip(`${assetBase}sprites/ui/readers.png`, `${signed(readers)} ${plural(Math.abs(readers), 'читатель', 'читателя', 'читателей')}`, readers > 0 ? 'up' : readers < 0 ? 'down' : ''),
       chip(`${assetBase}sprites/ui/money.png`, `${signed(r.moneyDelta)} ₽`, r.moneyDelta > 0 ? 'up' : r.moneyDelta < 0 ? 'down' : ''),
     ];
+    const trust = Math.round(r.trustAfter - r.trustBefore);
+    if (unlocked('framing') && trust !== 0) chips.push(chip(`${assetBase}sprites/ui/reputation.png`, `${signed(trust)}% репутации`, trust > 0 ? 'up' : trust < 0 ? 'down' : ''));
+    const city = Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex);
+    chips.push(
+      chip(
+        `${assetBase}sprites/ui/city_state_${cityStateOf(c, r.metricsAfter.cityIndex)}.png`,
+        `город: ${stageChange(r.metricsBefore.cityIndex, r.metricsAfter.cityIndex)}${city ? (city > 0 ? ' ▲' : ' ▼') : ''}`,
+        // What is good for the town is good for us only when we defend it.
+        city === 0 ? '' : (city > 0) === (state.mode === 'save') ? 'up' : 'down',
+      ),
+    );
     const counts = new Map<Reaction, number>();
     for (const x of Object.values(state.lastReactions)) counts.set(x, (counts.get(x) ?? 0) + 1);
     const ranked = [...counts.entries()].filter(([x]) => x !== 'talk').sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -800,29 +815,63 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h('span', { class: 'morning-chips' }, ...chips);
   }
 
-  /**
-   * The morning after the issue (CONCEPT.md §7.3): the camera flies to where the main story hit and a
-   * caption sums up the day; without cutscenes only the caption shows while the town reacts.
-   */
+  /** The issue's main story: the front page, else the most believed one. */
+  const mainStory = (r: TurnReport) => [...r.publications].sort((a, b) => b.placement - a.placement || b.believed - a.believed)[0];
+
+  /** The morning after the issue (CONCEPT.md §7.3): the camera flies to where the main story hit. */
   async function playMorning(r: TurnReport): Promise<void> {
-    const main = [...r.publications].sort((a, b) => b.placement - a.placement || b.believed - a.believed)[0];
+    const main = mainStory(r);
     cutsceneCaption.className = 'cutscene-caption kind-morning';
     cutsceneCaption.replaceChildren(
       h('span', { class: 'cutscene-kicker' }, `Утро · выпуск № ${r.turn} · ${issueLevelLabels[r.issue.level].toLowerCase()}`),
       h('b', {}, main ? main.title : 'Газета не вышла'),
-      morningChips(r),
     );
     cutsceneCaption.hidden = false;
     cutscene.hidden = false;
     tooltip.hidden = true;
-    const camera = !!scene && !settings.skipCutscenes;
-    cutscene.classList.toggle('caption-only', !camera);
     cutscene.parentElement!.classList.add('in-cutscene');
-    if (camera) await scene!.playMorning(main?.building ?? null);
-    else await new Promise((done) => window.setTimeout(done, REACTION_SECONDS * 1000));
+    await scene!.playMorning(main?.building ?? null);
     cutscene.hidden = true;
-    cutscene.classList.remove('caption-only');
     cutscene.parentElement!.classList.remove('in-cutscene');
+  }
+
+  /**
+   * The day's summary after the scenes (CONCEPT.md §7.3): the main story, what it brought and what
+   * happened in town. It stays until the player presses «Следующий день» (or Enter).
+   */
+  function showSummary(r: TurnReport): Promise<void> {
+    const main = mainStory(r);
+    const events: HTMLElement[] = [
+      ...r.highlights.map((x) => h('li', {}, x.title)),
+      ...r.exposures.map((x) => h('li', { class: 'bad' }, `Разоблачили: «${x.title}»`)),
+      ...r.deals.broken.map((x) => h('li', { class: 'bad' }, `Сделка «${x}» сорвана`)),
+      ...r.staff.quit.map((id) => h('li', { class: 'bad' }, `${reporterOf(c, id).name} ${reporterOf(c, id).female ? 'уволилась' : 'уволился'}`)),
+      ...(r.rival?.cured ? [h('li', {}, `Опровержения разубедили ${r.rival.cured} ${peopleWord(r.rival.cured)}`)] : []),
+    ];
+    return new Promise((done) => {
+      const finish = () => {
+        document.removeEventListener('keydown', onKey);
+        daySummary.hidden = true;
+        done();
+      };
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        finish();
+      };
+      const next = h('button', { class: 'primary big summary-next', onclick: finish }, state.outcome ? 'Чем всё кончилось ▸' : 'Следующий день ▸');
+      daySummary.replaceChildren(
+        h('span', { class: 'summary-kicker' }, `Итоги дня ${r.turn} · выпуск ${issueLevelLabels[r.issue.level].toLowerCase()}`),
+        h('b', { class: 'summary-title' }, main ? main.title : 'Газета не вышла'),
+        morningChips(r),
+        ...(events.length ? [h('ul', { class: 'summary-events' }, ...events)] : []),
+        next,
+      );
+      tooltip.hidden = true;
+      daySummary.hidden = false;
+      document.addEventListener('keydown', onKey);
+      next.focus({ preventScroll: true });
+    });
   }
 
   /** Plays the city cutscene with a caption for each bright moment. */

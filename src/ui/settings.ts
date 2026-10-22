@@ -1,4 +1,5 @@
 import type { Difficulty } from '../sim';
+import { STORAGE_SUFFIX } from '../assets';
 /**
  * Player settings (CONCEPT.md §7.3 «Настройки»): kept in the browser apart from the save, so a new
  * game keeps them. Reads and writes never throw.
@@ -17,7 +18,7 @@ export interface Settings {
   rivalOpen: boolean;
 }
 
-const KEY = 'breaking-town-settings';
+const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
 const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false };
 
 export function loadSettings(): Settings {

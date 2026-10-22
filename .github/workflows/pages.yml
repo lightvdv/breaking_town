@@ -1,38 +1,49 @@
-# Publishes the game to GitHub Pages on every push to master: tests, build, deploy.
 name: Pages
-
+# One GitHub Pages site, two builds:
+#   /breaking_town/      — the beta for testers, built from the commit in .github/beta-commit (frozen);
+#   /breaking_town/dev/  — the latest master, for watching changes.
+# A new beta = put a new commit hash into .github/beta-commit and push.
 on:
   push:
     branches: [master]
   workflow_dispatch:
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
-# One deploy at a time; a newer push cancels the one still waiting.
 concurrency:
   group: pages
   cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - id: beta
+        run: echo "sha=$(tr -d '[:space:]' < .github/beta-commit)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.beta.outputs.sha }}
+          path: beta-src
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm test
-      # The site lives at /<repo>/, so asset URLs get that base (they go through import.meta.env.BASE_URL).
-      - run: npm run build -- --base=/${{ github.event.repository.name }}/
+      - name: Build the dev preview
+        run: |
+          npm run build -- --base=/${{ github.event.repository.name }}/dev/
+          mkdir -p site && mv dist site/dev
+      - name: Build the beta
+        working-directory: beta-src
+        run: |
+          npm ci
+          npm run build -- --base=/${{ github.event.repository.name }}/
+          cp -r dist/. ../site/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
-
+          path: site
   deploy:
     needs: build
     runs-on: ubuntu-latest

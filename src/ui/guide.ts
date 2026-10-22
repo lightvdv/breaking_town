@@ -18,8 +18,6 @@ export interface GuideNote {
   id: string;
   title: string;
   text: string;
-  /** The day of an unlock; firsts have none. */
-  day: number | null;
 }
 
 interface Unlock {
@@ -63,11 +61,11 @@ export function pendingNotes(v: GuideView, seen: string[]): GuideNote[] {
   const out: GuideNote[] = [];
   for (const u of unlocks) {
     if (u.turn[mode] !== v.state.turn || seen.includes(u.id)) continue;
-    out.push({ id: u.id, title: byMode(u.title, mode), text: byMode(u.text, mode), day: u.turn[mode] });
+    out.push({ id: u.id, title: byMode(u.title, mode), text: byMode(u.text, mode) });
   }
   for (const f of firsts) {
     if (seen.includes(f.id) || !firstSeen[f.id]?.(v)) continue;
-    out.push({ id: f.id, title: byMode(f.title, mode), text: byMode(f.text, mode), day: null });
+    out.push({ id: f.id, title: byMode(f.title, mode), text: byMode(f.text, mode) });
   }
   return out;
 }

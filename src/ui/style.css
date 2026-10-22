@@ -4106,23 +4106,6 @@ button.publish.level-3.bump-up {
   transform: rotate(2deg);
 }
 
-.guide-day {
-  min-width: 34px;
-  padding-top: 2px;
-  color: var(--paper-muted);
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1;
-  text-align: center;
-}
-
-.guide-day small {
-  display: block;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .guide-title {
   display: block;
   margin-bottom: 2px;
@@ -4149,17 +4132,6 @@ button.publish.level-3.bump-up {
   font: inherit;
   text-align: left;
   cursor: pointer;
-}
-
-.guide-toggle .guide-day {
-  min-width: 0;
-  padding: 0;
-  font-size: 16px;
-}
-
-.guide-toggle .guide-day small {
-  display: inline;
-  margin-left: 3px;
 }
 
 .guide-toggle .guide-title {

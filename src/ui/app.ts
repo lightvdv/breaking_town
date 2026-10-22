@@ -1208,7 +1208,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       saveSettings(settings);
       render();
     };
-    const day = h('div', { class: 'guide-day' }, ...(n.day !== null ? [String(n.day), h('small', {}, 'день')] : ['!']));
+    // «Подсказка: подача» — no day numbers, the note says what it is about.
+    const head = () => h('b', { class: 'guide-title' }, `Подсказка: ${n.title.charAt(0).toLowerCase()}${n.title.slice(1)}`);
     guideNote.classList.toggle('folded', !settings.guideOpen);
     // Folded (the default): one line with the title; a press unfolds it, and it stays open on later days.
     if (!settings.guideOpen) {
@@ -1216,16 +1217,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'button',
           { class: 'guide-toggle', title: 'Показать подсказку', 'aria-expanded': 'false', onclick: fold(true) },
-          day,
-          h('b', { class: 'guide-title' }, n.title),
+          head(),
           h('span', { class: 'guide-arrow' }, '▾'),
         ),
       );
       return;
     }
     guideNote.replaceChildren(
-      day,
-      h('div', { class: 'guide-text' }, h('b', { class: 'guide-title' }, n.title), n.text),
+      h('div', { class: 'guide-text' }, head(), n.text),
       h('button', { class: 'guide-hide', title: 'Свернуть подсказки', 'aria-expanded': 'true', onclick: fold(false) }, '▴'),
       h(
         'button',

@@ -1202,9 +1202,31 @@ export function mountApp(root: HTMLElement, base: Content): void {
     guideNote.hidden = !notes.length;
     if (!notes.length) return;
     const n = notes[0];
+    const fold = (open: boolean) => (e: Event) => {
+      e.stopPropagation();
+      settings.guideOpen = open;
+      saveSettings(settings);
+      render();
+    };
+    const day = h('div', { class: 'guide-day' }, ...(n.day !== null ? [String(n.day), h('small', {}, 'день')] : ['!']));
+    guideNote.classList.toggle('folded', !settings.guideOpen);
+    // Folded (the default): one line with the title; a press unfolds it, and it stays open on later days.
+    if (!settings.guideOpen) {
+      guideNote.replaceChildren(
+        h(
+          'button',
+          { class: 'guide-toggle', title: 'Показать подсказку', 'aria-expanded': 'false', onclick: fold(true) },
+          day,
+          h('b', { class: 'guide-title' }, n.title),
+          h('span', { class: 'guide-arrow' }, '▾'),
+        ),
+      );
+      return;
+    }
     guideNote.replaceChildren(
-      h('div', { class: 'guide-day' }, ...(n.day !== null ? [String(n.day), h('small', {}, 'день')] : ['!'])),
+      day,
       h('div', { class: 'guide-text' }, h('b', { class: 'guide-title' }, n.title), n.text),
+      h('button', { class: 'guide-hide', title: 'Свернуть подсказки', 'aria-expanded': 'true', onclick: fold(false) }, '▴'),
       h(
         'button',
         {

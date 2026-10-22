@@ -23,10 +23,12 @@ export interface Settings {
   experience: 'novice' | 'veteran';
   /** Notes of the gradual opening already read: they are never shown again, in any game. */
   notesSeen: string[];
+  /** The novice's notes are unfolded; folded (the default) they are one line until opened. */
+  guideOpen: boolean;
 }
 
 const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
-const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, experience: 'novice', notesSeen: [] };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, experience: 'novice', notesSeen: [], guideOpen: false };
 
 export function loadSettings(): Settings {
   try {

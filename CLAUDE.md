@@ -21,6 +21,7 @@ npm run bots -- --trace mixed --seed 3 # one bot game turn by turn
 npm run bots -- --games 200 --mode save # the save mode's strategies (CONCEPT.md §8)
 npm run bots -- --games 200 --difficulty hard # any mode at a difficulty level (CONCEPT.md §4.6)
 npm run bots -- --games 200 --mode save --set saveLoseIndex=71 --set 'rivalStartTurn={"destroy":7,"save":2}'  # try balance values (JSON) without editing balance.json
+npm run bots -- --games 200 --twist election  # every game gets only this mid-game twist (CONCEPT.md §4.9)
 npm run art          # regenerate placeholder pixel art into public/assets (overwrites it)
 ```
 

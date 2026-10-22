@@ -1125,6 +1125,42 @@ button.publish.level-3.bump-up {
   margin: 2px 0 0;
 }
 
+.howto-lead {
+  margin: 0;
+  font-size: 15px;
+}
+
+.howto-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.howto-list li + li {
+  margin-top: 4px;
+}
+
+.howto-step {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.howto-step p {
+  margin: 2px 0 0;
+}
+
+.howto-num {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: bold;
+}
+
 /* ---------- Opening story (CONCEPT.md §1.1) ---------- */
 .intro {
   position: fixed;

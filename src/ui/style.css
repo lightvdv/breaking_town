@@ -4884,3 +4884,320 @@ button.publish.nudge {
     margin: 2px 14px 4px 0;
   }
 }
+
+/* ---------- Campaign map (CONCEPT.md §9) ---------- */
+.campaign-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-deep);
+}
+
+.campaign-screen[hidden] {
+  display: none;
+}
+
+.camp-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--panel);
+}
+
+.camp-top b {
+  font-size: 18px;
+}
+
+.camp-side {
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.camp-side.destroy {
+  background: var(--danger);
+  color: var(--text);
+}
+
+.camp-side.save {
+  background: var(--ok);
+  color: var(--ink);
+}
+
+.camp-diff {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.camp-stars {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.camp-stars small {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.camp-wrap {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.camp-map {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: var(--city-1);
+}
+
+.camp-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.town-pin {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  transform: translate(-50%, -100%);
+  cursor: pointer;
+}
+
+/* The global pressed-button nudge would replace the anchor transform and move the pin away mid-click. */
+.town-pin:active:not(:disabled) {
+  transform: translate(-50%, calc(-100% + 1px));
+}
+
+.town-pin .pin {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(24, 20, 37, 0.75);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+
+.town-pin.final .pin {
+  width: 54px;
+  height: 54px;
+}
+
+.town-pin .lbl {
+  padding: 2px 7px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 rgba(24, 20, 37, 0.4);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.town-pin .pin-stars {
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 0 var(--ink);
+}
+
+.town-pin.locked,
+.town-pin.gated {
+  filter: grayscale(1) brightness(0.8);
+}
+
+.town-pin.now .pin {
+  border-color: var(--accent);
+  animation: town-pulse 1.4s ease-in-out infinite;
+}
+
+.town-pin.sel .lbl {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@keyframes town-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 4px rgba(254, 174, 52, 0.35),
+      0 0 18px var(--accent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 8px rgba(254, 174, 52, 0.15),
+      0 0 26px var(--accent);
+  }
+}
+
+.town-card {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 10px;
+  width: 340px;
+  padding: 16px;
+  overflow: auto;
+  background: var(--panel-2);
+  border-left: 2px solid var(--ink);
+}
+
+.town-art {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 2px solid var(--ink);
+  image-rendering: pixelated;
+}
+
+.town-card h2 {
+  margin: 0;
+  color: var(--accent);
+  font-size: 24px;
+}
+
+.town-type {
+  margin-top: -6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.town-rule {
+  padding: 8px 10px;
+  background: var(--panel);
+  border-left: 4px solid var(--accent);
+  font-size: 14px;
+}
+
+.town-rule b {
+  display: block;
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.town-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  font-size: 14px;
+}
+
+.town-facts > span:nth-child(odd) {
+  color: var(--muted);
+}
+
+.town-bars {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.town-bars i {
+  width: 22px;
+  height: 8px;
+  background: var(--line);
+  border-radius: 2px;
+}
+
+.town-bars i.on {
+  background: var(--danger);
+}
+
+.town-best {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.town-rep,
+.carry-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.town-rep {
+  padding: 8px;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+}
+
+.town-rep .level-chip,
+.carry-item .level-chip {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.town-rep-portrait,
+.carry-portrait {
+  width: 48px;
+  height: 48px;
+  border: 2px solid var(--ink);
+  image-rendering: pixelated;
+}
+
+.town-rep b {
+  display: block;
+}
+
+.town-card .big {
+  margin-top: auto;
+}
+
+@media (max-width: 900px) {
+  .camp-wrap {
+    flex-direction: column;
+    overflow: auto;
+  }
+
+  .camp-map {
+    flex: none;
+    height: 60vw;
+    min-height: 260px;
+  }
+
+  .town-card {
+    width: auto;
+    border-top: 2px solid var(--ink);
+    border-left: 0;
+  }
+
+  .town-pin .pin {
+    width: 30px;
+    height: 30px;
+  }
+
+  .town-pin svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .town-pin .lbl {
+    font-size: 10px;
+  }
+
+  .camp-stars {
+    margin-left: 0;
+  }
+}

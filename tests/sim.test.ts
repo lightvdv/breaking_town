@@ -1245,3 +1245,25 @@ describe('campaign towns (CONCEPT.md §9)', () => {
     expect(levelOf(realContent, staffOf(s, realContent, 'nikitina').xp)).toBe(2);
   });
 });
+
+describe('campaign progress', () => {
+  it('opens towns in a row and gates the final by stars', async () => {
+    const { newCampaign, townState, winTown, campaignStars } = await import('../src/ui/campaign');
+    const camp = newCampaign('destroy', 'normal');
+    const last = realContent.towns.length - 1;
+    expect(townState(realContent, camp, 0)).toBe('now');
+    expect(townState(realContent, camp, 1)).toBe('locked');
+    for (let i = 0; i < last; i++) winTown(realContent, camp, realContent.towns[i].id, { stars: 1, days: 30 });
+    expect(camp.reached).toBe(last);
+    expect(campaignStars(camp)).toBe(last);
+    expect(townState(realContent, camp, last)).toBe('gated');
+    // A replay keeps the better result.
+    winTown(realContent, camp, realContent.towns[0].id, { stars: 3, days: 40 });
+    winTown(realContent, camp, realContent.towns[1].id, { stars: 3, days: 40 });
+    winTown(realContent, camp, realContent.towns[2].id, { stars: 0, days: 10 });
+    expect(campaignStars(camp)).toBe(last + 4);
+    expect(townState(realContent, camp, last)).toBe('now');
+    winTown(realContent, camp, realContent.towns[last].id, { stars: 2, days: 35 });
+    expect(camp.finished).toBe(true);
+  });
+});

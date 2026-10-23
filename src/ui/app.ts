@@ -34,6 +34,8 @@ import {
   arcInfo,
   withDifficulty,
   scoreOf,
+  townDays,
+  withTown,
   levelOf,
   staffOf,
   taskOf,
@@ -71,6 +73,7 @@ import {
   cityStateOf,
   setRivalWatch,
   type GameMode,
+  type Difficulty,
   type CardInstance,
   type Content,
   type ChurnReason,
@@ -96,6 +99,8 @@ import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
 import { pendingNotes, unlockDay, type Feature } from './guide';
 import { recordOf, starLine, submitRecord } from './records';
+import { campaignStars, loadCampaign, newCampaign, saveCampaign, townState, winTown, type Campaign } from './campaign';
+import { drawRegion, drawTownArt, MAP_H, MAP_W, townIcon } from './campaignMap';
 import { aboutLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillTiers, topicLine, type RepStatus } from './reporterBar';
 import {
   priceLabels,
@@ -139,6 +144,8 @@ type Modal =
   | 'settings'
   | 'about'
   | 'newgame'
+  | 'campaignNew'
+  | 'carry'
   | null;
 
 /** How an upgrade series is called in the upgrades window. */
@@ -212,7 +219,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let hasGame = saved !== null && saved.state.turn > 1;
   const urlMode: GameMode = params.get('mode') === 'save' ? 'save' : 'destroy';
   // The game runs on the content of its difficulty (CONCEPT.md §4.6); `c` follows the current game.
-  let c = withDifficulty(base, saved?.state.difficulty ?? settings.difficulty, saved?.state.mode ?? urlMode);
+  /** The content a game runs on: its difficulty's, and in the campaign its town's too (CONCEPT.md §4.6, §9). */
+  const contentFor = (difficulty: Difficulty, mode: GameMode, town: string | null) => {
+    const x = withDifficulty(base, difficulty, mode);
+    return town ? withTown(x, town, mode) : x;
+  };
+  let c = contentFor(saved?.state.difficulty ?? settings.difficulty, saved?.state.mode ?? urlMode, saved?.state.town ?? null);
+  /** The campaign (CONCEPT.md §9): its own storage; the map screen is open over the drifting city. */
+  let campaign: Campaign | null = loadCampaign(base);
+  let campaignOpen = false;
+  let campaignSel = 0;
   let state: GameState = saved?.state ?? createGame(c, seedFromUrl(), urlMode, settings.difficulty);
   let drafts = new Map<number, Draft>(saved?.drafts ?? []);
   // A saved layout that no longer fits the slots (e.g. two front pages from a removed upgrade) is laid out anew.
@@ -426,11 +442,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const modalLayer = h('div', { class: 'modal-layer' });
   const outcomeLayer = h('div', { class: 'modal-layer' });
   const titleLayer = h('div', { class: 'title-screen', hidden: true });
+  const campaignLayer = h('div', { class: 'campaign-screen', hidden: true });
   root.replaceChildren(
     hud,
     h('main', { class: 'stage' }, cityHost, cityEvents, tools, loading, cutscene, daySummary, issue, issueFab),
     tooltip,
     titleLayer,
+    campaignLayer,
     modalLayer,
     outcomeLayer,
   );
@@ -706,11 +724,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     issue.animate(frames, { duration: 320, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' });
   }
 
-  const newGame = (seed = randomSeed(), mode: GameMode = 'destroy') => {
+  const newGame = (seed = randomSeed(), mode: GameMode = 'destroy', town: string | null = null) => {
     hasGame = true;
-    c = withDifficulty(base, settings.difficulty, mode);
+    // A campaign town keeps the campaign's difficulty and starts with the reporter brought along.
+    const difficulty = town && campaign ? campaign.difficulty : settings.difficulty;
+    c = contentFor(difficulty, mode, town);
     reporterBar.c = c;
-    state = createGame(c, seed, mode, settings.difficulty);
+    state = createGame(c, seed, mode, difficulty, town ? { town, ...(campaign?.carry ? { reporters: [campaign.carry] } : {}) } : {});
     guided = settings.experience === 'novice';
     newRecord = false;
     drafts = new Map();
@@ -774,7 +794,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
       report = playTurn(state, c, decision);
       error = '';
       // A won game may beat the record of its mode and difficulty.
-      if (state.outcome?.result === 'win') newRecord = submitRecord(state.mode, state.difficulty, { stars: scoreOf(state, c).stars, days: report.turn });
+      // A won single game may beat the record; a won campaign town opens the next one (CONCEPT.md §4.8, §9).
+      if (state.outcome?.result === 'win' && !state.town) newRecord = submitRecord(state.mode, state.difficulty, { stars: scoreOf(state, c).stars, days: report.turn });
+      if (state.outcome?.result === 'win' && state.town && campaign) {
+        winTown(base, campaign, state.town, { stars: scoreOf(state, c).stars, days: report.turn });
+        saveCampaign(campaign);
+      }
       drafts = new Map();
       details.clear();
       // The exposure and reconciliation notices wait for the start of the next turn.
@@ -1231,7 +1256,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function renderCityEvents(): void {
     const rec = state.reconciliation;
     cityEvents.replaceChildren(
-      h('div', { class: 'day' }, `День ${state.turn}`),
+      h('div', { class: 'day' }, `${state.town ? `${base.towns.find((t) => t.id === state.town)?.name ?? ''} · ` : ''}День ${state.turn}`),
       ...state.todayEvents.map((e) => h('div', { class: 'event' }, `• ${e}`)),
       ...(rec ? [h('div', { class: 'event peace' }, `☮ Примирение: ${pairNames(rec.pair, ' и ')} · ещё ${rec.turnsLeft} ${turnsWord(rec.turnsLeft)}`)] : []),
       ...(mayorName() ? [h('div', { class: 'event' }, `Мэр: ${mayorName()}`)] : []),
@@ -2989,9 +3014,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
       settings: 'Настройки',
       about: 'Об игре',
       newgame: 'Новая игра',
+      campaignNew: 'Новая кампания',
+      carry: 'Кто поедет дальше',
     };
     const body =
-      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'team' ? teamContent() : shopContent();
+      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
     const panel = h(
       'div',
@@ -3020,9 +3047,30 @@ export function mountApp(root: HTMLElement, base: Content): void {
     );
   }
 
+  /** After a game: a single one goes on to the next town or a new game; a campaign town back to the map. */
+  function outcomeButtons(): HTMLElement[] {
+    const win = state.outcome?.result === 'win';
+    if (state.town && campaign) {
+      const i = base.towns.findIndex((t) => t.id === state.town);
+      const last = i === base.towns.length - 1;
+      return [
+        win
+          ? h('button', { class: 'primary big', onclick: () => (last ? openCampaign() : openModal('carry')) }, last ? 'Кампания пройдена ▸' : 'Кто поедет дальше ▸')
+          : h('button', { class: 'primary big', onclick: () => void startTown(i) }, 'Переиграть город'),
+        h('button', { onclick: () => openCampaign() }, 'На карту'),
+      ];
+    }
+    return [
+      win
+        ? h('button', { class: 'primary big', onclick: () => void startGame(state.mode) }, 'Следующий город ▸')
+        : h('button', { class: 'primary big', onclick: () => openModal('newgame') }, 'Новая игра'),
+      h('button', { onclick: () => showTitle() }, 'Главное меню'),
+    ];
+  }
+
   function renderOutcome(): void {
-    // The main menu covers the finished game: its result is not shown over it.
-    if (!state.outcome || busy || titleOpen) {
+    // The main menu and the campaign map cover the finished game: its result is not shown over them.
+    if (!state.outcome || busy || titleOpen || campaignOpen) {
       outcomeLayer.replaceChildren();
       return;
     }
@@ -3037,10 +3085,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'div',
           { class: 'outcome-actions' },
-          state.outcome.result === 'win'
-            ? h('button', { class: 'primary big', onclick: () => void startGame(state.mode) }, 'Следующий город ▸')
-            : h('button', { class: 'primary big', onclick: () => openModal('newgame') }, 'Новая игра'),
-          h('button', { onclick: () => showTitle() }, 'Главное меню'),
+          ...outcomeButtons(),
         ),
       ),
     );
@@ -3075,14 +3120,217 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderModal();
     renderOutcome();
     renderTitle();
+    renderCampaign();
     saveSoon();
   }
+  // ---------- Campaign (CONCEPT.md §9) ----------
+
+  const sideNames: Record<GameMode, string> = { destroy: '«Медиа-Плюс»', save: 'Честная газета' };
+
+  /** The map of the campaign; without one, the choice of a side first. */
+  function openCampaign(): void {
+    if (!campaign) {
+      openModal('campaignNew');
+      return;
+    }
+    const camp = campaign;
+    const next = base.towns.findIndex((_, i) => townState(base, camp, i) === 'now' || townState(base, camp, i) === 'gated');
+    campaignSel = next >= 0 ? next : Math.min(camp.reached, base.towns.length - 1);
+    campaignOpen = true;
+    titleOpen = false;
+    modal = null;
+    issueOpen = false;
+    tooltip.hidden = true;
+    scene?.startTour();
+    render();
+  }
+
+  /** Plays a campaign town; the very first one begins with the side's opening story. */
+  async function startTown(i: number): Promise<void> {
+    if (!campaign) return;
+    const t = base.towns[i];
+    campaignOpen = false;
+    modal = null;
+    titleOpen = false;
+    render();
+    if (i === 0 && !Object.keys(campaign.results).length) await watchIntro(campaign.side);
+    scene?.stopTour();
+    newGame(randomSeed(), campaign.side, t.id);
+  }
+
+  /** The region map with the towns in a row, and the card of the chosen town. */
+  let campaignKey = '';
+  function renderCampaign(): void {
+    campaignLayer.hidden = !campaignOpen || !campaign;
+    if (campaignLayer.hidden || !campaign) {
+      campaignLayer.replaceChildren();
+      campaignKey = '';
+      return;
+    }
+    const camp = campaign;
+    // Rebuilt only when something on it changes: the map canvas is drawn pixel by pixel.
+    const key = JSON.stringify([camp, campaignSel, settings.difficulty]);
+    if (key === campaignKey) return;
+    campaignKey = key;
+    const stars = campaignStars(camp);
+    const need = base.towns.reduce((m, t) => Math.max(m, t.starsToEnter ?? 0), 0);
+    const canvas = h('canvas', { class: 'camp-canvas' });
+    drawRegion(canvas, base.towns);
+    const pins = base.towns.map((t, i) => {
+      const st = townState(base, camp, i);
+      const res = camp.results[t.id];
+      return h(
+        'button',
+        {
+          class: `town-pin ${st}${i === campaignSel ? ' sel' : ''}${t.starsToEnter ? ' final' : ''}`,
+          style: `left: ${(t.map.x / MAP_W) * 100}%; top: ${(t.map.y / MAP_H) * 100}%`,
+          title: t.name,
+          onclick: () => {
+            campaignSel = i;
+            render();
+          },
+        },
+        h('span', { class: 'pin' }),
+        h('span', { class: 'lbl' }, `${i + 1}. ${t.name}`),
+        res ? h('span', { class: 'pin-stars' }, starLine(res.stars)) : null,
+      );
+    });
+    // The pin icons are tiny inline SVGs.
+    pins.forEach((p, i) => (p.querySelector('.pin')!.innerHTML = townIcon(townState(base, camp, i), camp.side, !!base.towns[i].starsToEnter)));
+    campaignLayer.replaceChildren(
+      h(
+        'header',
+        { class: 'camp-top' },
+        h('b', {}, 'Кампания'),
+        h('span', { class: `camp-side ${camp.side}` }, sideNames[camp.side]),
+        h('span', { class: 'camp-diff' }, base.difficulties.find((d) => d.id === camp.difficulty)?.name ?? ''),
+        h('span', { class: 'camp-stars' }, `★ ${stars}`, h('small', {}, camp.finished ? ' · кампания пройдена' : stars < need ? ` · для финала нужно ${need}` : ' · финал открыт')),
+        h('button', { class: 'ghost', onclick: () => openModal('campaignNew') }, 'Новая кампания'),
+        h(
+          'button',
+          {
+            onclick: () => {
+              campaignOpen = false;
+              showTitle();
+            },
+          },
+          '← Меню',
+        ),
+      ),
+      h('div', { class: 'camp-wrap' }, h('div', { class: 'camp-map' }, canvas, ...pins), townCard(campaignSel)),
+    );
+  }
+
+  /** The chosen town: its picture, type, special rule, difficulty, length, the rival, the best result, who comes along. */
+  function townCard(i: number): HTMLElement {
+    const camp = campaign!;
+    const t = base.towns[i];
+    const st = townState(base, camp, i);
+    const res = camp.results[t.id];
+    const art = h('canvas', { class: 'town-art' });
+    drawTownArt(art, t);
+    const pop = t.balance?.population ?? base.balance.population;
+    const rival = rivalNames[camp.side === 'save' ? 'tabloid' : 'guardian'].name;
+    const who = camp.carry ?? { id: base.balance.startReporters[0], xp: 0 };
+    const rep = reporterOf(base, who.id);
+    const action =
+      st === 'done'
+        ? h('button', { class: 'primary big', onclick: () => void startTown(i) }, 'Переиграть ради звёзд')
+        : st === 'now'
+          ? h('button', { class: 'primary big', onclick: () => void startTown(i) }, `Ехать в ${t.name} ▸`)
+          : st === 'gated'
+            ? h('button', { class: 'big', disabled: true }, `Нужно ${t.starsToEnter} ★ (у вас ${campaignStars(camp)})`)
+            : h('button', { class: 'big', disabled: true }, 'Сначала пройдите прошлый город');
+    return h(
+      'aside',
+      { class: 'town-card' },
+      art,
+      h('h2', {}, t.name),
+      h('div', { class: 'town-type' }, `${t.type} · жителей ~${pop}`),
+      h('div', { class: 'town-rule' }, h('b', {}, t.rule.title), t.rule.text),
+      h(
+        'div',
+        { class: 'town-facts' },
+        h('span', {}, 'Сложность'),
+        h('span', { class: 'town-bars' }, ...[1, 2, 3, 4, 5].map((k) => h('i', { class: k <= t.stars ? 'on' : '' }))),
+        h('span', {}, 'Дней'),
+        h('span', {}, String(townDays(t, camp.side))),
+        h('span', {}, 'Против вас'),
+        h('span', {}, `«${rival}»`),
+        ...(res ? [h('span', {}, 'Лучший итог'), h('span', { class: 'town-best' }, `${starLine(res.stars)} · ${res.days} ${daysWord(res.days)}`)] : []),
+      ),
+      st === 'now' || st === 'done'
+        ? h(
+            'div',
+            { class: 'town-rep' },
+            portrait(who.id, 'portrait town-rep-portrait'),
+            h('div', {}, h('b', {}, `${camp.carry ? 'С вами едет' : 'Начнёт с вами'}: ${rep.name}`), h('span', { class: 'level-chip' }, levelNames[levelOf(base, who.xp)])),
+          )
+        : null,
+      action,
+    );
+  }
+
+  /** A new campaign: the side for the whole of it; the difficulty is the one chosen for new games. */
+  function campaignNewContent(): HTMLElement[] {
+    const card = (side: GameMode, art: string, title: string, text: string) =>
+      h(
+        'button',
+        {
+          class: `mode-card mode-${side}`,
+          onclick: () => {
+            campaign = newCampaign(side, settings.difficulty);
+            saveCampaign(campaign);
+            openCampaign();
+          },
+        },
+        h('img', { src: `${assetBase}sprites/intro/${art}.png`, alt: '', width: 256, height: 144 }),
+        h('b', {}, title),
+        h('span', {}, text),
+      );
+    return [
+      ...(campaign ? [h('p', { class: 'bad' }, 'Текущая кампания будет потеряна.')] : []),
+      h('p', {}, `Семь городов области подряд. Сторона — на всю кампанию. Сложность: ${base.difficulties.find((d) => d.id === settings.difficulty)?.name ?? ''} (меняется в окне «Новая игра»).`),
+      h(
+        'div',
+        { class: 'mode-cards' },
+        card('destroy', 'goal', '«Медиа-Плюс»', 'Холдинг проверяет теорию «страх продаётся» на целой области: город за городом.'),
+        card('save', 'defend', 'Честная газета', 'Вы идёте за «Вечерним Набатом» из города в город и не даёте ему их сломать.'),
+      ),
+      h('button', { class: 'ghost', onclick: () => (campaign ? openCampaign() : openModal(null)) }, '← Назад'),
+    ];
+  }
+
+  /** After a won town: one reporter goes on to the next one, with their experience (CONCEPT.md §9). */
+  function carryContent(): HTMLElement[] {
+    const take = (id: string) => () => {
+      if (!campaign) return;
+      campaign.carry = { id, xp: staffOf(state, c, id).xp };
+      saveCampaign(campaign);
+      openCampaign();
+    };
+    return [
+      h('p', {}, 'В следующий город едет только один репортёр — со всем своим опытом. Остальные останутся здесь.'),
+      ...state.reporters.map((id) => {
+        const r = reporterOf(c, id);
+        const xp = staffOf(state, c, id).xp;
+        return h(
+          'div',
+          { class: 'shop-item carry-item' },
+          portrait(id, 'portrait carry-portrait'),
+          h('div', {}, h('strong', {}, r.name), h('span', { class: 'level-chip' }, levelNames[levelOf(c, xp)]), h('p', { class: 'hint' }, `Опыт ${xp}`)),
+          h('button', { class: 'primary', onclick: take(id) }, 'Взять'),
+        );
+      }),
+    ];
+  }
+
   // ---------- Menus (CONCEPT.md §7.3 «Меню») ----------
 
   /** Title screen over the live city: continue, new game, how to play, settings, about. */
   function renderTitle(): void {
     titleLayer.hidden = !titleOpen;
-    root.classList.toggle('at-title', titleOpen);
+    root.classList.toggle('at-title', titleOpen || campaignOpen);
     if (!titleOpen) {
       titleLayer.replaceChildren();
       return;
@@ -3104,6 +3352,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
                 h('small', {}, `${modeLabels[state.mode]} · день ${Math.min(state.turn, c.balance.turnLimit)} · ${cityStage().name.toLowerCase()} · ${state.money} монет`),
               )
             : null,
+          h(
+            'button',
+            { class: 'title-item', onclick: () => openCampaign() },
+            h('span', {}, 'Кампания'),
+            campaign ? h('small', {}, `${sideNames[campaign.side]} · ★ ${campaignStars(campaign)} · ${campaign.finished ? 'пройдена' : `город ${campaign.reached + 1} из ${base.towns.length}`}`) : h('small', {}, 'семь городов области'),
+          ),
           // A running game is not thrown away without asking.
           item('Новая игра', () => openModal('newgame'), hasGame && !state.outcome ? '' : 'primary'),
           item('Как играть', () => openModal('howto')),
@@ -3170,6 +3424,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         item('Продолжить', () => openModal(null), 'primary'),
         item('Как играть', () => openModal('howto')),
         item('Настройки', () => openModal('settings')),
+        ...(state.town && campaign ? [item('Карта кампании', () => openCampaign())] : []),
         item('Новая игра', () => openModal('newgame')),
         item('Главное меню', () => showTitle()),
         debugMode ? item('Отладка', () => openModal('debug'), 'ghost') : null,

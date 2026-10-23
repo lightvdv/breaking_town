@@ -186,6 +186,13 @@ export function exposureRiskOf(
   );
 }
 
+/** A master's or a legend's stories are checked less: they know how to cover their tracks (CONCEPT.md §3.3б). */
+export function reporterCheckMul(state: GameState, c: Content, card: CardInstance): number {
+  const xp = state.reporters.includes(card.reporterId) ? (state.staff[card.reporterId]?.xp ?? 0) : 0;
+  const level = c.balance.reporterLevels.filter((t) => xp >= t).length - 1;
+  return c.balance.levelCheckMul[level] ?? 1;
+}
+
 export function previewPublication(
   state: GameState,
   c: Content,
@@ -205,7 +212,7 @@ export function previewPublication(
     impact,
     tier: effectiveTier(card, pub.distortion),
     reachChance: outletReach(state, c, pub.placement),
-    exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25),
+    exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25) * reporterCheckMul(state, c, card),
     tension: card.conflict ? { pair: pairKey(c, ...card.conflict), delta: tensionShift(c, card, pub.distortion, impact, 0.1) } : null,
   };
 }
@@ -528,7 +535,7 @@ export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Mo
       ...(fake ? { setup: true } : {}),
       ...(card.reporterId ? { reporterId: card.reporterId } : {}),
     };
-    const risk = exposureRiskOf(state, c, mods, story.truth, n.pub.placement, n.viewers.length / active);
+    const risk = exposureRiskOf(state, c, mods, story.truth, n.pub.placement, n.viewers.length / active) * reporterCheckMul(state, c, card);
     if (chance(rng, risk)) {
       n.report.exposed = true;
       exposed.push(exposeNews(state, c, mods, story, n.viewers));

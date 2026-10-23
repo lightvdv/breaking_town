@@ -2790,6 +2790,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * the level as a yellow plaque with four steps, the experience bar and what is left; in the corner
    * luck and nose as icons (their look grows with them; hover or tap tells the level) and loyalty.
    */
+  /** What a level gives, for the plaque's hint: «Мастер: удача +10%, чутьё +1, ложь ловят на 20% реже». */
+  function levelPerks(level: number): string {
+    const b = c.balance;
+    const parts = [`удача +${pct(b.levelLuck[level] ?? 0)}`, `чутьё +${b.levelNose[level] ?? 0}`];
+    const check = b.levelCheckMul[level] ?? 1;
+    if (check < 1) parts.push(`ложь в его новостях ловят на ${pct(1 - check)} реже`);
+    return level === 0 ? `${levelNames[0]}: пока без бонусов` : `${levelNames[level]}: ${parts.join(', ')}`;
+  }
+
   function reporterHead(id: string, opts: { key?: string; lines?: (string | HTMLElement)[]; action?: HTMLElement | null; compact?: boolean } = {}): HTMLElement {
     const r = reporterOf(c, id);
     // A candidate from the agency has no record yet: a novice with no experience and no loyalty.
@@ -2835,7 +2844,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'div',
           { class: 'rep-level' },
-          h('span', { class: 'level-chip' }, levelNames[level]),
+          h('span', { class: 'level-chip', title: levelPerks(level) }, levelNames[level]),
           h('span', { class: 'level-pips', title: `Ступень ${level + 1} из ${steps.length}` }, ...steps.map((_, i) => h('i', { class: i <= level ? 'on' : '' }))),
         ),
         ...(hired

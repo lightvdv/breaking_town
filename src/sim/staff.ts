@@ -21,7 +21,7 @@ export function skilledReporter(state: GameState, c: Content, def: ReporterDef):
   const b = c.balance;
   return {
     ...def,
-    skills: { ...def.skills, luck: Math.min(0.98, def.skills.luck + level * b.levelLuck), nose: Math.min(3, def.skills.nose + level * b.levelNose) },
+    skills: { ...def.skills, luck: Math.min(0.98, def.skills.luck + (b.levelLuck[level] ?? 0)), nose: Math.min(3, def.skills.nose + (b.levelNose[level] ?? 0)) },
   };
 }
 

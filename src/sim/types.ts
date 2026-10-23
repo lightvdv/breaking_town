@@ -433,8 +433,10 @@ export interface Balance {
   fatesKept: number;
   /** Reporters with character (CONCEPT.md §3.3б): xp needed for each level and what a level adds. */
   reporterLevels: number[];
-  levelLuck: number;
-  levelNose: number;
+  /** What each level adds to luck and nose (by level, 0 = new), and how often their stories are fact-checked. */
+  levelLuck: number[];
+  levelNose: number[];
+  levelCheckMul: number[];
   /** xp for a printed story by placement (brief, article, front page). */
   xpPerPlacement: number[];
   startLoyalty: number;

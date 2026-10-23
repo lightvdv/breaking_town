@@ -8,12 +8,14 @@
       "checkerBase": 0.17,
       "rivalCloseShare": 0.03,
       "rivalTrustCollapse": 12,
-      "debunkTrust": 3
+      "debunkTrust": 3,
+      "guardianStoriesMax": 4
     },
     "modes": {
       "destroy": {},
       "save": {
-        "turnLimit": 34
+        "turnLimit": 34,
+        "rivalTrustCollapse": 15
       }
     }
   },
@@ -41,11 +43,11 @@
         "conflictStartTurn": 2
       },
       "save": {
-        "turnLimit": 46,
+        "turnLimit": 44,
         "rivalStoriesMax": 4,
         "assignFocus": 0.6,
         "electionPivot": 0.6,
-        "taskRewardMul": 0.6
+        "taskRewardMul": 0.8
       }
     }
   }

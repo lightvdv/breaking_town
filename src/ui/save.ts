@@ -70,6 +70,7 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.exposedTotal ??= 0;
     s.twist ??= null;
     s.budgetCut ??= 0;
+    s.town ??= null;
     // Tasks and twists removed from the content are dropped.
     s.tasks = s.tasks.filter((t) => c.tasks.some((x) => x.id === t.id));
     if (s.twist && !c.twists.some((x) => x.id === s.twist!.id)) s.twist = null;

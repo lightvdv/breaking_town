@@ -1,0 +1,274 @@
+[
+  {
+    "id": "tihorechye",
+    "name": "Тихоречье",
+    "type": "сонный городок",
+    "rule": {
+      "title": "Тихий старт",
+      "text": "Своих фактчекеров в городе нет, а конкурент слабее обычного."
+    },
+    "days": 30,
+    "stars": 1,
+    "buildings": {
+      "factCheckers": {
+        "count": 0
+      }
+    },
+    "balance": {
+      "population": 200
+    },
+    "map": {
+      "x": 18,
+      "y": 96
+    },
+    "modes": {
+      "destroy": {
+        "days": 38,
+        "balance": {
+          "guardianStoriesMax": 2
+        }
+      },
+      "save": {
+        "days": 34,
+        "balance": {
+          "rivalStoriesMax": 3
+        }
+      }
+    }
+  },
+  {
+    "id": "zavodsk",
+    "name": "Заводск",
+    "type": "моногород",
+    "rule": {
+      "title": "Один завод",
+      "text": "Половина города — рабочие, и почти все они на заводе. Закроется завод — закроется город."
+    },
+    "days": 35,
+    "stars": 2,
+    "groups": {
+      "pensioners": 0.2,
+      "workers": 0.5,
+      "youth": 0.2,
+      "intelligentsia": 0.1
+    },
+    "buildings": {
+      "factory": {
+        "jobs": 140
+      },
+      "shop": {
+        "count": 2
+      },
+      "entertainment": {
+        "count": 1
+      }
+    },
+    "balance": {
+      "tensionStart": {
+        "pensioners|youth": 20,
+        "workers|intelligentsia": 40,
+        "workers|youth": 15,
+        "pensioners|intelligentsia": 10
+      }
+    },
+    "map": {
+      "x": 42,
+      "y": 70
+    },
+    "modes": {
+      "destroy": {
+        "days": 42
+      },
+      "save": {
+        "days": 29
+      }
+    }
+  },
+  {
+    "id": "svetloozyorsk",
+    "name": "Светлоозёрск",
+    "type": "курорт",
+    "rule": {
+      "title": "Сезон",
+      "text": "Баров и магазинов вдвое больше, денег у людей тоже. Но газете здесь верят меньше."
+    },
+    "days": 35,
+    "stars": 2,
+    "buildings": {
+      "shop": {
+        "count": 5
+      },
+      "entertainment": {
+        "count": 4
+      }
+    },
+    "balance": {
+      "startTrust": 42,
+      "wage": 12
+    },
+    "map": {
+      "x": 66,
+      "y": 46
+    },
+    "modes": {
+      "destroy": {
+        "days": 45
+      },
+      "save": {
+        "days": 33
+      }
+    }
+  },
+  {
+    "id": "uchensk",
+    "name": "Ученск",
+    "type": "студенческий город",
+    "rule": {
+      "title": "Молодёжь",
+      "text": "Молодёжи и интеллигенции вдвое больше, и молодёжь легко выходит на протест."
+    },
+    "days": 38,
+    "stars": 3,
+    "groups": {
+      "pensioners": 0.2,
+      "workers": 0.28,
+      "youth": 0.32,
+      "intelligentsia": 0.2
+    },
+    "balance": {
+      "tensionStart": {
+        "pensioners|youth": 35,
+        "workers|intelligentsia": 25,
+        "workers|youth": 20,
+        "pensioners|intelligentsia": 10
+      }
+    },
+    "balanceMul": {
+      "clashProtest": 1.3,
+      "stigmaProtest": 1.3
+    },
+    "map": {
+      "x": 100,
+      "y": 62
+    },
+    "modes": {
+      "destroy": {
+        "days": 44
+      },
+      "save": {
+        "days": 33
+      }
+    }
+  },
+  {
+    "id": "starogorsk",
+    "name": "Старогорск",
+    "type": "стареющий город",
+    "rule": {
+      "title": "Старая гвардия",
+      "text": "Почти половина города — пенсионеры. Они читают всё, но дорогую газету бросают быстрее."
+    },
+    "days": 40,
+    "stars": 3,
+    "groups": {
+      "pensioners": 0.45,
+      "workers": 0.25,
+      "youth": 0.15,
+      "intelligentsia": 0.15
+    },
+    "buildings": {
+      "hospital": {
+        "jobs": 20
+      }
+    },
+    "balanceMul": {
+      "priceChurn": 1.6
+    },
+    "map": {
+      "x": 124,
+      "y": 88
+    },
+    "modes": {
+      "destroy": {
+        "days": 32,
+        "balance": {
+          "guardianStoriesMax": 6
+        }
+      },
+      "save": {
+        "days": 31
+      }
+    }
+  },
+  {
+    "id": "severny",
+    "name": "Северный Причал",
+    "type": "портовый город",
+    "rule": {
+      "title": "Порт",
+      "text": "Ссоры групп начинаются с первого дня, и вражда здесь горячее."
+    },
+    "days": 40,
+    "stars": 4,
+    "balance": {
+      "conflictStartTurn": 1,
+      "tensionStart": {
+        "pensioners|youth": 40,
+        "workers|intelligentsia": 35,
+        "workers|youth": 25,
+        "pensioners|intelligentsia": 20
+      }
+    },
+    "balanceMul": {},
+    "map": {
+      "x": 170,
+      "y": 72
+    },
+    "modes": {
+      "destroy": {
+        "days": 35
+      },
+      "save": {
+        "days": 32,
+        "balance": {
+          "conflictStartTurn": 4
+        }
+      }
+    }
+  },
+  {
+    "id": "gransk",
+    "name": "Гранск",
+    "type": "областной центр · финал",
+    "rule": {
+      "title": "Финал",
+      "text": "Большой город, сильнейший конкурент и 45 дней. Нужно 10 ★ за прошлые города."
+    },
+    "days": 45,
+    "stars": 5,
+    "starsToEnter": 10,
+    "balance": {
+      "population": 300,
+      "maxPopulation": 380
+    },
+    "balanceMul": {
+      "checkerBase": 1.2,
+      "rivalStoriesMax": 1.34
+    },
+    "map": {
+      "x": 176,
+      "y": 30
+    },
+    "modes": {
+      "destroy": {
+        "days": 35,
+        "balance": {
+          "guardianStoriesMax": 6
+        }
+      },
+      "save": {
+        "days": 40
+      }
+    }
+  }
+]

@@ -9,6 +9,7 @@ const content = {
 import { snapshotPeople, updatePeople } from '../src/sim/people';
 import { giveTask, scoreOf, taskOf, updateTasks } from '../src/sim/tasks';
 import { twistMods } from '../src/sim/twists';
+import { withTown } from '../src/sim/town';
 import {
   averageTrust,
   createGame,
@@ -1218,5 +1219,29 @@ describe('the mid-game twist (CONCEPT.md §4.9)', () => {
     a.turn++;
     updateTasks(a, content, []);
     expect(a.budgetCut).toBe(taskOf(content, 'audit_city').penalty);
+  });
+});
+
+describe('campaign towns (CONCEPT.md §9)', () => {
+  it('every town makes a playable game of its own character and length', () => {
+    for (const t of realContent.towns) {
+      const c = withTown(realContent, t.id, 'destroy');
+      const s = createGame(c, 5, 'destroy', 'normal', { town: t.id });
+      expect(s.town).toBe(t.id);
+      expect(c.balance.turnLimit).toBe(t.modes?.destroy?.days ?? t.days);
+      for (const [type, patch] of Object.entries(t.buildings ?? {})) {
+        if (patch?.count !== undefined) expect(s.buildings.filter((x) => x.type === type)).toHaveLength(patch.count);
+      }
+      for (let i = 0; i < 3 && !s.outcome; i++) playTurn(s, c, simpleDecision(s, 'none'));
+    }
+    // Shares change who lives there: Заводск is mostly workers.
+    const z = createGame(withTown(realContent, 'zavodsk', 'destroy'), 5, 'destroy', 'normal', { town: 'zavodsk' });
+    expect(z.residents.filter((r) => r.group === 'workers').length).toBeGreaterThan(z.residents.length * 0.45);
+  });
+
+  it('a carried reporter starts the next town with their experience', () => {
+    const s = createGame(realContent, 6, 'save', 'normal', { reporters: [{ id: 'nikitina', xp: 200 }] });
+    expect(s.reporters).toEqual(['nikitina']);
+    expect(levelOf(realContent, staffOf(s, realContent, 'nikitina').xp)).toBe(2);
   });
 });

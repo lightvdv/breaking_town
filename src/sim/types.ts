@@ -735,6 +735,7 @@ export interface Content {
   difficulties: DifficultyDef[];
   tasks: TaskDef[];
   twists: TwistDef[];
+  towns: TownDef[];
   letters: LetterTemplates;
   balance: Balance;
 }
@@ -962,6 +963,35 @@ export type GameMode = 'destroy' | 'save';
 /** Difficulty levels (CONCEPT.md §4.6): each overrides some balance numbers. */
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
+/**
+ * A town of the campaign (CONCEPT.md §9): its character as patches to the content — who lives
+ * there, what is built, balance numbers (some as multipliers, so they keep the difficulty's scale).
+ */
+export interface TownDef {
+  id: string;
+  name: string;
+  /** «моногород», «курорт»… */
+  type: string;
+  /** Its special rule, shown on the town card. */
+  rule: { title: string; text: string };
+  /** The game's length (turn limit). */
+  days: number;
+  /** Stars of the campaign needed to enter (the final). */
+  starsToEnter?: number;
+  /** Shares of the groups (all four). */
+  groups?: Partial<Record<GroupId, number>>;
+  buildings?: Partial<Record<BuildingType, { count?: number; jobs?: number }>>;
+  balance?: Partial<Balance>;
+  /** Balance numbers multiplied (e.g. checkerBase × 1.1). */
+  balanceMul?: Partial<Record<keyof Balance, number>>;
+  /** Per mode: its own length and balance (more days help the destroyer and hurt the defender). */
+  modes?: Partial<Record<GameMode, { days?: number; balance?: Partial<Balance> }>>;
+  /** Where it stands on the region map, in map pixels (200 × 120). */
+  map: { x: number; y: number };
+  /** 1–5 bars on the town card. */
+  stars: number;
+}
+
 export interface DifficultyDef {
   id: Difficulty;
   name: string;
@@ -1055,6 +1085,8 @@ export interface GameState {
   twist: TwistState | null;
   /** Upkeep a day added by a failed audit. */
   budgetCut: number;
+  /** The campaign town this game is played in (CONCEPT.md §9); null for a single game. */
+  town: string | null;
   outcome: Outcome | null;
 }
 

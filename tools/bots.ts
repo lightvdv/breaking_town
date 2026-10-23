@@ -30,6 +30,7 @@ import {
   rivalTrust,
   setRivalWatch,
   withDifficulty,
+  withTown,
   type Difficulty,
   answerOffer,
   offerOf,
@@ -50,6 +51,10 @@ const difficultyIndex = process.argv.indexOf('--difficulty');
 const difficulty = (difficultyIndex >= 0 ? process.argv[difficultyIndex + 1] : 'normal') as Difficulty;
 if (!baseContent.difficulties.some((d) => d.id === difficulty)) throw new Error(`Unknown difficulty ${difficulty}`);
 const content = withDifficulty(baseContent, difficulty, process.argv.includes('save') && process.argv.includes('--mode') ? 'save' : 'destroy');
+// --town id: every game is played in this campaign town (CONCEPT.md §9).
+const townIndex = process.argv.indexOf('--town');
+const town = townIndex >= 0 ? process.argv[townIndex + 1] : null;
+if (town) Object.assign(content, withTown(content, town, process.argv.includes('save') && process.argv.includes('--mode') ? 'save' : 'destroy'));
 // --twist id: every game gets only this mid-game twist (to see what one twist does to the balance).
 const twistIndex = process.argv.indexOf('--twist');
 if (twistIndex >= 0) content.twists = content.twists.filter((t) => t.id === process.argv[twistIndex + 1]);
@@ -331,7 +336,7 @@ function answerOffers(s: GameState, strategy: Strategy): void {
 }
 
 function playGame(seed: number, strategy: Strategy, trace = false): Result {
-  const s = createGame(content, seed, saveMode ? 'save' : 'destroy', difficulty);
+  const s = createGame(content, seed, saveMode ? 'save' : 'destroy', difficulty, town ? { town } : {});
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
     if ((strategy === mixed || strategy === agitator) && !noInvestigations) manageInvestigations(s);

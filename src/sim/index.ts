@@ -16,6 +16,7 @@ export { answerOffer, dealBrokenBy, offerOf, offerText, retainCost } from './off
 export { levelOf, skilledReporter, staffOf } from './staff';
 export { personResident } from './people';
 export { withDifficulty } from './difficulty';
+export { townDays, townOf, withTown } from './town';
 export { forecastTurn, type Forecast } from './forecast';
 export { scoreOf, taskOf, taskProgress, taskReward } from './tasks';
 export { electionLeader, runningTwist, twistOf } from './twists';

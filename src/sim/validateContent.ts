@@ -180,6 +180,16 @@ export function validateContent(c: Content): string[] {
     const iy = c.groups.findIndex((g) => g.id === y);
     if (ix < 0 || iy < 0 || ix >= iy) errors.push(`tensionStart: bad pair key ${key} (two groups in content order)`);
   }
+  // Campaign towns (CONCEPT.md §9): group shares add up, known groups and buildings, the map fits.
+  for (const t of c.towns) {
+    if (t.groups) {
+      const sum = c.groups.reduce((s, g) => s + (t.groups![g.id] ?? g.share), 0);
+      if (Math.abs(sum - 1) > 0.001) errors.push(`town ${t.id}: group shares sum to ${sum}`);
+      for (const id of Object.keys(t.groups)) if (!c.groups.some((g) => g.id === id)) errors.push(`town ${t.id}: unknown group ${id}`);
+    }
+    for (const type of Object.keys(t.buildings ?? {})) if (!c.buildings.some((b) => b.type === type)) errors.push(`town ${t.id}: unknown building ${type}`);
+    for (const key of [...Object.keys(t.balance ?? {}), ...Object.keys(t.balanceMul ?? {}), ...Object.values(t.modes ?? {}).flatMap((m) => Object.keys(m?.balance ?? {}))]) if (!(key in c.balance)) errors.push(`town ${t.id}: unknown balance key ${key}`);
+  }
   // Tasks and twists (CONCEPT.md §4.8, §4.9).
   for (const mode of ['destroy', 'save'] as const) {
     if (c.tasks.filter((t) => !t.twist && (!t.mode || t.mode === mode)).length < c.balance.taskCount + 2) errors.push(`too few tasks for ${mode}`);

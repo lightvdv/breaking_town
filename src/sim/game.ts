@@ -38,8 +38,18 @@ import type {
   Difficulty,
 } from './types';
 
-/** `c` must already be the content of this difficulty (`withDifficulty`). */
-export function createGame(c: Content, seed: number, mode: GameMode = 'destroy', difficulty: Difficulty = 'normal'): GameState {
+/**
+ * `c` must already be the content of this difficulty (`withDifficulty`) and, in the campaign, of the
+ * town (`withTown`). A campaign town may start with a reporter brought from the last town, with their experience.
+ */
+export function createGame(
+  c: Content,
+  seed: number,
+  mode: GameMode = 'destroy',
+  difficulty: Difficulty = 'normal',
+  opts: { town?: string; reporters?: { id: string; xp: number }[] } = {},
+): GameState {
+  const team = opts.reporters?.length ? opts.reporters : c.balance.startReporters.map((id) => ({ id, xp: 0 }));
   const rng = createRng(seed);
   const { buildings, mapSize } = createBuildings(c, rng);
   const residents = createResidents(c, rng, buildings);
@@ -65,7 +75,7 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy',
     people: {},
     letters: [],
     fates: [],
-    staff: Object.fromEntries(c.balance.startReporters.map((id) => [id, { xp: 0, loyalty: c.balance.startLoyalty }])),
+    staff: Object.fromEntries(team.map((x) => [x.id, { xp: x.xp, loyalty: c.balance.startLoyalty }])),
     money: c.balance.startMoney,
     price: c.balance.startPrice,
     brokeTurns: 0,
@@ -77,7 +87,7 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy',
     nextResidentId: residents.length,
     ownedChannels: c.channels.filter((ch) => ch.cost === 0 && ch.requires === null).map((ch) => ch.id),
     upgrades: [],
-    reporters: [...c.balance.startReporters],
+    reporters: team.map((x) => x.id),
     agencyOffer: [],
     agencyCalls: 0,
     lastFinds: [],
@@ -100,6 +110,7 @@ export function createGame(c: Content, seed: number, mode: GameMode = 'destroy',
     exposedTotal: 0,
     twist: null,
     budgetCut: 0,
+    town: opts.town ?? null,
     outcome: null,
   };
   state.metrics = computeMetrics(state, c);

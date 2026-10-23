@@ -265,7 +265,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let truthMenuFor: number | null = null;
   /** Phones: the story whose «where to» menu is open (stories are not dragged on a phone). */
   let moveMenuFor: number | null = null;
-  const isPhone = () => window.matchMedia('(max-width: 900px)').matches;
+  const phoneQuery = window.matchMedia('(max-width: 900px)');
+  const isPhone = () => phoneQuery.matches;
+  // Crossing the phone width moves «В печать» between the bottom bar and the issue column.
+  phoneQuery.addEventListener('change', () => render());
   /** The cover price menu in the masthead is open. */
   let priceMenuOpen = false;
   /** Story picked by a tap; the next tap on a place in the paper moves it there (CONCEPT.md §7.3). */
@@ -299,6 +302,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   );
   const hudControls = h('div', { class: 'hud-controls' }, reporterBar.el, hudShop, hudMenu);
   const hudGoal = h('div', { class: 'hud-goal' });
+  // A narrow track keeps only the names of the city's stage and the goal (CSS `.tight`).
+  new ResizeObserver(() => hudGoal.classList.toggle('tight', hudGoal.offsetWidth < 400)).observe(hudGoal);
   const hud = h('header', { class: 'hud' }, hudControls, hudRes, hudGoal, hudActions);
   const cityHost = h('div', { class: 'city-host' });
   const cityEvents = h('div', { class: 'city-events' });
@@ -382,7 +387,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
     { class: 'issue-fab', title: 'Вернуться к выпуску', 'aria-label': 'Вернуться к выпуску', hidden: true, onclick: () => openIssue() },
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
   );
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, rivalNotice, paper));
+  // Wide screens: «В печать» sits at the foot of the issue column, under the paper it sends out.
+  const issueFoot = h('div', { class: 'issue-foot' });
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, rivalNotice, paper), issueFoot);
+  /** Wide screens: the city is centred in what the issue column leaves of the stage. */
+  const fitCity = () => scene?.setInsetRight(issueOpen && !isPhone() && !titleOpen ? issue.offsetWidth : 0);
+  new ResizeObserver(fitCity).observe(issue);
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -439,6 +449,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   CityScene.create(cityHost, c, state, showTooltip)
     .then((s) => {
       scene = s;
+      fitCity();
       loading.remove();
       if (titleOpen) s.startTour();
     })
@@ -1070,7 +1081,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         next !== here ? h('i', { class: 'goal-marker ghost', style: `left: ${pos(next)}` }) : null,
         h('i', { class: 'goal-marker', style: `left: ${pos(here)}` }),
       ),
-      h('div', { class: 'goal-names' }, ...stages.map((x, i) => h('span', { class: i === here ? 'here' : '' }, x.name))),
+      h('div', { class: 'goal-names' }, ...stages.map((x, i) => h('span', { class: [i === here ? 'here' : '', i === goal ? 'goal' : ''].join(' ').trim() }, x.name))),
     );
     hudGoal.title = `${cityGoal()}.`;
   }
@@ -1191,9 +1202,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     hudShop.classList.toggle('is-new', isNew('shop'));
     // While the issue is open: its level and «В печать»; folded: «Выпуск» brings it back.
     const publishing = issueOpen && !state.outcome;
-    hudActions.replaceChildren(
-      ...(publishing ? [publishButton()] : []),
-    );
+    // Phones keep it in the bar along the bottom edge; wide screens put it under the paper.
+    const phone = isPhone();
+    hudActions.replaceChildren(...(publishing && phone ? [publishButton()] : []));
+    issueFoot.replaceChildren(...(publishing && !phone ? [publishButton()] : []));
     // A folded issue waits as a newspaper icon over the city.
     issueFab.hidden = issueOpen || folding || titleOpen || busy || !!state.outcome;
   }
@@ -3046,6 +3058,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     }
     renderCityEvents();
     renderIssue();
+    fitCity();
     renderExposures();
     renderReconcile();
     renderStaff();

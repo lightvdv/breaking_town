@@ -629,7 +629,8 @@ export class CityScene {
     const scale = fit < 1 && !this.zoomLevel ? (2 * fit) / dpr : level / dpr;
     const { width, height } = this.app.screen;
     this.world.scale.set(scale);
-    const x = (width - this.bounds.w * scale) / 2 - this.bounds.minX * scale + this.pan.x;
+    // The city is centred in the part of the stage the issue column leaves free.
+    const x = (width - this.insetRight - this.bounds.w * scale) / 2 - this.bounds.minX * scale + this.pan.x;
     const y = (height - this.bounds.h * scale) / 2 - this.bounds.minY * scale + this.pan.y;
     this.world.position.set(Math.round(x * dpr) / dpr, Math.round(y * dpr) / dpr);
   }
@@ -643,6 +644,15 @@ export class CityScene {
     const fit = this.fitZoom();
     const current = this.zoomLevel || (fit < 1 ? Math.max(1, Math.round(2 * fit)) : this.defaultLevel());
     this.zoomLevel = Math.max(1, Math.min(6, current + delta));
+    this.layout();
+  }
+
+  /** Wide screens: the issue column covers this many CSS pixels on the right of the stage. */
+  private insetRight = 0;
+
+  setInsetRight(px: number): void {
+    if (px === this.insetRight) return;
+    this.insetRight = px;
     this.layout();
   }
 

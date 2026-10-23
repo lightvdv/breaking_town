@@ -4652,3 +4652,179 @@ button.publish.nudge {
     left: 0;
   }
 }
+
+/* ---------- Wide screens: the issue is a column on the right, the city stays in sight (CONCEPT.md §7.3) ---------- */
+@media (min-width: 901px) {
+  /* Top bar: resources on the left, the goal track in the middle, reporters, cart and ☰ on the right. */
+  .hud {
+    flex-wrap: nowrap;
+    gap: 16px;
+    border-bottom: 2px solid var(--panel);
+  }
+
+  .hud-goal {
+    order: 1;
+    flex: 1 1 260px;
+    min-width: 160px;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  .hud-controls .reporter-bar {
+    order: 2;
+    margin-left: auto;
+  }
+}
+
+/* A small laptop with a full newsroom: five portraits, the cart and ☰ still fit in the one row. */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .hud-controls .reporter-bar {
+    gap: 8px;
+  }
+
+  .hud-controls .rep-name {
+    max-width: 48px;
+  }
+
+  .hud-controls .rep-name b,
+  .hud-controls .rep-name small {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 901px) {
+
+  .goal-names {
+    font-size: 11px;
+  }
+
+  /* The names would crowd a narrow track: only the city's stage and the goal stay. */
+  .hud-goal.tight .goal-names span:not(.here):not(.goal) {
+    visibility: hidden;
+  }
+
+  .stage {
+    --issue-w: clamp(420px, 40vw, 620px);
+  }
+
+  .issue {
+    left: auto;
+    width: var(--issue-w);
+    padding: 12px 12px 0;
+    background: none;
+  }
+
+  .issue-panel {
+    gap: 10px;
+    min-height: 0;
+  }
+
+  .issue-head h2 {
+    font-size: 22px;
+  }
+
+  .paper {
+    padding: 12px 16px 14px;
+  }
+
+  /* The name of the paper on one line, «—» beside it. */
+  .masthead {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'title close'
+      'row row';
+  }
+
+  .masthead h2 {
+    font-size: clamp(20px, 2vw, 26px);
+    white-space: nowrap;
+  }
+
+  /* One column of rubrics: the front page, the article, then the briefs. */
+  .paper-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      'front'
+      'article'
+      'briefs';
+    gap: 12px;
+  }
+
+  .zone-1,
+  .zone-0 {
+    padding: 10px 0 0;
+    border-left: none;
+    border-top: 1px solid var(--paper-muted);
+  }
+
+  /* The front page picture goes beside the text instead of filling half the screen. */
+  .at-2 .headline {
+    font-size: 24px;
+  }
+
+  .at-2 .news-art {
+    float: left;
+    width: 48%;
+    max-width: 288px;
+    margin: 2px 14px 4px 0;
+  }
+
+  .at-2 .lorem {
+    column-count: 1;
+  }
+
+  .guide-note {
+    max-width: none;
+    margin: 0;
+    transform: none;
+  }
+
+  /* «В печать» under the paper, always in reach while the column scrolls. */
+  .issue-foot {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    margin-top: 10px;
+    padding: 10px 0 12px;
+    background: linear-gradient(transparent, var(--bg-deep) 30%);
+  }
+
+  .issue-foot:empty {
+    display: none;
+  }
+
+  .issue-foot .publish {
+    width: 100%;
+    justify-content: center;
+    min-height: 48px;
+  }
+
+  /* The zoom buttons move off the paper to the edge of the city. */
+  .stage:has(.issue.open) .city-tools {
+    right: calc(var(--issue-w) + 12px);
+  }
+
+  .city-events {
+    max-width: min(320px, calc(100% - var(--issue-w) - 80px));
+  }
+
+  /* The legend stays left of the paper. */
+  .stage:has(.issue.open) .city-legend {
+    max-width: calc(100% - var(--issue-w) - 36px);
+  }
+}
+
+/* Tablets upright and large phones: the front page picture beside the text, not across the screen. */
+@media (min-width: 600px) and (max-width: 900px) {
+  .at-2 .news-art {
+    float: left;
+    width: 50%;
+    max-width: 360px;
+    margin: 2px 14px 4px 0;
+  }
+}

@@ -96,7 +96,7 @@ import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
 import { pendingNotes, unlockDay, type Feature } from './guide';
 import { recordOf, starLine, submitRecord } from './records';
-import { characterLine, levelNames, portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
+import { aboutLine, characterLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillLine, skillTiers, topicLine, type RepStatus } from './reporterBar';
 import {
   priceLabels,
   modeLabels,
@@ -397,6 +397,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     moveMenuFor = null;
     chooserFor = null;
     priceMenuOpen = false;
+    render();
+  });
+  // …and an open luck or nose tip in the reporter window.
+  document.addEventListener('pointerdown', (e) => {
+    if ((!openInfo.has('luck') && !openInfo.has('nose')) || (e.target as Element).closest('.skill-icon')) return;
+    openInfo.delete('luck');
+    openInfo.delete('nose');
     render();
   });
   document.addEventListener('keydown', (e) => {
@@ -2780,6 +2787,74 @@ export function mountApp(root: HTMLElement, base: Content): void {
     ];
   }
 
+  /**
+   * The reporter window's head (CONCEPT.md §7.3 «Окно репортёра»): a big portrait, the name with «i»,
+   * the level as a yellow plaque with four steps, the experience bar and what is left; in the corner
+   * luck and nose as icons (their look grows with them; hover or tap tells the level) and loyalty.
+   */
+  function reporterHead(id: string): HTMLElement {
+    const r = reporterOf(c, id);
+    const st = staffOf(state, c, id);
+    const level = levelOf(c, st.xp);
+    const steps = c.balance.reporterLevels;
+    const next = steps[level + 1];
+    const share = next === undefined ? 1 : (st.xp - steps[level]) / (next - steps[level]);
+    const left = next === undefined ? 0 : next - st.xp;
+    const fronts = Math.ceil(left / c.balance.xpPerPlacement[2]);
+    const sk = skillTiers(c, state, r);
+    const loyal = loyaltyOf(c, state, r);
+    const toggle = (key: string) => (e: Event) => {
+      e.stopPropagation();
+      if (openInfo.has(key)) openInfo.delete(key);
+      else openInfo.add(key);
+      render();
+    };
+    const skill = (key: string, icon: string, title: string, text: string) =>
+      h(
+        'button',
+        { class: `skill-icon${openInfo.has(key) ? ' on' : ''}`, 'aria-label': title, 'aria-expanded': String(openInfo.has(key)), onclick: toggle(key) },
+        h('img', { src: `${assetBase}sprites/ui/${icon}.png`, alt: '', width: 32, height: 32 }),
+        h('span', { class: 'skill-tip' }, h('b', {}, title), text),
+      );
+    return h(
+      'div',
+      { class: 'rep-head' },
+      portrait(id, 'portrait rep-head-portrait'),
+      h(
+        'div',
+        { class: 'rep-head-body' },
+        h(
+          'div',
+          { class: 'rep-head-name' },
+          r.name,
+          h('button', { class: `section-info${openInfo.has('about') ? ' on' : ''}`, title: 'О репортёре', 'aria-expanded': String(openInfo.has('about')), onclick: toggle('about') }, 'i'),
+        ),
+        ...(openInfo.has('about') ? [h('p', { class: 'hint info-text' }, aboutLine(r))] : []),
+        h(
+          'div',
+          { class: 'rep-level' },
+          h('span', { class: 'level-chip' }, levelNames[level]),
+          h('span', { class: 'level-pips', title: `Ступень ${level + 1} из ${steps.length}` }, ...steps.map((_, i) => h('i', { class: i <= level ? 'on' : '' }))),
+        ),
+        h('div', { class: 'xp-bar', title: next === undefined ? `Опыт ${st.xp}` : `Опыт ${st.xp} из ${next}` }, h('b', { style: `width: ${Math.round(share * 100)}%` })),
+        h(
+          'div',
+          { class: 'xp-caption' },
+          ...(next === undefined
+            ? ['Высшая ступень — расти больше некуда']
+            : [`До «${levelNamesGen[level + 1]}» ещё `, h('b', {}, `${left} опыта`), ` · ≈ ${fronts} ${plural(fronts, 'первая полоса', 'первые полосы', 'первых полос')}`]),
+        ),
+      ),
+      h(
+        'div',
+        { class: 'rep-corner' },
+        skill('luck', `luck_${sk.luckTier}`, `Удача: ${luckNames[sk.luckTier].toLowerCase()}`, `${pct(sk.luck)} — так часто репортёр что-то находит. С опытом подкова становится лучше.`),
+        skill('nose', `nose_${sk.noseTier}`, `Чутьё: ${noseNames[sk.noseTier].toLowerCase()}`, 'Чем тоньше нюх, тем чаще находки интересные и сенсационные. С опытом нюх становится тоньше.'),
+        h('span', { class: `loyal loyal-${loyal.level}`, title: 'Лояльность: ложь в газете её подтачивает, ниже предела репортёр уходит' }, loyal.word),
+      ),
+    );
+  }
+
   function investigateContent(): HTMLElement[] {
     const id = investigator;
     if (!id || !state.reporters.includes(id)) return [h('p', { class: 'hint' }, 'Репортёр больше не работает в редакции.')];
@@ -2795,12 +2870,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       }
       render();
     };
-    const head = h(
-      'div',
-      { class: 'shop-item reporter-item' },
-      portrait(id),
-      h('div', {}, h('strong', {}, r.name), h('p', {}, r.bio), h('p', {}, skillLine(c, state, r)), h('p', { class: 'hint' }, characterLine(c, state, r))),
-    );
+    const head = reporterHead(id);
     const errorLine = error ? [h('p', { class: 'bad' }, error)] : [];
     // Search topics (CONCEPT.md §3.3): the reporter is sent after them and brings them more often.
     const assigned = state.reporterTopics[id] ?? [];

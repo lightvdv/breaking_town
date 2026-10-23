@@ -362,6 +362,76 @@ function offer(): Raster {
   return outline(r);
 }
 
+/**
+ * A reporter's luck as a horseshoe (CONCEPT.md §3.3б): rusty, iron, silver, golden with sparkles.
+ * m = metal, d = its shade, h = nail holes, s = sparkle.
+ */
+const HORSESHOE = [
+  '................',
+  '..s..........s..',
+  '...kkk....kkk...',
+  '..kmmmk..kmmmk..',
+  '.kmmhmk..kmhmmk.',
+  '.kmmmdk..kdmmmk.',
+  '.kmhmdk..kdmhmk.',
+  '.kmmmdk..kdmmmk.',
+  '.kmmmmdkkdmmmmk.',
+  '.kmhmmmddmmmhmk.',
+  '..kmmmmmmmmmmk..',
+  '..kdmmmhhmmmdk..',
+  '...kddmmmmddk...',
+  '....kkdddddk....',
+  '......kkkkk.....',
+  '................',
+];
+const HORSESHOE_METALS: Record<string, Color>[] = [
+  { m: 'wood', d: 'brown', h: 'darkBrown' },
+  { m: 'grey', d: 'darkGrey', h: 'navy' },
+  { m: 'white', d: 'silver', h: 'darkGrey' },
+  { m: 'yellow', d: 'amber', h: 'rust', s: 'yellow' },
+];
+function luck(tier: number): Raster {
+  const r = new Raster(16, 16);
+  r.art(0, 0, HORSESHOE, { k: 'ink', ...HORSESHOE_METALS[tier] });
+  return r;
+}
+
+/**
+ * A reporter's nose for news as a nose (CONCEPT.md §3.3б): stuffed (plaster and a drop), plain,
+ * keen (smell waves), a bloodhound's (golden, with a sparkle).
+ */
+const NOSE = [
+  '................',
+  '................',
+  '.........kk.....',
+  '........kssk....',
+  '........ksssk...',
+  '.......kssssk...',
+  '.......ksssssk..',
+  '......ksssssssk.',
+  '......kssssssssk',
+  '.....ksssssssssk',
+  '.....ksssssnnsdk',
+  '......kkddddddk.',
+  '........kkkkkk..',
+  '................',
+  '................',
+  '................',
+];
+const SMELL: [number, number][] = [[1, 4], [2, 5], [1, 6], [3, 6], [4, 7], [3, 8], [1, 9], [2, 10], [1, 11]];
+function nose(tier: number): Raster {
+  const r = new Raster(16, 16);
+  const gold = tier === 3;
+  r.art(0, 0, NOSE, { k: 'ink', s: gold ? 'yellow' : 'skin', d: gold ? 'amber' : 'skinDark', n: gold ? 'rust' : 'brown' });
+  if (tier === 0) {
+    for (const [x, y] of [[9, 6], [10, 6], [11, 6], [10, 5], [10, 7]]) r.set(x, y, 'white');
+    r.rect(13, 12, 1, 2, 'blue');
+  }
+  if (tier >= 2) for (const [x, y] of SMELL) r.set(x, y, gold ? 'yellow' : 'cyan');
+  if (gold) for (const [x, y] of [[14, 2], [15, 1], [13, 1], [14, 0]]) r.set(x, y, 'white');
+  return r;
+}
+
 /** A task: a clipboard with a tick (CONCEPT.md §4.8). */
 function task(): Raster {
   const r = new Raster(16, 16);
@@ -404,6 +474,14 @@ function governor(): Raster {
 }
 
 export const uiIcons: Record<string, () => Raster> = {
+  luck_0: () => luck(0),
+  luck_1: () => luck(1),
+  luck_2: () => luck(2),
+  luck_3: () => luck(3),
+  nose_0: () => nose(0),
+  nose_1: () => nose(1),
+  nose_2: () => nose(2),
+  nose_3: () => nose(3),
   task,
   ballot,
   audit,

@@ -84,6 +84,14 @@
     "peace"
   ],
   "ui": [
+    "luck_0",
+    "luck_1",
+    "luck_2",
+    "luck_3",
+    "nose_0",
+    "nose_1",
+    "nose_2",
+    "nose_3",
     "task",
     "ballot",
     "audit",

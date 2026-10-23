@@ -4438,3 +4438,217 @@ button.publish.nudge {
     transform: translateY(-14px);
   }
 }
+
+/* ---------- The reporter window's head (CONCEPT.md §7.3 «Окно репортёра») ---------- */
+.rep-head {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 14px;
+  background: var(--panel-2);
+  border: 2px solid var(--ink);
+}
+
+.rep-head-portrait {
+  flex: none;
+  width: 120px;
+  height: 120px;
+  border: 2px solid var(--ink);
+  image-rendering: pixelated;
+}
+
+.rep-head-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rep-head-name {
+  display: flex;
+  align-items: center;
+  padding-right: 190px;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.rep-level {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.level-chip {
+  padding: 4px 9px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.level-pips {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.level-pips i {
+  width: 10px;
+  height: 10px;
+  background: var(--line);
+  border-radius: 50%;
+}
+
+.level-pips i.on {
+  background: var(--accent);
+}
+
+.xp-bar {
+  height: 10px;
+  overflow: hidden;
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.xp-bar b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #fee761);
+}
+
+.xp-caption {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.xp-caption b {
+  color: var(--text);
+}
+
+/* Luck, nose and loyalty in the top right corner. */
+.rep-corner {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.skill-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.skill-icon img {
+  image-rendering: pixelated;
+}
+
+.skill-icon:hover,
+.skill-icon.on {
+  border-color: var(--accent);
+}
+
+.skill-tip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 5;
+  display: none;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  background: #fff6e0;
+  color: var(--paper-ink);
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 rgba(24, 20, 37, 0.45);
+  font-size: 13px;
+  font-weight: 400;
+  text-align: left;
+}
+
+.skill-tip b {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.skill-icon:hover .skill-tip,
+.skill-icon.on .skill-tip {
+  display: block;
+}
+
+.loyal {
+  margin-left: 4px;
+  padding: 3px 8px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.loyal-ok {
+  color: var(--ok);
+}
+
+.loyal-mid {
+  color: var(--warn);
+}
+
+.loyal-bad {
+  color: var(--danger);
+  animation: loyal-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes loyal-blink {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (max-width: 900px) {
+  /* The corner row goes above the portrait, across the whole card. */
+  .rep-head {
+    gap: 12px;
+    padding: 60px 12px 12px;
+  }
+
+  .rep-head-portrait {
+    width: 88px;
+    height: 88px;
+  }
+
+  .rep-head-name {
+    padding-right: 0;
+    font-size: 18px;
+  }
+
+  .rep-corner {
+    left: 12px;
+  }
+
+  .loyal {
+    margin-left: auto;
+  }
+
+  .skill-tip {
+    right: auto;
+    left: 0;
+  }
+}

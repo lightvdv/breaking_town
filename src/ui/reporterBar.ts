@@ -21,6 +21,36 @@ export function skillLine(c: Content, state: GameState, r: ReporterDef): string 
 }
 
 export const levelNames = ['Новичок', 'Опытный', 'Мастер', 'Легенда'];
+/** «До «Мастера» ещё…» */
+export const levelNamesGen = ['Новичка', 'Опытного', 'Мастера', 'Легенды'];
+
+/** Luck as a horseshoe, nose for news as a nose: four looks each (CONCEPT.md §3.3б). */
+export const luckNames = ['Ржавая подкова', 'Железная подкова', 'Серебряная подкова', 'Золотая подкова'];
+export const noseNames = ['Заложенный нос', 'Обычный нос', 'Чуткий нос', 'Нюх ищейки'];
+/** Luck from which the horseshoe gets better: iron, silver, golden. */
+const LUCK_STEPS = [0.6, 0.75, 0.9];
+
+/** The reporter's skills as experience has grown them, and the look of each icon (0–3). */
+export function skillTiers(c: Content, state: GameState, r: ReporterDef): { luck: number; luckTier: number; nose: number; noseTier: number } {
+  const s = state.reporters.includes(r.id) ? skilledReporter(state, c, r) : r;
+  const luck = searchLuck(state, c, s, getModifiers(state, c));
+  const nose = s.skills.nose;
+  return { luck, luckTier: LUCK_STEPS.filter((x) => luck >= x).length, nose, noseTier: Math.max(0, Math.min(3, Math.round(nose))) };
+}
+
+/** Loyalty in a word and its colour: devoted, wavering, about to leave. */
+export function loyaltyOf(c: Content, state: GameState, r: ReporterDef): { word: string; level: 'ok' | 'mid' | 'bad' } {
+  const l = staffOf(state, c, r.id).loyalty;
+  if (l >= 0.6) return { word: r.female ? 'Предана' : 'Предан', level: 'ok' };
+  if (l >= 0.4) return { word: 'Сомневается', level: 'mid' };
+  return { word: 'На грани ухода', level: 'bad' };
+}
+
+/** What sits behind the «i» by the name: who they are, how they take lies, their personal story, their topics. */
+export function aboutLine(r: ReporterDef): string {
+  const honest = r.honesty >= 0.7 ? 'Не терпит лжи.' : r.honesty <= 0.2 ? `Ложь ${r.female ? 'её' : 'его'} не смущает.` : '';
+  return [r.bio, honest, r.tie?.text ?? '', `${topicLine(r)} · ${scopeLabels[r.skills.scope].toLowerCase()}.`].filter(Boolean).join(' ');
+}
 
 /** Experience and loyalty of a hired reporter, and their personal story (CONCEPT.md §3.3б). */
 export function characterLine(c: Content, state: GameState, r: ReporterDef): string {

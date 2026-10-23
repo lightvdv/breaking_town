@@ -96,7 +96,7 @@ import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
 import { pendingNotes, unlockDay, type Feature } from './guide';
 import { recordOf, starLine, submitRecord } from './records';
-import { aboutLine, characterLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillLine, skillTiers, topicLine, type RepStatus } from './reporterBar';
+import { aboutLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillTiers, topicLine, type RepStatus } from './reporterBar';
 import {
   priceLabels,
   modeLabels,
@@ -265,10 +265,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let truthMenuFor: number | null = null;
   /** Phones: the story whose «where to» menu is open (stories are not dragged on a phone). */
   let moveMenuFor: number | null = null;
-  const phoneQuery = window.matchMedia('(max-width: 900px)');
-  const isPhone = () => phoneQuery.matches;
-  // Crossing the phone width moves «В печать» between the bottom bar and the issue column.
-  phoneQuery.addEventListener('change', () => render());
+  const isPhone = () => window.matchMedia('(max-width: 900px)').matches;
   /** The cover price menu in the masthead is open. */
   let priceMenuOpen = false;
   /** Story picked by a tap; the next tap on a place in the paper moves it there (CONCEPT.md §7.3). */
@@ -299,8 +296,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     'button',
     { class: 'icon-btn hud-shop', title: 'Улучшения газеты', 'aria-label': 'Улучшения', onclick: () => openModal('shop') },
     h('img', { class: 'shop-icon', src: `${assetBase}sprites/ui/cart.png`, alt: '', width: 16, height: 16 }),
+    // Wide screens only: the cart says what it is.
+    h('span', { class: 'shop-label' }, 'Улучшения'),
   );
-  const hudControls = h('div', { class: 'hud-controls' }, reporterBar.el, hudShop, hudMenu);
+  // Wide screens: the reporters are one block «Редакция», as wide as a full newsroom, so nothing
+  // after it moves when someone is hired; on phones the wrapper melts away.
+  const hudTeam = h('div', { class: 'hud-team' }, h('span', { class: 'hud-team-label' }, 'Редакция'), reporterBar.el);
+  const hudControls = h('div', { class: 'hud-controls' }, hudTeam, hudShop, hudMenu);
   const hudGoal = h('div', { class: 'hud-goal' });
   // A narrow track keeps only the names of the city's stage and the goal (CSS `.tight`).
   new ResizeObserver(() => hudGoal.classList.toggle('tight', hudGoal.offsetWidth < 400)).observe(hudGoal);
@@ -314,13 +316,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     h('button', { class: 'icon-btn', title: 'Приблизить', onclick: () => scene?.zoomBy(1) }, '+'),
     h('button', { class: 'icon-btn', title: 'Отдалить', onclick: () => scene?.zoomBy(-1) }, '−'),
     h('button', { class: 'icon-btn', title: 'Весь город', onclick: () => scene?.resetView() }, '⌂'),
-  );
-  const legend = h(
-    'div',
-    { class: 'city-legend' },
-    ...(Object.keys(REACTION_ICON) as Reaction[]).map((r) =>
-      h('span', {}, h('img', { src: `${assetBase}sprites/fx/${REACTION_ICON[r]}.png`, alt: '' }), reactionLabels[r]),
-    ),
   );
   const issueHead = h('div', { class: 'issue-head' });
   // The issue is a newspaper mock-up: front page, the article, columns of briefs, and a tray for
@@ -387,12 +382,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     { class: 'issue-fab', title: 'Вернуться к выпуску', 'aria-label': 'Вернуться к выпуску', hidden: true, onclick: () => openIssue() },
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
   );
-  // Wide screens: «В печать» sits at the foot of the issue column, under the paper it sends out.
-  const issueFoot = h('div', { class: 'issue-foot' });
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, rivalNotice, paper), issueFoot);
-  /** Wide screens: the city is centred in what the issue column leaves of the stage. */
-  const fitCity = () => scene?.setInsetRight(issueOpen && !isPhone() && !titleOpen ? issue.offsetWidth : 0);
-  new ResizeObserver(fitCity).observe(issue);
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, rivalNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -411,9 +401,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
   });
   // …and an open luck or nose tip in the reporter window.
   document.addEventListener('pointerdown', (e) => {
-    if ((!openInfo.has('luck') && !openInfo.has('nose')) || (e.target as Element).closest('.skill-icon')) return;
-    openInfo.delete('luck');
-    openInfo.delete('nose');
+    const tips = [...openInfo].filter((x) => x.endsWith('luck') || x.endsWith('nose'));
+    if (!tips.length || (e.target as Element).closest('.skill-icon')) return;
+    for (const x of tips) openInfo.delete(x);
     render();
   });
   document.addEventListener('keydown', (e) => {
@@ -438,7 +428,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const titleLayer = h('div', { class: 'title-screen', hidden: true });
   root.replaceChildren(
     hud,
-    h('main', { class: 'stage' }, cityHost, cityEvents, tools, legend, loading, cutscene, daySummary, issue, issueFab),
+    h('main', { class: 'stage' }, cityHost, cityEvents, tools, loading, cutscene, daySummary, issue, issueFab),
     tooltip,
     titleLayer,
     modalLayer,
@@ -449,7 +439,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
   CityScene.create(cityHost, c, state, showTooltip)
     .then((s) => {
       scene = s;
-      fitCity();
       loading.remove();
       if (titleOpen) s.startTour();
     })
@@ -1074,10 +1063,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'div',
         { class: 'goal-track' },
-        ...stages.map((_, i) => h('span', { class: `goal-step s${i}${(save ? i >= goal : i < here) ? ' dim' : ''}` })),
+        // Stages the city has been through keep their colours; those ahead are greyed out, so the
+        // way to the goal reads at a glance. In the save mode the forbidden ones are darker still.
+        ...stages.map((_, i) =>
+          h('span', { class: `goal-step s${i}${i > here ? ' ahead' : ''}${save && i >= goal ? ' dim' : ''}${!save && i === goal ? ' target' : ''}` }),
+        ),
         save
           ? h('i', { class: 'goal-line', style: `left: calc(${(goal / stages.length) * 100}% - 2px)` })
-          : h('i', { class: 'goal-flag', style: `left: ${pos(goal)}` }, '🏁'),
+          : h('i', { class: 'goal-flag', style: `left: ${pos(goal)}`, title: 'Цель' }, '🏁'),
         next !== here ? h('i', { class: 'goal-marker ghost', style: `left: ${pos(next)}` }) : null,
         h('i', { class: 'goal-marker', style: `left: ${pos(here)}` }),
       ),
@@ -1198,14 +1191,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ),
     ];
     hudRes.replaceChildren(...items.filter((x): x is HTMLElement => x !== null));
+    hudTeam.style.setProperty('--team-slots', String(c.balance.maxReporters));
     hudShop.hidden = !unlocked('shop');
     hudShop.classList.toggle('is-new', isNew('shop'));
     // While the issue is open: its level and «В печать»; folded: «Выпуск» brings it back.
     const publishing = issueOpen && !state.outcome;
-    // Phones keep it in the bar along the bottom edge; wide screens put it under the paper.
-    const phone = isPhone();
-    hudActions.replaceChildren(...(publishing && phone ? [publishButton()] : []));
-    issueFoot.replaceChildren(...(publishing && !phone ? [publishButton()] : []));
+    hudActions.replaceChildren(
+      ...(publishing ? [publishButton()] : []),
+    );
     // A folded issue waits as a newspaper icon over the city.
     issueFab.hidden = issueOpen || folding || titleOpen || busy || !!state.outcome;
   }
@@ -2338,23 +2331,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function teamContent(): HTMLElement[] {
     const max = c.balance.maxReporters;
     const salaries = state.reporters.reduce((sum, id) => sum + reporterOf(c, id).salary, 0);
+    // Every reporter here looks like the head of their own window (CONCEPT.md §7.3 «Редакция»).
     const row = (id: string, price: string, action: HTMLElement) => {
       const r = reporterOf(c, id);
-      return h(
-        'div',
-        { class: 'shop-item reporter-item' },
-        portrait(id),
-        h(
-          'div',
-          {},
-          h('strong', {}, r.name),
-          h('p', {}, r.bio),
-          h('p', {}, skillLine(c, state, r)),
-          h('p', {}, `${topicLine(r)} · ${price}`),
-          state.reporters.includes(id) ? h('p', { class: 'hint' }, characterLine(c, state, r)) : r.tie ? h('p', { class: 'hint' }, r.tie.text) : null,
-        ),
+      const hired = state.reporters.includes(id);
+      return reporterHead(id, {
+        key: `team:${id}:`,
+        compact: true,
+        lines: hired ? [`${topicLine(r)} · ${price}`] : [r.bio, `${topicLine(r)} · ${price}`],
         action,
-      );
+      });
     };
     return [
       h('p', { class: 'hint' }, `У вас ${state.money}. Зарплаты репортёров: ${salaries} за ход.`),
@@ -2804,17 +2790,21 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * the level as a yellow plaque with four steps, the experience bar and what is left; in the corner
    * luck and nose as icons (their look grows with them; hover or tap tells the level) and loyalty.
    */
-  function reporterHead(id: string): HTMLElement {
+  function reporterHead(id: string, opts: { key?: string; lines?: (string | HTMLElement)[]; action?: HTMLElement | null; compact?: boolean } = {}): HTMLElement {
     const r = reporterOf(c, id);
-    const st = staffOf(state, c, id);
-    const level = levelOf(c, st.xp);
+    // A candidate from the agency has no record yet: a novice with no experience and no loyalty.
+    const hired = state.reporters.includes(id);
+    const xp = hired ? staffOf(state, c, id).xp : 0;
+    const level = levelOf(c, xp);
     const steps = c.balance.reporterLevels;
     const next = steps[level + 1];
-    const share = next === undefined ? 1 : (st.xp - steps[level]) / (next - steps[level]);
-    const left = next === undefined ? 0 : next - st.xp;
+    const share = next === undefined ? 1 : (xp - steps[level]) / (next - steps[level]);
+    const left = next === undefined ? 0 : next - xp;
     const fronts = Math.ceil(left / c.balance.xpPerPlacement[2]);
     const sk = skillTiers(c, state, r);
-    const loyal = loyaltyOf(c, state, r);
+    const loyal = hired ? loyaltyOf(c, state, r) : null;
+    // Several heads share a window in «Редакция»: each keeps its own open tips.
+    const k = opts.key ?? '';
     const toggle = (key: string) => (e: Event) => {
       e.stopPropagation();
       if (openInfo.has(key)) openInfo.delete(key);
@@ -2830,7 +2820,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       );
     return h(
       'div',
-      { class: 'rep-head' },
+      { class: `rep-head${opts.compact ? ' compact' : ''}` },
       portrait(id, 'portrait rep-head-portrait'),
       h(
         'div',
@@ -2839,30 +2829,36 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'div',
           { class: 'rep-head-name' },
           r.name,
-          h('button', { class: `section-info${openInfo.has('about') ? ' on' : ''}`, title: 'О репортёре', 'aria-expanded': String(openInfo.has('about')), onclick: toggle('about') }, 'i'),
+          h('button', { class: `section-info${openInfo.has(`${k}about`) ? ' on' : ''}`, title: 'О репортёре', 'aria-expanded': String(openInfo.has(`${k}about`)), onclick: toggle(`${k}about`) }, 'i'),
         ),
-        ...(openInfo.has('about') ? [h('p', { class: 'hint info-text' }, aboutLine(r))] : []),
+        ...(openInfo.has(`${k}about`) ? [h('p', { class: 'hint info-text' }, aboutLine(r))] : []),
         h(
           'div',
           { class: 'rep-level' },
           h('span', { class: 'level-chip' }, levelNames[level]),
           h('span', { class: 'level-pips', title: `Ступень ${level + 1} из ${steps.length}` }, ...steps.map((_, i) => h('i', { class: i <= level ? 'on' : '' }))),
         ),
-        h('div', { class: 'xp-bar', title: next === undefined ? `Опыт ${st.xp}` : `Опыт ${st.xp} из ${next}` }, h('b', { style: `width: ${Math.round(share * 100)}%` })),
-        h(
-          'div',
-          { class: 'xp-caption' },
-          ...(next === undefined
-            ? ['Высшая ступень — расти больше некуда']
-            : [`До «${levelNamesGen[level + 1]}» ещё `, h('b', {}, `${left} опыта`), ` · ≈ ${fronts} ${plural(fronts, 'первая полоса', 'первые полосы', 'первых полос')}`]),
-        ),
+        ...(hired
+          ? [
+              h('div', { class: 'xp-bar', title: next === undefined ? `Опыт ${xp}` : `Опыт ${xp} из ${next}` }, h('b', { style: `width: ${Math.round(share * 100)}%` })),
+              h(
+                'div',
+                { class: 'xp-caption' },
+                ...(next === undefined
+                  ? ['Высшая ступень — расти больше некуда']
+                  : [`До «${levelNamesGen[level + 1]}» ещё `, h('b', {}, `${left} опыта`), ` · ≈ ${fronts} ${plural(fronts, 'первая полоса', 'первые полосы', 'первых полос')}`]),
+              ),
+            ]
+          : []),
+        ...(opts.lines ?? []).map((x) => h('p', { class: 'rep-head-line' }, x)),
+        opts.action ? h('div', { class: 'rep-head-action' }, opts.action) : null,
       ),
       h(
         'div',
         { class: 'rep-corner' },
-        skill('luck', `luck_${sk.luckTier}`, `Удача: ${luckNames[sk.luckTier].toLowerCase()}`, `${pct(sk.luck)} — так часто репортёр что-то находит. С опытом подкова становится лучше.`),
-        skill('nose', `nose_${sk.noseTier}`, `Чутьё: ${noseNames[sk.noseTier].toLowerCase()}`, 'Чем тоньше нюх, тем чаще находки интересные и сенсационные. С опытом нюх становится тоньше.'),
-        h('span', { class: `loyal loyal-${loyal.level}`, title: 'Лояльность: ложь в газете её подтачивает, ниже предела репортёр уходит' }, loyal.word),
+        skill(`${k}luck`, `luck_${sk.luckTier}`, `Удача: ${luckNames[sk.luckTier].toLowerCase()}`, `${pct(sk.luck)} — так часто репортёр что-то находит. С опытом подкова становится лучше.`),
+        skill(`${k}nose`, `nose_${sk.noseTier}`, `Чутьё: ${noseNames[sk.noseTier].toLowerCase()}`, 'Чем тоньше нюх, тем чаще находки интересные и сенсационные. С опытом нюх становится тоньше.'),
+        loyal ? h('span', { class: `loyal loyal-${loyal.level}`, title: 'Лояльность: ложь в газете её подтачивает, ниже предела репортёр уходит' }, loyal.word) : null,
       ),
     );
   }
@@ -3058,7 +3054,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     }
     renderCityEvents();
     renderIssue();
-    fitCity();
     renderExposures();
     renderReconcile();
     renderStaff();
@@ -3339,6 +3334,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
       step(2, 'Разложите выпуск', 'Первая полоса — главная новость: её прочитают все и сильнее всего ей поверят. Статья — вторая по силе. Остальное выходит заметками. Что не нужно — «Не печатать». Нажмите на новость, чтобы переложить её.'),
       step(3, 'Выберите подачу', 'Кнопка «Подача» над заголовком: «Всё хорошо!», «Без паники», «Как есть», «Это неспроста», «Всё пропало!». Чем дальше от правды, тем сильнее новость — и тем вероятнее, что вас поймают на лжи. В меню виден риск каждого варианта.'),
       step(4, 'В печать', 'Кнопка «В печать» показывает, каким выйдет номер: скучным, обычным, интересным или сенсационным. Пока выпуск открыт, «≈» у показателей наверху — прогноз. После печати город отреагирует: над жителями появятся значки.'),
+      // What the icons over residents mean: the city has no legend of its own (CONCEPT.md §7.3).
+      h(
+        'div',
+        { class: 'howto-reactions' },
+        ...(Object.keys(REACTION_ICON) as Reaction[]).map((r) =>
+          h('span', {}, h('img', { src: `${assetBase}sprites/fx/${REACTION_ICON[r]}.png`, alt: '', width: 16, height: 16 }), reactionLabels[r]),
+        ),
+      ),
       h('h3', { class: 'section' }, 'Что беречь'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.'),
       block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. На деньги нанимайте репортёров и покупайте улучшения (тележка наверху).'),

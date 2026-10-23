@@ -245,8 +245,25 @@ select {
   background: #a22633;
 }
 
+/* Not reached yet: grey and see-through, the colour comes when the city gets there. */
+.goal-step.ahead {
+  filter: grayscale(0.85);
+  opacity: 0.4;
+}
+
 .goal-step.dim {
-  opacity: 0.35;
+  opacity: 0.2;
+}
+
+/* The goal stage: a white frame around it and the flag above. */
+.goal-step.target {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.goal-step.ahead.target {
+  filter: grayscale(0.3);
+  opacity: 0.8;
 }
 
 .goal-marker {
@@ -265,12 +282,23 @@ select {
   border-top-color: rgba(255, 255, 255, 0.4);
 }
 
+/* The finish flag: a white badge over the goal stage, visible from across the bar. */
 .goal-flag {
   position: absolute;
-  top: -14px;
-  font-size: 12px;
+  top: -19px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 22px;
+  background: var(--accent);
+  border: 2px solid var(--ink);
+  border-radius: 5px;
+  font-size: 15px;
   font-style: normal;
-  transform: translateX(-4px);
+  line-height: 1;
+  transform: translateX(-50%);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 
 .goal-line {
@@ -296,6 +324,12 @@ select {
 
 .goal-names .here {
   color: var(--text);
+  font-weight: 700;
+}
+
+/* The goal's name stands out too (destroy mode: the stage to reach). */
+.goal-names .goal:not(.here) {
+  color: var(--accent);
   font-weight: 700;
 }
 
@@ -1022,8 +1056,7 @@ button.publish.level-3.bump-up {
 /* The game interface stays out of sight behind the title screen. */
 .at-title .hud,
 .at-title .city-events,
-.at-title .city-tools,
-.at-title .city-legend {
+.at-title .city-tools {
   visibility: hidden;
 }
 
@@ -1158,6 +1191,22 @@ button.publish.level-3.bump-up {
   margin: 2px 0 0;
 }
 
+/* The icons over residents and what they mean, under «В печать» in the rulebook. */
+.howto-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-left: 42px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.howto-reactions img {
+  margin-right: 4px;
+  vertical-align: -3px;
+  image-rendering: pixelated;
+}
+
 .howto-num {
   display: grid;
   place-items: center;
@@ -1257,8 +1306,7 @@ button.publish.level-3.bump-up {
 
 /* ---------- City cutscene before the issue (CONCEPT.md §7.3) ---------- */
 .in-cutscene .city-events,
-.in-cutscene .city-tools,
-.in-cutscene .city-legend {
+.in-cutscene .city-tools {
   visibility: hidden;
 }
 
@@ -1708,29 +1756,6 @@ button.publish.level-3.bump-up {
   height: 36px;
   padding: 0;
   font-size: 20px;
-}
-
-.city-legend {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  padding: 6px 10px;
-  background: rgba(24, 20, 37, 0.78);
-  color: #fff;
-  border: 2px solid var(--ink);
-  font-size: 12px;
-  pointer-events: none;
-}
-
-.city-legend img {
-  width: 16px;
-  height: 16px;
-  image-rendering: pixelated;
-  vertical-align: -3px;
-  margin-right: 4px;
 }
 
 /* ---------- Issue of the day (centre overlay) ---------- */
@@ -3946,7 +3971,8 @@ button.publish.level-3.bump-up {
 
   .hud-goal {
     max-width: none;
-    padding: 6px 10px 0;
+    /* Room for the finish flag under the resources. */
+    padding: 16px 10px 0;
   }
 
   /* «В печать» / «Выпуск»: a solid bar along the whole bottom edge, like the top bar. */
@@ -4037,10 +4063,6 @@ button.publish.level-3.bump-up {
 
   .city-events {
     max-width: calc(100% - 72px);
-  }
-
-  .city-legend {
-    display: none;
   }
 }
 
@@ -4527,6 +4549,31 @@ button.publish.nudge {
   font-size: 13px;
 }
 
+/* «Редакция»: the same head for every reporter, a size smaller, with a line and a button. */
+.rep-head.compact .rep-head-portrait {
+  width: 96px;
+  height: 96px;
+}
+
+.rep-head.compact .rep-head-name {
+  font-size: 17px;
+}
+
+.rep-head-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.rep-head-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rep-head + .rep-head {
+  margin-top: 8px;
+}
+
 .xp-caption b {
   color: var(--text);
 }
@@ -4653,50 +4700,87 @@ button.publish.nudge {
   }
 }
 
-/* ---------- Wide screens: the issue is a column on the right, the city stays in sight (CONCEPT.md §7.3) ---------- */
+/* On phones the «Редакция» wrapper melts into the control row, and the cart is only an icon. */
+.hud-team {
+  display: contents;
+}
+
+.shop-label {
+  display: none;
+}
+
+.hud-team-label {
+  display: none;
+}
+
+/* ---------- Wide screens: the top bar in one row, the issue over the whole stage (CONCEPT.md §7.3) ---------- */
 @media (min-width: 901px) {
-  /* Top bar: resources on the left, the goal track in the middle, reporters, cart and ☰ on the right. */
+  /* Resources, the cart, «Редакция», the goal track in the middle, «В печать» and ☰ on the right.
+     Every piece is centred on the portraits' line; their names hang into the bar's bottom padding. */
   .hud {
-    flex-wrap: nowrap;
+    --team-gap: 16px;
     gap: 16px;
+    padding: 8px 12px 24px;
     border-bottom: 2px solid var(--panel);
   }
 
+  /* «Улучшения» right before «В печать»: the icon and its word. */
+  .hud-shop {
+    order: 4;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    padding: 0 10px 0 6px;
+    font-size: 13px;
+  }
+
+  .hud-shop .shop-label {
+    display: inline;
+  }
+
+  .hud-buttons {
+    order: 5;
+  }
+
+  .hud-menu {
+    order: 6;
+  }
+
+  /* «Редакция»: a caption and the portraits, as wide as a full newsroom, so the pieces after it
+     never move when someone is hired or leaves. */
+  .hud-team {
+    order: 2;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .hud-team-label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .hud-team .reporter-bar {
+    flex: none;
+    gap: var(--team-gap);
+    width: calc(var(--team-slots, 5) * 40px + (var(--team-slots, 5) - 1) * var(--team-gap));
+    padding-bottom: 0;
+  }
+
+  /* The row breaks by the flex basis, so the track starts at its narrowest and grows into the rest. */
   .hud-goal {
-    order: 1;
-    flex: 1 1 260px;
+    order: 3;
+    flex: 1 1 160px;
     min-width: 160px;
     max-width: 520px;
     margin: 0 auto;
-    padding: 0;
+    /* Room for the finish flag above the track. */
+    padding: 10px 0 0;
   }
-
-  .hud-controls .reporter-bar {
-    order: 2;
-    margin-left: auto;
-  }
-}
-
-/* A small laptop with a full newsroom: five portraits, the cart and ☰ still fit in the one row. */
-@media (min-width: 901px) and (max-width: 1100px) {
-  .hud-controls .reporter-bar {
-    gap: 8px;
-  }
-
-  .hud-controls .rep-name {
-    max-width: 48px;
-  }
-
-  .hud-controls .rep-name b,
-  .hud-controls .rep-name small {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-@media (min-width: 901px) {
 
   .goal-names {
     font-size: 11px;
@@ -4707,115 +4791,87 @@ button.publish.nudge {
     visibility: hidden;
   }
 
-  .stage {
-    --issue-w: clamp(420px, 40vw, 620px);
-  }
-
+  /* The issue takes the whole stage: the paper fills its width and height. */
   .issue {
-    left: auto;
-    width: var(--issue-w);
-    padding: 12px 12px 0;
-    background: none;
+    padding: 12px;
   }
 
   .issue-panel {
     gap: 10px;
-    min-height: 0;
-  }
-
-  .issue-head h2 {
-    font-size: 22px;
+    max-width: none;
   }
 
   .paper {
-    padding: 12px 16px 14px;
-  }
-
-  /* The name of the paper on one line, «—» beside it. */
-  .masthead {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'title close'
-      'row row';
-  }
-
-  .masthead h2 {
-    font-size: clamp(20px, 2vw, 26px);
-    white-space: nowrap;
-  }
-
-  /* One column of rubrics: the front page, the article, then the briefs. */
-  .paper-grid {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: none;
-    grid-template-areas:
-      'front'
-      'article'
-      'briefs';
-    gap: 12px;
-  }
-
-  .zone-1,
-  .zone-0 {
-    padding: 10px 0 0;
-    border-left: none;
-    border-top: 1px solid var(--paper-muted);
-  }
-
-  /* The front page picture goes beside the text instead of filling half the screen. */
-  .at-2 .headline {
-    font-size: 24px;
-  }
-
-  .at-2 .news-art {
-    float: left;
-    width: 48%;
-    max-width: 288px;
-    margin: 2px 14px 4px 0;
-  }
-
-  .at-2 .lorem {
-    column-count: 1;
-  }
-
-  .guide-note {
+    flex: 1;
     max-width: none;
-    margin: 0;
-    transform: none;
+  }
+}
+
+/* A smaller laptop: «Улучшения» is only its icon again (the word is in its tooltip). */
+@media (min-width: 901px) and (max-width: 1300px) {
+  .hud .hud-shop {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
   }
 
-  /* «В печать» under the paper, always in reach while the column scrolls. */
-  .issue-foot {
-    position: sticky;
-    bottom: 0;
-    z-index: 4;
-    margin-top: 10px;
-    padding: 10px 0 12px;
-    background: linear-gradient(transparent, var(--bg-deep) 30%);
+  .hud-shop .shop-label {
+    display: none;
+  }
+}
+
+/* A laptop: tighter spacing keeps the one row. */
+@media (min-width: 901px) and (max-width: 1440px) {
+  .hud {
+    --team-gap: 10px;
+    gap: 10px;
   }
 
-  .issue-foot:empty {
+  .res {
+    padding: 0 6px;
+  }
+
+  /* «В печать» without its icon and a size smaller, so ☰ stays in the row. */
+  .hud button.publish {
+    min-height: 36px;
+    gap: 6px;
+    padding-left: 10px;
+    font-size: 13px;
+  }
+
+  .hud button.publish img {
     display: none;
   }
 
-  .issue-foot .publish {
-    width: 100%;
-    justify-content: center;
-    min-height: 48px;
+  .hud-team .rep-name {
+    max-width: 48px;
   }
 
-  /* The zoom buttons move off the paper to the edge of the city. */
-  .stage:has(.issue.open) .city-tools {
-    right: calc(var(--issue-w) + 12px);
+  .hud-team .rep-name b,
+  .hud-team .rep-name small {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* A small laptop: the goal track takes a row of its own under the controls. */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .hud {
+    --team-gap: 8px;
   }
 
-  .city-events {
-    max-width: min(320px, calc(100% - var(--issue-w) - 80px));
+  .hud-team-label {
+    display: none;
   }
 
-  /* The legend stays left of the paper. */
-  .stage:has(.issue.open) .city-legend {
-    max-width: calc(100% - var(--issue-w) - 36px);
+  .hud .hud-goal {
+    order: 9;
+    flex-basis: 100%;
+    max-width: none;
+    /* Below the reporters' names, which hang under the portraits. */
+    margin: 26px 0 -14px;
   }
 }
 

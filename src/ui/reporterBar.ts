@@ -1,5 +1,5 @@
 import { ASSET_BASE } from '../assets';
-import { getModifiers, groupOf, levelOf, reporterOf, searchLuck, skilledReporter, staffOf, type Content, type Find, type GameState, type ReporterDef } from '../sim';
+import { getModifiers, groupOf, reporterOf, searchLuck, skilledReporter, staffOf, type Content, type Find, type GameState, type ReporterDef } from '../sim';
 import { h, pct } from './dom';
 import { rivalNames, scopeLabels, tierLabels, topicLabels } from './text';
 
@@ -50,16 +50,6 @@ export function loyaltyOf(c: Content, state: GameState, r: ReporterDef): { word:
 export function aboutLine(r: ReporterDef): string {
   const honest = r.honesty >= 0.7 ? 'Не терпит лжи.' : r.honesty <= 0.2 ? `Ложь ${r.female ? 'её' : 'его'} не смущает.` : '';
   return [r.bio, honest, r.tie?.text ?? '', `${topicLine(r)} · ${scopeLabels[r.skills.scope].toLowerCase()}.`].filter(Boolean).join(' ');
-}
-
-/** Experience and loyalty of a hired reporter, and their personal story (CONCEPT.md §3.3б). */
-export function characterLine(c: Content, state: GameState, r: ReporterDef): string {
-  const s = staffOf(state, c, r.id);
-  const level = levelOf(c, s.xp);
-  const next = c.balance.reporterLevels[level + 1];
-  const loyalty = s.loyalty >= 0.6 ? (r.female ? 'предана газете' : 'предан газете') : s.loyalty >= 0.4 ? 'сомневается' : 'на грани ухода';
-  const honest = r.honesty >= 0.7 ? 'Не терпит лжи.' : r.honesty <= 0.2 ? `Ложь ${r.female ? 'её' : 'его'} не смущает.` : '';
-  return [`${levelNames[level]}${next !== undefined ? ` (опыт ${s.xp}/${next})` : ''} · ${loyalty}.`, honest, r.tie?.text ?? ''].filter(Boolean).join(' ');
 }
 
 export function topicLine(r: ReporterDef): string {

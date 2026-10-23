@@ -27,10 +27,12 @@ export interface Settings {
   guideOpen: boolean;
   /** The tasks plaque is unfolded (the default); folded it is one line. */
   tasksOpen: boolean;
+  /** The «Редакция» plaque (promotions, quits) is unfolded; folded (the default) it is one line. */
+  staffOpen: boolean;
 }
 
 const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
-const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, experience: 'novice', notesSeen: [], guideOpen: false, tasksOpen: true };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, experience: 'novice', notesSeen: [], guideOpen: false, tasksOpen: true, staffOpen: false };
 
 export function loadSettings(): Settings {
   try {

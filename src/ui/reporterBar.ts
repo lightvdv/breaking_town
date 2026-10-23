@@ -20,7 +20,7 @@ export function skillLine(c: Content, state: GameState, r: ReporterDef): string 
   return `Удача ${pct(luck)} · Чутьё ${stars(s.skills.nose)} · ${scopeLabels[s.skills.scope]}`;
 }
 
-const levelNames = ['Новичок', 'Опытный', 'Мастер', 'Легенда'];
+export const levelNames = ['Новичок', 'Опытный', 'Мастер', 'Легенда'];
 
 /** Experience and loyalty of a hired reporter, and their personal story (CONCEPT.md §3.3б). */
 export function characterLine(c: Content, state: GameState, r: ReporterDef): string {
@@ -70,6 +70,17 @@ export class ReporterBar {
     private onInvestigate: (id: string) => void,
   ) {
     this.el.addEventListener('click', () => this.onSkip());
+  }
+
+  /** A promotion: a golden flash over the portrait and «▲ Повышение» rising from it. */
+  celebrate(ids: string[]): void {
+    for (const id of ids) {
+      const portrait = this.cards.get(id)?.root.querySelector('.rep-portrait');
+      if (!portrait) continue;
+      const fx = h('span', { class: 'level-up', 'aria-hidden': 'true' }, h('span', { class: 'level-up-ring' }), h('span', { class: 'level-up-tag' }, '▲ Повышение'));
+      portrait.append(fx);
+      window.setTimeout(() => fx.remove(), 3600);
+    }
   }
 
   /** Screen rectangle of a hired reporter's card (cards fly out of it). */

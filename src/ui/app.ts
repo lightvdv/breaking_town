@@ -34,6 +34,8 @@ import {
   arcInfo,
   withDifficulty,
   scoreOf,
+  levelOf,
+  staffOf,
   taskOf,
   taskProgress,
   taskReward,
@@ -94,7 +96,7 @@ import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
 import { pendingNotes, unlockDay, type Feature } from './guide';
 import { recordOf, starLine, submitRecord } from './records';
-import { characterLine, portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
+import { characterLine, levelNames, portrait, ReporterBar, skillLine, topicLine, type RepStatus } from './reporterBar';
 import {
   priceLabels,
   modeLabels,
@@ -235,6 +237,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let modal: Modal = null;
   /** Reporter whose investigation window is open. */
   let investigator: string | null = null;
+  /** Explanations opened with «i» in the reporter window (by section). */
+  const openInfo = new Set<string>();
   let scene: CityScene | null = null;
   // Start-of-turn search animation.
   let repStatus = new Map<string, RepStatus>();
@@ -252,6 +256,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** The mayor's reconciliation notice of the last report was closed. */
   let reconcileSeen = false;
   let staffSeen = false;
+  /** The turn whose promotions the portraits already celebrated (none again after a reload). */
+  let promotedTurn = saved?.report?.turn ?? -1;
   let offerError = '';
   /** Group picked on the relations circle: its lines stand out, the rest dim. */
   let relFocus: string | null = null;
@@ -1476,7 +1482,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const st = report?.staff;
     const lines = st
       ? [
-          ...st.levelUps.map((id) => `${reporterOf(c, id).name} набирается опыта: пишет лучше и находит больше.`),
+          ...st.levelUps.map((id) => `${reporterOf(c, id).name} ${reporterOf(c, id).female ? 'получила' : 'получил'} повышение: теперь ${levelNames[levelOf(c, staffOf(state, c, id).xp)].toLowerCase()}, пишет лучше и находит больше.`),
           ...st.quit.map((id) => {
             const r = reporterOf(c, id);
             const a = r.female ? 'а' : '';
@@ -1488,11 +1494,33 @@ export function mountApp(root: HTMLElement, base: Content): void {
       : [];
     staffNotice.hidden = !lines.length || staffSeen || searching;
     if (staffNotice.hidden) return;
+    const toggle = (open: boolean) => (e: Event) => {
+      e.stopPropagation();
+      settings.staffOpen = open;
+      saveSettings(settings);
+      render();
+    };
+    staffNotice.classList.toggle('folded', !settings.staffOpen);
+    // Folded by default: one line with the first news, like the rival's plaque; the choice is remembered.
+    if (!settings.staffOpen) {
+      staffNotice.replaceChildren(
+        h(
+          'button',
+          { class: 'rival-toggle', onclick: toggle(true) },
+          h('b', {}, 'Редакция'),
+          h('span', { class: 'staff-first' }, lines[0]),
+          lines.length > 1 ? h('span', { class: 'rival-count' }, `ещё ${lines.length - 1}`) : null,
+          h('span', { class: 'chip-arrow' }, '▾'),
+        ),
+      );
+      return;
+    }
     staffNotice.replaceChildren(
       h(
         'div',
         { class: 'notice-head' },
         h('b', {}, 'Редакция'),
+        h('button', { class: 'rival-hide', title: 'Свернуть', 'aria-label': 'Свернуть', onclick: toggle(false) }, '▴'),
         h(
           'button',
           {
@@ -2725,6 +2753,33 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   /** Reporter window: search topics and assigning an investigation (CONCEPT.md §3.3, §3.3а). */
+  /** A section heading with an «i» that shows its explanation under it (CONCEPT.md §7.3 «Окно репортёра»). */
+  function infoSection(key: string, title: string, ...texts: string[]): HTMLElement[] {
+    const open = openInfo.has(key);
+    return [
+      h(
+        'h3',
+        { class: 'section' },
+        title,
+        h(
+          'button',
+          {
+            class: `section-info${open ? ' on' : ''}`,
+            title: open ? 'Скрыть пояснение' : 'Что это?',
+            'aria-expanded': String(open),
+            onclick: () => {
+              if (open) openInfo.delete(key);
+              else openInfo.add(key);
+              render();
+            },
+          },
+          'i',
+        ),
+      ),
+      ...(open ? texts.map((t) => h('p', { class: 'hint info-text' }, t)) : []),
+    ];
+  }
+
   function investigateContent(): HTMLElement[] {
     const id = investigator;
     if (!id || !state.reporters.includes(id)) return [h('p', { class: 'hint' }, 'Репортёр больше не работает в редакции.')];
@@ -2753,7 +2808,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const chip = (label: string, on: boolean, pick: () => void, title = '') =>
       h('button', { class: `chip${on ? ' on' : ''}`, 'aria-pressed': String(on), title, disabled: !!state.outcome, onclick: act(pick) }, label);
     const topicSection = [
-      h('h3', { class: 'section' }, 'Темы поиска'),
+      ...infoSection(
+        'topics',
+        'Темы поиска',
+        `С шансом ${pct(b.assignFocus)} репортёр приносит новость на выбранные темы. ★ — его специальность: если все выбранные темы из них, удача +${pct(b.specialtyLuck)}.` +
+          (onSpecialty(state, r) ? ' Сейчас он работает по специальности.' : ''),
+      ),
       h(
         'div',
         { class: 'chips' },
@@ -2769,24 +2829,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
           );
         }),
       ),
-      h(
-        'p',
-        { class: 'hint' },
-        `С шансом ${pct(b.assignFocus)} репортёр приносит новость на выбранные темы. ★ — его специальность: если все выбранные темы из них, удача +${pct(b.specialtyLuck)}.` +
-          (onSpecialty(state, r) ? ' Сейчас он работает по специальности.' : ''),
-      ),
     ];
     // Save mode: watching the rival paper instead of the topics (CONCEPT.md §8).
     if (state.rival && !state.rival.closed) {
       const watching = state.rivalWatch.includes(id);
       topicSection.push(
-        h('h3', { class: 'section' }, `«${rivalNames[state.rival.kind].name}»`),
-        h('div', { class: 'chips' }, chip(`Следить за «${rivalNames[state.rival.kind].ins}»`, watching, () => setRivalWatch(state, id, !watching))),
-        h(
-          'p',
-          { class: 'hint' },
+        ...infoSection(
+          'rival',
+          `«${rivalNames[state.rival.kind].name}»`,
           `Следящий репортёр с шансом ${pct(b.assignFocus)} приносит опровержение свежей лжи «${rivalNames[state.rival.kind].gen}» вместо обычной новости; остальные находят его случайно, с шансом ${pct(b.debunkFindChance)}.`,
         ),
+        h('div', { class: 'chips' }, chip(`Следить за «${rivalNames[state.rival.kind].ins}»`, watching, () => setRivalWatch(state, id, !watching))),
       );
     }
     if (inv) {
@@ -2795,10 +2848,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
         head,
         ...errorLine,
         ...topicSection,
-        h('h3', { class: 'section' }, 'Расследование'),
+        ...infoSection('investigation', 'Расследование', `Пока идёт расследование, репортёр не ищет обычные новости, а редакция тратит ${b.investigationCost} за ход.`),
         h('p', {}, `Копает грязь на группу «${groupOf(c, inv.target).name}». Осталось ходов: ${inv.turnsLeft} из ${inv.total}.`),
         meter(done / inv.total, 'warn'),
-        h('p', { class: 'hint' }, `Пока идёт расследование, репортёр не ищет обычные новости, а редакция тратит ${b.investigationCost} за ход.`),
         h('button', { class: 'ghost', disabled: !!state.outcome, onclick: act(() => cancelInvestigation(state, id)) }, 'Отозвать с расследования'),
       ];
     }
@@ -2809,15 +2861,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
       head,
       ...errorLine,
       ...topicSection,
-      h('h3', { class: 'section' }, 'Расследование'),
-      h(
-        'p',
-        {},
-        `Поручите найти компромат на социальную группу. Займёт ${turns} хода и ${b.investigationCost} денег за каждый ход — всё это время репортёр не приносит обычных новостей. ` +
+      ...infoSection(
+        'investigation',
+        'Расследование',
+        `Займёт ${turns} хода и ${b.investigationCost} денег за каждый ход — всё это время репортёр не приносит обычных новостей. ` +
           `Итог — эксклюзив: сенсация с шансом ${pct(sensation)}, правда с шансом ${pct(truth)} (иначе полуправда).`,
+        'Поверившие из других групп злятся и выходят на протест, а сама группа чувствует травлю и уезжает — даже те, кто вас не читает.',
       ),
-      h('p', { class: 'hint' }, 'Поверившие из других групп злятся и выходят на протест, а сама группа чувствует травлю и уезжает — даже те, кто вас не читает.'),
-      h('h3', { class: 'section' }, 'На кого копать'),
+      h('p', {}, `Компромат на группу: ${turns} хода, ${b.investigationCost} ₽ за ход. На кого копать:`),
       ...c.groups.map((g) => {
         const active = state.residents.filter((x) => x.status === 'active' && x.group === g.id).length;
         return h(
@@ -2918,6 +2969,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderHud();
     reporterBar.hiring = unlocked('hire') ? (isNew('hire') ? 'new' : 'open') : 'closed';
     reporterBar.render(state, repStatus, searching);
+    // A promoted reporter's portrait celebrates once the day's search is over (CONCEPT.md §3.3б).
+    if (report && !searching && !busy && promotedTurn !== report.turn) {
+      promotedTurn = report.turn;
+      reporterBar.celebrate(report.staff.levelUps);
+    }
     renderCityEvents();
     renderIssue();
     renderExposures();

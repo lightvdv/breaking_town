@@ -4,18 +4,17 @@
     "name": "Легко",
     "text": "Фактчекеры ленивы, соперник слабее, денег больше, а спасать город нужно меньше дней.",
     "balance": {
-      "startMoney": 140,
+      "startMoney": 340,
       "checkerBase": 0.17,
       "rivalCloseShare": 0.03,
       "rivalTrustCollapse": 12,
-      "debunkTrust": 3,
-      "guardianStoriesMax": 4
+      "debunkTrust": 8
     },
     "modes": {
-      "destroy": { "tensionNews": { "destroy": [-16, 0, 30, 44], "save": [-16, 0, 25, 38] } },
+      "destroy": { "tensionNews": { "destroy": [-16, 0, 34, 50], "save": [-16, 0, 25, 38] } },
       "save": {
         "turnLimit": 34,
-        "rivalTrustCollapse": 15
+        "rivalTrustCollapse": 12
       }
     }
   },
@@ -31,15 +30,17 @@
     "name": "Сложно",
     "text": "Фактчекеры не спят, соперник цепкий, касса почти пуста, а время работает против вас.",
     "balance": {
-      "startMoney": 70,
+      "startMoney": 270,
       "checkerBase": 0.22,
       "rivalCloseShare": 0.015,
       "rivalTrustCollapse": 8,
-      "debunkTrust": 2
+      "debunkTrust": 4
     },
     "modes": {
       "destroy": {
-        "tensionNews": { "destroy": [-16, 0, 25, 38], "save": [-16, 0, 25, 38] },
+        "tensionNews": { "destroy": [-16, 0, 30, 44], "save": [-16, 0, 25, 38] },
+        "guardianStoriesMax": 3,
+        "tensionDecay": 0.025,
         "turnLimit": 37,
         "conflictStartTurn": 2
       },

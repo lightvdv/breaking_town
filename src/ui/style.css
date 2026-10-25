@@ -5416,3 +5416,13 @@ button.publish.nudge {
   font-weight: 700;
   letter-spacing: 0.5px;
 }
+
+/* One story a reporter a day (CONCEPT.md §3.3): events nobody wrote up, and a specialist's exclusive. */
+.city-events .event.missed {
+  opacity: 0.5;
+  font-style: italic;
+}
+
+.kicker.expert-kicker {
+  color: #124e89;
+}

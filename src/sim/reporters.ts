@@ -57,10 +57,12 @@ function available(state: GameState, t: CardTemplate): boolean {
 }
 
 /**
- * Hired reporters bring the news. Everything that happened in the city today (`events`, incidents
- * included) always reaches the issue: each event is written up by a reporter — one who covers its
- * topic if there is one, otherwise in turn. Then every reporter searches as usual for facts, rumors
- * and world news (CONCEPT.md §3.3). Returns the new cards and the search log.
+ * Hired reporters bring the news, one story each a day (CONCEPT.md §3.3). Today's events (incidents
+ * and arc stages included) come first: each takes a free reporter — one whose specialty it is (who
+ * writes it a level stronger: an exclusive), then one sent after its topic, then the next free one.
+ * Events nobody is free for go unwritten (`missed`). The reporters left search as usual for facts,
+ * rumors and world news. A reporter on an investigation, or watching the rival while it has lies to
+ * debunk, takes no event. Returns the new cards, the search log and the missed events.
  */
 export function findNews(
   state: GameState,
@@ -70,9 +72,10 @@ export function findNews(
   events: CardTemplate[],
   /** Today's incidents: which pair each one was about. */
   eventPairs: Map<string, [GroupId, GroupId]> = new Map(),
-): { cards: CardInstance[]; finds: Find[] } {
+): { cards: CardInstance[]; finds: Find[]; missed: CardTemplate[] } {
   const b = c.balance;
   const cards: CardInstance[] = [];
+  const missed: CardTemplate[] = [];
   const finds: Find[] = [];
   const inHand = new Set(state.hand.map((x) => x.templateId));
   const recent = (t: CardTemplate) => isRecent(state, c, t.id);
@@ -156,16 +159,26 @@ export function findNews(
   // Each works with the skills their experience has grown (CONCEPT.md §3.3б).
   const hired = state.reporters.filter((id) => !busy.has(id)).map((id) => skilledReporter(state, c, reporterOf(c, id)));
 
-  // Today's events always make the news: the reporter on the topic, otherwise the next in turn.
-  const writers = hired.length ? hired : state.reporters.slice(0, 1).map((id) => reporterOf(c, id));
-  let turn = 0;
+  // Today's events take free reporters first, one each; a specialist writes an exclusive.
+  const free = [...hired];
   for (const tpl of events) {
-    if (!writers.length || inHand.has(tpl.id) || cards.some((x) => x.templateId === tpl.id)) continue;
-    const r = writers.find((w) => w.skills.topics.includes(tpl.topic) || (state.reporterTopics[w.id] ?? []).includes(tpl.topic)) ?? writers[turn++ % writers.length];
+    if (inHand.has(tpl.id) || cards.some((x) => x.templateId === tpl.id)) continue;
+    const pool = free.filter((w) => !(targets.length && state.rivalWatch.includes(w.id)));
+    const r =
+      pool.find((w) => w.skills.topics.includes(tpl.topic)) ?? pool.find((w) => (state.reporterTopics[w.id] ?? []).includes(tpl.topic)) ?? pool[0];
+    if (!r) {
+      missed.push(tpl);
+      continue;
+    }
+    free.splice(free.indexOf(r), 1);
     const card = write(r, tpl, null);
+    if (r.skills.topics.includes(tpl.topic)) {
+      card.tier = Math.min(tpl.tiers?.[1] ?? 3, card.tier + b.expertTierBonus) as NewsTier;
+      card.expert = true;
+    }
     finds.push({ reporterId: r.id, cardUid: card.uid, tier: card.tier, forced: false, kind: 'search' });
   }
-  for (const r of hired) {
+  for (const r of free) {
     const card = chance(rng, searchLuck(state, c, r, mods)) ? make(r, null) : null;
     finds.push({ reporterId: r.id, cardUid: card?.uid ?? null, tier: card?.tier ?? null, forced: false, kind: 'search' });
   }
@@ -178,7 +191,7 @@ export function findNews(
     const card = make(reporterOf(c, f.reporterId), 0);
     if (card) Object.assign(f, { cardUid: card.uid, tier: card.tier, forced: true });
   }
-  return { cards, finds };
+  return { cards, finds, missed };
 }
 
 // ---------- Investigations (CONCEPT.md §3.3а) ----------

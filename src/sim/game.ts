@@ -105,6 +105,7 @@ export function createGame(
     initialEmployed: residents.filter((r) => r.job !== null).length,
     metrics: { population: 1, employment: 1, economy: 1, mood: 0.6, order: 1, cityIndex: 100, activeResidents: residents.length },
     lastReactions: {},
+    missedEvents: [],
     rivalReactions: {},
     todayEvents: [],
     tasks: [],
@@ -175,7 +176,9 @@ function startTurn(state: GameState, c: Content): { notes: string[]; twist: { st
   }
   pruneRival(state, c);
   const dug = advanceInvestigations(state, c, state.rng);
-  const { cards, finds } = findNews(state, c, state.rng, getModifiers(state, c), events, pairs);
+  const { cards, finds, missed } = findNews(state, c, state.rng, getModifiers(state, c), events, pairs);
+  const incidentTitles = new Map(relations.incidents.map((i) => [i.templateId, i.title]));
+  state.missedEvents = missed.map((t) => incidentTitles.get(t.id) ?? t.titles[0] ?? t.id);
   state.hand = [...state.hand, ...dug.cards, ...cards];
   state.lastFinds = [...dug.finds, ...finds];
   // Save mode: the rival writes today's issue; it comes out with ours (CONCEPT.md §8).

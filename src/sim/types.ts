@@ -469,6 +469,8 @@ export interface Balance {
   startReporters: string[];
   /** Stories guaranteed per turn even if every reporter fails. */
   minFinds: number;
+  /** Levels a specialist adds to an event on their own topic (an exclusive, CONCEPT.md §3.3). */
+  expertTierBonus: number;
   tierWeights: Quad<number>;
   /** Impact (how strongly viewers react) by tier. Tiers never change reach. */
   tierInterest: Quad<number>;
@@ -809,6 +811,8 @@ export interface CardInstance {
   /** Kompromat from an anonymous source that is fake: told as true, it is a lie for the fact-checkers. Hidden. */
   setup?: boolean;
   /** Debunks: the rival's printed story it answers (uid in `RivalState.printed`), its headline and effect. */
+  /** An event written by a reporter whose specialty it is: a level stronger (CONCEPT.md §3.3). */
+  expert?: boolean;
   debunk?: { uid: number; title: string; effect: EffectType | null };
 }
 
@@ -1079,6 +1083,8 @@ export interface GameState {
   metrics: CityMetrics;
   /** Reactions to the last turn's news, by resident id (for the UI). */
   lastReactions: Record<number, Reaction>;
+  /** Today's events no free reporter could write up (CONCEPT.md §3.3): shown greyed in the day's events. */
+  missedEvents: string[];
   /** Reactions to the rival's issue of the same day, kept apart from ours (shown with its paper over the head). */
   rivalReactions: Record<number, Reaction>;
   todayEvents: string[];

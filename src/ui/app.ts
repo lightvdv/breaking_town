@@ -1279,7 +1279,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const rec = state.reconciliation;
     cityEvents.replaceChildren(
       h('div', { class: 'day' }, `${state.town ? `${base.towns.find((t) => t.id === state.town)?.name ?? ''} · ` : ''}День ${state.turn}`),
-      ...state.todayEvents.map((e) => h('div', { class: 'event' }, `• ${e}`)),
+      // Events no free reporter could write up are greyed (CONCEPT.md §3.3: one story a reporter a day).
+      ...state.todayEvents.map((e) =>
+        state.missedEvents.includes(e) ? h('div', { class: 'event missed', title: 'Свободного репортёра не нашлось' }, `• ${e} — никто не написал`) : h('div', { class: 'event' }, `• ${e}`),
+      ),
+      ...state.missedEvents.filter((e) => !state.todayEvents.includes(e)).map((e) => h('div', { class: 'event missed', title: 'Свободного репортёра не нашлось' }, `• ${e} — никто не написал`)),
       ...(rec ? [h('div', { class: 'event peace' }, `☮ Примирение: ${pairNames(rec.pair, ' и ')} · ещё ${rec.turnsLeft} ${turnsWord(rec.turnsLeft)}`)] : []),
       ...(mayorName() ? [h('div', { class: 'event' }, `Мэр: ${mayorName()}`)] : []),
     );
@@ -2028,6 +2032,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       .join(' ');
     const children: (HTMLElement | null)[] = [
       investigation ? h('div', { class: 'kicker' }, `Расследование · эксклюзив · ${target.toLowerCase()}`) : null,
+      card.expert ? h('div', { class: 'kicker expert-kicker', title: 'Событие по специальности репортёра: на уровень сильнее' }, `Эксклюзив · ${reporter.name} знает тему`) : null,
       card.debunk ? h('div', { class: 'kicker debunk-kicker' }, `Опровержение · «${rivalNames[state.rival?.kind ?? 'tabloid'].name}»`) : null,
       pair ? h('div', { class: `kicker conflict-kicker level-${tensionLevel(c, state.tension[pair])}` }, `Конфликт · ${pairNames}`) : null,
       tpl.source === 'offer' ? h('div', { class: 'kicker offer-kicker' }, 'Документы от анонима · подлинность не проверена') : null,

@@ -15,7 +15,8 @@
       }
     },
     "balance": {
-      "population": 200
+      "population": 200,
+      "startMoney": 450
     },
     "map": {
       "x": 24,
@@ -25,7 +26,7 @@
       "destroy": {
         "days": 38,
         "balance": {
-          "guardianStoriesMax": 2
+          "guardianStoriesMax": 1
         }
       },
       "save": {
@@ -192,7 +193,7 @@
       "destroy": {
         "days": 32,
         "balance": {
-          "guardianStoriesMax": 6
+          "guardianStoriesMax": 3
         }
       },
       "save": {
@@ -263,7 +264,7 @@
       "destroy": {
         "days": 35,
         "balance": {
-          "guardianStoriesMax": 6
+          "guardianStoriesMax": 3
         }
       },
       "save": {

@@ -496,17 +496,43 @@ describe('reporters', () => {
     }
   });
 
-  it('everything that happened in the city today reaches the issue', () => {
+  it('one story a reporter a day: events come first, the rest go unwritten', () => {
     const c = withBalance({ incidentChance: 1 });
     for (const seed of [1, 2, 3, 4, 5, 6]) {
       const s = createGame(c, seed);
       for (const k of pairKeys(c)) s.tension[k] = 70;
       for (let i = 0; i < 4 && !s.outcome; i++) {
         playTurn(s, c, { publish: [] });
+        // Every event of the day is written up or listed as missed.
         const titles = s.hand.map((x) => storyTitle(c, x, 0));
-        for (const e of s.todayEvents) expect(titles).toContain(e);
+        for (const e of s.todayEvents) expect(titles.includes(e) || s.missedEvents.includes(e)).toBe(true);
+        // One reporter writes one story: an event if there is one.
+        expect(s.hand.length).toBeLessThanOrEqual(Math.max(s.reporters.length, c.balance.minFinds));
+        // Whatever the reporter wrote today, a missed event means nobody was free for it.
+        if (s.missedEvents.length) expect(s.hand.filter((x) => x.createdTurn === s.turn).length).toBeGreaterThanOrEqual(s.reporters.length);
       }
     }
+  });
+
+  it('a specialist writes an event on their topic a level stronger; an investigating reporter writes nothing', () => {
+    let experts = 0;
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const s = createGame(content, seed);
+      s.reporters = ['sokolov', 'volkova', 'kim', 'lebedev', 'orlova'];
+      for (let i = 0; i < 6 && !s.outcome; i++) {
+        playTurn(s, content, { publish: [] });
+        for (const card of s.hand.filter((x) => x.createdTurn === s.turn && x.expert)) {
+          experts++;
+          expect(reporterOf(content, card.reporterId).skills.topics).toContain(templateOf(content, card.templateId).topic);
+        }
+      }
+    }
+    expect(experts).toBeGreaterThan(0);
+    const s = createGame(content, 2);
+    startInvestigation(s, content, s.reporters[0], 'workers');
+    playTurn(s, content, { publish: [] });
+    expect(s.hand.filter((x) => x.createdTurn === s.turn)).toHaveLength(0);
+    expect(s.missedEvents).toEqual(s.todayEvents.filter((e) => s.missedEvents.includes(e)));
   });
 
   it('a forced story is boring, and every card names a hired reporter', () => {
@@ -936,7 +962,8 @@ describe('the guardian of the destroy mode (CONCEPT.md §8)', () => {
 });
 
 describe('story arcs', () => {
-  const c = { ...content, balance: { ...content.balance, arcChance: 1, arcStartTurn: 1, rivalArcChance: 0 } };
+  // A full newsroom, so the arc's stage always has a free reporter.
+  const c = { ...content, balance: { ...content.balance, arcChance: 1, arcStartTurn: 1, rivalArcChance: 0, startReporters: ['petrova', 'sokolov', 'volkova', 'kim', 'lebedev'] } };
   /** Plays an arc to its end, framing every stage with `frame` (max = inflame, min = soothe). */
   const run = (seed: number, frame: (card: CardInstance) => number) => {
     const s = createGame(c, seed);

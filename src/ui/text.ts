@@ -140,3 +140,31 @@ export function outcomeText(o: Outcome, mode: GameMode = 'destroy'): string {
       return 'Поражение: город не выдержал страха, ссор и безработицы. «Медиа-Плюс» празднует, «Вестник» остался без читателей.';
   }
 }
+
+/**
+ * How likely fact-checkers catch a story (CONCEPT.md §7.3 «Риск выпуска»): the red pencil's note in
+ * the margin, by risk step (`riskStep`).
+ */
+export const riskNotes = ['— вряд ли проверят', '— могут проверить', '— скорее всего проверят', '— проверят почти наверняка'];
+
+/** 0–3 by a story's exposure risk: under 10%, 25%, 45% and above. */
+export function riskStep(risk: number): number {
+  return risk < 0.1 ? 0 : risk < 0.25 ? 1 : risk < 0.45 ? 2 : 3;
+}
+
+/**
+ * The editor's stamp on the issue: all true, a risk (some lie may be caught) or a danger (at least
+ * a 30% chance one is caught today); null when nothing untrue can be caught (or nothing is printed).
+ */
+export type IssueStamp = 'clean' | 'risk' | 'danger';
+export function issueStampOf(untrue: number, risk: number, printed: number): IssueStamp | null {
+  if (!printed) return null;
+  if (!untrue) return 'clean';
+  if (risk <= 0) return null;
+  return risk < 0.3 ? 'risk' : 'danger';
+}
+export const stampLabels: Record<IssueStamp, [string, string]> = {
+  clean: ['ЧИСТО', 'всё правда'],
+  risk: ['РИСК', 'ложь могут найти'],
+  danger: ['ОПАСНО', 'могут поймать'],
+};

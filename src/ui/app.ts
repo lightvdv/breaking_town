@@ -46,6 +46,9 @@ import {
   twistOf,
   type TaskState,
   forecastTurn,
+  expectedJoins,
+  searchLuck,
+  skilledReporter,
   type Forecast,
   answerOffer,
   dealBrokenBy,
@@ -120,6 +123,10 @@ import {
   tierLabels,
   topicLabels,
   truthLabels,
+  riskNotes,
+  riskStep,
+  issueStampOf,
+  stampLabels,
 } from './text';
 
 interface Draft {
@@ -368,13 +375,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const zones: Record<string, ReturnType<typeof makeZone>> = { 2: makeZone(2), 1: makeZone(1), 0: makeZone(0), out: makeZone('out') };
   const issueNo = h('span', { class: 'issue-no' });
   const priceSelect = h('div', { class: 'price-select' });
-  // Two rows (CONCEPT.md §7.3): the name of the paper, then the cover price on the left and the issue number on the right.
+  // What the laid-out issue will be, in the paper's own voice (CONCEPT.md §7.3 «Риск выпуска»).
+  const todayLine = h('span', { class: 'today-line' });
+  const issueStamp = h('div', { class: 'issue-stamp', hidden: true });
+  // Two rows (CONCEPT.md §7.3): the name of the paper, then the cover price on the left, «Сегодня в номере» and the issue number on the right.
   const masthead = h(
     'header',
     { class: 'masthead' },
+    issueStamp,
     h('h2', {}, 'Городской Вестник'),
     h('button', { class: 'paper-close', title: 'Свернуть — посмотреть на город', onclick: () => closeIssue() }, '—'),
-    h('div', { class: 'masthead-row' }, priceSelect, issueNo),
+    h('div', { class: 'masthead-row' }, priceSelect, todayLine, issueNo),
   );
   // The tray of stories left out is the last rubric of the page, folded into one line (CONCEPT.md §7.3).
   // «Письма читателей» (CONCEPT.md §2.2а): what readers wrote about yesterday's issue.
@@ -1234,6 +1245,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * «В печать» shows what issue is going out: its icon and level, and the button looks duller or
    * louder by level, like story tier labels (CONCEPT.md §7.3). It bumps when the level changes.
    */
+  /** An orange or red dot on «В печать» while the issue carries a lie that may be caught. */
+  function riskDot(): HTMLElement | null {
+    const { printed, untrue, risk } = issueRisk();
+    const stamp = issueStampOf(untrue, risk, printed);
+    if (stamp !== 'risk' && stamp !== 'danger') return null;
+    return h('span', { class: `risk-dot ${stamp}`, title: stamp === 'danger' ? 'Опасный выпуск: ложь могут поймать' : 'В выпуске есть ложь' });
+  }
+
   function publishButton(): HTMLElement {
     const disabled = busy || !!state.outcome;
     if (searching) return h('button', { class: 'primary publish', disabled: true }, 'Репортёры ищут…');
@@ -1251,6 +1270,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       { class: `publish level-${level}${levelBump ? ` ${levelBump}` : ''}${guided && state.turn === 1 ? ' nudge' : ''}`, title: hint, onclick: endTurn, disabled },
       h('img', { src: `${assetBase}sprites/ui/issue_${level}.png`, alt: '', width: 24, height: 24 }),
       h('span', {}, 'В печать · ', h('b', {}, level === 3 ? 'СЕНСАЦИЯ!' : issueLevelLabels[level])),
+      riskDot(),
       h('span', { 'aria-hidden': 'true' }, '▸'),
     );
   }
@@ -2001,7 +2021,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
       : null;
 
     const withImage = where === 2 || where === 1;
-    const cls = ['news', `at-${where}`, `truth-${p.truth}`, `tier-${tier}`, investigation ? 'investigation' : '', selected === card.uid ? 'selected' : '']
+    // The editor's red pencil in the margin of an untrue story that may be caught (CONCEPT.md §7.3 «Риск выпуска»).
+    const pencil = where !== 'out' && p.truth > 0 && p.exposureRisk > 0 && unlocked('framing') ? riskStep(p.exposureRisk) : null;
+    const cls = ['news', `at-${where}`, `truth-${p.truth}`, `tier-${tier}`, investigation ? 'investigation' : '', selected === card.uid ? 'selected' : '', pencil !== null ? `pencil pencil-${pencil}` : '']
       .filter(Boolean)
       .join(' ');
     const children: (HTMLElement | null)[] = [
@@ -2025,7 +2047,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'news-head' },
         // The controls sit in a row above the headline: level, truth, and «✕» on the right.
-        h('div', { class: 'head-tools' }, unlocked('framing') ? truthButton : null, outButton),
+        h(
+          'div',
+          { class: 'head-tools' },
+          unlocked('framing') ? truthButton : null,
+          pencil !== null ? h('span', { class: 'pencil-note', title: `Риск разоблачения ${Math.round(p.exposureRisk * 100)}%` }, riskNotes[pencil]) : null,
+          outButton,
+        ),
         h('h3', { class: 'headline' }, p.title, ' ', tierLabel),
         truthMenu,
         moveMenu,
@@ -2212,6 +2240,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     issueHead.replaceChildren(...(note ? [h('p', {}, note)] : []), ...(error ? [h('p', { class: 'bad' }, error)] : []));
     issueNo.textContent = `Выпуск № ${state.turn}`;
     renderPrice();
+    renderToday();
 
     for (const [uid, el] of cardEls) {
       if (!visible.some((x) => x.uid === uid)) {
@@ -2291,6 +2320,57 @@ export function mountApp(root: HTMLElement, base: Content): void {
       }
     }
 
+  }
+
+  /**
+   * The fact-check risk of the issue being composed (CONCEPT.md §7.3 «Риск выпуска»): how many printed
+   * stories are untrue and the chance at least one of them is caught today.
+   */
+  function issueRisk(mods = getModifiers(state, c)): { printed: number; untrue: number; risk: number } {
+    let printed = 0;
+    let untrue = 0;
+    let clean = 1;
+    for (const card of state.hand) {
+      const d = drafts.get(card.uid);
+      if (!d?.publish) continue;
+      printed++;
+      const p = previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: d.distortion });
+      if (p.truth === 0) continue;
+      untrue++;
+      clean *= 1 - p.exposureRisk;
+    }
+    return { printed, untrue, risk: 1 - clean };
+  }
+
+  /** «Сегодня в номере: интересный выпуск · всё правда · город ≈ → кризис» and the editor's stamp. */
+  function renderToday(): void {
+    const { printed, untrue, risk } = issueRisk();
+    const stamp = searching ? null : issueStampOf(untrue, risk, printed);
+    issueStamp.hidden = !stamp;
+    issueStamp.className = `issue-stamp${stamp ? ` stamp-${stamp}` : ''}`;
+    issueStamp.replaceChildren(...(stamp ? [h('b', {}, stampLabels[stamp][0]), h('small', {}, stampLabels[stamp][1])] : []));
+    if (searching || !state.hand.some((x) => revealed.has(x.uid))) {
+      todayLine.replaceChildren();
+      return;
+    }
+    const level = currentIssueLevel();
+    const parts: (HTMLElement | string)[] = [printed ? h('b', {}, level === 3 ? 'сенсация' : `${issueLevelLabels[level].toLowerCase()} выпуск`) : h('b', {}, 'газета выйдет пустой')];
+    if (printed && unlocked('framing'))
+      parts.push(
+        !untrue
+          ? 'всё правда'
+          : risk <= 0
+            ? 'есть неправда · пока не проверяют'
+            : h('span', {}, 'есть неправда — ', h('b', { class: `risk-word step-${stamp === 'danger' ? 3 : riskStep(risk)}` }, stamp === 'danger' ? 'опасно' : risk < 0.1 ? 'риск небольшой' : 'рискованно')),
+      );
+    const fc = currentForecast();
+    if (fc) {
+      const here = cityStateOf(c, state.metrics.cityIndex);
+      const next = cityStateOf(c, fc.cityIndex);
+      const diff = fc.cityIndex - state.metrics.cityIndex;
+      parts.push(next !== here ? `город ≈ → ${c.balance.cityStates[next].name.toLowerCase()}` : Math.abs(diff) < 1 ? 'город почти не заметит' : diff < 0 ? 'город просядет' : 'городу станет лучше');
+    }
+    todayLine.replaceChildren('Сегодня в номере: ', ...parts.flatMap((x, i) => (i ? [' · ', x] : [x])));
   }
 
   /** Level of the issue being composed: published stories' tiers after distortion (CONCEPT.md §4.2а). */
@@ -2445,21 +2525,133 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * «Улучшения газеты» (CONCEPT.md §3.5): upgrades by section; a series such as kiosks is one line
    * with its progress and the next step.
    */
+  /**
+   * What an upgrade would bring now, in the player's own numbers (CONCEPT.md §7.3 «Улучшения»): money
+   * a day, readers a day, yesterday's losses or this issue's risk with it, and the days it takes to
+   * pay for itself. Counted from the sim's own formulas on today's town, without rolling.
+   */
+  function upgradeGain(u: UpgradeDef): { parts: string[]; payback: number | null; never: boolean } | null {
+    const e = u.effects;
+    const mods = getModifiers(state, c);
+    const withIt = { ...state, upgrades: [...state.upgrades, u.id] };
+    const modsWith = getModifiers(withIt, c);
+    const ch = state.ownedChannels[0];
+    const level = report?.issue.level ?? 1;
+    const parts: string[] = [];
+    let money = 0;
+    let readers = 0;
+    if (e.adRateAdd) money += followersOf(state, ch) * e.adRateAdd;
+    if (e.upkeepAdd) money += totalUpkeep(state, c) - totalUpkeep(withIt, c);
+    if (e.reachAdd || e.reachMul || e.groupReach || e.trustBonus) readers += expectedJoins(withIt, c, modsWith, level) - expectedJoins(state, c, mods, level);
+    if (money >= 0.5) parts.push(`≈ +${Math.round(money)} ₽ в день`);
+    if (e.churnMul && report) {
+      const lost = report.readers.lost - report.readers.lostBy.price;
+      const saved = lost * (1 - e.churnMul);
+      readers += saved;
+      if (lost > 0) parts.push(`вчера ушли ${lost} ${plural(lost, 'читатель', 'читателя', 'читателей')} — ушли бы ≈ ${Math.round(lost - saved)}`);
+    } else if (readers >= 0.75) parts.push(`≈ +${Math.round(readers)} ${plural(Math.round(readers), 'читатель', 'читателя', 'читателей')} в день`);
+    else if (readers >= 0.1) {
+      const every = Math.max(2, Math.round(1 / readers));
+      parts.push(`≈ +1 читатель за ${every} ${plural(every, 'день', 'дня', 'дней')}`);
+    }
+    if (e.trustBonus) parts.push(`+${e.trustBonus} к репутации`);
+    if (e.reporterLuck && state.reporters.length) {
+      const luck = (m: typeof mods) => state.reporters.reduce((s, id) => s + searchLuck(state, c, skilledReporter(state, c, reporterOf(c, id)), m), 0) / state.reporters.length;
+      parts.push(`удача редакции ${Math.round(luck(mods) * 100)}% → ${Math.round(luck(modsWith) * 100)}%`);
+    }
+    if (e.exposurePenaltyMul) {
+      const loss = report?.exposures.reduce((s, x) => s + x.trustLoss, 0) ?? 0;
+      const ratio = modsWith.exposurePenaltyMul / mods.exposurePenaltyMul;
+      parts.push(
+        loss >= 0.5
+          ? `вчерашнее разоблачение стоило бы −${Math.round(loss * ratio)} репутации, а не −${Math.round(loss)}`
+          : `разоблачения будут стоить на ${Math.round((1 - ratio) * 100)}% меньше репутации`,
+      );
+    }
+    if (e.checkerMul) {
+      const now = issueRisk(mods);
+      const after = issueRisk(modsWith);
+      parts.push(now.untrue && now.risk > 0 ? `риск этого выпуска ${Math.round(now.risk * 100)}% → ${Math.round(after.risk * 100)}%` : `ложь будут ловить на ${Math.round((1 - e.checkerMul) * 100)}% реже`);
+    }
+    if (!parts.length) return null;
+    // A reader gained on day k pays every day after it; money comes every day.
+    const daysLeft = Math.max(0, c.balance.turnLimit - state.turn + 1);
+    const perReader = incomePerReader(state, c, ch);
+    let payback: number | null = null;
+    if (money > 0 || readers > 0) {
+      for (let t = 1, sum = 0; t <= daysLeft; t++) {
+        sum += money + readers * t * perReader;
+        if (sum >= u.cost) {
+          payback = t;
+          break;
+        }
+      }
+    }
+    return { parts, payback, never: (money > 0 || readers > 0) && payback === null };
+  }
+
   function shopContent(): HTMLElement[] {
     const options = new Map(listPurchases(state, c).map((o) => [o.id, o]));
+    // The next step of each line and what it brings; the fastest to pay off gets a quiet mark.
+    const shown = new Map<string, ReturnType<typeof upgradeGain>>();
+    const gainOf = (u: UpgradeDef) => {
+      if (!shown.has(u.id)) shown.set(u.id, options.has(u.id) ? upgradeGain(u) : null);
+      return shown.get(u.id)!;
+    };
+    const visible = c.upgrades.filter((u) => !u.series || u === c.upgrades.filter((x) => x.series === u.series).find((x) => !state.upgrades.includes(x.id)));
+    const best = visible
+      .filter((u) => options.get(u.id)?.affordable && options.get(u.id)?.unlocked && gainOf(u)?.payback)
+      .sort((a, b) => gainOf(a)!.payback! - gainOf(b)!.payback!)[0]?.id;
     const item = (u: UpgradeDef, series?: UpgradeDef[]) => {
       const o = options.get(u.id);
       const owned = !o;
       const done = series ? series.filter((x) => state.upgrades.includes(x.id)).length : 0;
       const pips = series ? h('span', { class: 'pips' }, ...series.map((x) => h('span', { class: state.upgrades.includes(x.id) ? 'on' : '' }))) : null;
+      const gain = owned ? null : gainOf(u);
+      const infoKey = `shop:${u.id}`;
+      const infoOpen = openInfo.has(infoKey);
+      const description = owned ? (series ? 'Все точки открыты.' : u.description) : series ? `Следующий: ${u.name}. ${u.description}` : u.description;
       return h(
         'div',
         { class: `shop-item${o && !o.unlocked ? ' locked' : ''}${owned ? ' owned' : ''}` },
+        u.id === best ? h('span', { class: 'best-mark' }, 'выгоднее всего') : null,
         h(
           'div',
           {},
-          h('strong', {}, series ? `${seriesNames[u.series!] ?? u.name} ${done}/${series.length}` : u.name, pips),
-          h('p', {}, owned ? (series ? 'Все точки открыты.' : u.description) : series ? `Следующий: ${u.name}. ${u.description}` : u.description),
+          h(
+            'strong',
+            {},
+            series ? `${seriesNames[u.series!] ?? u.name} ${done}/${series.length}` : u.name,
+            pips,
+            // With a «now» line the description with its percentages hides behind «i».
+            gain
+              ? h(
+                  'button',
+                  {
+                    class: `section-info${infoOpen ? ' on' : ''}`,
+                    title: infoOpen ? 'Скрыть описание' : 'Описание',
+                    'aria-expanded': String(infoOpen),
+                    onclick: () => {
+                      if (infoOpen) openInfo.delete(infoKey);
+                      else openInfo.add(infoKey);
+                      render();
+                    },
+                  },
+                  'i',
+                )
+              : null,
+          ),
+          gain
+            ? h(
+                'p',
+                { class: 'gain-line' },
+                'Сейчас: ',
+                h('b', {}, gain.parts.join(', ')),
+                gain.payback ? h('span', { class: 'payback' }, ` · окупится за ${gain.payback} ${plural(gain.payback, 'день', 'дня', 'дней')}`) : null,
+                gain.never ? h('span', { class: 'payback never' }, ' · не окупится до конца партии') : null,
+              )
+            : null,
+          !gain || infoOpen ? h('p', { class: gain ? 'hint' : '' }, gain && series ? `Следующий: ${u.name}. ${u.description}` : description) : series && !owned ? h('p', { class: 'hint' }, `Следующий: ${u.name}`) : null,
           o && !o.unlocked ? h('p', { class: 'req' }, requirementText(u.requires)) : null,
         ),
         owned

@@ -111,3 +111,17 @@ export function updateReaders(
   }
   return out;
 }
+
+/**
+ * Expected new readers after an issue of this level, without rolling (CONCEPT.md §7.3 «Улучшения»:
+ * the upgrades window compares it with and without an upgrade).
+ */
+export function expectedJoins(state: GameState, c: Content, mods: Modifiers, level: IssueLevel): number {
+  const scale = c.balance.acquisitionRate * c.balance.issueAcquisition[level];
+  let sum = 0;
+  for (const r of state.residents) {
+    if (r.status !== 'active' || r.follows.length > 0) continue;
+    for (const ch of state.ownedChannels) sum += joinChance(c, mods, r, ch, scale) * buyWillingness(state, c, r);
+  }
+  return sum;
+}

@@ -586,8 +586,11 @@ export interface Balance {
   tensionLevels: Triple<number>;
   /** Share of the gap to the start value tension closes each turn. */
   tensionDecay: number;
-  /** Tension shift of a conflict story by framing: calm, as is (true), heat (half-true), inflate (lie). */
-  tensionNews: Quad<number>;
+  /**
+   * Tension shift of a conflict story by framing: calm, as is (true), heat (half-true), inflate (lie),
+   * by mode (in the save mode it is mostly the tabloid that heats).
+   */
+  tensionNews: Record<GameMode, Quad<number>>;
   /** Shift × impact × (tensionReachBase + share of the pair that believed × tensionShareMul). */
   tensionReachBase: number;
   tensionShareMul: number;
@@ -1076,6 +1079,8 @@ export interface GameState {
   metrics: CityMetrics;
   /** Reactions to the last turn's news, by resident id (for the UI). */
   lastReactions: Record<number, Reaction>;
+  /** Reactions to the rival's issue of the same day, kept apart from ours (shown with its paper over the head). */
+  rivalReactions: Record<number, Reaction>;
   todayEvents: string[];
   /** Tasks of this game (CONCEPT.md §4.8): the ordinary ones and the audit's. */
   tasks: TaskState[];
@@ -1106,6 +1111,8 @@ export interface PublicationReport {
   wordOfMouth: number;
   effects: Partial<Record<EffectType, number>>;
   exposed: boolean;
+  /** How its believers react: happy for good or calming news, scared otherwise (the morning scene acts it out). */
+  mood?: 'happy' | 'scared';
   /** The place the story is about, if any: the morning after the issue starts there (CONCEPT.md §7.3). */
   building?: number;
   /** Investigations: who was targeted and what the stigma did to them. */

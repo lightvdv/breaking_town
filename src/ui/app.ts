@@ -885,7 +885,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
     cutscene.hidden = false;
     tooltip.hidden = true;
     cutscene.parentElement!.classList.add('in-cutscene');
-    await scene!.playMorning(main?.building ?? null);
+    // The crowd acts out how the main story was taken: believed (scared or happy) or doubted.
+    const reaction = !main || main.believed + main.doubted === 0 ? null : main.believed >= main.doubted ? (main.mood ?? 'scared') : 'doubted';
+    await scene!.playMorning(main?.building ?? null, reaction);
     cutscene.hidden = true;
     cutscene.parentElement!.classList.remove('in-cutscene');
   }
@@ -3605,6 +3607,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         ...(Object.keys(REACTION_ICON) as Reaction[]).map((r) =>
           h('span', {}, h('img', { src: `${assetBase}sprites/fx/${REACTION_ICON[r]}.png`, alt: '', width: 16, height: 16 }), reactionLabels[r]),
         ),
+        h('span', {}, h('img', { src: `${assetBase}sprites/fx/rival_${save ? 'tabloid' : 'guardian'}.png`, alt: '', width: 16, height: 16 }), `отозвался на «${rivalNames[save ? 'tabloid' : 'guardian'].name}»`),
       ),
       h('h3', { class: 'section' }, 'Что беречь'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.'),

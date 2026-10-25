@@ -105,6 +105,7 @@ export function createGame(
     initialEmployed: residents.filter((r) => r.job !== null).length,
     metrics: { population: 1, employment: 1, economy: 1, mood: 0.6, order: 1, cityIndex: 100, activeResidents: residents.length },
     lastReactions: {},
+    rivalReactions: {},
     todayEvents: [],
     tasks: [],
     exposedTotal: 0,
@@ -259,6 +260,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const peopleBefore = snapshotPeople(state);
 
   state.lastReactions = {};
+  state.rivalReactions = {};
   state.scandal = Math.min(1, state.scandal + b.scandalRecovery);
 
   const lateExposures = processLateExposures(state, c, rng, mods);

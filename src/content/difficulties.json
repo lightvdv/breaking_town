@@ -12,7 +12,7 @@
       "guardianStoriesMax": 4
     },
     "modes": {
-      "destroy": {},
+      "destroy": { "tensionNews": { "destroy": [-16, 0, 30, 44], "save": [-16, 0, 25, 38] } },
       "save": {
         "turnLimit": 34,
         "rivalTrustCollapse": 15
@@ -39,6 +39,7 @@
     },
     "modes": {
       "destroy": {
+        "tensionNews": { "destroy": [-16, 0, 25, 38], "save": [-16, 0, 25, 38] },
         "turnLimit": 37,
         "conflictStartTurn": 2
       },

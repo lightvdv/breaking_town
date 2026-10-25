@@ -252,7 +252,7 @@
   "tensionDefault": 10,
   "tensionLevels": [30, 60, 80],
   "tensionDecay": 0.04,
-  "tensionNews": [-16, 0, 25, 38],
+  "tensionNews": { "destroy": [-16, 0, 22, 34], "save": [-16, 0, 25, 38] },
   "tensionReachBase": 0.8,
   "tensionShareMul": 4,
   "tensionStigma": 1.5,

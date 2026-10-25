@@ -187,6 +187,15 @@ export const fxIcons: Record<string, { rows: string[]; key: Record<string, Color
     rows: ['kkkkkkkk', 'kwwwwwrk', 'kwkkkrwk', 'kwwwrwwk', 'kwkrkkwk', 'kwrwwwwk', 'krkkkkkk', 'r.......'],
     key: { k: 'ink', w: 'white', r: 'hotRed' },
   },
+  // A reaction to the rival's issue (CONCEPT.md §8): its paper over the head, in its colour.
+  rival_tabloid: {
+    rows: ['kkkkkkk.', 'kccccck.', 'kccccck.', 'kwwwwwk.', 'kwkkkwk.', 'kwwwwwk.', 'kwkkwwk.', 'kkkkkkk.'],
+    key: { k: 'ink', c: 'red', w: 'white' },
+  },
+  rival_guardian: {
+    rows: ['kkkkkkk.', 'kccccck.', 'kccccck.', 'kwwwwwk.', 'kwkkkwk.', 'kwwwwwk.', 'kwkkwwk.', 'kkkkkkk.'],
+    key: { k: 'ink', c: 'blue', w: 'white' },
+  },
   // Cutscenes (CONCEPT.md §7.3): a punch star over a fight, a dove over a reconciliation.
   fight: {
     rows: ['k..kk..k', '.kkyyk..', '.kyyyyk.', 'kyyrryyk', 'kyyrryyk', '.kyyyyk.', '..kyykk.', 'k..kk..k'],

@@ -213,14 +213,14 @@ export function previewPublication(
     tier: effectiveTier(card, pub.distortion),
     reachChance: outletReach(state, c, pub.placement),
     exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25) * reporterCheckMul(state, c, card),
-    tension: card.conflict ? { pair: pairKey(c, ...card.conflict), delta: tensionShift(c, card, pub.distortion, impact, 0.1) } : null,
+    tension: card.conflict ? { pair: pairKey(c, ...card.conflict), delta: tensionShift(state, c, card, pub.distortion, impact, 0.1) } : null,
   };
 }
 
 /** How much a conflict story moves its pair's tension, given the share of the pair that believed it. */
-function tensionShift(c: Content, card: CardInstance, distortion: number, impact: number, share: number): number {
+function tensionShift(state: GameState, c: Content, card: CardInstance, distortion: number, impact: number, share: number): number {
   const b = c.balance;
-  return b.tensionNews[framingOf(card, distortion)] * impact * (b.tensionReachBase + share * b.tensionShareMul);
+  return b.tensionNews[state.mode][framingOf(card, distortion)] * impact * (b.tensionReachBase + share * b.tensionShareMul);
 }
 
 function beliefChance(
@@ -308,9 +308,9 @@ function applyEffect(
 const reactionPriority: Record<Reaction, number> = { doubted: 1, happy: 2, scared: 2, talk: 3, outraged: 4 };
 
 /** Keeps the most telling reaction when several news reach the same resident in one turn. */
-function setReaction(state: GameState, id: number, reaction: Reaction): void {
-  const current = state.lastReactions[id];
-  if (!current || reactionPriority[reaction] >= reactionPriority[current]) state.lastReactions[id] = reaction;
+function setReaction(reactions: Record<number, Reaction>, id: number, reaction: Reaction): void {
+  const current = reactions[id];
+  if (!current || reactionPriority[reaction] >= reactionPriority[current]) reactions[id] = reaction;
 }
 
 /** A publication after it went out: who saw it and who believed it. */
@@ -376,16 +376,23 @@ export function publish(
   const doubters: number[] = [];
   const believers: Resident[] = [];
   const good = effect?.type === 'moodUp' || effect?.type === 'debunk';
+  // Reactions to the rival's issue are kept apart: they neither hide ours nor make our readers leave.
+  const reactions = rival ? state.rivalReactions : state.lastReactions;
+  // A debunk brings relief from a scary story, and the fear back when it takes away a false comfort:
+  // everything «Голос города» prints comforts and everything «Набат» prints scares (RIVAL_TEMPLATES).
+  const takesComfort = card.templateId === 'debunk_guardian' || card.templateId === 'tabloid_debunk';
+  const mood = effect?.type === 'debunk' ? (takesComfort ? 'scared' : 'happy') : good || calm ? 'happy' : 'scared';
+  report.mood = mood;
 
   const consider = (r: Resident, factor: number): boolean => {
     heard.add(r.id);
     if (!chance(rng, beliefChance(state, c, mods, r, tpl, truth, rival ? r.rivalTrust : undefined) * factor)) {
-      setReaction(state, r.id, 'doubted');
+      setReaction(reactions, r.id, 'doubted');
       report.doubted++;
       doubters.push(r.id);
       return false;
     }
-    setReaction(state, r.id, good || calm ? 'happy' : 'scared');
+    setReaction(reactions, r.id, mood);
     report.believed++;
     r.beliefs.push({ cardUid: card.uid, title, turn: state.turn });
     if (r.beliefs.length > b.maxBeliefs) r.beliefs.shift();
@@ -434,7 +441,7 @@ export function publish(
     const candidate = state.residents[int(rng, state.residents.length)];
     if (candidate.status !== 'active' || heard.has(candidate.id)) continue;
     report.wordOfMouth++;
-    setReaction(state, believers[i].id, 'talk');
+    setReaction(reactions, believers[i].id, 'talk');
     consider(candidate, b.wordOfMouthFactor);
   }
 
@@ -475,7 +482,7 @@ export function publish(
     const members = state.residents.filter((r) => r.status === 'active' && (r.group === a || r.group === z));
     const memberIds = new Set(members.map((r) => r.id));
     const believedInPair = state.residents.filter((r) => memberIds.has(r.id) && r.beliefs.some((x) => x.cardUid === card.uid)).length;
-    const delta = tensionShift(c, card, pub.distortion, impact, believedInPair / Math.max(1, members.length));
+    const delta = tensionShift(state, c, card, pub.distortion, impact, believedInPair / Math.max(1, members.length));
     addTension(state, key, delta);
     report.tension = { [key]: delta };
     // Calming earns the trust of both groups' readers.
@@ -502,7 +509,7 @@ export function exposeNews(
     if (r.status !== 'active') continue;
     if (viewerSet.has(r.id)) {
       r.trust = clamp(r.trust - penalty, 0, 100);
-      setReaction(state, r.id, 'outraged');
+      setReaction(state.lastReactions, r.id, 'outraged');
     } else r.trust = clamp(r.trust - penalty * b.trustPenaltyBystanderShare, 0, 100);
     r.beliefs = r.beliefs.filter((x) => x.cardUid !== story.cardUid);
   }

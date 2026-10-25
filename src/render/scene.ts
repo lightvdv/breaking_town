@@ -49,6 +49,8 @@ interface Agent {
   door: Pt | null;
   icon: Sprite | null;
   pendingReaction: Reaction | null;
+  /** The reaction is to the rival's issue: its paper is shown instead of the reaction icon. */
+  pendingRival: boolean;
   reactDelay: number;
   lastStop: Stop;
   leaving: boolean;
@@ -328,7 +330,16 @@ export class CityScene {
         const agent = this.agents.get(Number(id));
         if (!agent || agent.leaving) continue;
         agent.pendingReaction = reaction;
+        agent.pendingRival = false;
         agent.reactDelay = rand(0, 0.9);
+      }
+      // Who reacted only to the rival's paper does so a little later, under its paper (CONCEPT.md §8).
+      for (const [id, reaction] of Object.entries(state.rivalReactions ?? {})) {
+        const agent = this.agents.get(Number(id));
+        if (!agent || agent.leaving || state.lastReactions[Number(id)]) continue;
+        agent.pendingReaction = reaction;
+        agent.pendingRival = true;
+        agent.reactDelay = rand(0.6, 1.8);
       }
     }
   }
@@ -380,6 +391,7 @@ export class CityScene {
       door: null,
       icon: null,
       pendingReaction: null,
+      pendingRival: false,
       reactDelay: 0,
       lastStop: 'home',
       leaving: false,
@@ -522,7 +534,7 @@ export class CityScene {
     this.agents.delete(agent.id);
   }
 
-  private startReaction(agent: Agent, reaction: Reaction): void {
+  private startReaction(agent: Agent, reaction: Reaction, rival = false): void {
     if (agent.mode === 'inside' && agent.door) agent.pos = { ...agent.door };
     agent.mode = 'react';
     agent.timer = REACTION_SECONDS;
@@ -531,7 +543,7 @@ export class CityScene {
     this.setAnim(agent, REACTION_ANIM[reaction], Math.random() < 0.5);
     agent.sprite.gotoAndPlay(0);
     agent.icon?.destroy();
-    const icon = new Sprite(this.art.fx[REACTION_ICON[reaction]]);
+    const icon = new Sprite(this.art.fx[rival ? `rival_${this.state.rival?.kind ?? 'guardian'}` : REACTION_ICON[reaction]]);
     icon.anchor.set(0.5, 1);
     this.overlay.addChild(icon);
     agent.icon = icon;
@@ -554,8 +566,9 @@ export class CityScene {
       if (agent.pendingReaction) {
         agent.reactDelay -= dt;
         if (agent.reactDelay <= 0) {
-          this.startReaction(agent, agent.pendingReaction);
+          this.startReaction(agent, agent.pendingReaction, agent.pendingRival);
           agent.pendingReaction = null;
+          agent.pendingRival = false;
         }
       }
       switch (agent.mode) {
@@ -895,7 +908,7 @@ export class CityScene {
    * and a few figures act out the day's main reaction under its icon; then the camera returns.
    * Resolves when done or skipped.
    */
-  async playMorning(building: number | null): Promise<void> {
+  async playMorning(building: number | null, mainReaction: Reaction | null = null): Promise<void> {
     this.skipping = false;
     const home = this.currentView();
     const zoom = Math.max(3, Math.min(6, Math.floor(Math.max(1, this.fitZoom())) + 3));
@@ -906,11 +919,11 @@ export class CityScene {
     const spot =
       (building !== null && this.doors.has(building) ? { ...this.doors.get(building)! } : null) ??
       this.crowdOf(reacted.map((x) => x.r.id)) ?? { x: n / 2, y: n / 2 };
-    // The day's main reaction: the most common one, chatter only when there is nothing else.
+    // The main story's reaction; without one, the day's most common, chatter only when there is nothing else.
     const counts = new Map<Reaction, number>();
     for (const x of reacted) counts.set(x.reaction, (counts.get(x.reaction) ?? 0) + 1);
     const ranked = [...counts.entries()].sort((a, b) => (a[0] === 'talk' ? 1 : 0) - (b[0] === 'talk' ? 1 : 0) || b[1] - a[1]);
-    const main = ranked[0]?.[0] ?? null;
+    const main = mainReaction ?? ranked[0]?.[0] ?? null;
     const center = screenOf(spot.x, spot.y);
     await this.flyTo(this.viewAt({ x: center.x, y: center.y - 12 }, zoom), 0.9);
     if (!this.skipping) {
@@ -919,10 +932,12 @@ export class CityScene {
         const agent = this.agents.get(x.r.id);
         if (!agent || agent.leaving || agent.mode === 'react' || Math.hypot(agent.pos.x - spot.x, agent.pos.y - spot.y) > 5) continue;
         agent.pendingReaction = x.reaction;
+        agent.pendingRival = false;
         agent.reactDelay = rand(0, 0.5);
       }
       if (main) {
-        const groups = reacted.filter((x) => x.reaction === main).map((x) => x.r.group);
+        const same = reacted.filter((x) => x.reaction === main).map((x) => x.r.group);
+        const groups = same.length ? same : reacted.length ? reacted.map((x) => x.r.group) : this.state.residents.filter((r) => r.status === 'active').map((r) => r.group);
         const spots = [
           { x: spot.x - 0.35, y: spot.y + 0.25 },
           { x: spot.x + 0.3, y: spot.y - 0.15 },

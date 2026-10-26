@@ -999,10 +999,17 @@ describe('save mode (CONCEPT.md §8)', () => {
 
 describe('the guardian of the destroy mode (CONCEPT.md §8)', () => {
   it('reassures the town and answers our fresh lies the next day', () => {
-    const s = createGame(content, 6);
+    // A lie that was not caught at once (a caught one needs no answer).
+    let s = createGame(content, 6);
+    let lie = s.hand[0];
+    for (let seed = 6; seed < 40; seed++) {
+      s = createGame(content, seed);
+      lie = s.hand.find((x) => maxDistortion(x) > 0)!;
+      if (!lie) continue;
+      const r = playTurn(s, content, { publish: [{ cardUid: lie.uid, placement: 2, distortion: maxDistortion(lie) }] });
+      if (!r.exposures.length) break;
+    }
     expect(s.rival!.kind).toBe('guardian');
-    const lie = s.hand.find((x) => maxDistortion(x) > 0)!;
-    playTurn(s, content, { publish: [{ cardUid: lie.uid, placement: 2, distortion: maxDistortion(lie) }] });
     const answer = s.rival!.plan.find((x) => x.card.debunk?.uid === lie.uid);
     expect(answer).toBeDefined();
     expect(answer!.card.templateId).toBe('guardian_debunk');

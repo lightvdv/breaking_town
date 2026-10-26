@@ -354,7 +354,8 @@ export function publish(
   const calm = pub.distortion < 0 && !!card.conflict;
   const soothed = isSoothed(card, pub.distortion);
   const effect = calm ? null : soothed ? tpl.softEffects?.[-pub.distortion - 1] ?? null : tpl.effects[truth];
-  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn);
+  // The rival's stories have their own strength (`rivalImpactMul`).
+  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn) * (rival ? b.rivalImpactMul[state.rival?.kind ?? 'tabloid'] : 1);
   // Interesting stories are retold more, and viral channels spread them further.
   const retell = clamp(
     b.wordOfMouthChance * (0.5 + tpl.engagement * b.tierEngagement[effectiveTier(card, pub.distortion)]) * (1 + outletVirality(state, c)) * mods.wordOfMouthMul,

@@ -316,13 +316,13 @@
     "name": "Жёлтая вёрстка",
     "icon": "📢",
     "description": "Крупные кричащие заголовки: страшные новости бьют на 30% сильнее.",
-    "drawback": "Фактчекеры проверяют вас на 20% чаще.",
+    "drawback": "Фактчекеры проверяют вас на 10% чаще.",
     "cost": 300,
     "requires": null,
     "fork": "style",
     "effects": {
       "scaryImpactMul": 1.3,
-      "checkerMul": 1.2
+      "checkerMul": 1.1
     }
   },
   {

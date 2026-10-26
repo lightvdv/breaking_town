@@ -412,6 +412,8 @@ export interface Balance {
   rivalChurnDoubt: number;
   /** It prints 1..rivalStoriesMax stories a day. */
   rivalStoriesMax: number;
+  /** Multiplies the impact of the rival paper's stories by its kind (ours are set by `impactNorm`). */
+  rivalImpactMul: Record<RivalKind, number>;
   /** The upgrades deck (CONCEPT.md §3.5): cards on offer, days between deals, the price of dealing early, a rare card's weight. */
   shopOfferSize: number;
   shopRefreshDays: number;

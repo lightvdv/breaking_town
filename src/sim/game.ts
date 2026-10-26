@@ -117,6 +117,8 @@ export function createGame(
     abilityReady: {},
     twist: null,
     budgetCut: 0,
+    vouchers: 0,
+    lastProfit: 0,
     town: opts.town ?? null,
     outcome: null,
   };
@@ -332,6 +334,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   // Deals with a catch (CONCEPT.md §3.5а): a bad story about what we promised to keep quiet about costs us.
   const deals = settleDeals(state, c, d.publish);
   const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
+  state.lastProfit = Object.values(income).reduce((s, x) => s + x, 0) - upkeep;
   const moleCaught = checkMole(state, c, rng);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
 

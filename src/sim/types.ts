@@ -726,7 +726,9 @@ export type TaskCheck =
   | { type: 'protesters'; count: number }
   | { type: 'readers'; count: number }
   | { type: 'readersGain'; count: number }
-  | { type: 'money'; amount: number }
+  | { type: 'income'; amount: number }
+  | { type: 'upgrades'; count: number }
+  | { type: 'reporters'; count: number }
   | { type: 'noExposure' }
   | { type: 'trust'; min: number }
   | { type: 'mood'; min: number }
@@ -744,12 +746,16 @@ export interface TaskDef {
   kind: 'reach' | 'keep';
   check: TaskCheck;
   days: number;
-  /** Money paid when it is done. */
+  /** Money paid when it is done (may be 0 when the task pays with a prize). */
   reward: number;
+  /** What else it gives: a free card from the upgrade deck, reputation for the whole town, xp for every reporter. */
+  prize?: TaskPrize;
   /** A twist's task (the audit): never among the ordinary tasks; failing it costs this much upkeep a day. */
   penalty?: number;
   twist?: boolean;
 }
+
+export type TaskPrize = { type: 'voucher' } | { type: 'trust'; amount: number } | { type: 'xp'; amount: number };
 
 export interface TaskState {
   id: string;
@@ -757,7 +763,7 @@ export interface TaskState {
   /** The last day it can be done on. */
   untilTurn: number;
   status: 'active' | 'done' | 'failed';
-  /** The value the check counts from (debunks, readers or the city index when it was given). */
+  /** The value the check counts from (debunks, readers, upgrades or the city index when it was given). */
   base: number;
   /** The day it was done or failed. */
   endTurn?: number;
@@ -1165,6 +1171,10 @@ export interface GameState {
   twist: TwistState | null;
   /** Upkeep a day added by a failed audit. */
   budgetCut: number;
+  /** Free cards from the upgrade deck won by tasks (CONCEPT.md §4.8). */
+  vouchers: number;
+  /** Sales minus upkeep of the last issue: the «прибыль в день» of tasks. */
+  lastProfit: number;
   /** The campaign town this game is played in (CONCEPT.md §9); null for a single game. */
   town: string | null;
   outcome: Outcome | null;

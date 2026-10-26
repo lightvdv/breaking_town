@@ -44,6 +44,7 @@ import {
   electionLeader,
   runningTwist,
   twistOf,
+  type TaskDef,
   type TaskState,
   forecastTurn,
   forkChoice,
@@ -946,7 +947,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...(r.cleanStreak.bonus ? [h('li', { class: 'good' }, `✓ ${c.balance.cleanStreakDays} выпусков подряд без лжи: +${Math.round(r.cleanStreak.bonus)}% репутации`)] : []),
       ...(r.cleanStreak.broken ? [h('li', { class: 'bad' }, 'Серия выпусков без лжи прервалась')] : []),
       ...(r.moleCaught ? [h('li', { class: 'bad' }, `Крота раскрыли: −${c.balance.molePenalty}% репутации`)] : []),
-      ...r.tasks.done.map((id) => h('li', { class: 'good' }, `✓ Задание выполнено: ${taskOf(c, id).title} (+${taskReward(c, taskOf(c, id))} ₽)`)),
+      ...r.tasks.done.map((id) => h('li', { class: 'good' }, `✓ Задание выполнено: ${taskOf(c, id).title} (${prizeText(taskOf(c, id))})`)),
       ...r.tasks.failed.map((id) => h('li', { class: 'bad' }, `✗ Задание провалено: ${taskOf(c, id).title}`)),
       ...twistLines(r).map((x) => h('li', {}, x)),
     ];
@@ -1330,10 +1331,20 @@ export function mountApp(root: HTMLElement, base: Content): void {
   };
   const daysWord = (n: number) => plural(n, 'день', 'дня', 'дней');
 
+  /** What a done task gives: money and its prize (CONCEPT.md §4.8). */
+  function prizeText(def: TaskDef): string {
+    const p = def.prize;
+    const parts = def.reward ? [`+${taskReward(c, def)} ₽`] : [];
+    if (p?.type === 'voucher') parts.push('бесплатное улучшение');
+    if (p?.type === 'trust') parts.push(`+${p.amount}% репутации`);
+    if (p?.type === 'xp') parts.push(`+${p.amount} опыта репортёрам`);
+    return parts.join(' и ');
+  }
+
   /** Where a task stands, in a few words: «3 из 8», «сейчас 52%», «ещё 4 дня». */
   function taskLine(t: TaskState): string {
     const def = taskOf(c, t.id);
-    if (t.status === 'done') return `выполнено · +${taskReward(c, def)} ₽`;
+    if (t.status === 'done') return `выполнено · ${prizeText(def)}`;
     if (t.status === 'failed') return def.penalty ? `провалено · бюджет −${def.penalty} ₽ в день` : 'провалено';
     const p = taskProgress(state, c, t);
     const left = t.untilTurn - state.turn + 1;
@@ -1346,8 +1357,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
           ? `сейчас: ${cityStage().name.toLowerCase()} · `
         : ch === 'trust' || ch === 'mood'
           ? `сейчас ${p.value}% · `
-          : `${Math.max(0, p.value)} из ${p.target} · `;
-    return `${now}${days} · +${taskReward(c, def)} ₽`;
+          : ch === 'income'
+            ? `вчера ${p.value} ₽ · `
+            : `${Math.max(0, p.value)} из ${p.target} · `;
+    return `${now}${days} · ${prizeText(def)}`;
   }
 
   /** The game's tasks: folded to one line by default, like the rival's plaque (CONCEPT.md §4.8). */
@@ -2696,7 +2709,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const best = deck.filter((u) => options.get(u.id)?.affordable && options.get(u.id)?.unlocked && gainOf(u)?.payback).sort((a, z) => gainOf(a)!.payback! - gainOf(z)!.payback!)[0]?.id;
     const price = (u: UpgradeDef) => {
       const o = options.get(u.id);
-      return h('button', { class: o?.affordable ? 'primary' : '', disabled: !o?.affordable || !!state.outcome, onclick: () => buy(u.id) }, `${u.cost}`);
+      const free = o?.cost === 0 && u.cost > 0;
+      return h('button', { class: o?.affordable ? 'primary' : '', disabled: !o?.affordable || !!state.outcome, onclick: () => buy(u.id) }, free ? 'бесплатно' : `${u.cost}`);
     };
     const icon = (u: UpgradeDef, cls = 'upg-icon') => h('span', { class: cls, 'aria-hidden': 'true' }, u.icon ?? '★');
     const series = (u: UpgradeDef) => (u.series ? c.upgrades.filter((x) => x.series === u.series) : null);
@@ -2749,6 +2763,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const days = Math.max(0, state.shopRefreshTurn - state.turn);
     return [
       h('p', { class: 'hint' }, `У вас ${state.money} ₽ · расходы ${totalUpkeep(state, c)} ₽ в день. Улучшения оплачиваются сразу и действуют до конца партии.`),
+      state.vouchers ? h('p', { class: 'good voucher-line' }, `За задания: ${state.vouchers === 1 ? 'одно улучшение из колоды' : `${state.vouchers} улучшения из колоды`} — бесплатно.`) : null,
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
       taken.length ? h('div', { class: 'paper-style' }, ...taken.map((u) => h('span', { class: 'style-chip' }, icon(u, 'style-icon'), u.name))) : null,
       ...(open

@@ -1,6 +1,7 @@
-import { averageTrust } from './lookup';
+import { averageTrust, clamp } from './lookup';
 import { readerCount } from './readers';
 import { pick, type RngState } from './rng';
+import { staffOf } from './staff';
 import type { Content, ExposedStory, GameState, TaskDef, TaskState } from './types';
 
 /**
@@ -24,6 +25,8 @@ function baseOf(state: GameState, def: TaskDef): number {
       return readerCount(state);
     case 'cityDrop':
       return state.metrics.cityIndex;
+    case 'upgrades':
+      return state.upgrades.length;
     default:
       return 0;
   }
@@ -32,6 +35,15 @@ function baseOf(state: GameState, def: TaskDef): number {
 /** What a done task pays at this difficulty. */
 export function taskReward(c: Content, def: TaskDef): number {
   return Math.round(def.reward * c.balance.taskRewardMul);
+}
+
+/** A done task's prize beside the money: a free deck card, reputation or experience. */
+function givePrize(state: GameState, c: Content, def: TaskDef): void {
+  const p = def.prize;
+  if (!p) return;
+  if (p.type === 'voucher') state.vouchers++;
+  else if (p.type === 'trust') for (const r of state.residents) r.trust = clamp(r.trust + p.amount, 0, 100);
+  else for (const id of state.reporters) staffOf(state, c, id).xp += p.amount;
 }
 
 /** Gives a task now. */
@@ -73,8 +85,12 @@ export function taskProgress(state: GameState, c: Content, task: TaskState): { v
       return of(readerCount(state), ch.count);
     case 'readersGain':
       return of(readerCount(state) - task.base, ch.count);
-    case 'money':
-      return of(state.money, ch.amount);
+    case 'income':
+      return of(state.lastProfit, ch.amount);
+    case 'upgrades':
+      return of(state.upgrades.length - task.base, ch.count);
+    case 'reporters':
+      return of(state.reporters.length, ch.count);
     case 'noExposure':
       return of(0, 0);
     case 'trust':
@@ -115,6 +131,7 @@ export function updateTasks(state: GameState, c: Content, exposures: ExposedStor
       const reward = taskReward(c, def);
       state.money += reward;
       out.reward += reward;
+      givePrize(state, c, def);
       out.done.push(task.id);
     } else {
       state.budgetCut += def.penalty ?? 0;

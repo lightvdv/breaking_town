@@ -3,7 +3,7 @@ import { channelOf } from './lookup';
 import { getModifiers } from './modifiers';
 import { reporterOf } from './reporters';
 import { onSale } from './shop';
-import type { ChannelId, Content, GameState, Requirement, UpkeepItem } from './types';
+import type { ChannelId, Content, GameState, Requirement, UpgradeDef, UpkeepItem } from './types';
 
 export interface PurchaseOption {
   id: string;
@@ -49,12 +49,17 @@ export function listPurchases(state: GameState, c: Content): PurchaseOption[] {
       kind: 'upgrade',
       name: u.name,
       description: u.description,
-      cost: u.cost,
+      cost: deckFree(state, u) ? 0 : u.cost,
       unlocked,
-      affordable: unlocked && state.money >= u.cost,
+      affordable: unlocked && (deckFree(state, u) || state.money >= u.cost),
     });
   }
   return out;
+}
+
+/** A task's voucher pays for any card of the deck (never a fork option). */
+export function deckFree(state: GameState, u: UpgradeDef): boolean {
+  return state.vouchers > 0 && !u.fork;
 }
 
 /** Fires a hired reporter; the last one cannot be fired. */
@@ -73,6 +78,7 @@ export function purchase(state: GameState, c: Content, id: string): void {
   state.money -= option.cost;
   if (option.kind === 'channel') state.ownedChannels.push(id);
   else {
+    if (deckFree(state, c.upgrades.find((u) => u.id === id)!)) state.vouchers--;
     state.upgrades.push(id);
     state.shopOffer = state.shopOffer.filter((x) => x !== id);
   }

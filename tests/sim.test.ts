@@ -1250,13 +1250,32 @@ describe('tasks and stars (CONCEPT.md §4.8)', () => {
     // A reach task is done the day its check holds and pays its reward.
     const s = createGame(content, 12);
     s.tasks = [];
-    giveTask(s, content, 'money_destroy');
+    giveTask(s, content, 'upgrades_destroy');
     s.turn++;
-    s.money = 10_000;
+    s.upgrades.push('kiosk_1', 'kiosk_2', 'kiosk_3');
     const money = s.money;
     const r = updateTasks(s, content, []);
-    expect(r.done).toEqual(['money_destroy']);
-    expect(s.money).toBe(money + Math.round(taskOf(content, 'money_destroy').reward * content.balance.taskRewardMul));
+    expect(r.done).toEqual(['upgrades_destroy']);
+    expect(s.money).toBe(money + Math.round(taskOf(content, 'upgrades_destroy').reward * content.balance.taskRewardMul));
+    // A prize instead of money: the voucher makes one deck card free, never a fork option.
+    giveTask(s, content, 'income_destroy');
+    s.turn++;
+    s.lastProfit = 1000;
+    expect(updateTasks(s, content, []).done).toEqual(['income_destroy']);
+    expect(s.vouchers).toBe(1);
+    s.money = 0;
+    s.shopOffer = ['photographer'];
+    expect(listPurchases(s, content).find((p) => p.id === 'photographer')).toMatchObject({ cost: 0, affordable: true });
+    purchase(s, content, 'photographer');
+    expect(s.vouchers).toBe(0);
+    expect(s.money).toBe(0);
+    // Experience for the whole newsroom.
+    giveTask(s, content, 'team_destroy');
+    s.turn++;
+    s.reporters = content.reporters.slice(0, 4).map((x) => x.id);
+    const xp = staffOf(s, content, s.reporters[3]).xp;
+    updateTasks(s, content, []);
+    expect(staffOf(s, content, s.reporters[3]).xp).toBe(xp + 40);
     // A keep task fails on the first exposure.
     giveTask(s, content, 'clean_destroy');
     s.turn++;
@@ -1265,7 +1284,7 @@ describe('tasks and stars (CONCEPT.md §4.8)', () => {
 
   it('stars: a win, all tasks, a clean game; a lost game has none', () => {
     const s = createGame(content, 13);
-    s.tasks = [{ id: 'money_destroy', startTurn: 1, untilTurn: 5, status: 'done', base: 0 }];
+    s.tasks = [{ id: 'upgrades_destroy', startTurn: 1, untilTurn: 5, status: 'done', base: 0 }];
     s.exposedTotal = 0;
     s.outcome = { result: 'win', reason: 'cityDestroyed' };
     expect(scoreOf(s, content).stars).toBe(3);

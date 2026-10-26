@@ -261,7 +261,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let modal: Modal = null;
   /** Reporter whose investigation window is open. */
   let investigator: string | null = null;
-  /** Explanations opened with «i» in the reporter window (by section). */
+  /** Explanations opened with «?» in the reporter window (by section). */
   const openInfo = new Set<string>();
   let scene: CityScene | null = null;
   // Start-of-turn search animation.
@@ -2113,7 +2113,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
               'aria-expanded': String(open),
               onclick: act(() => (open ? details.delete(card.uid) : details.add(card.uid))),
             },
-            'i',
+            '?',
           ),
         ),
         info,
@@ -2664,7 +2664,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             {},
             series ? `${seriesNames[u.series!] ?? u.name} ${done}/${series.length}` : u.name,
             pips,
-            // With a «now» line the description with its percentages hides behind «i».
+            // With a «now» line the description with its percentages hides behind «?».
             gain
               ? h(
                   'button',
@@ -2678,7 +2678,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
                       render();
                     },
                   },
-                  'i',
+                  '?',
                 )
               : null,
           ),
@@ -3031,7 +3031,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   /** Reporter window: search topics and assigning an investigation (CONCEPT.md §3.3, §3.3а). */
-  /** A section heading with an «i» that shows its explanation under it (CONCEPT.md §7.3 «Окно репортёра»). */
+  /** A section heading with an «?» that shows its explanation under it (CONCEPT.md §7.3 «Окно репортёра»). */
   function infoSection(key: string, title: string, ...texts: string[]): HTMLElement[] {
     const open = openInfo.has(key);
     return [
@@ -3051,7 +3051,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
               render();
             },
           },
-          'i',
+          '?',
         ),
       ),
       ...(open ? texts.map((t) => h('p', { class: 'hint info-text' }, t)) : []),
@@ -3059,7 +3059,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   /**
-   * The reporter window's head (CONCEPT.md §7.3 «Окно репортёра»): a big portrait, the name with «i»,
+   * The reporter window's head (CONCEPT.md §7.3 «Окно репортёра»): a big portrait, the name with «?»,
    * the level as a yellow plaque with four steps, the experience bar and what is left; in the corner
    * luck and nose as icons (their look grows with them; hover or tap tells the level) and loyalty.
    */
@@ -3111,7 +3111,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'div',
           { class: 'rep-head-name' },
           r.name,
-          h('button', { class: `section-info${openInfo.has(`${k}about`) ? ' on' : ''}`, title: 'О репортёре', 'aria-expanded': String(openInfo.has(`${k}about`)), onclick: toggle(`${k}about`) }, 'i'),
+          h('button', { class: `section-info${openInfo.has(`${k}about`) ? ' on' : ''}`, title: 'О репортёре', 'aria-expanded': String(openInfo.has(`${k}about`)), onclick: toggle(`${k}about`) }, '?'),
         ),
         ...(openInfo.has(`${k}about`) ? [h('p', { class: 'hint info-text' }, aboutLine(r))] : []),
         h(
@@ -3356,14 +3356,40 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'Поверившие из других групп злятся и выходят на протест, а сама группа чувствует травлю и уезжает — даже те, кто вас не читает.',
       ),
       h('p', {}, `Компромат на группу — эксклюзив через ${turns} ${turnsWord(turns)}. Под кого копать:`),
-      ...c.groups.map((g) =>
-        h(
+      // One line per group; what digging would bring hides behind «?» (CONCEPT.md §3.3а).
+      ...c.groups.map((g) => {
+        const key = `dig:${id}:${g.id}`;
+        const open = openInfo.has(key);
+        return h(
           'div',
           { class: 'shop-item dig-option' },
-          h('div', {}, h('strong', {}, g.name), digPromise(g.id, id)),
+          h(
+            'div',
+            {},
+            h(
+              'strong',
+              {},
+              g.name,
+              h(
+                'button',
+                {
+                  class: `section-info${open ? ' on' : ''}`,
+                  title: open ? 'Скрыть' : 'Что это даст?',
+                  'aria-expanded': String(open),
+                  onclick: () => {
+                    if (open) openInfo.delete(key);
+                    else openInfo.add(key);
+                    render();
+                  },
+                },
+                '?',
+              ),
+            ),
+            open ? digPromise(g.id, id) : null,
+          ),
           h('button', { class: 'primary', disabled: !!state.outcome, onclick: act(() => startInvestigation(state, c, id, g.id)) }, 'Копать'),
-        ),
-      ),
+        );
+      }),
     ];
   }
 

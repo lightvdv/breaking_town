@@ -46,7 +46,7 @@ export function loyaltyOf(c: Content, state: GameState, r: ReporterDef): { word:
   return { word: 'На грани ухода', level: 'bad' };
 }
 
-/** What sits behind the «i» by the name: who they are, how they take lies, their personal story, their topics. */
+/** What sits behind the «?» by the name: who they are, how they take lies, their personal story, their topics. */
 export function aboutLine(r: ReporterDef): string {
   const honest = r.honesty >= 0.7 ? 'Не терпит лжи.' : r.honesty <= 0.2 ? `Ложь ${r.female ? 'её' : 'его'} не смущает.` : '';
   return [r.bio, honest, r.tie?.text ?? '', `${topicLine(r)} · ${scopeLabels[r.skills.scope].toLowerCase()}.`].filter(Boolean).join(' ');

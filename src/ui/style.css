@@ -2989,7 +2989,7 @@ button.publish.level-3.bump-up {
   border-radius: 50%;
   font-size: 13px;
   font-weight: 700;
-  font-style: italic;
+  font-style: normal;
   background: transparent;
   color: var(--paper-ink);
   border: 2px solid var(--paper-ink);
@@ -4346,7 +4346,7 @@ button.publish.nudge {
   color: var(--muted);
   border: 1.5px solid var(--muted);
   border-radius: 50%;
-  font: italic 700 12px/1 var(--font);
+  font: 700 12px/1 var(--font);
   cursor: pointer;
 }
 

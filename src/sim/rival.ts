@@ -105,10 +105,16 @@ export function planRival(state: GameState, c: Content, rng: RngState, events: C
       !chosen.includes(t) &&
       !state.hand.some((x) => x.templateId === t.id),
   );
+  // It does not like to repeat itself: what it printed lately weighs less, the longer ago the more.
+  const seen = (rival.seen ??= {});
+  const fresh = (t: CardTemplate) => {
+    const last = seen[t.id];
+    return last === undefined ? 1 : Math.min(1, Math.max(0.05, (state.turn - last) / b.repeatFadeDays));
+  };
   while (chosen.length < count && pool.length) {
     const t = weightedPick(
       rng,
-      pool.map((x) => ({ x, weight: x.interest * x.weight })),
+      pool.map((x) => ({ x, weight: x.interest * x.weight * fresh(x) })),
     ).x;
     pool.splice(pool.indexOf(t), 1);
     chosen.push(t);
@@ -117,6 +123,7 @@ export function planRival(state: GameState, c: Content, rng: RngState, events: C
   const careful = rivalTrust(state) < b.rivalTrustCollapse * 2;
   for (const tpl of chosen) {
     state.lastSeen[tpl.id] = state.turn;
+    seen[tpl.id] = state.turn;
     const [lo, hi] = tpl.tiers ?? [0, 3];
     const tiers = b.tierWeights.map((weight, tier) => ({ weight, tier: tier as NewsTier })).filter((x) => x.tier >= lo && x.tier <= hi);
     const card: CardInstance = {

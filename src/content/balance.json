@@ -26,6 +26,7 @@
   "rivalChurn": 0.03,
   "rivalChurnDoubt": 0.12,
   "rivalStoriesMax": 3,
+  "repeatFadeDays": 25,
   "guardianStoriesMax": 2,
   "rivalCountersMax": 1,
   "rivalExposure": 0.25,

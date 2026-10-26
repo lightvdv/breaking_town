@@ -63,6 +63,8 @@ export function validateContent(c: Content): string[] {
       if (possible !== (t.titles[level] !== null)) {
         errors.push(`card ${t.id}: title for truth level ${level} should be ${possible ? 'set' : 'null'}`);
       }
+      const variants = t.titleVariants?.[level];
+      if (t.titleVariants && possible !== (variants !== null && variants !== undefined)) errors.push(`card ${t.id}: title variants for truth level ${level} should be ${possible ? 'set' : 'null'}`);
       const e = t.effects[level];
       if (!possible && e !== null) errors.push(`card ${t.id}: effect for impossible truth level ${level}`);
       if (e && ['quitJob', 'avoid'].includes(e.type) && !e.building) {

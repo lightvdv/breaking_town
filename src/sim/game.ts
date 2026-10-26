@@ -138,8 +138,16 @@ function generateEvents(state: GameState, c: Content, rng: RngState): CardTempla
   const pool = fresh.length ? fresh : all;
   const count = b.eventsMin + int(rng, b.eventsMax - b.eventsMin + 1);
   const out: CardTemplate[] = [];
+  // What happened not so long ago is less likely again (`repeatFadeDays`).
+  const fade = (t: CardTemplate) => {
+    const last = state.lastSeen[t.id];
+    return last === undefined ? 1 : Math.min(1, Math.max(0.05, (state.turn - last) / b.repeatFadeDays));
+  };
   for (let i = 0; i < count && pool.length; i++) {
-    const tpl = weightedPick(rng, pool);
+    const tpl = weightedPick(
+      rng,
+      pool.map((x) => ({ x, weight: x.weight * fade(x) })),
+    ).x;
     pool.splice(pool.indexOf(tpl), 1);
     state.lastSeen[tpl.id] = state.turn;
     if (tpl.cityEffect) applyCityEffect(state, rng, tpl.cityEffect);

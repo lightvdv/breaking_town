@@ -181,6 +181,8 @@ export interface CardTemplate {
   topic: Topic;
   /** Title per truth level; null where that level is impossible (below baseTruth). */
   titles: Triple<string | null>;
+  /** More headlines for the same truth level, so a story told often does not repeat (null below `baseTruth`); one is picked per card. */
+  titleVariants?: Triple<string[] | null>;
   effects: Triple<CardEffect | null>;
   interest: number;
   /**
@@ -376,6 +378,8 @@ export interface Balance {
   rivalChurnDoubt: number;
   /** It prints 1..rivalStoriesMax stories a day. */
   rivalStoriesMax: number;
+  /** Days after which a story is as likely to come again as a new one: events and the rival's picks are weighted by how long ago they last appeared. */
+  repeatFadeDays: number;
   /** The same for the guardian of the destroy mode. */
   guardianStoriesMax: number;
   /** At most this many of its daily stories are debunks of ours. */
@@ -866,6 +870,8 @@ export interface RivalState {
   plan: RivalStory[];
   /** What it printed in the last `debunkWindow` days, newest first. */
   printed: PrintedStory[];
+  /** When it last printed each template, so it varies its stories (`repeatFadeDays`). */
+  seen?: Record<string, number>;
   closed: boolean;
   /** Its stories our debunks answered, over the game. */
   debunked: number;

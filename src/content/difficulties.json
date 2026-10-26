@@ -11,7 +11,7 @@
       "debunkTrust": 8
     },
     "modes": {
-      "destroy": { "tensionNews": { "destroy": [-16, 0, 34, 50], "save": [-16, 0, 25, 38] } },
+      "destroy": { "tensionNews": { "destroy": [-16, 0, 38, 56], "save": [-16, 0, 25, 38] } },
       "save": {
         "turnLimit": 34,
         "rivalTrustCollapse": 12
@@ -38,16 +38,17 @@
     },
     "modes": {
       "destroy": {
-        "tensionNews": { "destroy": [-16, 0, 30, 44], "save": [-16, 0, 25, 38] },
+        "tensionNews": { "destroy": [-16, 0, 25, 38], "save": [-16, 0, 25, 38] },
         "guardianStoriesMax": 3,
         "tensionDecay": 0.025,
-        "turnLimit": 37,
+        "turnLimit": 39,
         "conflictStartTurn": 2
       },
       "save": {
         "turnLimit": 46,
         "rivalStoriesMax": 4,
         "assignFocus": 0.45,
+        "debunkWindow": 1,
         "electionPivot": 0.6,
         "taskRewardMul": 0.8
       }

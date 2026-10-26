@@ -125,7 +125,12 @@ export function findNews(
     }
     if (candidates.length === 0) return null;
 
-    return write(r, weightedPick(rng, candidates), forcedTier);
+    // What was in the news not so long ago comes up less often (`repeatFadeDays`).
+    const fade = (t: CardTemplate) => {
+      const last = state.lastSeen[t.id];
+      return last === undefined ? 1 : Math.min(1, Math.max(0.05, (state.turn - last) / b.repeatFadeDays));
+    };
+    return write(r, weightedPick(rng, candidates.map((x) => ({ x, weight: x.weight * fade(x) }))).x, forcedTier);
   };
 
   /** A card for a template, written up by a reporter (tier by the reporter's nose). */

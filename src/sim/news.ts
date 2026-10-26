@@ -93,7 +93,10 @@ export function limitSensations(state: GameState, c: Content, publish: Publicati
 /** The headline at this distortion, with the conflict pair's names filled in. */
 export function storyTitle(c: Content, card: CardInstance, distortion: number): string {
   const tpl = templateOf(c, card.templateId);
-  const raw = distortion < 0 ? (card.conflict ? tpl.calmTitle : tpl.softTitles?.[-distortion - 1]) ?? '' : tpl.titles[cardTruth(card, distortion)] ?? '';
+  const truth = cardTruth(card, distortion);
+  // A story told often (debunks above all) has several headlines; each card keeps one of them.
+  const told = [tpl.titles[truth], ...(tpl.titleVariants?.[truth] ?? [])].filter((x): x is string => !!x);
+  const raw = distortion < 0 ? (card.conflict ? tpl.calmTitle : tpl.softTitles?.[-distortion - 1]) ?? '' : told.length ? told[card.uid % told.length] : '';
   // A debunk quotes the rival's headline.
   return fillTitle(c, card.debunk ? raw.replace('{story}', card.debunk.title) : raw, card.conflict);
 }

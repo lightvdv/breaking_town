@@ -425,6 +425,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     'button',
     { class: 'issue-fab', title: 'Вернуться к выпуску', 'aria-label': 'Вернуться к выпуску', hidden: true, onclick: () => openIssue() },
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
+    h('span', {}, 'К выпуску'),
   );
   const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, rivalNotice, abilityBar, paper));
   issue.addEventListener('click', (e) => {
@@ -1063,7 +1064,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     // Stage numbers grow towards ruin: a bigger one is worse for the city.
     const worse = next !== here ? next > here : diff < 0;
     const text = next !== here ? `≈→ ${c.balance.cityStates[next].name.toLowerCase()}` : `город ≈${worse ? '▼' : '▲'}`;
-    return h('small', { class: `res-forecast ${worse ? 'down' : 'up'}`, title: 'Ожидается, если выпустить газету так' }, text);
+    return h('small', { class: `res-forecast ${worse ? 'down' : 'up'}`, title: 'Ожидается, если выпустить газету так и никакую ложь не поймают' }, text);
   }
 
   /** The list of stories that can fill an empty place: every other story of today, best first. */
@@ -1101,7 +1102,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function forecastTag(expected: number): HTMLElement | null {
     const n = Math.round(expected);
     if (n === 0) return null;
-    return h('small', { class: `res-forecast ${n > 0 ? 'up' : 'down'}`, title: 'Ожидается, если выпустить газету так' }, `≈${n > 0 ? '+' : '−'}${Math.abs(n)}`);
+    return h('small', { class: `res-forecast ${n > 0 ? 'up' : 'down'}`, title: 'Ожидается, если выпустить газету так и никакую ложь не поймают' }, `≈${n > 0 ? '+' : '−'}${Math.abs(n)}`);
   }
 
   /**
@@ -2443,6 +2444,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
             ? 'есть неправда · пока не проверяют'
             : h('span', {}, 'есть неправда — ', h('b', { class: `risk-word step-${stamp === 'danger' ? 3 : riskStep(risk)}` }, stamp === 'danger' ? 'опасно' : risk < 0.1 ? 'риск небольшой' : 'рискованно')),
       );
+    // An untrue story from yesterday may still be caught today: the forecast leaves it out, this says it.
+    if (state.pendingLies.length && unlocked('framing')) parts.push(h('span', { class: 'late-risk' }, 'вчерашняя ложь ещё может всплыть'));
     const fc = currentForecast();
     if (fc) {
       const here = cityStateOf(c, state.metrics.cityIndex);
@@ -2641,17 +2644,18 @@ export function mountApp(root: HTMLElement, base: Content): void {
     let readers = 0;
     if (e.adRateAdd) money += followersOf(state, ch) * e.adRateAdd;
     if (e.upkeepAdd) money += totalUpkeep(state, c) - totalUpkeep(withIt, c);
-    if (e.reachAdd || e.reachMul || e.groupReach || e.trustBonus) readers += expectedJoins(withIt, c, modsWith, level) - expectedJoins(state, c, mods, level);
+    if (e.reachAdd || e.reachMul || e.groupReach || e.trustBonus || e.acquisitionMul) readers += expectedJoins(withIt, c, modsWith, level) - expectedJoins(state, c, mods, level);
     if (money >= 0.5) parts.push(`≈ +${Math.round(money)} ₽ в день`);
+    if (readers >= 0.75) parts.push(`≈ +${Math.round(readers)} ${plural(Math.round(readers), 'читатель', 'читателя', 'читателей')} в день`);
+    else if (readers >= 0.1) {
+      const every = Math.max(2, Math.round(1 / readers));
+      parts.push(`≈ +1 читатель за ${every} ${plural(every, 'день', 'дня', 'дней')}`);
+    } else if (readers <= -0.75) parts.push(`≈ −${Math.round(-readers)} ${plural(Math.round(-readers), 'новый читатель', 'новых читателя', 'новых читателей')} в день`);
     if (e.churnMul && report) {
       const lost = report.readers.lost - report.readers.lostBy.price;
       const saved = lost * (1 - e.churnMul);
       readers += saved;
       if (lost > 0) parts.push(`вчера ушли ${lost} ${plural(lost, 'читатель', 'читателя', 'читателей')} — ушли бы ≈ ${Math.round(lost - saved)}`);
-    } else if (readers >= 0.75) parts.push(`≈ +${Math.round(readers)} ${plural(Math.round(readers), 'читатель', 'читателя', 'читателей')} в день`);
-    else if (readers >= 0.1) {
-      const every = Math.max(2, Math.round(1 / readers));
-      parts.push(`≈ +1 читатель за ${every} ${plural(every, 'день', 'дня', 'дней')}`);
     }
     if (e.trustBonus) parts.push(`+${e.trustBonus} к репутации`);
     if (e.reporterLuck && state.reporters.length) {

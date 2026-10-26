@@ -315,15 +315,16 @@
     "id": "cheap_paper",
     "name": "Дешёвая бумага",
     "icon": "📰",
-    "description": "Газета обходится на 15 ₽ в день дешевле.",
-    "drawback": "Читатели бросают её на 20% чаще.",
+    "description": "Газета обходится на 15 ₽ в день дешевле, и её чаще берут на пробу: новых читателей на 30% больше.",
+    "drawback": "Читатели бросают её на 15% чаще.",
     "cost": 150,
     "requires": null,
     "fork": "money",
     "effects": {
       "channel": "newspaper",
       "upkeepAdd": -15,
-      "churnMul": 1.2
+      "acquisitionMul": 1.3,
+      "churnMul": 1.15
     }
   },
   {

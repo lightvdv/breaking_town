@@ -1777,16 +1777,20 @@ button.publish.level-3.bump-up {
 .issue-fab {
   position: absolute;
   z-index: 6;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 20px;
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  margin-left: -32px;
-  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  height: 60px;
+  margin: 0 auto;
+  padding: 0 20px 0 12px;
   border: 2px solid var(--ink);
   border-radius: 14px;
+  color: var(--ink);
+  font: 700 17px/1 var(--font);
   background: var(--paper);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
   animation: fab-bob 1.6s ease-in-out infinite alternate;
@@ -5222,6 +5226,10 @@ button.publish.nudge {
 
 .today-line .risk-word.step-0,
 .today-line .risk-word.step-1 {
+  color: #b5531a;
+}
+
+.today-line .late-risk {
   color: #b5531a;
 }
 

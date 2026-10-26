@@ -15,17 +15,21 @@ export interface Forecast {
 /**
  * Rehearses the turn on copies of the state (CONCEPT.md §7.3 «прогноз»): the real state is not
  * touched. Every rehearsal uses the same random streams whatever the layout, so two layouts differ
- * by the choice, not by luck. Returns null if the decision is not allowed.
+ * by the choice, not by luck. Nothing is caught in a rehearsal, neither today's untrue stories nor
+ * yesterday's: a rare exposure would swing a few rehearsals wildly, and its risk is shown on its own
+ * (the stamp, the pencil, «вчерашняя ложь может всплыть»). Returns null if the decision is not allowed.
  */
 export function forecastTurn(state: GameState, c: Content, d: Decision, samples = 3): Forecast | null {
   const sum: Forecast = { money: 0, readers: 0, trust: 0, cityIndex: 0 };
   const json = JSON.stringify(state);
+  const rehearsal: Content = { ...c, balance: { ...c.balance, checkerBase: 0 } };
   for (let i = 0; i < samples; i++) {
     const copy = JSON.parse(json) as GameState;
+    copy.pendingLies = [];
     copy.rng = createRng((state.seed * 31 + state.turn * 7919 + i * 104729) >>> 0);
     let report;
     try {
-      report = playTurn(copy, c, d);
+      report = playTurn(copy, rehearsal, d);
     } catch {
       return null;
     }

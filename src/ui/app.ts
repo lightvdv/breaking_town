@@ -146,6 +146,7 @@ type Modal =
   | 'shop'
   | 'team'
   | 'investigate'
+  | 'dig'
   | 'pause'
   | 'howto'
   | 'settings'
@@ -278,6 +279,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let exposuresSeen = false;
   /** The mayor's reconciliation notice of the last report was closed. */
   let reconcileSeen = false;
+  let digSeen = false;
+  /** The group the «Компромат» window digs under (CONCEPT.md §3.3а). */
+  let digTarget: string | null = null;
   let staffSeen = false;
   /** The turn whose promotions the portraits already celebrated (none again after a reload). */
   let promotedTurn = saved?.report?.turn ?? -1;
@@ -396,6 +400,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const guideNote = h('section', { class: 'guide-note', hidden: true, role: 'status' });
   const exposureNotice = h('section', { class: 'notice notice-exposed', hidden: true, role: 'status' });
   const reconcileNotice = h('section', { class: 'notice notice-peace', hidden: true, role: 'status' });
+  // «Расследование готово» on the day the dirt comes in (CONCEPT.md §3.3а).
+  const digNotice = h('section', { class: 'notice notice-dig', hidden: true, role: 'status' });
   // Save mode: what the rival paper prints today, and which of its stories we answer (CONCEPT.md §8).
   const rivalNotice = h('section', { class: 'notice notice-rival', hidden: true, role: 'status' });
   const staffNotice = h('section', { class: 'notice notice-staff', hidden: true, role: 'status' });
@@ -409,7 +415,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     { class: 'issue-fab', title: 'Вернуться к выпуску', 'aria-label': 'Вернуться к выпуску', hidden: true, onclick: () => openIssue() },
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
   );
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, rivalNotice, paper));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, rivalNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -510,6 +516,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     issueOpen = true;
     exposuresSeen = false;
     reconcileSeen = false;
+    digSeen = false;
     staffSeen = false;
     repStatus = new Map();
     revealed = new Set();
@@ -1286,6 +1293,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...state.missedEvents.filter((e) => !state.todayEvents.includes(e)).map((e) => h('div', { class: 'event missed', title: 'Свободного репортёра не нашлось' }, `• ${e} — никто не написал`)),
       ...(rec ? [h('div', { class: 'event peace' }, `☮ Примирение: ${pairNames(rec.pair, ' и ')} · ещё ${rec.turnsLeft} ${turnsWord(rec.turnsLeft)}`)] : []),
       ...(mayorName() ? [h('div', { class: 'event' }, `Мэр: ${mayorName()}`)] : []),
+      // Investigations under way (CONCEPT.md §3.3а): who digs under whom, and the day before it is ready.
+      ...state.investigations.map((x) => {
+        const who = reporterOf(c, x.reporterId).name;
+        const whom = groupOf(c, x.target).forms.manyGen;
+        return h('div', { class: 'event digging' }, x.turnsLeft <= 1 ? `⛏ Завтра: эксклюзив про ${whom} (${who})` : `⛏ ${who} копает под ${whom} — ещё ${x.turnsLeft} ${turnsWord(x.turnsLeft)}`);
+      }),
     );
   }
 
@@ -1809,6 +1822,21 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('h3', { class: 'section' }, 'Отношения между группами'),
       h('div', { class: 'relations-box' }, chart, changes.length ? h('div', { class: 'rel-changes' }, ...changes) : null),
       state.reconciliation ? h('p', { class: 'hint-line' }, `☮ Мэрия мирит: ${pairNames(state.reconciliation.pair, ' и ')}.`) : null,
+      // A group picked on the circle: dig dirt on it from here (CONCEPT.md §3.3а).
+      relFocus && !state.outcome
+        ? h(
+            'button',
+            {
+              class: 'dig-btn',
+              onclick: () => {
+                digTarget = relFocus;
+                error = '';
+                openModal('dig');
+              },
+            },
+            `⛏ Копать компромат на ${groupOf(c, relFocus).forms.manyGen}`,
+          )
+        : null,
     ];
     return out.filter((x): x is HTMLElement => x !== null);
   }
@@ -2241,7 +2269,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const mods = getModifiers(state, c);
     const visible = state.hand.filter((card) => revealed.has(card.uid));
 
-    const note = searching ? 'Репортёры ищут новости… (щёлкните, чтобы пропустить)' : !visible.length ? 'Сегодня новостей нет.' : '';
+    // An empty day says why when the newsroom is away digging (CONCEPT.md §3.3а).
+    const digging = state.reporters.length > 0 && state.reporters.every((id) => state.investigations.some((x) => x.reporterId === id));
+    const note = searching
+      ? 'Репортёры ищут новости… (щёлкните, чтобы пропустить)'
+      : !visible.length
+        ? digging
+          ? 'Сегодня новостей нет: вся редакция копает компромат.'
+          : 'Сегодня новостей нет.'
+        : '';
     issueHead.replaceChildren(...(note ? [h('p', {}, note)] : []), ...(error ? [h('p', { class: 'bad' }, error)] : []));
     issueNo.textContent = `Выпуск № ${state.turn}`;
     renderPrice();
@@ -2911,6 +2947,19 @@ export function mountApp(root: HTMLElement, base: Content): void {
           `Читают вас: ${readersHere} · верят вашим новостям: ${believers} · сбережения ≈ ${Math.round(avg(here, (x) => x.money))}`,
           protesting ? h('span', { class: 'bad' }, ` · протестуют: ${protesting}`) : '',
         ),
+        h(
+          'button',
+          {
+            class: 'dig-btn',
+            disabled: !!state.outcome,
+            onclick: () => {
+              digTarget = g.id;
+              error = '';
+              openModal('dig');
+            },
+          },
+          state.investigations.some((x) => x.target === g.id) ? `⛏ Копаем под ${g.forms.manyGen}…` : `⛏ Копать компромат на ${g.forms.manyGen}`,
+        ),
       );
     });
     return [
@@ -3096,6 +3145,133 @@ export function mountApp(root: HTMLElement, base: Content): void {
     );
   }
 
+  /** The day the dirt comes in: the exclusive is in today's paper (CONCEPT.md §3.3а). */
+  function renderDig(): void {
+    const done = state.lastFinds.filter((f) => f.kind === 'investigation' && f.cardUid !== null);
+    digNotice.hidden = !done.length || digSeen || searching;
+    if (digNotice.hidden) return;
+    digNotice.replaceChildren(
+      h(
+        'div',
+        { class: 'notice-head' },
+        h('span', { class: 'dig-icon', 'aria-hidden': 'true' }, '⛏'),
+        h('b', {}, done.length > 1 ? `Расследований готово: ${done.length}` : 'Расследование готово'),
+        h('button', { class: 'icon-btn', title: 'Закрыть', onclick: () => ((digSeen = true), render()) }, '×'),
+      ),
+      ...done.map((f) => {
+        const card = state.hand.find((x) => x.uid === f.cardUid);
+        return h(
+          'p',
+          { class: 'notice-note' },
+          `${reporterOf(c, f.reporterId).name} ${reporterOf(c, f.reporterId).female ? 'принесла' : 'принёс'} эксклюзив: `,
+          h('b', {}, card ? `«${storyTitle(c, card, 0)}»` : ''),
+          card?.tier === 3 ? ' — сенсация!' : '',
+          ' Поставьте его на первую полосу.',
+        );
+      }),
+    );
+  }
+
+  /**
+   * What digging under a group would bring (CONCEPT.md §3.3а «Карточка-обещание»): the headline, when,
+   * what it does to the town in words, what it costs, and how it may come out. With a reporter, the
+   * days and odds are theirs.
+   */
+  function digPromise(target: string, reporterId: string | null): HTMLElement {
+    const b = c.balance;
+    const g = groupOf(c, target);
+    const tpl = c.cards.find((t) => t.source === 'investigation' && t.target === target);
+    const r = reporterId ? skilledReporter(state, c, reporterOf(c, reporterId)) : null;
+    const days = r ? investigationTurns(c, r) : b.investigationTurns;
+    const fast = b.investigationTurns - 1;
+    const sensation = r ? Math.min(1, b.investigationSensationBase + b.investigationSensationPerNose * r.skills.nose) : null;
+    const truth = r ? Math.min(1, b.investigationTruthBase + b.investigationTruthPerNose * r.skills.nose) : null;
+    // Pairs already in a quarrel with the target: there the dirt may go as far as fights.
+    const hot = c.groups
+      .filter((x) => x.id !== target)
+      .map((x) => ({ x, level: tensionLevel(c, state.tension[pairKey(c, target, x.id)] ?? 0) }))
+      .filter((p) => p.level >= 1)
+      .sort((a, b2) => b2.level - a.level);
+    const others = state.residents.filter((x) => x.status === 'active' && x.group !== target && x.follows.length > 0).length;
+    const effect = [
+      `Настроит остальных против ${g.forms.manyGen}: прочтут ≈ ${others} ваших читателей из других групп.`,
+      ...hot.slice(0, 2).map((p) => `С ${p.x.forms.manyIns} и так ${tensionLabels[p.level].toLowerCase()}${p.level >= 2 ? ' — может дойти до драк' : ''}.`),
+      `Часть ${g.forms.manyGen} уедет — даже те, кто вас не читает.`,
+    ];
+    const odds = r
+      ? [
+          truth! >= 0.6 ? 'скорее правда' : truth! >= 0.4 ? 'правда или слух — как повезёт' : 'скорее слух',
+          sensation! >= 0.5 ? 'скорее всего сенсация' : sensation! >= 0.3 ? 'может выйти сенсацией' : 'сенсация — редкость',
+        ].join(', ')
+      : 'с чутьём репортёра выше шанс правды и сенсации';
+    return h(
+      'div',
+      { class: 'dig-promise' },
+      tpl ? h('p', { class: 'dig-headline' }, h('span', {}, 'Выйдет примерно так: '), h('b', {}, `«${tpl.titles[0] ?? ''}»`)) : null,
+      h('p', { class: 'dig-when' }, r ? `Через ${days} ${turnsWord(days)} — эксклюзив на первую полосу.` : `Через ${fast === days ? days : `${fast}–${days}`} дня — эксклюзив на первую полосу.`),
+      ...effect.map((t) => h('p', { class: 'dig-effect' }, t)),
+      h('p', { class: 'dig-cost' }, `${b.investigationCost} ₽ в день${r ? ` · ${days} ${turnsWord(days)} ${r.name.split(' ').pop()} не пишет новостей` : ' · репортёр всё это время не пишет новостей'}`),
+      h('p', { class: 'dig-odds' }, `Что выйдет: ${odds}.`),
+      state.mode === 'save' ? h('p', { class: 'bad' }, 'Вы спасаете город — травля группы бьёт по нему самому.') : null,
+    );
+  }
+
+  /** «Компромат на …»: the promise, then who can dig (CONCEPT.md §3.3а). */
+  function digContent(): HTMLElement[] {
+    const target = digTarget;
+    if (!target) return [];
+    const busy = (id: string) => state.investigations.find((x) => x.reporterId === id);
+    const under = state.investigations.find((x) => x.target === target);
+    return [
+      digPromise(target, null),
+      ...(error ? [h('p', { class: 'bad' }, error)] : []),
+      h('h3', { class: 'section' }, under ? `Уже копает: ${reporterOf(c, under.reporterId).name}` : 'Кто будет копать'),
+      ...state.reporters.map((id) => {
+        const r = skilledReporter(state, c, reporterOf(c, id));
+        const inv = busy(id);
+        const days = investigationTurns(c, r);
+        const truth = Math.min(1, c.balance.investigationTruthBase + c.balance.investigationTruthPerNose * r.skills.nose);
+        const sensation = Math.min(1, c.balance.investigationSensationBase + c.balance.investigationSensationPerNose * r.skills.nose);
+        return h(
+          'div',
+          { class: 'shop-item dig-who' },
+          portrait(id, 'portrait carry-portrait'),
+          h(
+            'div',
+            {},
+            h('strong', {}, r.name),
+            h(
+              'p',
+              { class: 'hint' },
+              inv
+                ? `Копает под ${groupOf(c, inv.target).forms.manyGen} · ещё ${inv.turnsLeft} ${turnsWord(inv.turnsLeft)}`
+                : `${days} ${turnsWord(days)} · ${truth >= 0.6 ? 'скорее правда' : truth >= 0.4 ? 'правда или слух' : 'скорее слух'} · ${sensation >= 0.5 ? 'скорее сенсация' : sensation >= 0.3 ? 'может выйти сенсацией' : 'сенсация редко'}`,
+            ),
+          ),
+          h(
+            'button',
+            {
+              class: inv ? '' : 'primary',
+              disabled: !!inv || !!state.outcome,
+              onclick: () => {
+                try {
+                  startInvestigation(state, c, id, target);
+                  error = '';
+                  modal = null;
+                } catch (e) {
+                  error = e instanceof Error ? e.message : String(e);
+                }
+                render();
+              },
+            },
+            'Копать',
+          ),
+        );
+      }),
+      h('button', { class: 'ghost', onclick: () => openModal('population') }, '← Жители'),
+    ];
+  }
+
   function investigateContent(): HTMLElement[] {
     const id = investigator;
     if (!id || !state.reporters.includes(id)) return [h('p', { class: 'hint' }, 'Репортёр больше не работает в редакции.')];
@@ -3179,16 +3355,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
           `Итог — эксклюзив: сенсация с шансом ${pct(sensation)}, правда с шансом ${pct(truth)} (иначе полуправда).`,
         'Поверившие из других групп злятся и выходят на протест, а сама группа чувствует травлю и уезжает — даже те, кто вас не читает.',
       ),
-      h('p', {}, `Компромат на группу: ${turns} хода, ${b.investigationCost} ₽ за ход. На кого копать:`),
-      ...c.groups.map((g) => {
-        const active = state.residents.filter((x) => x.status === 'active' && x.group === g.id).length;
-        return h(
+      h('p', {}, `Компромат на группу — эксклюзив через ${turns} ${turnsWord(turns)}. Под кого копать:`),
+      ...c.groups.map((g) =>
+        h(
           'div',
-          { class: 'shop-item' },
-          h('div', {}, h('strong', {}, g.name), h('p', {}, `Жителей: ${active}`)),
+          { class: 'shop-item dig-option' },
+          h('div', {}, h('strong', {}, g.name), digPromise(g.id, id)),
           h('button', { class: 'primary', disabled: !!state.outcome, onclick: act(() => startInvestigation(state, c, id, g.id)) }, 'Копать'),
-        );
-      }),
+        ),
+      ),
     ];
   }
 
@@ -3208,6 +3383,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       shop: 'Улучшения газеты',
       team: 'Редакция',
       investigate: 'Репортёр',
+      dig: digTarget ? `Компромат на ${groupOf(c, digTarget).forms.manyGen}` : 'Компромат',
       pause: 'Меню',
       howto: 'Как играть',
       settings: 'Настройки',
@@ -3217,7 +3393,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       carry: 'Кто поедет дальше',
     };
     const body =
-      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : shopContent();
+      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'dig' ? digContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
     const panel = h(
       'div',
@@ -3309,6 +3485,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderIssue();
     renderExposures();
     renderReconcile();
+    renderDig();
     renderStaff();
     renderLetters();
     renderOffer();

@@ -5426,3 +5426,61 @@ button.publish.nudge {
 .kicker.expert-kicker {
   color: #124e89;
 }
+
+/* ---------- Digging dirt (CONCEPT.md §3.3а) ---------- */
+
+.dig-promise {
+  margin: 4px 0 2px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.dig-promise p {
+  margin: 2px 0;
+}
+
+.dig-headline b {
+  color: var(--accent);
+}
+
+.dig-when {
+  font-weight: 700;
+}
+
+.dig-effect {
+  color: var(--muted);
+}
+
+.dig-effect::before {
+  content: '• ';
+}
+
+.dig-cost,
+.dig-odds {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.dig-option {
+  align-items: flex-start;
+}
+
+.dig-btn {
+  margin-top: 6px;
+}
+
+.city-events .event.digging {
+  color: var(--accent);
+}
+
+.notice-dig {
+  border-left: 6px solid var(--accent);
+}
+
+.dig-icon {
+  font-size: 20px;
+}
+
+.issue-stamp[hidden] {
+  display: none;
+}

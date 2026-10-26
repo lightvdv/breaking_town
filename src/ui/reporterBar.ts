@@ -180,7 +180,7 @@ export class ReporterBar {
         : animating && !s
           ? ''
           : inv
-            ? 'копает'
+            ? `копает ${inv.total - inv.turnsLeft}/${inv.total}`
             : state.rivalWatch.includes(id)
               ? 'следит'
               : found

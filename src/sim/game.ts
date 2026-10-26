@@ -1,3 +1,4 @@
+import { pressHunt, settleHunt } from './hunt';
 import { createRng, int, weightedPick, type RngState } from './rng';
 import {
   advanceCity,
@@ -17,7 +18,7 @@ import { assignPeople, snapshotPeople, updatePeople } from './people';
 import { createBuildings } from './map';
 import { averageTrust, groupOf, templateOf } from './lookup';
 import { getModifiers, placementSlots, type Modifiers } from './modifiers';
-import { effectiveTier, issueLevel, issueScore, maxDistortion, minDistortion, processLateExposures, publish, verifyNews, type PublishedNews } from './news';
+import { effectiveTier, issueLevel, issueScore, maxDistortion, minDistortion, processLateExposures, publish, storyEffect, verifyNews, type PublishedNews } from './news';
 import { advanceRelations, createTension, fillTitle, pairKeys, pairOf, tensionLevel } from './relations';
 import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
 import { advanceInvestigations, findNews, isRecent, scopeOf } from './reporters';
@@ -117,6 +118,8 @@ export function createGame(
     abilityReady: {},
     twist: null,
     budgetCut: 0,
+    hunt: null,
+    stains: {},
     vouchers: 0,
     lastProfit: 0,
     town: opts.town ?? null,
@@ -330,6 +333,10 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   for (const s of state.rival?.closed ? [] : (state.rival?.plan ?? [])) pushArc(state, c, s.card, s.placement, s.distortion);
   const rivalNews = publishRival(state, c, rivalRng);
   const exposures = [...lateExposures, ...verifyNews(state, c, checkRng, mods, published)];
+  // The hunt against a place (CONCEPT.md §3.6а): today's hits stain it (after the fact-check, which
+  // looks at its stories as hard as the days in a row so far deserve).
+  const huntTarget = state.hunt?.building ?? null;
+  const pressed = pressHunt(state, c, published, (n) => storyEffect(c, state.hand.find((x) => x.uid === n.pub.cardUid)!, n.pub.distortion));
   const cleanStreak = advanceCleanStreak(state, c, published);
   verifyRival(state, c, rivalRng, rivalNews);
   // The rival may answer our lies over the next days.
@@ -348,7 +355,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const stories = d.publish.map((p) => ({ tier: effectiveTier(state.hand.find((x) => x.uid === p.cardUid)!, p.distortion), placement: p.placement }));
   const issue = { score: issueScore(c, stories), level: issueLevel(c, stories) };
   const readers = updateReaders(state, c, readersRng, mods, published.length, issue.level, readerIds);
-  updateRivalReaders(state, c, rivalReadersRng, rivalNews);
+  updateRivalReaders(state, c, rivalReadersRng, rivalNews, issue.level, mods.rivalStealMul);
   const readersAfter = readerCount(state);
 
   const streak: Partial<Record<Topic, number>> = {};
@@ -366,6 +373,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const notes = day.notes;
   // Tasks are settled for the day that ended; the audit ends with its task.
   const tasks = updateTasks(state, c, exposures);
+  const huntWon = settleHunt(state, c);
   const auditEnded = settleAudit(state, c, tasks.done, tasks.failed);
   // The named residents: what the day did to them, and their letters to the paper (CONCEPT.md §2.2а).
   updatePeople(state, c, peopleRng, peopleBefore, published, exposures);
@@ -407,6 +415,9 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     notes,
     outcome: state.outcome,
     tasks,
+    ...(huntTarget !== null && pressed
+      ? { hunt: { building: huntTarget, hit: pressed.hit, step: state.hunt?.step ?? 0, stain: pressed.stain, won: huntWon } }
+      : {}),
     ...(day.twist.started || day.twist.ended || auditEnded ? { twist: { started: day.twist.started, ended: day.twist.ended || auditEnded } } : {}),
     ...(state.rival && rivalBefore
       ? {

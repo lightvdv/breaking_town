@@ -1320,6 +1320,14 @@ scenes.guardian_debunk = scenes.debunk;
 scenes.kompromat_mayor = scenes.mayor_affair;
 scenes.kompromat_factory = scenes.factory_waste;
 scenes.kompromat_rival = scenes.debunk;
+scenes.kompromat_guardian = scenes.debunk;
+// Campaign targets (CONCEPT.md §3.6а): stories about the fact-checkers, the city hall, a shop and a bar.
+scenes.factcheck_bias = scenes.library_reopen;
+scenes.factcheck_report = scenes.library_reopen;
+scenes.cityhall_budget = scenes.rumor_budget;
+scenes.cityhall_meeting = scenes.mayor_promise;
+scenes.shop_expired = scenes.shop_meat;
+scenes.bar_owner = scenes.bar_fight;
 // Story arcs (CONCEPT.md §3.1а) reuse the scenes of similar stories.
 scenes.arc_factory_1 = scenes.layoffs_coming;
 scenes.arc_factory_2 = scenes.rumor_jobs_taken;

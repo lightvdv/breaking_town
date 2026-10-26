@@ -4,7 +4,7 @@ import { modifiersOf } from './modifiers';
 import { effectiveTier, isSoothed, limitSensations, maxDistortion, minDistortion, publish, storyTitle, type PublishedNews } from './news';
 import { pickPair } from './relations';
 import { isRecent, scopeOf } from './reporters';
-import type { CardInstance, CardTemplate, Content, GameMode, GameState, GroupId, NewsTier, Placement, PrintedStory, RivalKind, TruthLevel } from './types';
+import type { CardInstance, CardTemplate, Content, GameMode, GameState, GroupId, IssueLevel, NewsTier, Placement, PrintedStory, RivalKind, TruthLevel } from './types';
 
 /**
  * The rival paper (CONCEPT.md §8): in the save mode the holding's tabloid «Вечерний Набат» scares the
@@ -83,7 +83,8 @@ export function planRival(state: GameState, c: Content, rng: RngState, events: C
   if (!rivalStarted(state, c)) return;
   const b = c.balance;
   const guardian = rival.kind === 'guardian';
-  const count = 1 + int(rng, guardian ? b.guardianStoriesMax : b.rivalStoriesMax);
+  // Every author we lured away is a story less a day (CONCEPT.md §8.4).
+  const count = 1 + int(rng, Math.max(1, (guardian ? b.guardianStoriesMax : b.rivalStoriesMax) - (rival.lured ?? 0)));
   // It answers our freshest lies that work against it, on top of its own stories.
   for (const story of counterTargets(state, c).slice(0, Math.min(count, c.balance.rivalCountersMax))) {
     rival.plan.push({ card: { ...makeDebunk(state, story, ''), templateId: RIVAL_TEMPLATES[rival.kind].theirs }, placement: 0, distortion: 0 });
@@ -274,14 +275,21 @@ export function verifyRival(state: GameState, c: Content, rng: RngState, news: P
 }
 
 /** Readers come and go: those who doubted it drop it more often, trusting non-readers start buying it. */
-export function updateRivalReaders(state: GameState, c: Content, rng: RngState, news: PublishedNews[]): void {
+export function updateRivalReaders(state: GameState, c: Content, rng: RngState, news: PublishedNews[], level: IssueLevel = 0, stealMul = 1): void {
   const rival = state.rival;
   // Before it starts printing its readers stay as they are.
   if (!rival || !rivalStarted(state, c)) return;
   const b = c.balance;
   const doubted = new Set(news.flatMap((n) => n.doubters));
+  // Our gripping issue takes its readers: who read both and was caught by ours drops it (CONCEPT.md §8.4).
+  const steal = b.rivalSteal[level] * stealMul;
   for (const r of state.residents) {
     if (r.status !== 'active') {
+      r.rivalReader = false;
+      continue;
+    }
+    const caught = state.lastReactions[r.id];
+    if (r.rivalReader && steal > 0 && (caught === 'scared' || caught === 'talk' || caught === 'happy') && chance(rng, steal)) {
       r.rivalReader = false;
       continue;
     }
@@ -300,3 +308,28 @@ export function updateRivalReaders(state: GameState, c: Content, rng: RngState, 
 }
 
 
+
+/** What luring its next author away costs: dearer each time (CONCEPT.md §8.4). */
+export function lureCost(state: GameState, c: Content): number {
+  return Math.round(c.balance.rivalLureCost * (1 + (state.rival?.lured ?? 0)));
+}
+
+/** Why its author cannot be lured away now, or null. */
+export function lureBlock(state: GameState, c: Content): string | null {
+  const rival = state.rival;
+  if (!rival || rival.closed || state.outcome) return 'no rival';
+  if (!rivalStarted(state, c)) return 'not yet';
+  if ((rival.lured ?? 0) >= c.balance.rivalLureMax) return 'nobody left';
+  if (state.money < lureCost(state, c)) return 'no money';
+  return null;
+}
+
+/** Lures an author of the rival away: it prints a story less a day, and its readers trust it less. */
+export function lureRivalAuthor(state: GameState, c: Content): void {
+  const block = lureBlock(state, c);
+  if (block) throw new Error(`Cannot lure: ${block}`);
+  state.money -= lureCost(state, c);
+  const rival = state.rival!;
+  rival.lured = (rival.lured ?? 0) + 1;
+  for (const r of state.residents) if (r.status === 'active') r.rivalTrust = clamp(r.rivalTrust - c.balance.rivalLureTrust, 0, 100);
+}

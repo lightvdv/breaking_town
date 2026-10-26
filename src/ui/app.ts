@@ -2,6 +2,10 @@ import { ASSET_BASE } from '../assets';
 import { CityScene, REACTION_ICON, type HoverTarget } from '../render/scene';
 import {
   averageTrust,
+  huntBonus,
+  endHunt,
+  isHuntStory,
+  startHunt,
   buildingDefOf,
   buildingName,
   cancelInvestigation,
@@ -44,6 +48,7 @@ import {
   electionLeader,
   runningTwist,
   twistOf,
+  type CardEffect,
   type TaskDef,
   type TaskState,
   forecastTurn,
@@ -76,6 +81,11 @@ import {
   followersOf,
   reporterOf,
   startInvestigation,
+  rivalStarted,
+  RIVAL_DIG,
+  lureBlock,
+  lureCost,
+  lureRivalAuthor,
   templateOf,
   totalUpkeep,
   rivalReaders,
@@ -233,6 +243,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // Only a game with at least one turn played counts: a city nobody touched is not offered to continue.
   let hasGame = saved !== null && saved.state.turn > 1;
   const urlMode: GameMode = params.get('mode') === 'save' ? 'save' : 'destroy';
+  // The save mode is hidden for now: the game is tuned on the attack on the town (CONCEPT.md §8);
+  // `&mode=save` in the address still starts one.
+  const saveModeShown = false;
   // The game runs on the content of its difficulty (CONCEPT.md §4.6); `c` follows the current game.
   /** The content a game runs on: its difficulty's, and in the campaign its town's too (CONCEPT.md §4.6, §9). */
   const contentFor = (difficulty: Difficulty, mode: GameMode, town: string | null) => {
@@ -420,6 +433,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // Tasks of the game and the mid-game twist (CONCEPT.md §4.8, §4.9).
   const tasksNotice = h('section', { class: 'notice notice-tasks', hidden: true, role: 'status' });
   const twistNotice = h('section', { class: 'notice notice-twist', hidden: true, role: 'status' });
+  // The hunt against a place (CONCEPT.md §3.6а).
+  const huntNotice = h('section', { class: 'notice notice-hunt', hidden: true, role: 'status' });
   // The folded issue: a newspaper over the city; a tap unfolds it.
   const issueFab = h(
     'button',
@@ -427,7 +442,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
     h('span', {}, 'К выпуску'),
   );
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, rivalNotice, abilityBar, paper));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, huntNotice, rivalNotice, abilityBar, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -951,6 +966,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...r.tasks.done.map((id) => h('li', { class: 'good' }, `✓ Задание выполнено: ${taskOf(c, id).title} (${prizeText(taskOf(c, id))})`)),
       ...r.tasks.failed.map((id) => h('li', { class: 'bad' }, `✗ Задание провалено: ${taskOf(c, id).title}`)),
       ...twistLines(r).map((x) => h('li', {}, x)),
+      ...(r.hunt?.won ? [h('li', { class: 'good' }, `🎯 Травля удалась: ${r.hunt.won} закрылся. Город потрясён`)] : []),
     ];
     return new Promise((done) => {
       const finish = () => {
@@ -1311,7 +1327,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       // Investigations under way (CONCEPT.md §3.3а): who digs under whom, and the day before it is ready.
       ...state.investigations.map((x) => {
         const who = reporterOf(c, x.reporterId).name;
-        const whom = groupOf(c, x.target).forms.manyGen;
+        const whom = digWhom(x.target);
         return h('div', { class: 'event digging' }, x.turnsLeft <= 1 ? `⛏ Завтра: эксклюзив про ${whom} (${who})` : `⛏ ${who} копает под ${whom} — ещё ${x.turnsLeft} ${turnsWord(x.turnsLeft)}`);
       }),
     );
@@ -1764,6 +1780,54 @@ export function mountApp(root: HTMLElement, base: Content): void {
           ]
         : []),
       ...notes.map((t) => h('p', { class: 'notice-note' }, t)),
+      ...(rival.kind === 'guardian' && !rival.closed && rivalStarted(state, c) ? [rivalStrikes()] : []),
+    );
+  }
+
+  /**
+   * Strikes at «Голос города» (CONCEPT.md §8.4): lure its author away, set a reporter digging into its
+   * money; a gripping issue of ours takes its readers by itself.
+   */
+  function rivalStrikes(): HTMLElement {
+    const block = lureBlock(state, c);
+    const lureWhy: Record<string, string> = { 'nobody left': 'переманивать больше некого', 'no money': 'не хватает денег', 'not yet': 'он ещё не выходит', 'no rival': '' };
+    const digging = state.investigations.find((x) => x.target === RIVAL_DIG);
+    const free = state.reporters.filter((id) => !state.investigations.some((x) => x.reporterId === id));
+    const surname = (id: string) => reporterOf(c, id).name.split(' ').pop()!;
+    return h(
+      'div',
+      { class: 'rival-strikes' },
+      h('span', { class: 'strikes-label', title: 'Интересный выпуск сам перехватывает его читателей: кого зацепила наша новость, тот чаще бросает «Голос»' }, 'Ударить по «Голосу»:'),
+      h(
+        'button',
+        {
+          class: 'ghost strike',
+          disabled: !!block,
+          title: block ? lureWhy[block] : 'Его ведущий автор уходит к нам: «Голос» печатает на одну новость в день меньше, его читатели доверяют ему меньше',
+          onclick: actNow(() => lureRivalAuthor(state, c)),
+        },
+        `Сманить автора · ${lureCost(state, c)} ₽`,
+      ),
+      digging
+        ? h('span', { class: 'strike-note' }, `${surname(digging.reporterId)} копает под «Голос» ${digging.total - digging.turnsLeft}/${digging.total}`)
+        : free.length > 1 || (free.length === 1 && state.reporters.length > 1)
+          ? h(
+              'span',
+              { class: 'strike-dig' },
+              'Копать компромат:',
+              ...free.map((id) =>
+                h(
+                  'button',
+                  {
+                    class: 'ghost strike',
+                    title: `${surname(id)} несколько дней не ищет новостей и приносит документы о том, кто платит «Голосу». Поверившие перестают ему доверять. ${c.balance.investigationCost} ₽ в день`,
+                    onclick: actNow(() => startInvestigation(state, c, id, RIVAL_DIG)),
+                  },
+                  surname(id),
+                ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -1909,7 +1973,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const p = previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: d.distortion });
     const audience = tpl.audience?.length ? tpl.audience.map((g) => groupOf(c, g).name.toLowerCase()).join(', ') : 'все жители';
     const investigation = tpl.source === 'investigation';
-    const target = tpl.target ? groupOf(c, tpl.target).name : '';
+    const target = tpl.target === RIVAL_DIG ? '«Голос города»' : tpl.target ? groupOf(c, tpl.target).name : '';
     const reporter = reporterOf(c, card.reporterId);
     const open = details.has(card.uid);
     // Distortion raises the tier, and the item restyles itself at once (CONCEPT.md §3.1).
@@ -2110,10 +2174,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
             `Сюжет · ${arc.name} · ${arc.day < arc.days ? `день ${arc.day} из ${arc.days}` : 'развязка'}`,
           )
         : null,
-      // Which of the town's bars or shops the story is about.
-      card.building !== undefined && state.buildings[card.building] && buildingDefOf(c, state.buildings[card.building].type).names
-        ? h('div', { class: 'kicker place-kicker' }, buildingName(state, c, card.building))
-        : null,
+      // Which place the story is about, and the hunt against it (CONCEPT.md §3.6а).
+      placeKicker(card, p.effect),
       h(
         'div',
         { class: 'news-head' },
@@ -2158,6 +2220,87 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ),
     ];
     return { cls, children: children.filter((x): x is HTMLElement => x !== null) };
+  }
+
+  /**
+   * The place a story is about: its name for a bar or a shop, and the hunt — «Травля · удар +40%» on
+   * a story about the target, a «Начать травлю» button on a story about any other workplace.
+   */
+  /** Whom an investigation digs under, in the genitive: a group or «Голос города» (CONCEPT.md §8.4). */
+  const digWhom = (target: string) => (target === RIVAL_DIG ? '«Голос города»' : groupOf(c, target).forms.manyGen);
+
+  const actNow = (f: () => void) => () => {
+    f();
+    render();
+  };
+
+  function placeKicker(card: CardInstance, effect: CardEffect | null): HTMLElement | null {
+    if (card.building === undefined) return null;
+    const x = state.buildings[card.building];
+    if (!x) return null;
+    const named = !!buildingDefOf(c, x.type).names;
+    const name = buildingName(state, c, card.building);
+    const target = state.hunt?.building === card.building;
+    if (target) {
+      const hits = isHuntStory(state, card, effect);
+      const bonus = Math.round((huntBonus(state, c, getModifiers(state, c)) - 1) * 100);
+      return h(
+        'div',
+        { class: `kicker hunt-kicker${hits ? '' : ' idle'}` },
+        `🎯 Травля · ${name} · ${hits ? (bonus ? `удар +${bonus}%` : 'первый удар') : 'в такой подаче не ударит'}`,
+      );
+    }
+    const canTarget = x.open && x.jobs > 0 && !state.outcome && unlocked('framing');
+    if (!named && !canTarget) return null;
+    return h(
+      'div',
+      { class: 'kicker place-kicker' },
+      named ? name : null,
+      canTarget
+        ? h(
+            'button',
+            {
+              class: 'hunt-start',
+              title: 'Бить по этому месту день за днём: каждая страшная новость о нём подряд сильнее прошлой, люди его обходят, работники уходят',
+              onclick: actNow(() => startHunt(state, x.id)),
+            },
+            state.hunt ? `🎯 Травить вместо этого: ${name.toLowerCase()}` : `🎯 Начать травлю: ${name.toLowerCase()}`,
+          )
+        : null,
+    );
+  }
+
+  /** The hunt plaque (CONCEPT.md §3.6а): the target, the days in a row, how it holds, «Снять». */
+  function renderHunt(): void {
+    const camp = state.hunt;
+    huntNotice.hidden = !camp || searching || !!state.outcome;
+    if (!camp || huntNotice.hidden) return;
+    const b = c.balance;
+    const x = state.buildings[camp.building];
+    const name = buildingName(state, c, camp.building);
+    const stain = state.stains[camp.building] ?? 0;
+    const staff = state.residents.filter((r) => r.status === 'active' && r.job === x.id).length;
+    const shaky = stain < 0.15 ? 'держится' : stain < 0.4 ? 'люди его обходят' : 'на грани';
+    const bonus = Math.round((huntBonus(state, c, getModifiers(state, c)) - 1) * 100);
+    const pips = h('span', { class: 'pips hunt-pips' }, ...Array.from({ length: b.huntMaxSteps }, (_, i) => h('span', { class: i < camp.step ? 'on' : '' })));
+    huntNotice.replaceChildren(
+      h(
+        'div',
+        { class: 'notice-head' },
+        h('span', { class: 'hunt-icon', 'aria-hidden': 'true' }, '🎯'),
+        h('b', {}, `Травля: ${name}`),
+        pips,
+        h('span', { class: 'rival-stats' }, bonus ? `удар +${bonus}%` : 'ударьте сегодня'),
+        h('button', { class: 'ghost hunt-stop', title: 'Прекратить травлю', onclick: actNow(() => endHunt(state)) }, 'Прекратить'),
+      ),
+      h(
+        'p',
+        { class: 'hunt-line' },
+        `${shaky[0].toUpperCase()}${shaky.slice(1)}`,
+        x.type === 'shop' || x.type === 'entertainment' ? '' : ` · работников ${staff}`,
+        ' · каждый день подряд со страшной новостью о нём бьёт сильнее, пропуск остужает травлю.',
+      ),
+    );
   }
 
   /** Small fixed-size clipping that follows the pointer while a story is dragged. */
@@ -2923,6 +3066,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       boring: 'выпуск их не зацепил',
       empty: 'выпуска не было',
       price: 'цена им не по карману или кажется высокой',
+      style: 'газета стала не для них',
     };
     const out: HTMLElement[] = [
       h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${readerCount(state)}`), h('span', {}, 'постоянных читателей'))),
@@ -3405,7 +3549,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
               'p',
               { class: 'hint' },
               inv
-                ? `Копает под ${groupOf(c, inv.target).forms.manyGen} · ещё ${inv.turnsLeft} ${turnsWord(inv.turnsLeft)}`
+                ? `Копает под ${digWhom(inv.target)} · ещё ${inv.turnsLeft} ${turnsWord(inv.turnsLeft)}`
                 : `${days} ${turnsWord(days)} · ${truth >= 0.6 ? 'скорее правда' : truth >= 0.4 ? 'правда или слух' : 'скорее слух'} · ${sensation >= 0.5 ? 'скорее сенсация' : sensation >= 0.3 ? 'может выйти сенсацией' : 'сенсация редко'}`,
             ),
           ),
@@ -3497,7 +3641,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         ...errorLine,
         ...topicSection,
         ...infoSection('investigation', 'Расследование', `Пока идёт расследование, репортёр не ищет обычные новости, а редакция тратит ${b.investigationCost} за ход.`),
-        h('p', {}, `Копает грязь на группу «${groupOf(c, inv.target).name}». Осталось ходов: ${inv.turnsLeft} из ${inv.total}.`),
+        h('p', {}, `Копает грязь ${inv.target === RIVAL_DIG ? 'на «Голос города»' : `на группу «${groupOf(c, inv.target).name}»`}. Осталось ходов: ${inv.turnsLeft} из ${inv.total}.`),
         meter(done / inv.total, 'warn'),
         h('button', { class: 'ghost', disabled: !!state.outcome, onclick: act(() => cancelInvestigation(state, id)) }, 'Отозвать с расследования'),
       ];
@@ -3679,6 +3823,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderRival();
     renderTwist();
     renderTasks();
+    renderHunt();
     renderGuide();
     renderModal();
     renderOutcome();
@@ -3853,12 +3998,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
       );
     return [
       ...(campaign ? [h('p', { class: 'bad' }, 'Текущая кампания будет потеряна.')] : []),
-      h('p', {}, `Семь городов области подряд. Сторона — на всю кампанию. Сложность: ${base.difficulties.find((d) => d.id === settings.difficulty)?.name ?? ''} (меняется в окне «Новая игра»).`),
+      h('p', {}, `Семь городов области подряд.${saveModeShown ? ' Сторона — на всю кампанию.' : ''} Сложность: ${base.difficulties.find((d) => d.id === settings.difficulty)?.name ?? ''} (меняется в окне «Новая игра»).`),
       h(
         'div',
         { class: 'mode-cards' },
         card('destroy', 'goal', '«Медиа-Плюс»', 'Холдинг проверяет теорию «страх продаётся» на целой области: город за городом.'),
-        card('save', 'defend', 'Честная газета', 'Вы идёте за «Вечерним Набатом» из города в город и не даёте ему их сломать.'),
+        saveModeShown ? card('save', 'defend', 'Честная газета', 'Вы идёте за «Вечерним Набатом» из города в город и не даёте ему их сломать.') : null,
       ),
       h('button', { class: 'ghost', onclick: () => (campaign ? openCampaign() : openModal(null)) }, '← Назад'),
     ];
@@ -4078,7 +4223,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'mode-cards' },
         card('destroy', 'goal', 'Разрушить город', 'Вы — редактор газеты холдинга «Медиа-Плюс». Пугайте, стравливайте и врите, пока город не опустеет. Мешать будет честный «Голос города».'),
-        card('save', 'defend', 'Спасти город', 'Вы — последняя честная газета. «Вечерний Набат» холдинга пугает город — опровергайте его и не дайте городу пасть.'),
+        saveModeShown ? card('save', 'defend', 'Спасти город', 'Вы — последняя честная газета. «Вечерний Набат» холдинга пугает город — опровергайте его и не дайте городу пасть.') : null,
       ),
       h('button', { class: 'ghost', onclick: () => openModal(titleOpen ? null : 'pause') }, '← Назад'),
     ];

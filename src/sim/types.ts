@@ -142,6 +142,18 @@ export interface UpgradeEffects {
   debunkFindAdd?: number;
   /** We see the rival's issue being written (a mole there, CONCEPT.md §3.5). */
   seeRivalPlan?: boolean;
+  /** The yellow press (CONCEPT.md §3.5): youth and the jobless believe us as if our reputation were at least this. */
+  sensationTrust?: number;
+  /** Added to the chance that a reader of these groups stops buying: the paper is not for them any more. */
+  groupChurn?: Partial<Record<GroupId, number>>;
+  /** Multiplies the campaign's extra impact per day in a row. */
+  huntStepMul?: number;
+  /** Added to the chance that a reporter digs up a story about the campaign's target. */
+  huntFindAdd?: number;
+  /** Multiplies the share of the rival's readers our gripping issue takes. */
+  rivalStealMul?: number;
+  /** Multiplies the impact of stories on these topics (a desk of the paper). */
+  topicImpactMul?: Partial<Record<Topic, number>>;
 }
 
 export interface UpgradeDef {
@@ -452,6 +464,31 @@ export interface Balance {
   taskStartTurn: number;
   /** Scales every task's reward (and the audit's premium) for balance by difficulty. */
   taskRewardMul: number;
+  /** A campaign against a place (CONCEPT.md §3.6а): extra impact per day in a row, up to this many steps. */
+  huntStep: number;
+  huntMaxSteps: number;
+  /** Stain a campaign story leaves on its place per impact × share of viewers who believed it. */
+  huntStain: number;
+  /** Chance that a free reporter digs up a story about the target instead of searching at random. */
+  huntFindChance: number;
+  /** A worker of a stained place quits with chance stain × this a day; the stain fades by `stainDecay` a day. */
+  stainQuit: number;
+  stainDecay: number;
+  /** A place stained at least this much closes when its staff falls below `stainCloseShare` of its jobs. */
+  stainCloseMin: number;
+  stainCloseShare: number;
+  /** Strikes at the rival (CONCEPT.md §8.4): share of its readers our issue of each level takes, among those it caught. */
+  rivalSteal: [number, number, number, number];
+  /** Luring its author away: the price (it grows by itself each time), how many, and its readers' trust lost. */
+  rivalLureCost: number;
+  rivalLureMax: number;
+  rivalLureTrust: number;
+  /** The town's mood falls by this when the campaign closes its target. */
+  huntWinMood: number;
+  /** Each day of the hunt in a row raises the fact-check risk of stories about its target by this share. */
+  huntCheckerStep: number;
+  /** Share of the usual topic fatigue that hunt stories suffer. */
+  huntFatigueShare: number;
   /** The mid-game twist (CONCEPT.md §4.9): its day; the election's mood line (at or above it the peacemaker wins). */
   twistTurn: number;
   electionPivot: number;
@@ -844,6 +881,15 @@ export interface Resident {
   quitFrom: BuildingType[];
 }
 
+export interface HuntState {
+  building: number;
+  startTurn: number;
+  /** Days in a row with a hit, minus cooled-down days; sets the extra impact. */
+  step: number;
+  /** Issues that hit it in all. */
+  hits: number;
+}
+
 export interface Building {
   id: number;
   type: BuildingType;
@@ -926,6 +972,8 @@ export interface RivalState {
   closed: boolean;
   /** Its stories our debunks answered, over the game. */
   debunked: number;
+  /** Its authors we lured away (CONCEPT.md §8.4): a story less a day each. */
+  lured?: number;
 }
 
 /** An incident between two groups that happened today (it becomes a true story). */
@@ -1169,6 +1217,10 @@ export interface GameState {
   twist: TwistState | null;
   /** Upkeep a day added by a failed audit. */
   budgetCut: number;
+  /** The campaign against one place (CONCEPT.md §3.6а), if one is on. */
+  hunt: HuntState | null;
+  /** How tainted a place is in people's eyes, by building id (0..1): customers stay away, workers quit. */
+  stains: Record<number, number>;
   /** Free cards from the upgrade deck won by tasks (CONCEPT.md §4.8). */
   vouchers: number;
   /** Sales minus upkeep of the last issue: the «прибыль в день» of tasks. */
@@ -1217,7 +1269,7 @@ export type IssueLevel = 0 | 1 | 2 | 3;
 
 /** Why readers stopped buying (CONCEPT.md §5.2). */
 /** price = the issue costs more than the resident can or wants to pay (CONCEPT.md §5.4). */
-export type ChurnReason = 'exposed' | 'doubted' | 'boring' | 'empty' | 'price';
+export type ChurnReason = 'exposed' | 'doubted' | 'boring' | 'empty' | 'price' | 'style';
 
 export interface ReadersChange {
   lost: number;
@@ -1269,6 +1321,8 @@ export interface TurnReport {
   outcome: Outcome | null;
   /** Tasks done and failed this turn (ids) and the money they paid. */
   tasks: { done: string[]; failed: string[]; reward: number };
+  /** The campaign against a place: whether today's issue hit it, its stain, and the place it closed. */
+  hunt?: { building: number; hit: boolean; step: number; stain: number; won: string | null };
   /** The twist began or ended this turn. */
   twist?: { started: boolean; ended: boolean };
   /** Save mode: what the rival printed this turn and how it stands now. */

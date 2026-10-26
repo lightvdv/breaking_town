@@ -5594,7 +5594,7 @@ button.publish.nudge {
 }
 
 .style-icon {
-  font-size: 14px;
+  font-size: 18px;
 }
 
 .upg-icon {
@@ -5606,6 +5606,21 @@ button.publish.nudge {
   background: var(--panel);
   border: 2px solid var(--ink);
   font-size: 18px;
+}
+
+.deck-card .upg-icon {
+  width: 72px;
+  height: 72px;
+  margin: 2px auto 6px;
+  font-size: 44px;
+  line-height: 1;
+}
+
+.fork-title .upg-icon {
+  width: 60px;
+  height: 60px;
+  font-size: 36px;
+  line-height: 1;
 }
 
 .upg-plus {
@@ -5813,4 +5828,118 @@ button.publish.nudge {
   .deck {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* ---------- The hunt against a place (CONCEPT.md §3.6а) ---------- */
+.notice-hunt {
+  border-left: 6px solid #a22633;
+}
+
+.hunt-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.hunt-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.hunt-pips span {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #a22633;
+  border-radius: 2px;
+}
+
+.hunt-pips span.on {
+  background: #a22633;
+}
+
+.hunt-stop {
+  margin-left: auto;
+  padding: 2px 10px;
+  font-size: 13px;
+}
+
+.hunt-line {
+  margin: 0;
+  padding: 0 10px 8px;
+  font-size: 14px;
+}
+
+.kicker.hunt-kicker {
+  color: #a22633;
+}
+
+.kicker.hunt-kicker.idle {
+  color: #8a7a66;
+}
+
+.kicker .hunt-start {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border: 1px solid #a22633;
+  border-radius: 10px;
+  background: transparent;
+  color: #a22633;
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.kicker .hunt-start:hover {
+  background: #a22633;
+  color: var(--paper);
+}
+
+/* Strikes at «Голос города» (CONCEPT.md §8.4). */
+.rival-strikes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 4px 10px 8px;
+  font-size: 13px;
+}
+
+.strikes-label {
+  font-weight: 700;
+  cursor: help;
+}
+
+.strike-dig {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.rival-strikes .strike {
+  padding: 2px 10px;
+  font-size: 13px;
+}
+
+.strike-note {
+  font-style: italic;
+}
+
+/* Buttons on the paper plaques: ink on paper, not the dark theme's ghost. */
+.notice .hunt-stop,
+.rival-strikes .strike {
+  border: 2px solid var(--paper-ink, #3a2a1e);
+  background: transparent;
+  color: var(--paper-ink, #3a2a1e);
+  box-shadow: none;
+}
+
+.notice .hunt-stop:hover:not(:disabled),
+.rival-strikes .strike:hover:not(:disabled) {
+  background: var(--paper-ink, #3a2a1e);
+  color: var(--paper, #f4e4c1);
+}
+
+.rival-strikes .strike:disabled {
+  opacity: 0.45;
 }

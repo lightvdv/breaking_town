@@ -1,4 +1,4 @@
-import type { ChannelId, Content, GameState, GroupId, Placement } from './types';
+import type { ChannelId, Content, GameState, GroupId, Placement, Topic } from './types';
 
 export interface ChannelMods {
   reachAdd: number;
@@ -27,6 +27,15 @@ export interface Modifiers {
   wordOfMouthMul: number;
   debunkFindAdd: number;
   seeRivalPlan: boolean;
+  /** Youth and the jobless believe the outlet as if its reputation were at least this (the yellow press). */
+  sensationTrust: number;
+  /** Added to the churn of readers from these groups (the paper's style is not for them). */
+  groupChurn: Record<GroupId, number>;
+  huntStepMul: number;
+  huntFindAdd: number;
+  rivalStealMul: number;
+  /** Impact of stories by topic: the paper's desks (CONCEPT.md §3.5). */
+  topicImpactMul: Partial<Record<Topic, number>>;
   channels: Record<ChannelId, ChannelMods>;
 }
 
@@ -51,6 +60,12 @@ export function modifiersOf(c: Content, upgrades: string[]): Modifiers {
     wordOfMouthMul: 1,
     debunkFindAdd: 0,
     seeRivalPlan: false,
+    sensationTrust: 0,
+    groupChurn: {},
+    huntStepMul: 1,
+    huntFindAdd: 0,
+    rivalStealMul: 1,
+    topicImpactMul: {},
     channels: {},
   };
   for (const ch of c.channels) m.channels[ch.id] = { reachAdd: 0, reachMul: 1, adRateAdd: 0, upkeepAdd: 0, frontReadMul: 1, groupReach: {} };
@@ -71,6 +86,12 @@ export function modifiersOf(c: Content, upgrades: string[]): Modifiers {
     m.wordOfMouthMul *= e.wordOfMouthMul ?? 1;
     m.debunkFindAdd += e.debunkFindAdd ?? 0;
     m.seeRivalPlan ||= !!e.seeRivalPlan;
+    m.sensationTrust = Math.max(m.sensationTrust, e.sensationTrust ?? 0);
+    m.huntStepMul *= e.huntStepMul ?? 1;
+    m.huntFindAdd += e.huntFindAdd ?? 0;
+    m.rivalStealMul *= e.rivalStealMul ?? 1;
+    for (const [t, v] of Object.entries(e.topicImpactMul ?? {}) as [Topic, number][]) m.topicImpactMul[t] = (m.topicImpactMul[t] ?? 1) * v;
+    for (const [g, v] of Object.entries(e.groupChurn ?? {})) m.groupChurn[g] = (m.groupChurn[g] ?? 0) + (v ?? 0);
     if (e.channel) {
       const cm = m.channels[e.channel];
       cm.reachAdd += e.reachAdd ?? 0;

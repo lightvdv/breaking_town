@@ -1,3 +1,4 @@
+import { quitStained, stainedChoice } from './hunt';
 import { chance, int, next, pick, weightedPick, type RngState } from './rng';
 import { buildingName, clamp, groupOf } from './lookup';
 import type {
@@ -60,10 +61,12 @@ export function tryAssignJob(
   group: GroupDef,
   buildings: Building[],
   workers: Map<number, number>,
+  /** A place this resident will not work at today (a hunted one, CONCEPT.md §3.6а). */
+  refuse?: (x: Building) => boolean,
 ): boolean {
   for (const type of group.jobs) {
     if (r.quitFrom.includes(type)) continue;
-    const b = buildings.find((x) => x.type === type && x.open && (workers.get(x.id) ?? 0) < x.jobs);
+    const b = buildings.find((x) => x.type === type && x.open && (workers.get(x.id) ?? 0) < x.jobs && !refuse?.(x));
     if (b) {
       r.job = b.id;
       workers.set(b.id, (workers.get(b.id) ?? 0) + 1);
@@ -173,14 +176,17 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
       r.mood += b.moodUnemployed;
     } else r.money += g.pension;
 
-    if (!r.avoid.shop && !(scared && chance(rng, b.fearShopSkip)) && openShops.length && r.money >= b.shopPrice) {
-      pick(rng, openShops).turnover += b.shopPrice;
+    // A place a hunt stained loses customers who would have gone there (CONCEPT.md §3.6а).
+    const shop = openShops.length ? pick(rng, openShops) : null;
+    if (!r.avoid.shop && !(scared && chance(rng, b.fearShopSkip)) && shop && !stainedChoice(state, rng, shop) && r.money >= b.shopPrice) {
+      shop.turnover += b.shopPrice;
       r.money -= b.shopPrice;
       r.mood += b.moodShop;
     } else r.mood += b.moodNoShop;
 
-    if (!r.avoid.entertainment && !scared && openFuns.length && r.money >= b.funPrice && chance(rng, b.funChance)) {
-      pick(rng, openFuns).turnover += b.funPrice;
+    const fun = openFuns.length ? pick(rng, openFuns) : null;
+    if (!r.avoid.entertainment && !scared && fun && r.money >= b.funPrice && chance(rng, b.funChance) && !stainedChoice(state, rng, fun)) {
+      fun.turnover += b.funPrice;
       r.money -= b.funPrice;
       r.mood += b.moodFun;
     }
@@ -196,6 +202,9 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
     if (r.mood < b.despairMood && chance(rng, b.despairLeaveChance * b.leaveScale)) leaveCity(r);
   }
 
+  // Workers leave a stained place; the stain fades.
+  quitStained(state, c, rng);
+
   // Businesses: weak shops and venues lay off staff and close when nobody works there.
   const expected: Partial<Record<BuildingType, number>> = {
     shop: (state.initialPopulation * b.shopPrice) / Math.max(1, shops.length),
@@ -209,7 +218,8 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
   for (const x of state.buildings) {
     if (!x.open || x.jobs === 0) continue;
     const staff = workers.get(x.id) ?? 0;
-    const minStaff = x.type === 'factory' ? x.jobs * b.factoryCloseShare : 1;
+    // A hunted place closes once half its people are gone (CONCEPT.md §3.6а).
+    const minStaff = x.type === 'factory' ? x.jobs * b.factoryCloseShare : (state.stains[x.id] ?? 0) >= b.stainCloseMin ? x.jobs * b.stainCloseShare : 1;
     if (staff < minStaff) {
       x.open = false;
       for (const r of state.residents) if (r.job === x.id) r.job = null;
@@ -236,7 +246,7 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
   for (const r of state.residents) {
     if (r.status !== 'active' || r.job !== null || r.protestTurns > 0) continue;
     const g = groupOf(c, r.group);
-    if (g.jobs.length && chance(rng, rehire)) tryAssignJob(r, g, state.buildings, workers);
+    if (g.jobs.length && chance(rng, rehire)) tryAssignJob(r, g, state.buildings, workers, (x) => stainedChoice(state, rng, x));
   }
 
   // A thriving city attracts newcomers.

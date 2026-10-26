@@ -7,6 +7,12 @@
 import { content as baseContent } from '../src/content';
 import {
   averageTrust,
+  startHunt,
+  lureBlock,
+  lureCost,
+  lureRivalAuthor,
+  RIVAL_DIG,
+  rivalStarted,
   callAgency,
   agencyCost,
   hireFromAgency,
@@ -64,6 +70,16 @@ process.argv.forEach((a, i) => {
   const [key, value] = process.argv[i + 1].split(/=(.*)/s);
   if (!(key in content.balance)) throw new Error(`Unknown balance key ${key}`);
   (content.balance as unknown as Record<string, unknown>)[key] = JSON.parse(value);
+});
+
+// --upgrade id.effect=json (any number): tries an upgrade's effect without editing upgrades.json.
+process.argv.forEach((a, i) => {
+  if (a !== '--upgrade') return;
+  const [path, value] = process.argv[i + 1].split(/=(.*)/s);
+  const [id, key] = path.split('.');
+  const u = content.upgrades.find((x) => x.id === id);
+  if (!u) throw new Error(`Unknown upgrade ${id}`);
+  (u.effects as unknown as Record<string, unknown>)[key] = JSON.parse(value);
 });
 
 interface Choice {
@@ -222,6 +238,23 @@ const saveStrategies: Record<string, Strategy> = { defender, liarDefender, sooth
 const pairKeyOf = (c: CardInstance) => pairKey(content, c.conflict![0], c.conflict![1]);
 
 /** The thoughtful bot keeps one reporter digging dirt on the biggest group. */
+/**
+ * The thoughtful bots' attack beyond the issue (CONCEPT.md §3.6а, §8.4): they hound the biggest
+ * workplace from the third day, lure the guardian's authors away when money allows and set a
+ * reporter digging into it once the newsroom has three.
+ */
+function attack(s: GameState): void {
+  if (!s.hunt && s.turn >= 3) {
+    const target = s.buildings.filter((x) => x.open && x.jobs > 0 && x.type !== 'factCheckers').sort((a, b) => b.jobs - a.jobs)[0];
+    if (target) startHunt(s, target.id);
+  }
+  const rival = s.rival;
+  if (!rival || rival.closed || !rivalStarted(s, content)) return;
+  if (!lureBlock(s, content) && s.money - lureCost(s, content) >= totalUpkeep(s, content) * 3) lureRivalAuthor(s, content);
+  const free = s.reporters.filter((id) => !s.investigations.some((x) => x.reporterId === id) && !s.rivalWatch.includes(id));
+  if (s.reporters.length >= 3 && free.length >= 2 && !s.investigations.some((x) => x.target === RIVAL_DIG)) startInvestigation(s, content, free[0], RIVAL_DIG);
+}
+
 function manageInvestigations(s: GameState): void {
   if (s.investigations.length || s.reporters.length < 2) return;
   const r = [...s.reporters].sort((a, b) => reporterOf(content, b).skills.nose - reporterOf(content, a).skills.nose)[0];
@@ -298,11 +331,15 @@ const avoid: Record<GameState['mode'], string[]> = {
   destroy: ['solid_style', 'cheap_paper', 'lawyers', 'paid_subscription', 'mole'],
   save: ['yellow_layout', 'cheap_paper', 'insider', 'paid_subscription', 'mole'],
 };
+// --avoid id,id: the bots never buy these (to measure what an upgrade adds).
+const avoidIndex = process.argv.indexOf('--avoid');
+if (avoidIndex >= 0) for (const id of process.argv[avoidIndex + 1].split(',')) avoid.destroy.push(id), avoid.save.push(id);
+// The fork option is taken only if it is not avoided.
 
 function shop(s: GameState): void {
   // The fork option comes once the newsroom has three reporters (it is not worth starving the staff for).
   const at = buyOrder.indexOf(3) + 1;
-  const order = [...buyOrder.slice(0, at), ...forkPicks[s.mode], ...buyOrder.slice(at)];
+  const order = [...buyOrder.slice(0, at), ...forkPicks[s.mode].filter((id) => !avoid[s.mode].includes(id)), ...buyOrder.slice(at)];
   for (;;) {
     const reserve = totalUpkeep(s, content) * 3;
     const options = listPurchases(s, content).filter((p) => p.unlocked && !avoid[s.mode].includes(p.id) && !content.upgrades.find((u) => u.id === p.id)?.ability);
@@ -356,6 +393,8 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
       s.reporters.forEach((id) => setRivalWatch(s, id, id === free[free.length - 1] && s.reporters.length >= 2));
     }
     answerOffers(s, strategy);
+    // The hunt and the strikes at the guardian are the agitator's: `mixed` plays the original concept.
+    if (strategy === agitator && !saveMode && !noAttack) attack(s);
     const d = decide(s, strategy, rng);
     limitSensations(s, content, d.publish);
     const r = playTurn(s, content, d);
@@ -392,6 +431,7 @@ const games = arg('games', 200);
 const saveMode = process.argv.includes('save') && process.argv.includes('--mode');
 // --no-investigations: measure how much investigations add to the thoughtful bot.
 const noInvestigations = process.argv.includes('--no-investigations');
+const noAttack = process.argv.includes('--no-attack');
 const baseSeed = arg('seed', 1);
 
 // --trace <strategy>: print one game turn by turn instead of the summary table.

@@ -48,7 +48,10 @@ export function seedFollowers(state: GameState, c: Content, rng: RngState, mods:
 /** Why a reader might leave after this turn and how likely it is, given what they experienced; null when they stay. */
 function churnOf(c: Content, mods: Modifiers, state: GameState, r: Resident, issueSize: number, level: IssueLevel): { reason: ChurnReason; chance: number } | null {
   const found = baseChurn(c, state, r, issueSize, level);
-  const churn = found && { reason: found.reason, chance: found.chance * mods.churnMul };
+  let churn = found && { reason: found.reason, chance: found.chance * mods.churnMul };
+  // The paper's style drives some groups away (the yellow press loses pensioners, CONCEPT.md §3.5).
+  const style = mods.groupChurn[r.group] ?? 0;
+  if (style > (churn?.chance ?? 0)) churn = { reason: 'style', chance: style };
   // Too dear: who cannot pay stops buying, who can but grudges it drops it now and then.
   const will = buyWillingness(state, c, r);
   const price = will <= 0 ? 1 : Math.max(0, 1 - will) * c.balance.priceChurn;
@@ -83,7 +86,7 @@ export function updateReaders(
   const out: ReadersChange = {
     lost: 0,
     gained: 0,
-    lostBy: { exposed: 0, doubted: 0, boring: 0, empty: 0, price: 0 },
+    lostBy: { exposed: 0, doubted: 0, boring: 0, empty: 0, price: 0, style: 0 },
     movedAway: 0,
     gainedBy: Object.fromEntries(state.ownedChannels.map((ch) => [ch, 0])),
   };

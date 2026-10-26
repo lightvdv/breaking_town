@@ -10,6 +10,7 @@ import { snapshotPeople, updatePeople } from '../src/sim/people';
 import { giveTask, scoreOf, taskOf, updateTasks } from '../src/sim/tasks';
 import { twistMods } from '../src/sim/twists';
 import { withTown } from '../src/sim/town';
+import { settleHunt } from '../src/sim/hunt';
 import {
   averageTrust,
   createGame,
@@ -58,6 +59,11 @@ import {
   pairKeys,
   fillTitle,
   storyTitle,
+  startHunt,
+  huntBonus,
+  lureBlock,
+  lureRivalAuthor,
+  RIVAL_DIG,
   type CardInstance,
   type Content,
   type Decision,
@@ -1292,6 +1298,54 @@ describe('tasks and stars (CONCEPT.md §4.8)', () => {
     expect(scoreOf(s, content).stars).toBe(2);
     s.outcome = { result: 'lose', reason: 'bankrupt' };
     expect(scoreOf(s, content).stars).toBe(0);
+  });
+});
+
+describe('attacking the town (CONCEPT.md §3.5, §3.6а, §8.4)', () => {
+  it('a hunt makes stories about its target hit harder day after day, stains it and is won when it closes', () => {
+    const s = createGame(content, 21);
+    const factory = s.buildings.find((x) => x.type === 'factory')!;
+    s.hand = [];
+    const card: CardInstance = { uid: s.nextUid++, templateId: 'factory_sold', baseTruth: 1, createdTurn: s.turn, tier: 2, scope: 'local', reporterId: s.reporters[0], building: factory.id };
+    s.hand.push(card);
+    const mods = getModifiers(s, content);
+    const pub = { cardUid: card.uid, placement: 2 as const, distortion: 0 };
+    const before = previewPublication(s, content, mods, pub).impact;
+    startHunt(s, factory.id);
+    s.hunt!.step = 2;
+    expect(huntBonus(s, content, mods)).toBeCloseTo(1 + 2 * content.balance.huntStep);
+    expect(previewPublication(s, content, mods, pub).impact).toBeGreaterThan(before);
+    playTurn(s, content, { publish: [pub] });
+    expect(s.hunt?.step).toBe(3);
+    expect(s.stains[factory.id] ?? 0).toBeGreaterThan(0);
+    // A day without a hit cools it down a step.
+    playTurn(s, content, { publish: [] });
+    expect(s.hunt?.step).toBe(2);
+    s.buildings[factory.id].open = false;
+    expect(settleHunt(s, content)).toBeTruthy();
+    expect(s.hunt).toBeNull();
+  });
+
+  it('the yellow press: youth believe it whatever its reputation, pensioners drift away', () => {
+    const m = getModifiers({ ...createGame(content, 3), upgrades: ['yellow_layout'] }, content);
+    expect(m.sensationTrust).toBeGreaterThan(0);
+    expect(m.groupChurn.pensioners).toBeGreaterThan(0);
+    expect(m.channels.newspaper.groupReach.youth).toBeGreaterThan(0);
+  });
+
+  it('strikes at the guardian: luring its author and digging into its money', () => {
+    const s = createGame(content, 22, 'destroy');
+    s.money = 5000;
+    const trust = rivalTrust(s);
+    lureRivalAuthor(s, content);
+    expect(s.rival!.lured).toBe(1);
+    expect(rivalTrust(s)).toBeLessThan(trust);
+    while (!lureBlock(s, content)) lureRivalAuthor(s, content);
+    expect(lureBlock(s, content)).toBe('nobody left');
+    // A reporter digging into it brings documents about who pays it.
+    startInvestigation(s, content, s.reporters[0], RIVAL_DIG);
+    for (let i = 0; i < 6 && !s.hand.some((x) => x.templateId === 'kompromat_guardian'); i++) playTurn(s, content, { publish: [] });
+    expect(s.hand.some((x) => x.templateId === 'kompromat_guardian')).toBe(true);
   });
 });
 

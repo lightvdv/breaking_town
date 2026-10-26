@@ -80,7 +80,7 @@ export function validateContent(c: Content): string[] {
     if (t.scope && t.scope !== 'local' && t.scope !== 'global') errors.push(`card ${t.id}: unknown scope ${t.scope}`);
     for (const g of t.audience ?? []) if (!c.groups.some((x) => x.id === g)) errors.push(`card ${t.id}: unknown audience ${g}`);
     const stigma = t.effects.some((e) => e?.type === 'stigma');
-    if (t.source === 'investigation' && (!t.target || !c.groups.some((g) => g.id === t.target))) {
+    if (t.source === 'investigation' && (!t.target || (t.target !== 'rival' && !c.groups.some((g) => g.id === t.target)))) {
       errors.push(`card ${t.id}: investigation needs a valid target group`);
     }
     if (stigma && !t.target) errors.push(`card ${t.id}: stigma effect needs a target group`);

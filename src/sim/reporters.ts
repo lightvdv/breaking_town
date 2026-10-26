@@ -1,3 +1,4 @@
+import { huntTemplates } from './hunt';
 import { debunkTargets, makeDebunk } from './rival';
 import { skilledReporter } from './staff';
 import { chance, int, pick, weightedPick, type RngState } from './rng';
@@ -135,6 +136,17 @@ export function findNews(
     return write(r, weightedPick(rng, candidates.map((x) => ({ x, weight: x.weight * fade(x) }))).x, forcedTier);
   };
 
+  /** A hunt: a reporter who found something today may have dug into its target (CONCEPT.md §3.6а). */
+  const huntFind = (r: ReporterDef): CardInstance | null => {
+    const target = state.hunt ? state.buildings[state.hunt.building] : null;
+    if (!target?.open || !chance(rng, b.huntFindChance + mods.huntFindAdd)) return null;
+    const pool = huntTemplates(c, target, (t) => !t.conflict && (t.source === 'rumor' || t.source === 'fact') && !inHand.has(t.id) && !cards.some((x) => x.templateId === t.id));
+    if (!pool.length) return null;
+    const card = write(r, weightedPick(rng, pool.map((x) => ({ x, weight: x.weight }))).x, null);
+    card.building = target.id;
+    return card;
+  };
+
   /** A card for a template, written up by a reporter (tier by the reporter's nose). */
   const write = (r: ReporterDef, tpl: CardTemplate, forcedTier: NewsTier | null): CardInstance => {
     state.lastSeen[tpl.id] = state.turn;
@@ -186,7 +198,8 @@ export function findNews(
     finds.push({ reporterId: r.id, cardUid: card.uid, tier: card.tier, forced: false, kind: 'search' });
   }
   for (const r of free) {
-    const card = opts.sure || chance(rng, searchLuck(state, c, r, mods)) ? make(r, null) : null;
+    // Luck decides whether the reporter finds anything; a hunt decides what about (CONCEPT.md §3.6а).
+    const card = opts.sure || chance(rng, searchLuck(state, c, r, mods)) ? (huntFind(r) ?? make(r, null)) : null;
     finds.push({ reporterId: r.id, cardUid: card?.uid ?? null, tier: card?.tier ?? null, forced: false, kind: 'search' });
   }
 
@@ -203,6 +216,9 @@ export function findNews(
 
 // ---------- Investigations (CONCEPT.md §3.3а) ----------
 
+/** The investigation target that means the rival paper, not a group. */
+export const RIVAL_DIG = 'rival';
+
 export function investigationTurns(c: Content, r: ReporterDef): number {
   const b = c.balance;
   return b.investigationTurns - (r.skills.nose >= b.investigationFastNose ? 1 : 0);
@@ -212,7 +228,8 @@ export function startInvestigation(state: GameState, c: Content, reporterId: str
   if (state.outcome) throw new Error('Game is over');
   if (!state.reporters.includes(reporterId)) throw new Error(`Reporter ${reporterId} is not hired`);
   if (state.investigations.some((x) => x.reporterId === reporterId)) throw new Error(`Reporter ${reporterId} is already investigating`);
-  if (!c.groups.some((g) => g.id === target)) throw new Error(`Unknown group ${target}`);
+  // Digging into «Голос города» itself (CONCEPT.md §8.4): its money, its masters.
+  if (target === RIVAL_DIG ? !state.rival || state.rival.closed : !c.groups.some((g) => g.id === target)) throw new Error(`Unknown target ${target}`);
   if (!c.cards.some((t) => t.source === 'investigation' && t.target === target)) throw new Error(`No investigation story about ${target}`);
   const total = investigationTurns(c, reporterOf(c, reporterId));
   state.investigations.push({ reporterId, target, turnsLeft: total, total });
@@ -230,6 +247,8 @@ export function advanceInvestigations(state: GameState, c: Content, rng: RngStat
   const keep = [];
   for (const inv of state.investigations) {
     if (!state.reporters.includes(inv.reporterId)) continue;
+    // A closed rival leaves nothing to dig.
+    if (inv.target === RIVAL_DIG && (!state.rival || state.rival.closed)) continue;
     inv.turnsLeft--;
     if (inv.turnsLeft > 0) {
       keep.push(inv);

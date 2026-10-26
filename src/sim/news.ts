@@ -1,3 +1,4 @@
+import { huntBonus, huntWatch, isHuntStory } from './hunt';
 import { chance, int, type RngState } from './rng';
 import { leaveCity } from './city';
 import { averageTrust, channelOf, clamp, factCheckStarted, groupOf, templateOf } from './lookup';
@@ -115,15 +116,17 @@ export function isHarmful(effect: CardEffect | null): boolean {
  * Impact of a story — how strongly viewers react (CONCEPT.md §5.2а). It never changes reach.
  * 1 means a normal story; divided by impactNorm so content `interest` values stay readable.
  */
-function impactOf(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, repeatsThisTurn: number): number {
+function impactOf(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, repeatsThisTurn: number, hunt = false): number {
   const b = c.balance;
   const streak = (state.topicStreak[tpl.topic] ?? 0) + repeatsThisTurn;
-  const fatigue = Math.pow(1 - b.fatiguePerRepeat, streak);
+  // A hunt story grows with every day in a row (CONCEPT.md §3.6а), and readers tire of it less.
+  const fatigue = hunt ? Math.pow(1 - b.fatiguePerRepeat * b.huntFatigueShare, streak) * huntBonus(state, c, mods) : Math.pow(1 - b.fatiguePerRepeat, streak);
   const scope = card.scope === 'global' ? b.globalEffectMul : 1;
   const placement = b.placementImpact[pub.placement];
   // A yellow layout makes frightening stories hit harder, a solid one softer (CONCEPT.md §3.5).
   const style = isHarmful(storyEffect(c, card, pub.distortion)) ? mods.scaryImpactMul : 1;
-  return (tpl.interest * b.tierInterest[effectiveTier(card, pub.distortion)] * scope * placement * fatigue * style) / b.impactNorm;
+  const desk = mods.topicImpactMul[tpl.topic] ?? 1;
+  return (tpl.interest * b.tierInterest[effectiveTier(card, pub.distortion)] * scope * placement * fatigue * style * desk) / b.impactNorm;
 }
 
 /** Owned channels a resident follows; only followers see the issue (CONCEPT.md §5.2). */
@@ -209,7 +212,7 @@ export function previewPublication(
   if (!card) throw new Error(`Card ${pub.cardUid} is not in hand`);
   const tpl = templateOf(c, card.templateId);
   const truth = cardTruth(card, pub.distortion);
-  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn);
+  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn, isHuntStory(state, card, storyEffect(c, card, pub.distortion)));
   return {
     title: storyTitle(c, card, pub.distortion),
     truth,
@@ -217,7 +220,7 @@ export function previewPublication(
     impact,
     tier: effectiveTier(card, pub.distortion),
     reachChance: outletReach(state, c, pub.placement),
-    exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25) * reporterCheckMul(state, c, card),
+    exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25) * reporterCheckMul(state, c, card) * huntWatch(state, c, card, storyEffect(c, card, pub.distortion)),
     tension: card.conflict ? { pair: pairKey(c, ...card.conflict), delta: tensionShift(state, c, card, pub.distortion, impact, 0.1) } : null,
   };
 }
@@ -245,7 +248,10 @@ function beliefChance(
   }
   // People do not believe dirt about their own group.
   if (tpl.target === r.group) plausibility *= b.witness[truth];
-  const trust = (trustIn ?? r.trust + mods.trustBonus) / 100;
+  // The yellow press: youth and the jobless go for a loud headline whoever prints it (CONCEPT.md §3.5).
+  const own = r.trust + mods.trustBonus;
+  const hungry = r.group === 'youth' || (r.job === null && groupOf(c, r.group).jobs.length > 0);
+  const trust = (trustIn ?? (hungry ? Math.max(own, mods.sensationTrust) : own)) / 100;
   const skepticism = groupOf(c, r.group).skepticism;
   return clamp(b.beliefScale * trust * plausibility * (1 - skepticism), 0, b.maxBelief);
 }
@@ -355,7 +361,7 @@ export function publish(
   const soothed = isSoothed(card, pub.distortion);
   const effect = calm ? null : soothed ? tpl.softEffects?.[-pub.distortion - 1] ?? null : tpl.effects[truth];
   // The rival's stories have their own strength (`rivalImpactMul`).
-  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn) * (rival ? b.rivalImpactMul[state.rival?.kind ?? 'tabloid'] : 1);
+  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn, !rival && isHuntStory(state, card, effect)) * (rival ? b.rivalImpactMul[state.rival?.kind ?? 'tabloid'] : 1);
   // Interesting stories are retold more, and viral channels spread them further.
   const retell = clamp(
     b.wordOfMouthChance * (0.5 + tpl.engagement * b.tierEngagement[effectiveTier(card, pub.distortion)]) * (1 + outletVirality(state, c)) * mods.wordOfMouthMul,
@@ -388,7 +394,7 @@ export function publish(
   const reactions = rival ? state.rivalReactions : state.lastReactions;
   // A debunk brings relief from a scary story, and the fear back when it takes away a false comfort:
   // everything «Голос города» prints comforts and everything «Набат» prints scares (RIVAL_TEMPLATES).
-  const takesComfort = card.templateId === 'debunk_guardian' || card.templateId === 'tabloid_debunk';
+  const takesComfort = card.templateId === 'debunk_guardian' || card.templateId === 'tabloid_debunk' || card.templateId === 'kompromat_guardian';
   const mood = effect?.type === 'debunk' ? (takesComfort ? 'scared' : 'happy') : good || calm ? 'happy' : 'scared';
   report.mood = mood;
 
@@ -556,7 +562,7 @@ export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Mo
       ...(fake ? { setup: true } : {}),
       ...(card.reporterId ? { reporterId: card.reporterId } : {}),
     };
-    const risk = exposureRiskOf(state, c, mods, story.truth, n.pub.placement, n.viewers.length / active) * reporterCheckMul(state, c, card);
+    const risk = exposureRiskOf(state, c, mods, story.truth, n.pub.placement, n.viewers.length / active) * reporterCheckMul(state, c, card) * huntWatch(state, c, card, storyEffect(c, card, n.pub.distortion));
     if (chance(rng, risk)) {
       n.report.exposed = true;
       exposed.push(exposeNews(state, c, mods, story, n.viewers));

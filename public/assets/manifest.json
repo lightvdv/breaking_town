@@ -297,6 +297,13 @@
     "arc_bus_good",
     "kompromat_mayor",
     "kompromat_factory",
-    "kompromat_rival"
+    "kompromat_rival",
+    "factcheck_bias",
+    "factcheck_report",
+    "cityhall_budget",
+    "cityhall_meeting",
+    "shop_expired",
+    "bar_owner",
+    "kompromat_guardian"
   ]
 }

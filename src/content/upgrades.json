@@ -287,14 +287,28 @@
     "id": "yellow_layout",
     "name": "Жёлтая вёрстка",
     "icon": "📢",
-    "description": "Крупные кричащие заголовки: страшные новости бьют на 30% сильнее.",
-    "drawback": "Фактчекеры проверяют вас на 10% чаще.",
+    "description": "Газета для улицы: страшное бьёт на 30% сильнее, молодёжь и безработные верят ей даже при низкой репутации и охотнее покупают, а пойманная ложь стоит на 10% меньше.",
+    "drawback": "Пенсионеры и интеллигенция её бросают, правда даёт вдвое меньше репутации, проверяют на 10% чаще.",
     "cost": 300,
     "requires": null,
     "fork": "style",
     "effects": {
+      "channel": "newspaper",
       "scaryImpactMul": 1.3,
-      "checkerMul": 1.1
+      "checkerMul": 1.1,
+      "sensationTrust": 40,
+      "exposurePenaltyMul": 0.9,
+      "trustGainMul": 0.5,
+      "groupReach": {
+        "youth": 0.25,
+        "workers": 0.1,
+        "pensioners": -0.35,
+        "intelligentsia": -0.35
+      },
+      "groupChurn": {
+        "pensioners": 0.04,
+        "intelligentsia": 0.06
+      }
     }
   },
   {
@@ -370,5 +384,163 @@
       "checkerMul": 0.75,
       "exposurePenaltyMul": 1.15
     }
+  },
+  {
+    "id": "crime_desk",
+    "name": "Криминальная хроника",
+    "icon": "🚨",
+    "description": "Свой отдел происшествий: новости о преступности бьют на 30% сильнее.",
+    "drawback": "Отдел стоит 8 ₽ в день.",
+    "cost": 220,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "upkeepAdd": 8,
+      "topicImpactMul": {
+        "crime": 1.3
+      }
+    },
+    "section": "Отделы"
+  },
+  {
+    "id": "factory_desk",
+    "name": "Заводской репортёр",
+    "icon": "🏭",
+    "description": "Человек на проходной: новости о заводе бьют на 30% сильнее.",
+    "drawback": "8 ₽ в день.",
+    "cost": 220,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "upkeepAdd": 8,
+      "topicImpactMul": {
+        "factory": 1.3
+      }
+    },
+    "section": "Отделы"
+  },
+  {
+    "id": "health_desk",
+    "name": "Медицинская колонка",
+    "icon": "🩺",
+    "description": "Свой «доктор» в газете: новости о здоровье бьют на 30% сильнее.",
+    "drawback": "8 ₽ в день.",
+    "cost": 200,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "upkeepAdd": 8,
+      "topicImpactMul": {
+        "health": 1.3
+      }
+    },
+    "section": "Отделы"
+  },
+  {
+    "id": "power_desk",
+    "name": "Кулуары мэрии",
+    "icon": "🏛",
+    "description": "Свой человек в приёмной мэра: новости о власти бьют на 30% сильнее.",
+    "drawback": "10 ₽ в день.",
+    "cost": 240,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "upkeepAdd": 10,
+      "topicImpactMul": {
+        "power": 1.3
+      }
+    },
+    "section": "Отделы"
+  },
+  {
+    "id": "dossier",
+    "name": "Досье",
+    "icon": "📁",
+    "description": "Папка на каждого: травля разгоняется в полтора раза быстрее — каждый день подряд добавляет к удару больше.",
+    "cost": 260,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "huntStepMul": 1.5
+    },
+    "section": "Нападение"
+  },
+  {
+    "id": "insiders",
+    "name": "Источники внутри",
+    "icon": "🕳",
+    "description": "Свои люди в любом здании: новости о цели травли репортёры приносят заметно чаще.",
+    "drawback": "10 ₽ в день на «благодарности».",
+    "cost": 240,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "channel": "newspaper",
+      "upkeepAdd": 10,
+      "huntFindAdd": 0.25
+    },
+    "section": "Нападение"
+  },
+  {
+    "id": "interceptors",
+    "name": "Перехват читателей",
+    "icon": "🧲",
+    "description": "Раздаём газету у киосков «Голоса»: интересный выпуск уводит у него вдвое больше читателей.",
+    "drawback": "6 ₽ в день.",
+    "cost": 230,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "channel": "newspaper",
+      "upkeepAdd": 6,
+      "rivalStealMul": 2
+    },
+    "section": "Нападение"
+  },
+  {
+    "id": "cartoonist",
+    "name": "Карикатурист",
+    "icon": "✏️",
+    "description": "Злые картинки к новостям: их пересказывают на 25% охотнее.",
+    "cost": 180,
+    "requires": null,
+    "effects": {
+      "wordOfMouthMul": 1.25
+    },
+    "section": "Содержание"
+  },
+  {
+    "id": "gate_handout",
+    "name": "Раздача у проходной",
+    "icon": "🎟",
+    "description": "Газету суют в руки рабочим после смены: рабочие охотнее её покупают.",
+    "drawback": "−0.2 ₽ с каждого читателя: часть тиража бесплатно.",
+    "cost": 150,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "groupReach": {
+        "workers": 0.2
+      },
+      "adRateAdd": -0.2
+    },
+    "section": "Продажи"
+  },
+  {
+    "id": "proofreader",
+    "name": "Корректор-фальсификатор",
+    "icon": "🔍",
+    "description": "Подчищает следы: ложь ловят на 15% реже.",
+    "drawback": "12 ₽ в день.",
+    "cost": 300,
+    "requires": null,
+    "rare": true,
+    "effects": {
+      "channel": "newspaper",
+      "upkeepAdd": 12,
+      "checkerMul": 0.85
+    },
+    "section": "Редакция"
   }
 ]

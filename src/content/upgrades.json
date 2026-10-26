@@ -92,19 +92,6 @@
     "section": "Продажи"
   },
   {
-    "id": "printing_house",
-    "name": "Своя типография",
-    "icon": "🏭",
-    "description": "Печать дешевле: содержание газеты −10 в ход.",
-    "cost": 350,
-    "requires": null,
-    "effects": {
-      "channel": "newspaper",
-      "upkeepAdd": -10
-    },
-    "section": "Продажи"
-  },
-  {
     "id": "newspaper_quality_1",
     "name": "Цветная печать",
     "icon": "🎨",
@@ -292,21 +279,6 @@
     "ability": {
       "cooldown": 5,
       "cost": 20
-    },
-    "effects": {},
-    "section": "Приёмы"
-  },
-  {
-    "id": "recall",
-    "name": "Отозвать тираж",
-    "icon": "🗑",
-    "description": "Приём: вчерашнюю ложь больше не поймают — остатки тиража выкуплены.",
-    "drawback": "40 ₽ и −1% репутации за раз, потом 5 дней перезарядки.",
-    "cost": 200,
-    "requires": null,
-    "ability": {
-      "cooldown": 5,
-      "cost": 40
     },
     "effects": {},
     "section": "Приёмы"

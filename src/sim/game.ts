@@ -305,13 +305,20 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   state.scandal = Math.min(1, state.scandal + b.scandalRecovery);
 
   const lateExposures = processLateExposures(state, c, rng, mods);
+  // Every part of the turn rolls its own dice (CONCEPT.md §7.3 «прогноз»): how one story is told
+  // changes that story's luck only, not the rival's, the readers' or tomorrow's town.
+  const seedOf = () => int(rng, 0x100000000);
+  const storySeed = seedOf();
+  const [rivalRng, checkRng, staffRng, moleRng, readersRng, rivalReadersRng, peopleRng] = Array.from({ length: 7 }, () => createRng(seedOf()));
+  const daySeed = seedOf();
+  const storyRng = (uid: number) => createRng((storySeed + Math.imul(uid, 0x9e3779b1)) >>> 0);
 
   const published: PublishedNews[] = [];
   const topicsThisTurn: Partial<Record<Topic, number>> = {};
   for (const p of d.publish) {
     const card = state.hand.find((x) => x.uid === p.cardUid)!;
     const topic = templateOf(c, card.templateId).topic;
-    published.push(publish(state, c, rng, mods, p, topicsThisTurn[topic] ?? 0));
+    published.push(publish(state, c, storyRng(p.cardUid), mods, p, topicsThisTurn[topic] ?? 0));
     pushArc(state, c, card, p.placement, p.distortion);
     topicsThisTurn[topic] = (topicsThisTurn[topic] ?? 0) + 1;
   }
@@ -321,27 +328,27 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   markDebunked(state, debunks.map((x) => x.debunk!.uid));
   const cured = published.filter((n) => debunks.some((x) => x.uid === n.pub.cardUid)).reduce((sum, n) => sum + (n.report.effects.debunk ?? 0), 0);
   for (const s of state.rival?.closed ? [] : (state.rival?.plan ?? [])) pushArc(state, c, s.card, s.placement, s.distortion);
-  const rivalNews = publishRival(state, c, rng);
-  const exposures = [...lateExposures, ...verifyNews(state, c, rng, mods, published)];
+  const rivalNews = publishRival(state, c, rivalRng);
+  const exposures = [...lateExposures, ...verifyNews(state, c, checkRng, mods, published)];
   const cleanStreak = advanceCleanStreak(state, c, published);
-  verifyRival(state, c, rng, rivalNews);
+  verifyRival(state, c, rivalRng, rivalNews);
   // The rival may answer our lies over the next days.
   recordOurIssue(state, c, published);
   // Reporters grow, take our lies to heart, and may quit (CONCEPT.md §3.3б).
-  const staff = updateStaff(state, c, rng, mods, published);
+  const staff = updateStaff(state, c, staffRng, mods, published);
   exposures.push(...staff.exposures);
 
   // Deals with a catch (CONCEPT.md §3.5а): a bad story about what we promised to keep quiet about costs us.
   const deals = settleDeals(state, c, d.publish);
   const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
   state.lastProfit = Object.values(income).reduce((s, x) => s + x, 0) - upkeep;
-  const moleCaught = checkMole(state, c, rng);
+  const moleCaught = checkMole(state, c, moleRng);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
 
   const stories = d.publish.map((p) => ({ tier: effectiveTier(state.hand.find((x) => x.uid === p.cardUid)!, p.distortion), placement: p.placement }));
   const issue = { score: issueScore(c, stories), level: issueLevel(c, stories) };
-  const readers = updateReaders(state, c, rng, mods, published.length, issue.level, readerIds);
-  updateRivalReaders(state, c, rng, rivalNews);
+  const readers = updateReaders(state, c, readersRng, mods, published.length, issue.level, readerIds);
+  updateRivalReaders(state, c, rivalReadersRng, rivalNews);
   const readersAfter = readerCount(state);
 
   const streak: Partial<Record<Topic, number>> = {};
@@ -354,13 +361,14 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
 
   const tensionMid = { ...state.tension };
   state.exposedTotal += exposures.length;
+  state.rng = createRng(daySeed);
   const day = startTurn(state, c);
   const notes = day.notes;
   // Tasks are settled for the day that ended; the audit ends with its task.
   const tasks = updateTasks(state, c, exposures);
   const auditEnded = settleAudit(state, c, tasks.done, tasks.failed);
   // The named residents: what the day did to them, and their letters to the paper (CONCEPT.md §2.2а).
-  updatePeople(state, c, rng, peopleBefore, published, exposures);
+  updatePeople(state, c, peopleRng, peopleBefore, published, exposures);
   state.outcome = checkOutcome(state, c);
   const reconciliationStarted = state.reconciliation && state.reconciliation !== reconcileBefore ? { ...state.reconciliation } : null;
   const highlights = findHighlights(state, c, {

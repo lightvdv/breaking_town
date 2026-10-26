@@ -3266,7 +3266,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const reasons: Record<string, string> = {
       'nobody free': 'все репортёры заняты',
       'nothing to raise': 'нечего усиливать',
-      'nothing to recall': 'нечего отзывать',
       'no money': 'не хватает денег',
     };
     abilityBar.replaceChildren(

@@ -422,8 +422,6 @@ export interface Balance {
   /** The mole at the rival's: the daily chance to be found out and the reputation it costs. */
   moleRisk: number;
   molePenalty: number;
-  /** Reputation the «Отозвать тираж» ability costs. */
-  recallTrust: number;
   /** Days after which a story is as likely to come again as a new one: events and the rival's picks are weighted by how long ago they last appeared. */
   repeatFadeDays: number;
   /** The same for the guardian of the destroy mode. */

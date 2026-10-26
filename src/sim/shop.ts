@@ -81,7 +81,6 @@ export function abilityBlock(state: GameState, c: Content, id: string): string |
   if (state.money < def.ability.cost) return 'no money';
   if (id === 'night_shift' && !freeReporters(state).length) return 'nobody free';
   if (id === 'sensation_day' && !boostTarget(state)) return 'nothing to raise';
-  if (id === 'recall' && !state.pendingLies.length) return 'nothing to recall';
   return null;
 }
 
@@ -97,8 +96,7 @@ function boostTarget(state: GameState) {
 
 /**
  * Uses an ability (CONCEPT.md §3.5): «Ночная смена» brings one more story from the luckiest free
- * reporter, «Заголовок покрупнее» raises the best story of the day a level, «Отозвать тираж»
- * forgets the lies that could still surface. Returns the uids of new cards.
+ * reporter, «Заголовок покрупнее» raises the best story of the day a level. Returns the uids of new cards.
  */
 export function useAbility(state: GameState, c: Content, id: string): number[] {
   const block = abilityBlock(state, c, id);
@@ -117,10 +115,6 @@ export function useAbility(state: GameState, c: Content, id: string): number[] {
     const card = boostTarget(state)!;
     card.tier = Math.min(3, card.tier + 1) as NewsTier;
     return [];
-  }
-  if (id === 'recall') {
-    state.pendingLies = [];
-    for (const r of state.residents) if (r.status === 'active') r.trust = clamp(r.trust - c.balance.recallTrust, 0, 100);
   }
   return [];
 }

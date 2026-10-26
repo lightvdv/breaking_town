@@ -21,6 +21,7 @@ import { effectiveTier, issueLevel, issueScore, maxDistortion, minDistortion, pr
 import { advanceRelations, createTension, fillTitle, pairKeys, pairOf, tensionLevel } from './relations';
 import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
 import { advanceInvestigations, findNews, isRecent, scopeOf } from './reporters';
+import { advanceShop, checkMole } from './shop';
 import { markDebunked, planRival, pruneRival, publishRival, recordOurIssue, rivalKindOf, rivalReaders, rivalTrust, seedRival, updateRivalReaders, verifyRival } from './rival';
 import type {
   CardTemplate,
@@ -111,6 +112,9 @@ export function createGame(
     tasks: [],
     exposedTotal: 0,
     cleanStreak: 0,
+    shopOffer: [],
+    shopRefreshTurn: 0,
+    abilityReady: {},
     twist: null,
     budgetCut: 0,
     town: opts.town ?? null,
@@ -199,6 +203,8 @@ function startTurn(state: GameState, c: Content): { notes: string[]; twist: { st
   state.metrics = computeMetrics(state, c);
   // The game's tasks are given on their day (CONCEPT.md §4.8).
   assignTasks(state, c, state.rng);
+  // The upgrades deck is dealt again every few days (CONCEPT.md §3.5).
+  advanceShop(state, c, state.rng);
   return { notes, twist: { started: twist.started, ended: twist.ended } };
 }
 
@@ -326,6 +332,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   // Deals with a catch (CONCEPT.md §3.5а): a bad story about what we promised to keep quiet about costs us.
   const deals = settleDeals(state, c, d.publish);
   const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
+  const moleCaught = checkMole(state, c, rng);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
 
   const stories = d.publish.map((p) => ({ tier: effectiveTier(state.hand.find((x) => x.uid === p.cardUid)!, p.distortion), placement: p.placement }));
@@ -365,6 +372,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   return {
     turn,
     cleanStreak,
+    ...(moleCaught ? { moleCaught } : {}),
     publications: published.map((n) => n.report),
     exposures,
     buyers,

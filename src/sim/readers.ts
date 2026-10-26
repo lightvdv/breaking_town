@@ -79,7 +79,7 @@ export function updateReaders(
   readersAtStart: Set<number>,
 ): ReadersChange {
   // An interesting issue is talked about: more people start buying (CONCEPT.md §4.2а).
-  const joinScale = c.balance.acquisitionRate * c.balance.issueAcquisition[issueSize === 0 ? 0 : level];
+  const joinScale = c.balance.acquisitionRate * c.balance.issueAcquisition[issueSize === 0 ? 0 : level] * mods.acquisitionMul;
   const out: ReadersChange = {
     lost: 0,
     gained: 0,
@@ -117,7 +117,7 @@ export function updateReaders(
  * the upgrades window compares it with and without an upgrade).
  */
 export function expectedJoins(state: GameState, c: Content, mods: Modifiers, level: IssueLevel): number {
-  const scale = c.balance.acquisitionRate * c.balance.issueAcquisition[level];
+  const scale = c.balance.acquisitionRate * c.balance.issueAcquisition[level] * mods.acquisitionMul;
   let sum = 0;
   for (const r of state.residents) {
     if (r.status !== 'active' || r.follows.length > 0) continue;

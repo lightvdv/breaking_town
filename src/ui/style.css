@@ -5557,3 +5557,252 @@ button.publish.nudge {
     display: none;
   }
 }
+
+/* ---------- Upgrades: forks, the deck, abilities (CONCEPT.md §3.5) ---------- */
+
+.paper-style,
+.owned-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+
+.style-chip,
+.owned-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  background: var(--panel-2);
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.owned-chip {
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.style-icon {
+  font-size: 14px;
+}
+
+.upg-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  font-size: 18px;
+}
+
+.upg-plus {
+  margin: 2px 0;
+  color: var(--ok);
+  font-size: 13px;
+}
+
+.upg-minus {
+  margin: 2px 0;
+  color: #f08a8f;
+  font-size: 13px;
+}
+
+.fork {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.fork-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  background: var(--panel-2);
+  border: 2px solid var(--ink);
+}
+
+.fork-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.fork-or {
+  align-self: center;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.fork-buy {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.fork-next {
+  margin: 6px 0 2px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.deck-head {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin: -4px 0 8px;
+}
+
+.deck-head .hint {
+  margin: 0;
+}
+
+.deck {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.deck-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 10px 10px;
+  background: var(--panel-2);
+  border: 2px solid var(--ink);
+}
+
+.deck-card.rare {
+  border-color: #b55088;
+}
+
+.deck-card.ability {
+  border-color: var(--blue);
+}
+
+.deck-card .best-mark {
+  right: 8px;
+}
+
+.deck-tag {
+  position: absolute;
+  top: -9px;
+  left: 8px;
+  padding: 0 6px;
+  border: 2px solid var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.tag-ability {
+  background: var(--blue);
+}
+
+.tag-rare {
+  background: #b55088;
+}
+
+.deck-card .pips {
+  margin-left: 6px;
+}
+
+.deck-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.deck-foot .gain-line {
+  margin: 0;
+  font-size: 12px;
+}
+
+.fork-side .gain-line {
+  font-size: 12px;
+}
+
+/* «Приёмы» right above the paper. */
+.ability-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.ability-bar[hidden] {
+  display: none;
+}
+
+.ability-label {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.ability {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px 4px 5px;
+  text-align: left;
+}
+
+.ability.ready {
+  background: var(--blue);
+}
+
+.ability.wait {
+  opacity: 0.6;
+}
+
+.ability-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  background: var(--panel-2);
+  border: 1px solid var(--ink);
+  font-size: 15px;
+}
+
+.ability-text b {
+  display: block;
+  font-size: 13px;
+}
+
+.ability-text small {
+  display: block;
+  font-size: 11px;
+}
+
+.mole-line {
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .fork {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .deck {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

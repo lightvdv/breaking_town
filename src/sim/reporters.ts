@@ -72,6 +72,8 @@ export function findNews(
   events: CardTemplate[],
   /** Today's incidents: which pair each one was about. */
   eventPairs: Map<string, [GroupId, GroupId]> = new Map(),
+  /** Only these reporters search, and `sure` ones always find something (the «Ночная смена» ability). */
+  opts: { only?: string[]; sure?: boolean } = {},
 ): { cards: CardInstance[]; finds: Find[]; missed: CardTemplate[] } {
   const b = c.balance;
   const cards: CardInstance[] = [];
@@ -89,7 +91,7 @@ export function findNews(
 
   const make = (r: ReporterDef, forcedTier: NewsTier | null): CardInstance | null => {
     // A reporter watching the rival mostly brings a debunk of its lies; anyone else may stumble on one.
-    if (targets.length && chance(rng, state.rivalWatch.includes(r.id) ? b.assignFocus : b.debunkFindChance)) {
+    if (targets.length && chance(rng, state.rivalWatch.includes(r.id) ? b.assignFocus : b.debunkFindChance + mods.debunkFindAdd)) {
       const card = makeDebunk(state, targets.shift()!, r.id);
       cards.push(card);
       return card;
@@ -162,7 +164,7 @@ export function findNews(
   // Reporters busy with an investigation skip the ordinary search.
   const busy = new Set(state.investigations.map((x) => x.reporterId));
   // Each works with the skills their experience has grown (CONCEPT.md §3.3б).
-  const hired = state.reporters.filter((id) => !busy.has(id)).map((id) => skilledReporter(state, c, reporterOf(c, id)));
+  const hired = state.reporters.filter((id) => !busy.has(id) && (!opts.only || opts.only.includes(id))).map((id) => skilledReporter(state, c, reporterOf(c, id)));
 
   // Today's events take free reporters first, one each; a specialist writes an exclusive.
   const free = [...hired];
@@ -184,7 +186,7 @@ export function findNews(
     finds.push({ reporterId: r.id, cardUid: card.uid, tier: card.tier, forced: false, kind: 'search' });
   }
   for (const r of free) {
-    const card = chance(rng, searchLuck(state, c, r, mods)) ? make(r, null) : null;
+    const card = opts.sure || chance(rng, searchLuck(state, c, r, mods)) ? make(r, null) : null;
     finds.push({ reporterId: r.id, cardUid: card?.uid ?? null, tier: card?.tier ?? null, forced: false, kind: 'search' });
   }
 

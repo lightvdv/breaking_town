@@ -128,6 +128,20 @@ export interface UpgradeEffects {
   groupReach?: Partial<Record<GroupId, number>>;
   /** Multiplies the chance that a reader stops buying. */
   churnMul?: number;
+  /** Multiplies the impact of harmful (frightening) stories. */
+  scaryImpactMul?: number;
+  /** Multiplies the trust true news brings. */
+  trustGainMul?: number;
+  /** Multiplies the chance that a resident starts buying. */
+  acquisitionMul?: number;
+  /** For `channel`: multiplies how many readers read the front page. */
+  frontReadMul?: number;
+  /** Multiplies the chance that a believer retells our story. */
+  wordOfMouthMul?: number;
+  /** Added to the chance that a reporter stumbles on a rival's lie to debunk. */
+  debunkFindAdd?: number;
+  /** We see the rival's issue being written (a mole there, CONCEPT.md §3.5). */
+  seeRivalPlan?: boolean;
 }
 
 export interface UpgradeDef {
@@ -141,6 +155,26 @@ export interface UpgradeDef {
   series?: string;
   /** Heading of the upgrades window this upgrade is listed under. */
   section?: string;
+  /** A glyph for its card. */
+  icon?: string;
+  /** What it costs besides the price, shown in red (CONCEPT.md §3.5). */
+  drawback?: string;
+  /** One of the two options of a fork (`forks.json`): never in the deck, taking one closes the other. */
+  fork?: string;
+  /** Only offered in this mode. */
+  mode?: GameMode;
+  /** Comes up in the deck less often (`shopRareWeight`). */
+  rare?: boolean;
+  /** An active ability: used from the bar above the paper for `cost`, then waits `cooldown` days. */
+  ability?: { cooldown: number; cost: number };
+}
+
+/** A fork of the upgrades (CONCEPT.md §3.5): from `day` on, the player may take one of two options for good. */
+export interface ForkDef {
+  id: string;
+  title: string;
+  day: number;
+  options: [string, string];
 }
 
 /** stigma = dirt on the template's `target` group: other groups turn on it, it feels hunted. */
@@ -378,6 +412,16 @@ export interface Balance {
   rivalChurnDoubt: number;
   /** It prints 1..rivalStoriesMax stories a day. */
   rivalStoriesMax: number;
+  /** The upgrades deck (CONCEPT.md §3.5): cards on offer, days between deals, the price of dealing early, a rare card's weight. */
+  shopOfferSize: number;
+  shopRefreshDays: number;
+  shopRefreshCost: number;
+  shopRareWeight: number;
+  /** The mole at the rival's: the daily chance to be found out and the reputation it costs. */
+  moleRisk: number;
+  molePenalty: number;
+  /** Reputation the «Отозвать тираж» ability costs. */
+  recallTrust: number;
   /** Days after which a story is as likely to come again as a new one: events and the rival's picks are weighted by how long ago they last appeared. */
   repeatFadeDays: number;
   /** The same for the guardian of the destroy mode. */
@@ -743,6 +787,7 @@ export interface Content {
   groups: GroupDef[];
   channels: ChannelDef[];
   upgrades: UpgradeDef[];
+  forks: ForkDef[];
   cards: CardTemplate[];
   buildings: BuildingDef[];
   reporters: ReporterDef[];
@@ -1108,6 +1153,12 @@ export interface GameState {
   exposedTotal: number;
   /** Issues in a row printed without a half-truth or lie (CONCEPT.md §5.3); resets on a lie and after the bonus. */
   cleanStreak: number;
+  /** Today's cards of the upgrades deck (CONCEPT.md §3.5); a bought one leaves its place empty until the deck is dealt again. */
+  shopOffer: string[];
+  /** The turn the deck is dealt again by itself. */
+  shopRefreshTurn: number;
+  /** For each owned ability: the turn it is ready again. */
+  abilityReady: Record<string, number>;
   /** The mid-game twist (CONCEPT.md §4.9), once it began. */
   twist: TwistState | null;
   /** Upkeep a day added by a failed audit. */
@@ -1172,6 +1223,8 @@ export interface TurnReport {
   turn: number;
   /** The clean streak after this issue, whether it broke and whether it paid its bonus (CONCEPT.md §5.3). */
   cleanStreak: { days: number; broken: boolean; bonus: number };
+  /** The mole at the rival's was found out today. */
+  moleCaught?: boolean;
   publications: PublicationReport[];
   /** Stories exposed during this turn: this issue's and old lies that surfaced. */
   exposures: ExposedStory[];

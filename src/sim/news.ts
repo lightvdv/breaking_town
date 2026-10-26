@@ -115,13 +115,15 @@ export function isHarmful(effect: CardEffect | null): boolean {
  * Impact of a story — how strongly viewers react (CONCEPT.md §5.2а). It never changes reach.
  * 1 means a normal story; divided by impactNorm so content `interest` values stay readable.
  */
-function impactOf(state: GameState, c: Content, card: CardInstance, tpl: CardTemplate, pub: Publication, repeatsThisTurn: number): number {
+function impactOf(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, repeatsThisTurn: number): number {
   const b = c.balance;
   const streak = (state.topicStreak[tpl.topic] ?? 0) + repeatsThisTurn;
   const fatigue = Math.pow(1 - b.fatiguePerRepeat, streak);
   const scope = card.scope === 'global' ? b.globalEffectMul : 1;
   const placement = b.placementImpact[pub.placement];
-  return (tpl.interest * b.tierInterest[effectiveTier(card, pub.distortion)] * scope * placement * fatigue) / b.impactNorm;
+  // A yellow layout makes frightening stories hit harder, a solid one softer (CONCEPT.md §3.5).
+  const style = isHarmful(storyEffect(c, card, pub.distortion)) ? mods.scaryImpactMul : 1;
+  return (tpl.interest * b.tierInterest[effectiveTier(card, pub.distortion)] * scope * placement * fatigue * style) / b.impactNorm;
 }
 
 /** Owned channels a resident follows; only followers see the issue (CONCEPT.md §5.2). */
@@ -207,7 +209,7 @@ export function previewPublication(
   if (!card) throw new Error(`Card ${pub.cardUid} is not in hand`);
   const tpl = templateOf(c, card.templateId);
   const truth = cardTruth(card, pub.distortion);
-  const impact = impactOf(state, c, card, tpl, pub, repeatsThisTurn);
+  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn);
   return {
     title: storyTitle(c, card, pub.distortion),
     truth,
@@ -352,10 +354,10 @@ export function publish(
   const calm = pub.distortion < 0 && !!card.conflict;
   const soothed = isSoothed(card, pub.distortion);
   const effect = calm ? null : soothed ? tpl.softEffects?.[-pub.distortion - 1] ?? null : tpl.effects[truth];
-  const impact = impactOf(state, c, card, tpl, pub, repeatsThisTurn);
+  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn);
   // Interesting stories are retold more, and viral channels spread them further.
   const retell = clamp(
-    b.wordOfMouthChance * (0.5 + tpl.engagement * b.tierEngagement[effectiveTier(card, pub.distortion)]) * (1 + outletVirality(state, c)),
+    b.wordOfMouthChance * (0.5 + tpl.engagement * b.tierEngagement[effectiveTier(card, pub.distortion)]) * (1 + outletVirality(state, c)) * mods.wordOfMouthMul,
     0,
     0.9,
   );
@@ -374,6 +376,8 @@ export function publish(
     exposed: false,
     ...(card.building !== undefined ? { building: card.building } : {}),
   };
+  // A photographer makes the front page read more (CONCEPT.md §3.5).
+  const frontRead = Math.max(1, ...state.ownedChannels.map((ch) => mods.channels[ch]?.frontReadMul ?? 1));
   const heard = new Set<number>();
   const viewers: number[] = [];
   const doubters: number[] = [];
@@ -431,7 +435,7 @@ export function publish(
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
     const channels = rival ? [] : followedChannels(state, r);
-    if ((rival ? !r.rivalReader : channels.length === 0) || !chance(rng, b.placementRead[pub.placement])) continue;
+    if ((rival ? !r.rivalReader : channels.length === 0) || !chance(rng, b.placementRead[pub.placement] * (pub.placement === 2 && !rival ? frontRead : 1))) continue;
     for (const ch of channels) report.byChannel[ch]++;
     viewers.push(r.id);
     if (consider(r, 1)) believers.push(r);
@@ -529,7 +533,7 @@ export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Mo
     const fake = !!state.hand.find((x) => x.uid === n.pub.cardUid)?.setup;
     if (n.truth === 0 && !fake) {
       // True news builds trust by its place in the paper; word of mouth carries a little of it to the rest (CONCEPT.md §5.3).
-      const gain = b.trustGain * b.placementTrustGain[n.pub.placement];
+      const gain = b.trustGain * b.placementTrustGain[n.pub.placement] * mods.trustGainMul;
       const seen = new Set(n.viewers);
       for (const r of state.residents) {
         if (r.status !== 'active') continue;

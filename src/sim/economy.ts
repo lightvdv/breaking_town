@@ -2,6 +2,7 @@ import { removeReporter } from './staff';
 import { channelOf } from './lookup';
 import { getModifiers } from './modifiers';
 import { reporterOf } from './reporters';
+import { onSale } from './shop';
 import type { ChannelId, Content, GameState, Requirement, UpkeepItem } from './types';
 
 export interface PurchaseOption {
@@ -15,7 +16,7 @@ export interface PurchaseOption {
   affordable: boolean;
 }
 
-function requirementMet(state: GameState, req: Requirement | null | undefined): boolean {
+export function requirementMet(state: GameState, req: Requirement | null | undefined): boolean {
   if (!req) return true;
   if (req.channel && !state.ownedChannels.includes(req.channel)) return false;
   if (req.upgrade && !state.upgrades.includes(req.upgrade)) return false;
@@ -37,8 +38,9 @@ export function listPurchases(state: GameState, c: Content): PurchaseOption[] {
       affordable: unlocked && state.money >= ch.cost,
     });
   }
+  // Upgrades are on sale only from today's deck or an open fork (CONCEPT.md §3.5).
   for (const u of c.upgrades) {
-    if (state.upgrades.includes(u.id)) continue;
+    if (state.upgrades.includes(u.id) || !onSale(state, c, u)) continue;
     const unlocked =
       requirementMet(state, u.requires) &&
       (!u.effects.channel || state.ownedChannels.includes(u.effects.channel));
@@ -70,7 +72,10 @@ export function purchase(state: GameState, c: Content, id: string): void {
   if (!option.affordable) throw new Error(`Cannot buy ${id} now`);
   state.money -= option.cost;
   if (option.kind === 'channel') state.ownedChannels.push(id);
-  else state.upgrades.push(id);
+  else {
+    state.upgrades.push(id);
+    state.shopOffer = state.shopOffer.filter((x) => x !== id);
+  }
 }
 
 /** Channel upkeep, reporter salaries and running investigations, paid every turn. */

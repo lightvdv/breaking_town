@@ -2,6 +2,7 @@
   {
     "id": "kiosk_1",
     "name": "Киоск у рынка",
+    "icon": "🏪",
     "description": "Ещё одна точка продаж у рынка: +5% охвата и +0.3 денег с каждого читателя.",
     "cost": 100,
     "requires": null,
@@ -16,6 +17,7 @@
   {
     "id": "kiosk_2",
     "name": "Киоск у завода",
+    "icon": "🏪",
     "description": "Ещё одна точка продаж у проходной завода: +5% охвата и +0.3 денег с каждого читателя.",
     "cost": 180,
     "requires": {
@@ -32,6 +34,7 @@
   {
     "id": "kiosk_3",
     "name": "Киоск на остановке",
+    "icon": "🏪",
     "description": "Ещё одна точка продаж на автобусной остановке: +5% охвата и +0.3 денег с каждого читателя.",
     "cost": 280,
     "requires": {
@@ -48,6 +51,7 @@
   {
     "id": "kiosk_4",
     "name": "Киоск у больницы",
+    "icon": "🏪",
     "description": "Ещё одна точка продаж у больницы: +5% охвата и +0.3 денег с каждого читателя.",
     "cost": 400,
     "requires": {
@@ -64,6 +68,7 @@
   {
     "id": "subscription",
     "name": "Подписка с доставкой",
+    "icon": "📬",
     "description": "Газету приносят домой: читатели бросают её на 25% реже.",
     "cost": 300,
     "requires": null,
@@ -73,8 +78,23 @@
     "section": "Продажи"
   },
   {
+    "id": "paid_subscription",
+    "name": "Платная подписка",
+    "icon": "🧾",
+    "description": "Подписчики почти не бросают газету: уходят вдвое реже.",
+    "drawback": "Новых читателей приходит почти вдвое меньше.",
+    "cost": 200,
+    "requires": null,
+    "effects": {
+      "churnMul": 0.5,
+      "acquisitionMul": 0.6
+    },
+    "section": "Продажи"
+  },
+  {
     "id": "printing_house",
     "name": "Своя типография",
+    "icon": "🏭",
     "description": "Печать дешевле: содержание газеты −10 в ход.",
     "cost": 350,
     "requires": null,
@@ -87,6 +107,7 @@
   {
     "id": "newspaper_quality_1",
     "name": "Цветная печать",
+    "icon": "🎨",
     "description": "Газета выглядит солиднее: +15% охвата, +5 к репутации.",
     "cost": 150,
     "requires": null,
@@ -100,6 +121,7 @@
   {
     "id": "newspaper_quality_2",
     "name": "Колумнист с именем",
+    "icon": "🖋",
     "description": "Его читают ради мнения: +20% охвата, +5 к репутации.",
     "cost": 400,
     "requires": {
@@ -115,6 +137,7 @@
   {
     "id": "tv_guide",
     "name": "Телепрограмма и кроссворд",
+    "icon": "📺",
     "description": "Пенсионеры берут газету чаще: их интерес к газете +0.15.",
     "cost": 200,
     "requires": null,
@@ -129,6 +152,7 @@
   {
     "id": "sports_page",
     "name": "Спортивная страница",
+    "icon": "⚽",
     "description": "Футбол и рыбалка: рабочие начинают покупать газету (интерес +0.3).",
     "cost": 450,
     "requires": null,
@@ -143,6 +167,7 @@
   {
     "id": "youth_insert",
     "name": "Молодёжная вкладка",
+    "icon": "🎧",
     "description": "Комиксы, гороскоп и афиша: газету берёт молодёжь (интерес +0.35).",
     "cost": 650,
     "requires": {
@@ -157,8 +182,24 @@
     "section": "Содержание"
   },
   {
+    "id": "photographer",
+    "name": "Фотограф",
+    "icon": "📷",
+    "description": "Снимки на первой полосе: её читают на 20% чаще.",
+    "drawback": "Его зарплата — 10 ₽ в день.",
+    "cost": 150,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "frontReadMul": 1.2,
+      "upkeepAdd": 10
+    },
+    "section": "Содержание"
+  },
+  {
     "id": "editorial_1",
     "name": "Опытный редактор",
+    "icon": "🧠",
     "description": "+10% к шансу находок у всех репортёров.",
     "cost": 300,
     "requires": null,
@@ -170,6 +211,7 @@
   {
     "id": "experts",
     "name": "Независимые эксперты",
+    "icon": "🎓",
     "description": "+0.1 к правдоподобию всех новостей.",
     "cost": 600,
     "requires": null,
@@ -179,27 +221,181 @@
     "section": "Редакция"
   },
   {
-    "id": "lawyers",
-    "name": "Юристы",
-    "description": "Разоблачения бьют по репутации на 30% слабее.",
-    "cost": 500,
+    "id": "trolls",
+    "name": "Тролли в комментариях",
+    "icon": "💬",
+    "description": "Страшные новости пересказывают на 40% охотнее.",
+    "drawback": "Пойманная ложь стоит на 20% больше репутации.",
+    "cost": 260,
     "requires": null,
+    "mode": "destroy",
     "effects": {
-      "exposurePenaltyMul": 0.7
+      "wordOfMouthMul": 1.4,
+      "exposurePenaltyMul": 1.2
     },
     "section": "Редакция"
   },
   {
-    "id": "insider",
-    "name": "Свои люди в мэрии",
-    "description": "Шанс разоблачения −25%.",
-    "cost": 800,
-    "requires": {
-      "upgrade": "lawyers"
-    },
+    "id": "hotline",
+    "name": "Горячая линия",
+    "icon": "☎",
+    "description": "Горожане сами звонят про враньё конкурента: опровержения находятся на 20% чаще.",
+    "drawback": "Операторы — 10 ₽ в день.",
+    "cost": 220,
+    "requires": null,
+    "mode": "save",
     "effects": {
-      "checkerMul": 0.75
+      "channel": "newspaper",
+      "debunkFindAdd": 0.2,
+      "upkeepAdd": 10
     },
     "section": "Редакция"
+  },
+  {
+    "id": "mole",
+    "name": "Крот у конкурента",
+    "icon": "🕵",
+    "description": "Свой человек в редакции конкурента: вы видите, что он напечатает сегодня.",
+    "drawback": "Каждый день 5% — крота раскроют: −5% репутации, и он пропадёт.",
+    "cost": 420,
+    "requires": null,
+    "rare": true,
+    "effects": {
+      "seeRivalPlan": true
+    },
+    "section": "Редакция"
+  },
+  {
+    "id": "night_shift",
+    "name": "Ночная смена",
+    "icon": "🌙",
+    "description": "Приём: один репортёр сегодня принесёт ещё одну новость.",
+    "drawback": "15 ₽ за раз, потом 4 дня перезарядки.",
+    "cost": 250,
+    "requires": null,
+    "ability": {
+      "cooldown": 4,
+      "cost": 15
+    },
+    "effects": {},
+    "section": "Приёмы"
+  },
+  {
+    "id": "sensation_day",
+    "name": "Заголовок покрупнее",
+    "icon": "🔥",
+    "description": "Приём: лучшая новость дня становится на ступень сильнее (до сенсации).",
+    "drawback": "20 ₽ за раз, потом 5 дней перезарядки.",
+    "cost": 300,
+    "requires": null,
+    "rare": true,
+    "ability": {
+      "cooldown": 5,
+      "cost": 20
+    },
+    "effects": {},
+    "section": "Приёмы"
+  },
+  {
+    "id": "recall",
+    "name": "Отозвать тираж",
+    "icon": "🗑",
+    "description": "Приём: вчерашнюю ложь больше не поймают — остатки тиража выкуплены.",
+    "drawback": "40 ₽ и −1% репутации за раз, потом 5 дней перезарядки.",
+    "cost": 200,
+    "requires": null,
+    "ability": {
+      "cooldown": 5,
+      "cost": 40
+    },
+    "effects": {},
+    "section": "Приёмы"
+  },
+  {
+    "id": "yellow_layout",
+    "name": "Жёлтая вёрстка",
+    "icon": "📢",
+    "description": "Крупные кричащие заголовки: страшные новости бьют на 30% сильнее.",
+    "drawback": "Фактчекеры проверяют вас на 20% чаще.",
+    "cost": 300,
+    "requires": null,
+    "fork": "style",
+    "effects": {
+      "scaryImpactMul": 1.3,
+      "checkerMul": 1.2
+    }
+  },
+  {
+    "id": "solid_style",
+    "name": "Солидный стиль",
+    "icon": "🎩",
+    "description": "Строгая вёрстка и проверенные факты: правда даёт вдвое больше репутации.",
+    "drawback": "Страшные новости бьют на 20% слабее.",
+    "cost": 300,
+    "requires": null,
+    "fork": "style",
+    "effects": {
+      "trustGainMul": 2,
+      "scaryImpactMul": 0.8
+    }
+  },
+  {
+    "id": "cheap_paper",
+    "name": "Дешёвая бумага",
+    "icon": "📰",
+    "description": "Газета обходится на 15 ₽ в день дешевле.",
+    "drawback": "Читатели бросают её на 20% чаще.",
+    "cost": 150,
+    "requires": null,
+    "fork": "money",
+    "effects": {
+      "channel": "newspaper",
+      "upkeepAdd": -15,
+      "churnMul": 1.2
+    }
+  },
+  {
+    "id": "gloss",
+    "name": "Глянец",
+    "icon": "✨",
+    "description": "Плотная бумага и цвет: +0.6 ₽ с каждого читателя.",
+    "drawback": "Печать дороже на 15 ₽ в день.",
+    "cost": 250,
+    "requires": null,
+    "fork": "money",
+    "effects": {
+      "channel": "newspaper",
+      "adRateAdd": 0.6,
+      "upkeepAdd": 15
+    }
+  },
+  {
+    "id": "lawyers",
+    "name": "Юристы",
+    "icon": "⚖",
+    "description": "Разоблачения бьют по репутации на 30% слабее.",
+    "drawback": "Свои юристы стоят 10 ₽ в день.",
+    "cost": 500,
+    "requires": null,
+    "fork": "defense",
+    "effects": {
+      "exposurePenaltyMul": 0.7,
+      "channel": "newspaper",
+      "upkeepAdd": 10
+    }
+  },
+  {
+    "id": "insider",
+    "name": "Свои люди в мэрии",
+    "icon": "🏛",
+    "description": "Шанс разоблачения −25%.",
+    "drawback": "Если узнают — скандал: каждое разоблачение стоит на 15% больше репутации.",
+    "cost": 800,
+    "requires": null,
+    "fork": "defense",
+    "effects": {
+      "checkerMul": 0.75,
+      "exposurePenaltyMul": 1.15
+    }
   }
 ]

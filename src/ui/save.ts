@@ -69,6 +69,9 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.tasks ??= [];
     s.exposedTotal ??= 0;
     s.cleanStreak ??= 0;
+    s.shopOffer ??= [];
+    s.shopRefreshTurn ??= 0;
+    s.abilityReady ??= {};
     s.twist ??= null;
     s.budgetCut ??= 0;
     s.town ??= null;

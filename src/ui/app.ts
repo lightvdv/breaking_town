@@ -46,6 +46,12 @@ import {
   twistOf,
   type TaskState,
   forecastTurn,
+  forkChoice,
+  openForks,
+  refreshShop,
+  abilitiesOf,
+  abilityBlock,
+  useAbility,
   expectedJoins,
   searchLuck,
   skilledReporter,
@@ -404,6 +410,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const reconcileNotice = h('section', { class: 'notice notice-peace', hidden: true, role: 'status' });
   // «Расследование готово» on the day the dirt comes in (CONCEPT.md §3.3а).
   const digNotice = h('section', { class: 'notice notice-dig', hidden: true, role: 'status' });
+  // The abilities bought in the upgrades window, as buttons right above the paper (CONCEPT.md §3.5).
+  const abilityBar = h('div', { class: 'ability-bar', hidden: true });
   // Save mode: what the rival paper prints today, and which of its stories we answer (CONCEPT.md §8).
   const rivalNotice = h('section', { class: 'notice notice-rival', hidden: true, role: 'status' });
   const staffNotice = h('section', { class: 'notice notice-staff', hidden: true, role: 'status' });
@@ -417,7 +425,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     { class: 'issue-fab', title: 'Вернуться к выпуску', 'aria-label': 'Вернуться к выпуску', hidden: true, onclick: () => openIssue() },
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
   );
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, rivalNotice, paper));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, rivalNotice, abilityBar, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -937,6 +945,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...(r.rival?.cured ? [h('li', {}, `Опровержения разубедили ${r.rival.cured} ${peopleWord(r.rival.cured)}`)] : []),
       ...(r.cleanStreak.bonus ? [h('li', { class: 'good' }, `✓ ${c.balance.cleanStreakDays} выпусков подряд без лжи: +${Math.round(r.cleanStreak.bonus)}% репутации`)] : []),
       ...(r.cleanStreak.broken ? [h('li', { class: 'bad' }, 'Серия выпусков без лжи прервалась')] : []),
+      ...(r.moleCaught ? [h('li', { class: 'bad' }, `Крота раскрыли: −${c.balance.molePenalty}% репутации`)] : []),
       ...r.tasks.done.map((id) => h('li', { class: 'good' }, `✓ Задание выполнено: ${taskOf(c, id).title} (+${taskReward(c, taskOf(c, id))} ₽)`)),
       ...r.tasks.failed.map((id) => h('li', { class: 'bad' }, `✗ Задание провалено: ${taskOf(c, id).title}`)),
       ...twistLines(r).map((x) => h('li', {}, x)),
@@ -1729,6 +1738,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
             ),
           ]
         : []),
+      // The mole at the rival's: what it prints today, with ours (CONCEPT.md §3.5).
+      ...(getModifiers(state, c).seeRivalPlan && rival.plan.length
+        ? [
+            h('p', { class: 'notice-note mole-line' }, '🕵 Крот: сегодня «' + rn.short + '» напечатает:'),
+            h(
+              'ul',
+              { class: 'rival-list mole-list' },
+              ...rival.plan.map((x) => h('li', {}, h('span', { class: 'rival-place' }, placementLabels[x.placement].toLowerCase()), h('span', { class: 'rival-title' }, `«${storyTitle(c, x.card, x.distortion)}»`))),
+            ),
+          ]
+        : []),
       ...notes.map((t) => h('p', { class: 'notice-note' }, t)),
     );
   }
@@ -2286,6 +2306,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     issueNo.textContent = `Выпуск № ${state.turn}`;
     renderPrice();
     renderToday();
+    renderAbilities();
 
     for (const [uid, el] of cardEls) {
       if (!visible.some((x) => x.uid === uid)) {
@@ -2630,13 +2651,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
       parts.push(
         loss >= 0.5
           ? `вчерашнее разоблачение стоило бы −${Math.round(loss * ratio)} репутации, а не −${Math.round(loss)}`
-          : `разоблачения будут стоить на ${Math.round((1 - ratio) * 100)}% меньше репутации`,
+          : `разоблачения будут стоить на ${Math.round(Math.abs(1 - ratio) * 100)}% ${ratio < 1 ? 'меньше' : 'больше'} репутации`,
       );
     }
     if (e.checkerMul) {
       const now = issueRisk(mods);
       const after = issueRisk(modsWith);
-      parts.push(now.untrue && now.risk > 0 ? `риск этого выпуска ${Math.round(now.risk * 100)}% → ${Math.round(after.risk * 100)}%` : `ложь будут ловить на ${Math.round((1 - e.checkerMul) * 100)}% реже`);
+      parts.push(
+        now.untrue && now.risk > 0
+          ? `риск этого выпуска ${Math.round(now.risk * 100)}% → ${Math.round(after.risk * 100)}%`
+          : `ложь будут ловить на ${Math.round(Math.abs(1 - e.checkerMul) * 100)}% ${e.checkerMul < 1 ? 'реже' : 'чаще'}`,
+      );
     }
     if (!parts.length) return null;
     // A reader gained on day k pays every day after it; money comes every day.
@@ -2655,91 +2680,125 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return { parts, payback, never: (money > 0 || readers > 0) && payback === null };
   }
 
+  /**
+   * The upgrades window (CONCEPT.md §3.5): the paper's style from the forks taken, the open fork (one
+   * of two for good), today's deck with plus and minus on every card, and what is owned.
+   */
   function shopContent(): HTMLElement[] {
+    const b = c.balance;
     const options = new Map(listPurchases(state, c).map((o) => [o.id, o]));
-    // The next step of each line and what it brings; the fastest to pay off gets a quiet mark.
-    const shown = new Map<string, ReturnType<typeof upgradeGain>>();
+    const gains = new Map<string, ReturnType<typeof upgradeGain>>();
     const gainOf = (u: UpgradeDef) => {
-      if (!shown.has(u.id)) shown.set(u.id, options.has(u.id) ? upgradeGain(u) : null);
-      return shown.get(u.id)!;
+      if (!gains.has(u.id)) gains.set(u.id, options.has(u.id) ? upgradeGain(u) : null);
+      return gains.get(u.id)!;
     };
-    const visible = c.upgrades.filter((u) => !u.series || u === c.upgrades.filter((x) => x.series === u.series).find((x) => !state.upgrades.includes(x.id)));
-    const best = visible
-      .filter((u) => options.get(u.id)?.affordable && options.get(u.id)?.unlocked && gainOf(u)?.payback)
-      .sort((a, b) => gainOf(a)!.payback! - gainOf(b)!.payback!)[0]?.id;
-    const item = (u: UpgradeDef, series?: UpgradeDef[]) => {
+    const deck = state.shopOffer.map((id) => c.upgrades.find((u) => u.id === id)).filter((u): u is UpgradeDef => !!u);
+    const best = deck.filter((u) => options.get(u.id)?.affordable && options.get(u.id)?.unlocked && gainOf(u)?.payback).sort((a, z) => gainOf(a)!.payback! - gainOf(z)!.payback!)[0]?.id;
+    const price = (u: UpgradeDef) => {
       const o = options.get(u.id);
-      const owned = !o;
-      const done = series ? series.filter((x) => state.upgrades.includes(x.id)).length : 0;
-      const pips = series ? h('span', { class: 'pips' }, ...series.map((x) => h('span', { class: state.upgrades.includes(x.id) ? 'on' : '' }))) : null;
-      const gain = owned ? null : gainOf(u);
-      const infoKey = `shop:${u.id}`;
-      const infoOpen = openInfo.has(infoKey);
-      const description = owned ? (series ? 'Все точки открыты.' : u.description) : series ? `Следующий: ${u.name}. ${u.description}` : u.description;
+      return h('button', { class: o?.affordable ? 'primary' : '', disabled: !o?.affordable || !!state.outcome, onclick: () => buy(u.id) }, `${u.cost}`);
+    };
+    const icon = (u: UpgradeDef, cls = 'upg-icon') => h('span', { class: cls, 'aria-hidden': 'true' }, u.icon ?? '★');
+    const series = (u: UpgradeDef) => (u.series ? c.upgrades.filter((x) => x.series === u.series) : null);
+    const pips = (list: UpgradeDef[]) => h('span', { class: 'pips' }, ...list.map((x) => h('span', { class: state.upgrades.includes(x.id) ? 'on' : '' })));
+    const nowLine = (u: UpgradeDef) => {
+      const g = gainOf(u);
+      if (!g) return null;
       return h(
-        'div',
-        { class: `shop-item${o && !o.unlocked ? ' locked' : ''}${owned ? ' owned' : ''}` },
-        u.id === best ? h('span', { class: 'best-mark' }, 'выгоднее всего') : null,
-        h(
-          'div',
-          {},
-          h(
-            'strong',
-            {},
-            series ? `${seriesNames[u.series!] ?? u.name} ${done}/${series.length}` : u.name,
-            pips,
-            // With a «now» line the description with its percentages hides behind «?».
-            gain
-              ? h(
-                  'button',
-                  {
-                    class: `section-info${infoOpen ? ' on' : ''}`,
-                    title: infoOpen ? 'Скрыть описание' : 'Описание',
-                    'aria-expanded': String(infoOpen),
-                    onclick: () => {
-                      if (infoOpen) openInfo.delete(infoKey);
-                      else openInfo.add(infoKey);
-                      render();
-                    },
-                  },
-                  '?',
-                )
-              : null,
-          ),
-          gain
-            ? h(
-                'p',
-                { class: 'gain-line' },
-                'Сейчас: ',
-                h('b', {}, gain.parts.join(', ')),
-                gain.payback ? h('span', { class: 'payback' }, ` · окупится за ${gain.payback} ${plural(gain.payback, 'день', 'дня', 'дней')}`) : null,
-                gain.never ? h('span', { class: 'payback never' }, ' · не окупится до конца партии') : null,
-              )
-            : null,
-          !gain || infoOpen ? h('p', { class: gain ? 'hint' : '' }, gain && series ? `Следующий: ${u.name}. ${u.description}` : description) : series && !owned ? h('p', { class: 'hint' }, `Следующий: ${u.name}`) : null,
-          o && !o.unlocked ? h('p', { class: 'req' }, requirementText(u.requires)) : null,
-        ),
-        owned
-          ? h('span', { class: 'owned-mark' }, '✓')
-          : h('button', { class: o!.affordable ? 'primary' : '', disabled: !o!.affordable || !!state.outcome, onclick: () => buy(u.id) }, `${o!.cost}`),
+        'p',
+        { class: 'gain-line' },
+        'Сейчас: ',
+        h('b', {}, g.parts.join(', ')),
+        g.payback ? h('span', { class: 'payback' }, ` · окупится за ${g.payback} ${plural(g.payback, 'день', 'дня', 'дней')}`) : null,
+        g.never ? h('span', { class: 'payback never' }, ' · не окупится до конца партии') : null,
       );
     };
-    const sections = new Map<string, HTMLElement[]>();
-    const seen = new Set<string>();
-    for (const u of c.upgrades) {
-      if (u.series) {
-        if (seen.has(u.series)) continue;
-        seen.add(u.series);
-        const series = c.upgrades.filter((x) => x.series === u.series);
-        const next = series.find((x) => !state.upgrades.includes(x.id)) ?? series[series.length - 1];
-        sections.set(u.section ?? '', [...(sections.get(u.section ?? '') ?? []), item(next, series)]);
-      } else sections.set(u.section ?? '', [...(sections.get(u.section ?? '') ?? []), item(u)]);
-    }
+    const minus = (u: UpgradeDef) => (u.drawback ? h('p', { class: 'upg-minus' }, `− ${u.drawback}`) : null);
+    // The paper's style: what the forks made of it.
+    const taken = c.forks.map((f) => forkChoice(state, f)).filter((x): x is string => !!x).map((id) => c.upgrades.find((u) => u.id === id)!);
+    const open = openForks(state, c)[0];
+    const next = c.forks.find((f) => f.day > state.turn && !forkChoice(state, f));
+    const forkSide = (id: string) => {
+      const u = c.upgrades.find((x) => x.id === id)!;
+      return h(
+        'div',
+        { class: 'fork-side' },
+        h('div', { class: 'fork-title' }, icon(u), h('b', {}, u.name)),
+        h('p', { class: 'upg-plus' }, `+ ${u.description}`),
+        minus(u),
+        nowLine(u),
+        h('div', { class: 'fork-buy' }, price(u)),
+      );
+    };
+    const card = (u: UpgradeDef) => {
+      const line = series(u);
+      return h(
+        'div',
+        { class: `deck-card${u.rare ? ' rare' : ''}${u.ability ? ' ability' : ''}` },
+        u.ability ? h('span', { class: 'deck-tag tag-ability' }, 'приём') : u.rare ? h('span', { class: 'deck-tag tag-rare' }, 'редкое') : null,
+        u.id === best ? h('span', { class: 'best-mark' }, 'выгоднее всего') : null,
+        icon(u),
+        h('b', {}, line ? `${seriesNames[u.series!] ?? u.name}: ${u.name.toLowerCase()}` : u.name, line ? pips(line) : null),
+        h('p', { class: 'upg-plus' }, `+ ${u.description}`),
+        minus(u),
+        options.get(u.id) && !options.get(u.id)!.unlocked ? h('p', { class: 'req' }, requirementText(u.requires)) : null,
+        h('div', { class: 'deck-foot' }, nowLine(u) ?? h('span'), price(u)),
+      );
+    };
+    const owned = c.upgrades.filter((u) => state.upgrades.includes(u.id) && !(u.series && c.upgrades.filter((x) => x.series === u.series && state.upgrades.includes(x.id)).pop() !== u));
+    const days = Math.max(0, state.shopRefreshTurn - state.turn);
     return [
-      h('p', { class: 'hint' }, `У вас ${state.money}. Расходы: ${totalUpkeep(state, c)} за ход. Улучшения оплачиваются сразу и действуют до конца партии.`),
+      h('p', { class: 'hint' }, `У вас ${state.money} ₽ · расходы ${totalUpkeep(state, c)} ₽ в день. Улучшения оплачиваются сразу и действуют до конца партии.`),
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
-      ...[...sections].flatMap(([name, items]) => [...(name ? [h('h3', { class: 'section' }, name)] : []), ...items]),
-    ];
+      taken.length ? h('div', { class: 'paper-style' }, ...taken.map((u) => h('span', { class: 'style-chip' }, icon(u, 'style-icon'), u.name))) : null,
+      ...(open
+        ? [
+            ...infoSection('fork', `Развилка: ${open.title.toLowerCase()}`, 'Можно взять только одно из двух — навсегда. Второй вариант пропадёт. Развилки открываются по дням партии.'),
+            h('div', { class: 'fork' }, forkSide(open.options[0]), h('span', { class: 'fork-or' }, 'или'), forkSide(open.options[1])),
+          ]
+        : []),
+      next ? h('p', { class: 'fork-next' }, `Следующая развилка — «${next.title}»: ${next.options.map((id) => c.upgrades.find((u) => u.id === id)!.name.toLowerCase()).join(' или ')} (на ${next.day}-й день)`) : null,
+      ...infoSection(
+        'deck',
+        'Сегодня предлагают',
+        `Каждые ${b.shopRefreshDays} дня — ${b.shopOfferSize} новых предложения из колоды; раньше — за ${b.shopRefreshCost} ₽. Купленное уходит из колоды. «Приём» — кнопка над газетой, срабатывает раз в несколько дней. «Редкое» выпадает нечасто.`,
+      ),
+      h(
+        'div',
+        { class: 'deck-head' },
+        h('span', { class: 'hint' }, days > 0 ? `новые через ${days} ${plural(days, 'день', 'дня', 'дней')}` : 'новые завтра'),
+        h(
+          'button',
+          {
+            disabled: state.money < b.shopRefreshCost || !!state.outcome,
+            onclick: () => {
+              try {
+                refreshShop(state, c);
+                error = '';
+              } catch (e) {
+                error = e instanceof Error ? e.message : String(e);
+              }
+              render();
+            },
+          },
+          `Обновить −${b.shopRefreshCost}`,
+        ),
+      ),
+      deck.length ? h('div', { class: 'deck' }, ...deck.map(card)) : h('p', { class: 'hint' }, 'Сегодня всё раскупили — новые предложения скоро.'),
+      ...(owned.length
+        ? [
+            h('h3', { class: 'section' }, 'Ваша газета'),
+            h(
+              'div',
+              { class: 'owned-list' },
+              ...owned.map((u) => {
+                const line = series(u);
+                return h('span', { class: 'owned-chip', title: `${u.description}${u.drawback ? ` ${u.drawback}` : ''}` }, icon(u, 'style-icon'), line ? seriesNames[u.series!] ?? u.name : u.name, line ? pips(line) : null);
+              }),
+            ),
+          ]
+        : []),
+    ].filter((x): x is HTMLElement => x !== null);
   }
 
   /** Debug menu: every parameter hidden from the top panel, the turn report and a new game. */
@@ -3178,6 +3237,54 @@ export function mountApp(root: HTMLElement, base: Content): void {
         skill(`${k}nose`, `nose_${sk.noseTier}`, `Чутьё: ${noseNames[sk.noseTier].toLowerCase()}`, 'Чем тоньше нюх, тем чаще находки интересные и сенсационные. С опытом нюх становится тоньше.'),
         loyal ? h('span', { class: `loyal loyal-${loyal.level}`, title: 'Лояльность: ложь в газете её подтачивает, ниже предела репортёр уходит' }, loyal.word) : null,
       ),
+    );
+  }
+
+  /**
+   * «Приёмы» (CONCEPT.md §3.5): ready ones are blue with their price, the others say why not or in
+   * how many days. A press uses the ability at once; a new story lands in the briefs.
+   */
+  function renderAbilities(): void {
+    const owned = abilitiesOf(state, c);
+    abilityBar.hidden = !owned.length || searching || !!state.outcome;
+    if (abilityBar.hidden) return;
+    const reasons: Record<string, string> = {
+      'nobody free': 'все репортёры заняты',
+      'nothing to raise': 'нечего усиливать',
+      'nothing to recall': 'нечего отзывать',
+      'no money': 'не хватает денег',
+    };
+    abilityBar.replaceChildren(
+      h('span', { class: 'ability-label' }, 'Приёмы'),
+      ...owned.map(({ def, readyTurn }) => {
+        const block = abilityBlock(state, c, def.id);
+        const wait = readyTurn - state.turn;
+        const status = !block ? `готово · −${def.ability!.cost} ₽` : block === 'cooling down' ? `через ${wait} ${plural(wait, 'день', 'дня', 'дней')}` : reasons[block] ?? '';
+        return h(
+          'button',
+          {
+            class: `ability${!block ? ' ready' : ' wait'}`,
+            disabled: !!block || busy,
+            title: `${def.name}. ${def.description} ${def.drawback ?? ''}`.trim(),
+            onclick: () => {
+              try {
+                const added = useAbility(state, c, def.id);
+                for (const uid of added) {
+                  drafts.set(uid, { publish: true, placement: 0, distortion: 0 });
+                  revealed.add(uid);
+                  flyQueue.add(uid);
+                }
+                error = '';
+              } catch (e) {
+                error = e instanceof Error ? e.message : String(e);
+              }
+              render();
+            },
+          },
+          h('span', { class: 'ability-icon', 'aria-hidden': 'true' }, def.icon ?? '★'),
+          h('span', { class: 'ability-text' }, h('b', {}, def.name), h('small', {}, status)),
+        );
+      }),
     );
   }
 

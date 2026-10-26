@@ -21,3 +21,4 @@ export { forecastTurn, type Forecast } from './forecast';
 export { scoreOf, taskOf, taskProgress, taskReward } from './tasks';
 export { electionLeader, runningTwist, twistOf } from './twists';
 export { isRoadTile, mapSizeFor } from './map';
+export { abilitiesOf, abilityBlock, advanceShop, dealShop, deckCards, forkChoice, onSale, openForks, refreshShop, useAbility } from './shop';

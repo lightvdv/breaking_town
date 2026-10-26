@@ -22,6 +22,8 @@ import {
   setReporterTopics,
   reporterOf,
   startInvestigation,
+  useAbility,
+  abilityBlock,
   previewPublication,
   getModifiers,
   templateOf,
@@ -220,6 +222,7 @@ describe('readers', () => {
     const workers = () => s.residents.filter((r) => r.status === 'active' && r.group === 'workers' && r.follows.length > 0).length;
     const before = workers();
     s.money = 10_000;
+    s.shopOffer.push('sports_page');
     purchase(s, content, 'sports_page');
     // Boring issues attract nobody, so publish interesting stories.
     for (let i = 0; i < 4; i++) {
@@ -263,6 +266,7 @@ describe('readers', () => {
     const s = createGame(content, 6);
     s.money = 10_000;
     const base = salesOf(s, content, 'newspaper', 100);
+    s.shopOffer.push('kiosk_1', 'kiosk_2');
     expect(() => purchase(s, content, 'kiosk_2')).toThrow();
     purchase(s, content, 'kiosk_1');
     const one = salesOf(s, content, 'newspaper', 100);
@@ -723,6 +727,7 @@ describe('purchases', () => {
   it('requires money and prerequisites', () => {
     const s = createGame(content, 1);
     s.money = 10_000;
+    s.shopOffer.push('newspaper_quality_1', 'newspaper_quality_2');
     expect(() => purchase(s, content, 'newspaper_quality_2')).toThrow();
     expect(listPurchases(s, content).find((p) => p.id === 'newspaper_quality_2')?.unlocked).toBe(false);
     purchase(s, content, 'newspaper_quality_1');
@@ -733,7 +738,52 @@ describe('purchases', () => {
   it('cannot buy without enough money', () => {
     const s = createGame(content, 1);
     s.money = 0;
+    s.shopOffer.push('newspaper_quality_1');
     expect(() => purchase(s, content, 'newspaper_quality_1')).toThrow();
+  });
+});
+
+describe('the upgrades deck, forks and abilities (CONCEPT.md §3.5)', () => {
+  it('the deck offers a few cards of the mode, deals again every few days, and only what is on offer can be bought', () => {
+    const b = content.balance;
+    const s = createGame(content, 3);
+    expect(s.shopOffer.length).toBe(b.shopOfferSize);
+    for (const id of s.shopOffer) {
+      const u = content.upgrades.find((x) => x.id === id)!;
+      expect(u.fork).toBeUndefined();
+      expect(!u.mode || u.mode === s.mode).toBe(true);
+    }
+    const off = content.upgrades.find((u) => !u.fork && !s.shopOffer.includes(u.id))!;
+    s.money = 10_000;
+    expect(() => purchase(s, content, off.id)).toThrow();
+    const first = [...s.shopOffer];
+    purchase(s, content, first[0]);
+    expect(s.shopOffer).not.toContain(first[0]);
+    for (let i = 0; i < b.shopRefreshDays; i++) playTurn(s, content, { publish: [] });
+    expect(s.shopOffer.length).toBe(b.shopOfferSize);
+    expect(s.shopOffer).not.toContain(first[0]);
+  });
+
+  it('a fork opens on its day and taking one option closes the other', () => {
+    const s = createGame(content, 4);
+    const fork = content.forks[0];
+    s.money = 10_000;
+    expect(() => purchase(s, content, fork.options[0])).toThrow();
+    while (s.turn < fork.day && !s.outcome) playTurn(s, content, { publish: [] });
+    purchase(s, content, fork.options[0]);
+    expect(() => purchase(s, content, fork.options[1])).toThrow();
+  });
+
+  it('an ability costs money, works once and waits its cooldown', () => {
+    const s = createGame(content, 5);
+    s.money = 10_000;
+    s.upgrades.push('night_shift');
+    const hand = s.hand.length;
+    const added = useAbility(s, content, 'night_shift');
+    expect(added.length).toBe(1);
+    expect(s.hand.length).toBe(hand + 1);
+    expect(abilityBlock(s, content, 'night_shift')).toBe('cooling down');
+    expect(() => useAbility(s, content, 'night_shift')).toThrow();
   });
 });
 

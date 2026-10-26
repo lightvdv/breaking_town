@@ -291,12 +291,20 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
  * best candidate it offers.
  */
 const buyOrder: (string | number)[] = [2, 'kiosk_1', 'sports_page', 'newspaper_quality_1', 3, 'kiosk_2', 'editorial_1', 'youth_insert', 4, 'kiosk_3', 'subscription', 5, 'lawyers', 'kiosk_4'];
+// Upgrades come from a deck and forks (CONCEPT.md §3.5): the bot takes the fork option of its side
+// first and never buys what works against it; abilities it would not use.
+const forkPicks: Record<GameState['mode'], string[]> = { destroy: ['yellow_layout', 'gloss'], save: ['solid_style', 'gloss'] };
+const avoid: Record<GameState['mode'], string[]> = {
+  destroy: ['solid_style', 'cheap_paper', 'insider', 'paid_subscription', 'mole'],
+  save: ['yellow_layout', 'cheap_paper', 'insider', 'paid_subscription', 'mole'],
+};
 
 function shop(s: GameState): void {
+  const order = [buyOrder[0], ...forkPicks[s.mode], ...buyOrder.slice(1)];
   for (;;) {
     const reserve = totalUpkeep(s, content) * 3;
-    const options = listPurchases(s, content).filter((p) => p.unlocked);
-    const step = buyOrder.find((x) => (typeof x === 'number' ? s.reporters.length < x : options.some((p) => p.id === x)));
+    const options = listPurchases(s, content).filter((p) => p.unlocked && !avoid[s.mode].includes(p.id) && !content.upgrades.find((u) => u.id === p.id)?.ability);
+    const step = order.find((x) => (typeof x === 'number' ? s.reporters.length < x : options.some((p) => p.id === x)));
     if (typeof step === 'number') {
       // Enough for the fee and a typical hire on top of the reserve.
       if (s.money - agencyCost(s, content) - 200 < reserve) return;

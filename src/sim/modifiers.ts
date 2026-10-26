@@ -5,6 +5,7 @@ export interface ChannelMods {
   reachMul: number;
   adRateAdd: number;
   upkeepAdd: number;
+  frontReadMul: number;
   /** Added to the channel affinity of each group. */
   groupReach: Record<GroupId, number>;
 }
@@ -20,6 +21,12 @@ export interface Modifiers {
   /** Added to every resident's trust in the outlet. */
   trustBonus: number;
   churnMul: number;
+  scaryImpactMul: number;
+  trustGainMul: number;
+  acquisitionMul: number;
+  wordOfMouthMul: number;
+  debunkFindAdd: number;
+  seeRivalPlan: boolean;
   channels: Record<ChannelId, ChannelMods>;
 }
 
@@ -38,9 +45,15 @@ export function modifiersOf(c: Content, upgrades: string[]): Modifiers {
     plausibilityAdd: 0,
     trustBonus: 0,
     churnMul: 1,
+    scaryImpactMul: 1,
+    trustGainMul: 1,
+    acquisitionMul: 1,
+    wordOfMouthMul: 1,
+    debunkFindAdd: 0,
+    seeRivalPlan: false,
     channels: {},
   };
-  for (const ch of c.channels) m.channels[ch.id] = { reachAdd: 0, reachMul: 1, adRateAdd: 0, upkeepAdd: 0, groupReach: {} };
+  for (const ch of c.channels) m.channels[ch.id] = { reachAdd: 0, reachMul: 1, adRateAdd: 0, upkeepAdd: 0, frontReadMul: 1, groupReach: {} };
 
   for (const id of upgrades) {
     const u = c.upgrades.find((x) => x.id === id);
@@ -52,12 +65,19 @@ export function modifiersOf(c: Content, upgrades: string[]): Modifiers {
     m.plausibilityAdd += e.plausibilityAdd ?? 0;
     m.trustBonus += e.trustBonus ?? 0;
     m.churnMul *= e.churnMul ?? 1;
+    m.scaryImpactMul *= e.scaryImpactMul ?? 1;
+    m.trustGainMul *= e.trustGainMul ?? 1;
+    m.acquisitionMul *= e.acquisitionMul ?? 1;
+    m.wordOfMouthMul *= e.wordOfMouthMul ?? 1;
+    m.debunkFindAdd += e.debunkFindAdd ?? 0;
+    m.seeRivalPlan ||= !!e.seeRivalPlan;
     if (e.channel) {
       const cm = m.channels[e.channel];
       cm.reachAdd += e.reachAdd ?? 0;
       cm.reachMul *= e.reachMul ?? 1;
       cm.adRateAdd += e.adRateAdd ?? 0;
       cm.upkeepAdd += e.upkeepAdd ?? 0;
+      cm.frontReadMul *= e.frontReadMul ?? 1;
       for (const [g, v] of Object.entries(e.groupReach ?? {})) cm.groupReach[g] = (cm.groupReach[g] ?? 0) + (v ?? 0);
     }
   }

@@ -182,6 +182,22 @@ export function validateContent(c: Content): string[] {
     const iy = c.groups.findIndex((g) => g.id === y);
     if (ix < 0 || iy < 0 || ix >= iy) errors.push(`tensionStart: bad pair key ${key} (two groups in content order)`);
   }
+  // Upgrade forks and the deck (CONCEPT.md §3.5).
+  for (const f of c.forks) {
+    for (const id of f.options) {
+      const u = c.upgrades.find((x) => x.id === id);
+      if (!u) errors.push(`fork ${f.id}: unknown upgrade ${id}`);
+      else if (u.fork !== f.id) errors.push(`fork ${f.id}: upgrade ${id} must have fork "${f.id}"`);
+    }
+  }
+  for (const u of c.upgrades) {
+    if (u.fork && !c.forks.some((f) => f.id === u.fork && f.options.includes(u.id))) errors.push(`upgrade ${u.id}: fork ${u.fork} does not list it`);
+    if (u.ability && !(u.ability.cooldown >= 1 && u.ability.cost >= 0)) errors.push(`upgrade ${u.id}: an ability needs a cooldown ≥ 1 and a cost ≥ 0`);
+  }
+  for (const mode of ['destroy', 'save'] as const) {
+    const deck = c.upgrades.filter((u) => !u.fork && (!u.mode || u.mode === mode));
+    if (deck.length < c.balance.shopOfferSize * 2) errors.push(`the ${mode} deck needs at least ${c.balance.shopOfferSize * 2} cards`);
+  }
   // Campaign towns (CONCEPT.md §9): group shares add up, known groups and buildings, the map fits.
   for (const t of c.towns) {
     if (t.groups) {

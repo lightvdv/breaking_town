@@ -1,0 +1,29 @@
+[
+  {
+    "id": "style",
+    "title": "Как вас читают",
+    "day": 5,
+    "options": [
+      "yellow_layout",
+      "solid_style"
+    ]
+  },
+  {
+    "id": "money",
+    "title": "Деньги",
+    "day": 12,
+    "options": [
+      "cheap_paper",
+      "gloss"
+    ]
+  },
+  {
+    "id": "defense",
+    "title": "Защита",
+    "day": 20,
+    "options": [
+      "lawyers",
+      "insider"
+    ]
+  }
+]

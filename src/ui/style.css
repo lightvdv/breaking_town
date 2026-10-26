@@ -5484,3 +5484,76 @@ button.publish.nudge {
 .issue-stamp[hidden] {
   display: none;
 }
+
+/* ---------- The clean streak (CONCEPT.md §5.3) ---------- */
+
+.stamp-box {
+  grid-area: stamp;
+  justify-self: start;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.streak-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--paper-ink);
+  cursor: help;
+}
+
+.streak-badge[hidden] {
+  display: none;
+}
+
+.streak-label {
+  font-weight: 700;
+}
+
+.streak-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.streak-pips i {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--truth-0);
+  border-radius: 50%;
+}
+
+.streak-pips i.on {
+  background: var(--truth-0);
+}
+
+.streak-prize {
+  color: var(--truth-0);
+  font-weight: 700;
+}
+
+.streak-badge.dim .streak-prize {
+  opacity: 0.5;
+}
+
+.streak-badge.breaks .streak-label {
+  color: #b8262e;
+}
+
+.streak-badge.breaks .streak-pips i.on {
+  background: transparent;
+  border-style: dashed;
+}
+
+@media (max-width: 900px) {
+  .streak-badge {
+    font-size: 11px;
+  }
+
+  .streak-prize {
+    display: none;
+  }
+}

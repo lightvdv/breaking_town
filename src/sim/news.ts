@@ -525,7 +525,13 @@ export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Mo
   for (const n of news) {
     const fake = !!state.hand.find((x) => x.uid === n.pub.cardUid)?.setup;
     if (n.truth === 0 && !fake) {
-      for (const id of n.viewers) state.residents[id].trust = clamp(state.residents[id].trust + b.trustGain, 0, 100);
+      // True news builds trust by its place in the paper; word of mouth carries a little of it to the rest (CONCEPT.md §5.3).
+      const gain = b.trustGain * b.placementTrustGain[n.pub.placement];
+      const seen = new Set(n.viewers);
+      for (const r of state.residents) {
+        if (r.status !== 'active') continue;
+        r.trust = clamp(r.trust + (seen.has(r.id) ? gain : gain * b.trustGainBystanderShare), 0, 100);
+      }
       continue;
     }
     const card = state.hand.find((x) => x.uid === n.pub.cardUid)!;

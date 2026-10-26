@@ -1294,3 +1294,45 @@ describe('campaign progress', () => {
     expect(camp.finished).toBe(true);
   });
 });
+
+describe('reputation (CONCEPT.md §5.3)', () => {
+  it('five clean issues in a row pay the bonus; a lie breaks the streak', () => {
+    const b = content.balance;
+    const s = createGame(content, 5);
+    const honest = () => {
+      const card = s.hand.find((x) => x.baseTruth === 0);
+      return card ? [{ cardUid: card.uid, placement: 0 as const, distortion: 0 }] : [];
+    };
+    let bonus = 0;
+    for (let i = 0; i < b.cleanStreakDays * 2 && !s.outcome && !bonus; i++) {
+      const publish = honest();
+      const r = playTurn(s, content, { publish });
+      bonus = r.cleanStreak.bonus;
+    }
+    expect(bonus).toBeGreaterThan(0);
+    expect(s.cleanStreak).toBe(0);
+    // Two clean days, then a lie.
+    for (let i = 0; i < 2; i++) playTurn(s, content, { publish: honest() });
+    const before = s.cleanStreak;
+    const lie = s.hand.find((x) => maxDistortion(x) > 0)!;
+    const r = playTurn(s, content, { publish: [{ cardUid: lie.uid, placement: 0, distortion: maxDistortion(lie) }] });
+    expect(before).toBeGreaterThan(0);
+    expect(r.cleanStreak.broken).toBe(true);
+    expect(s.cleanStreak).toBe(0);
+  });
+
+  it('true news on the front page builds more trust than a brief, and reaches non-readers a little', () => {
+    const gainAt = (placement: 0 | 2) => {
+      const s = createGame(content, 8);
+      const card = s.hand.find((x) => x.baseTruth === 0)!;
+      const readers = new Set(s.residents.filter((r) => r.follows.length).map((r) => r.id));
+      const outsider = s.residents.find((r) => !readers.has(r.id) && r.status === 'active')!;
+      const before = outsider.trust;
+      const r = playTurn(s, content, { publish: [{ cardUid: card.uid, placement, distortion: 0 }] });
+      return { all: r.trustAfter - r.trustBefore, outsider: s.residents[outsider.id].trust - before };
+    };
+    const front = gainAt(2);
+    expect(front.all).toBeGreaterThan(gainAt(0).all);
+    expect(front.outsider).toBeGreaterThan(0);
+  });
+});

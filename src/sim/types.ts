@@ -631,6 +631,14 @@ export interface Balance {
   fatiguePerRepeat: number;
 
   trustGain: number;
+  /** Trust from true news by placement (brief, article, front page), like `placementExposurePenalty`. */
+  placementTrustGain: Triple<number>;
+  /** Share of a true story's trust gain that reaches residents who did not see it. */
+  trustGainBystanderShare: number;
+  /** Issues in a row without a half-truth or lie that earn the clean-streak bonus (CONCEPT.md §5.3). */
+  cleanStreakDays: number;
+  /** Trust every resident gains when the clean streak is complete. */
+  cleanStreakBonus: number;
   trustPenaltyMul: number;
   trustPenaltyBystanderShare: number;
   checkerBase: number;
@@ -1092,6 +1100,8 @@ export interface GameState {
   tasks: TaskState[];
   /** Stories of ours exposed this game: a clean game earns a star. */
   exposedTotal: number;
+  /** Issues in a row printed without a half-truth or lie (CONCEPT.md §5.3); resets on a lie and after the bonus. */
+  cleanStreak: number;
   /** The mid-game twist (CONCEPT.md §4.9), once it began. */
   twist: TwistState | null;
   /** Upkeep a day added by a failed audit. */
@@ -1154,6 +1164,8 @@ export interface ReadersChange {
 
 export interface TurnReport {
   turn: number;
+  /** The clean streak after this issue, whether it broke and whether it paid its bonus (CONCEPT.md §5.3). */
+  cleanStreak: { days: number; broken: boolean; bonus: number };
   publications: PublicationReport[];
   /** Stories exposed during this turn: this issue's and old lies that surfaced. */
   exposures: ExposedStory[];

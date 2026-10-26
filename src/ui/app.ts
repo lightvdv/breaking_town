@@ -382,11 +382,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // What the laid-out issue will be, in the paper's own voice (CONCEPT.md §7.3 «Риск выпуска»).
   const todayLine = h('span', { class: 'today-line' });
   const issueStamp = h('div', { class: 'issue-stamp', hidden: true });
+  // The clean streak under the stamp: «Без лжи 3 из 5 → +3% репутации» (CONCEPT.md §5.3).
+  const streakBadge = h('div', { class: 'streak-badge', hidden: true });
   // Two rows (CONCEPT.md §7.3): the name of the paper, then the cover price on the left, «Сегодня в номере» and the issue number on the right.
   const masthead = h(
     'header',
     { class: 'masthead' },
-    issueStamp,
+    h('div', { class: 'stamp-box' }, issueStamp, streakBadge),
     h('h2', {}, 'Городской Вестник'),
     h('button', { class: 'paper-close', title: 'Свернуть — посмотреть на город', onclick: () => closeIssue() }, '—'),
     h('div', { class: 'masthead-row' }, priceSelect, todayLine, issueNo),
@@ -933,6 +935,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...r.deals.broken.map((x) => h('li', { class: 'bad' }, `Сделка «${x}» сорвана`)),
       ...r.staff.quit.map((id) => h('li', { class: 'bad' }, `${reporterOf(c, id).name} ${reporterOf(c, id).female ? 'уволилась' : 'уволился'}`)),
       ...(r.rival?.cured ? [h('li', {}, `Опровержения разубедили ${r.rival.cured} ${peopleWord(r.rival.cured)}`)] : []),
+      ...(r.cleanStreak.bonus ? [h('li', { class: 'good' }, `✓ ${c.balance.cleanStreakDays} выпусков подряд без лжи: +${Math.round(r.cleanStreak.bonus)}% репутации`)] : []),
+      ...(r.cleanStreak.broken ? [h('li', { class: 'bad' }, 'Серия выпусков без лжи прервалась')] : []),
       ...r.tasks.done.map((id) => h('li', { class: 'good' }, `✓ Задание выполнено: ${taskOf(c, id).title} (+${taskReward(c, taskOf(c, id))} ₽)`)),
       ...r.tasks.failed.map((id) => h('li', { class: 'bad' }, `✗ Задание провалено: ${taskOf(c, id).title}`)),
       ...twistLines(r).map((x) => h('li', {}, x)),
@@ -2390,6 +2394,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     issueStamp.hidden = !stamp;
     issueStamp.className = `issue-stamp${stamp ? ` stamp-${stamp}` : ''}`;
     issueStamp.replaceChildren(...(stamp ? [h('b', {}, stampLabels[stamp][0]), h('small', {}, stampLabels[stamp][1])] : []));
+    renderStreak(untrue > 0);
     if (searching || !state.hand.some((x) => revealed.has(x.uid))) {
       todayLine.replaceChildren();
       return;
@@ -2412,6 +2417,25 @@ export function mountApp(root: HTMLElement, base: Content): void {
       parts.push(next !== here ? `город ≈ → ${c.balance.cityStates[next].name.toLowerCase()}` : Math.abs(diff) < 1 ? 'город почти не заметит' : diff < 0 ? 'город просядет' : 'городу станет лучше');
     }
     todayLine.replaceChildren('Сегодня в номере: ', ...parts.flatMap((x, i) => (i ? [' · ', x] : [x])));
+  }
+
+  /**
+   * The clean streak (CONCEPT.md §5.3): pips for the issues in a row without a lie and what completing
+   * it gives; with a lie laid out, a warning that it will break. Hidden until the player can lie.
+   */
+  function renderStreak(lieLaidOut: boolean): void {
+    const b = c.balance;
+    streakBadge.hidden = !unlocked('framing') || searching || !!state.outcome;
+    if (streakBadge.hidden) return;
+    const days = state.cleanStreak;
+    const breaks = lieLaidOut && days > 0;
+    streakBadge.className = `streak-badge${breaks ? ' breaks' : ''}${lieLaidOut ? ' dim' : ''}`;
+    streakBadge.title = `${b.cleanStreakDays} выпусков подряд без полуправды и лжи — +${b.cleanStreakBonus}% репутации у всего города. Ложь обнуляет серию, пустой выпуск её не двигает.`;
+    streakBadge.replaceChildren(
+      h('span', { class: 'streak-label' }, breaks ? 'Серия прервётся' : 'Без лжи'),
+      h('span', { class: 'streak-pips', 'aria-label': `${days} из ${b.cleanStreakDays}` }, ...Array.from({ length: b.cleanStreakDays }, (_, i) => h('i', { class: i < days ? 'on' : '' }))),
+      h('span', { class: 'streak-prize' }, `→ +${b.cleanStreakBonus}% репутации`),
+    );
   }
 
   /** Level of the issue being composed: published stories' tiers after distortion (CONCEPT.md §4.2а). */
@@ -2853,6 +2877,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/reputation.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${Math.round(trust)}%`), h('span', {}, 'средняя репутация у жителей'))),
       meter(trust / 100, trust < 20 ? 'danger' : 'ok'),
       h('div', { class: 'ledger-row' }, h('span', {}, 'Фактчекеры проверяют вас реже на'), h('b', {}, `${Math.round(b.trustShield * trust)}%`)),
+      h(
+        'div',
+        { class: 'ledger-row' },
+        h('span', {}, `Выпусков подряд без лжи`, h('small', {}, ` за ${b.cleanStreakDays} — +${b.cleanStreakBonus}% всему городу`)),
+        h('b', {}, `${state.cleanStreak} из ${b.cleanStreakDays}`),
+      ),
+      h(
+        'p',
+        { class: 'hint' },
+        `Правда приносит репутацию: на первой полосе больше всего, в заметке меньше; немного достаётся и тем, кто вас не читает. Пойманная ложь отнимает примерно столько, сколько дают 3–4 честных выпуска.`,
+      ),
     ];
     if (r) {
       const loss = r.exposures.reduce((s, x) => s + x.trustLoss, 0);
@@ -2860,7 +2895,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       out.push(
         h('h3', { class: 'section' }, `Прошлый ход (${r.turn})`),
         ...r.exposures.map((x) => ledgerRow(`Разоблачено: «${x.title}»`, -Math.round(x.trustLoss * 10) / 10, `выпуск дня ${x.turn}`, '%')),
-        ledgerRow('Правдивые новости и прочее', Math.round((delta + loss) * 10) / 10, '', '%'),
+        ...(r.cleanStreak.bonus ? [ledgerRow(`${c.balance.cleanStreakDays} выпусков без лжи`, Math.round(r.cleanStreak.bonus * 10) / 10, '', '%')] : []),
+        ledgerRow('Правдивые новости и прочее', Math.round((delta + loss - r.cleanStreak.bonus) * 10) / 10, '', '%'),
         ledgerTotal('Итого', Math.round(delta * 10) / 10, '%'),
       );
     }

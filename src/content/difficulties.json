@@ -34,7 +34,7 @@
       "checkerBase": 0.22,
       "rivalCloseShare": 0.015,
       "rivalTrustCollapse": 8,
-      "debunkTrust": 4
+      "debunkTrust": 2.5
     },
     "modes": {
       "destroy": {
@@ -45,9 +45,9 @@
         "conflictStartTurn": 2
       },
       "save": {
-        "turnLimit": 44,
+        "turnLimit": 46,
         "rivalStoriesMax": 4,
-        "assignFocus": 0.6,
+        "assignFocus": 0.45,
         "electionPivot": 0.6,
         "taskRewardMul": 0.8
       }

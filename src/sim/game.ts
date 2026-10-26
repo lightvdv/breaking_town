@@ -110,6 +110,7 @@ export function createGame(
     todayEvents: [],
     tasks: [],
     exposedTotal: 0,
+    cleanStreak: 0,
     twist: null,
     budgetCut: 0,
     town: opts.town ?? null,
@@ -191,6 +192,27 @@ function startTurn(state: GameState, c: Content): { notes: string[]; twist: { st
   // The game's tasks are given on their day (CONCEPT.md §4.8).
   assignTasks(state, c, state.rng);
   return { notes, twist: { started: twist.started, ended: twist.ended } };
+}
+
+/**
+ * The clean streak (CONCEPT.md §5.3): every issue printed without a half-truth or lie adds a day; a
+ * lie breaks it, an empty issue leaves it as it is. After `cleanStreakDays` days the whole town
+ * trusts the paper `cleanStreakBonus` more and the streak starts again.
+ */
+function advanceCleanStreak(state: GameState, c: Content, published: { truth: number }[]): { days: number; broken: boolean; bonus: number } {
+  const b = c.balance;
+  if (!published.length) return { days: state.cleanStreak, broken: false, bonus: 0 };
+  if (published.some((n) => n.truth > 0)) {
+    const broken = state.cleanStreak > 0;
+    state.cleanStreak = 0;
+    return { days: 0, broken, bonus: 0 };
+  }
+  state.cleanStreak++;
+  if (state.cleanStreak < b.cleanStreakDays) return { days: state.cleanStreak, broken: false, bonus: 0 };
+  const before = averageTrust(state, c);
+  for (const r of state.residents) if (r.status === 'active') r.trust = Math.min(100, r.trust + b.cleanStreakBonus);
+  state.cleanStreak = 0;
+  return { days: b.cleanStreakDays, broken: false, bonus: averageTrust(state, c) - before };
 }
 
 export function validateDecision(state: GameState, c: Content, d: Decision, mods: Modifiers): void {
@@ -285,6 +307,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   for (const s of state.rival?.closed ? [] : (state.rival?.plan ?? [])) pushArc(state, c, s.card, s.placement, s.distortion);
   const rivalNews = publishRival(state, c, rng);
   const exposures = [...lateExposures, ...verifyNews(state, c, rng, mods, published)];
+  const cleanStreak = advanceCleanStreak(state, c, published);
   verifyRival(state, c, rng, rivalNews);
   // The rival may answer our lies over the next days.
   recordOurIssue(state, c, published);
@@ -333,6 +356,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
 
   return {
     turn,
+    cleanStreak,
     publications: published.map((n) => n.report),
     exposures,
     buyers,

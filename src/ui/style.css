@@ -4005,6 +4005,7 @@ button.publish.level-3.bump-up {
     grid-template-columns: 1fr auto;
     grid-template-areas:
       'title close'
+      'stamp stamp'
       'row row';
     text-align: center;
   }
@@ -5966,4 +5967,25 @@ span.hunt-chip {
 .at-out .hunt-chip {
   font-size: 11px;
   line-height: 16px;
+}
+
+/* Phones: the editor's stamp and the clean streak share one row under the title, so the title stays centred. */
+@media (max-width: 900px) {
+  .stamp-box {
+    justify-self: stretch;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .stamp-box:not(:has(> :not([hidden]))) {
+    display: none;
+  }
+
+  .stamp-box .issue-stamp {
+    margin-left: 6px;
+    padding: 1px 7px 0;
+    border-width: 2px;
+  }
 }

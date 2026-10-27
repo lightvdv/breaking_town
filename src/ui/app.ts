@@ -2190,7 +2190,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           )
         : null,
       // Which place the story is about, and the hunt against it (CONCEPT.md §3.6а).
-      placeKicker(card, p.effect),
+      placeKicker(card),
       h(
         'div',
         { class: 'news-head' },
@@ -2199,6 +2199,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'div',
           { class: 'head-tools' },
           unlocked('framing') ? truthButton : null,
+          huntChip(card, p.effect),
           pencil !== null ? h('span', { class: 'pencil-note', title: `Риск разоблачения ${Math.round(p.exposureRisk * 100)}%` }, riskNotes[pencil]) : null,
           outButton,
         ),
@@ -2249,39 +2250,39 @@ export function mountApp(root: HTMLElement, base: Content): void {
     render();
   };
 
-  function placeKicker(card: CardInstance, effect: CardEffect | null): HTMLElement | null {
-    if (card.building === undefined) return null;
+  function placeKicker(card: CardInstance): HTMLElement | null {
+    if (card.building === undefined || !state.buildings[card.building]) return null;
+    return buildingDefOf(c, state.buildings[card.building].type).names ? h('div', { class: 'kicker place-kicker' }, buildingName(state, c, card.building)) : null;
+  }
+
+  /**
+   * The hunt chip in the story's control row, next to «Подача» (CONCEPT.md §3.6а): «🎯 Травить» on a
+   * story about a workplace, «🎯 Травля · +40%» on a story about the target.
+   */
+  function huntChip(card: CardInstance, effect: CardEffect | null): HTMLElement | null {
+    if (card.building === undefined || !unlocked('framing')) return null;
     const x = state.buildings[card.building];
     if (!x) return null;
-    const named = !!buildingDefOf(c, x.type).names;
-    const name = buildingName(state, c, card.building);
-    const target = state.hunt?.building === card.building;
-    if (target) {
+    const name = buildingName(state, c, card.building).toLowerCase();
+    if (state.hunt?.building === card.building) {
       const hits = isHuntStory(state, card, effect);
       const bonus = Math.round((huntBonus(state, c, getModifiers(state, c)) - 1) * 100);
       return h(
-        'div',
-        { class: `kicker hunt-kicker${hits ? '' : ' idle'}` },
-        `🎯 Травля · ${name} · ${hits ? (bonus ? `удар +${bonus}%` : 'первый удар') : 'в такой подаче не ударит'}`,
+        'span',
+        { class: `hunt-chip on${hits ? '' : ' idle'}`, title: hits ? `Травля: ${name} — эта новость бьёт по цели` : 'В такой подаче новость не страшная и по цели не ударит' },
+        '🎯 ',
+        hits ? (bonus ? `Травля +${bonus}%` : 'Травля') : 'Не ударит',
       );
     }
-    const canTarget = x.open && x.jobs > 0 && !state.outcome && unlocked('framing');
-    if (!named && !canTarget) return null;
+    if (!x.open || x.jobs === 0 || state.outcome) return null;
     return h(
-      'div',
-      { class: 'kicker place-kicker' },
-      named ? name : null,
-      canTarget
-        ? h(
-            'button',
-            {
-              class: 'hunt-start',
-              title: 'Бить по этому месту день за днём: каждая страшная новость о нём подряд сильнее прошлой, люди его обходят, работники уходят',
-              onclick: actNow(() => startHunt(state, x.id)),
-            },
-            state.hunt ? `🎯 Травить вместо этого: ${name.toLowerCase()}` : `🎯 Начать травлю: ${name.toLowerCase()}`,
-          )
-        : null,
+      'button',
+      {
+        class: 'hunt-chip',
+        title: `${state.hunt ? 'Травить вместо нынешней цели' : 'Начать травлю'}: ${name}. Бить по этому месту день за днём: каждая страшная новость о нём подряд сильнее прошлой, люди его обходят, работники уходят`,
+        onclick: actNow(() => startHunt(state, x.id)),
+      },
+      '🎯 Травить',
     );
   }
 

@@ -2289,7 +2289,8 @@ button.publish.level-3.bump-up {
   cursor: pointer;
 }
 
-.truth-chip:active {
+.truth-chip:active,
+.hunt-chip:active {
   transform: translateY(1px);
   box-shadow: 0 1px 0 rgba(62, 39, 49, 0.55);
 }
@@ -2455,6 +2456,7 @@ button.publish.level-3.bump-up {
 
 .head-tools {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
@@ -5872,31 +5874,9 @@ button.publish.nudge {
   font-size: 14px;
 }
 
-.kicker.hunt-kicker {
-  color: #a22633;
-}
 
-.kicker.hunt-kicker.idle {
-  color: #8a7a66;
-}
 
-.kicker .hunt-start {
-  margin-left: 6px;
-  padding: 1px 8px;
-  border: 1px solid #a22633;
-  border-radius: 10px;
-  background: transparent;
-  color: #a22633;
-  font: inherit;
-  letter-spacing: 0;
-  text-transform: none;
-  cursor: pointer;
-}
 
-.kicker .hunt-start:hover {
-  background: #a22633;
-  color: var(--paper);
-}
 
 /* Strikes at «Голос города» (CONCEPT.md §8.4). */
 .rival-strikes {
@@ -5946,4 +5926,44 @@ button.publish.nudge {
 
 .rival-strikes .strike:disabled {
   opacity: 0.45;
+}
+
+/* The hunt chip next to «Подача» (CONCEPT.md §3.6а): the same raised button, in the hunt's red. */
+.hunt-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  font: 700 13px/18px var(--font);
+  white-space: nowrap;
+  color: #8c1f2a;
+  background: #f3d9d2;
+  border: 1px solid #a22633;
+  border-radius: 6px;
+  box-shadow:
+    0 2px 0 rgba(62, 39, 49, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+
+span.hunt-chip {
+  cursor: default;
+  box-shadow: none;
+}
+
+.hunt-chip.on {
+  color: #fff;
+  background: #a22633;
+}
+
+.hunt-chip.idle {
+  color: #8a7a66;
+  background: transparent;
+  border-color: #b8a88f;
+}
+
+.at-0 .hunt-chip,
+.at-out .hunt-chip {
+  font-size: 11px;
+  line-height: 16px;
 }

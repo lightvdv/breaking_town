@@ -42,6 +42,8 @@ body {
   color: var(--text);
   font-family: var(--font);
   font-size: 14px;
+  /* No double-tap zoom: a zoomed page cuts windows and their ✕ off the screen. */
+  touch-action: manipulation;
 }
 
 button,

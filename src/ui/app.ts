@@ -318,6 +318,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let truthMenuFor: number | null = null;
   /** Phones: the story whose «where to» menu is open (stories are not dragged on a phone). */
   let moveMenuFor: number | null = null;
+  let menuClosedFor: number | null = null;
   const isPhone = () => window.matchMedia('(max-width: 900px)').matches;
   /** The cover price menu in the masthead is open. */
   let priceMenuOpen = false;
@@ -466,7 +467,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
   });
   // A press anywhere else closes an open truth menu.
   document.addEventListener('pointerdown', (e) => {
+    menuClosedFor = null;
     if ((truthMenuFor === null && moveMenuFor === null && chooserFor === null && !priceMenuOpen) || (e.target as Element).closest('.place-menu, .truth-chip, .price-chip, .zone-empty')) return;
+    // A tap on the story itself only closes its menu: the click that follows must not open it again.
+    if (moveMenuFor !== null && (e.target as Element).closest(`[data-uid="${moveMenuFor}"]`)) menuClosedFor = moveMenuFor;
     truthMenuFor = null;
     moveMenuFor = null;
     chooserFor = null;
@@ -2636,6 +2640,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
           });
           el.addEventListener('click', (e) => {
             if (!isPhone() || busy || (e.target as Element).closest('button, .news-info, .place-menu')) return;
+            const closed = menuClosedFor === card.uid;
+            menuClosedFor = null;
+            if (closed) return;
             truthMenuFor = null;
             moveMenuFor = moveMenuFor === card.uid ? null : card.uid;
             render();

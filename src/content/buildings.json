@@ -2,8 +2,9 @@
   { "type": "factory", "name": "Завод", "count": 1, "jobs": 100, "size": 2, "color": "#8b9bb4" },
   { "type": "shop", "name": "Магазин", "names": ["«Колосок»", "«Ромашка»", "«Копейка»"], "count": 3, "jobs": 8, "size": 1, "color": "#feae34" },
   { "type": "entertainment", "name": "Бар", "names": ["«Якорь»", "«Подкова»"], "count": 2, "jobs": 6, "size": 1, "color": "#b55088" },
-  { "type": "hospital", "name": "Больница", "count": 1, "jobs": 12, "size": 2, "color": "#e43b44" },
-  { "type": "cityHall", "name": "Мэрия", "count": 1, "jobs": 8, "size": 2, "color": "#0099db" },
-  { "type": "factCheckers", "name": "Фактчекеры", "count": 1, "jobs": 6, "size": 1, "color": "#63c74d" },
+  { "type": "hospital", "name": "Больница", "count": 1, "jobs": 12, "size": 2, "color": "#e43b44", "closed": "закрылась" },
+  { "type": "cityHall", "name": "Мэрия", "count": 1, "jobs": 8, "size": 2, "color": "#0099db", "closed": "закрылась" },
+  { "type": "police", "name": "Полиция", "count": 1, "jobs": 6, "size": 1, "color": "#4b5bab", "closed": "закрылась" },
+  { "type": "factCheckers", "name": "Фактчекеры", "count": 1, "jobs": 6, "size": 1, "color": "#63c74d", "closed": "закрылись" },
   { "type": "home", "name": "Жилой дом", "count": 12, "jobs": 0, "size": 1, "color": "#c28569" }
 ]

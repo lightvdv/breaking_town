@@ -1,6 +1,7 @@
+import { crimePressure } from './crime';
 import { quitStained, stainedChoice } from './hunt';
 import { chance, int, next, pick, weightedPick, type RngState } from './rng';
-import { buildingName, clamp, groupOf } from './lookup';
+import { clamp, closedLine, groupOf } from './lookup';
 import type {
   Building,
   BuildingType,
@@ -107,7 +108,10 @@ export function computeMetrics(state: GameState, c: Content): CityMetrics {
   // Order falls with protests, fear of crime and the jobless who drift into it (CONCEPT.md §2.3).
   const unrest = active.filter((r) => r.protestTurns > 0 || r.fearTurns > 0).length;
   const jobless = active.filter((r) => r.job === null && groupOf(c, r.group).jobs.length > 0).length;
-  const order = n ? clamp(1 - (unrest + jobless * b.joblessCrime) / n) : 0;
+  // A town that lost its police station loses order on top (CONCEPT.md §5.6).
+  const police = state.buildings.filter((x) => x.type === 'police');
+  const lawless = police.length && !police.some((x) => x.open) ? b.policeClosedOrder : 0;
+  const order = n ? clamp(1 - (unrest + jobless * b.joblessCrime) / n - lawless) : 0;
   const w = b.cityIndexWeights;
   const cityIndex =
     100 *
@@ -144,6 +148,15 @@ export function applyCityEffect(state: GameState, rng: RngState, e: CityEffect):
     case 'money':
       for (const r of active) r.money = Math.max(0, r.money + e.amount);
       break;
+    case 'fear': {
+      // Real crime frightens more in a town already afraid (CONCEPT.md §5.6).
+      const share = e.amount * (1 + (state.crimeHeat + state.crimeBoost) * 4);
+      for (const r of active) if (chance(rng, share)) r.fearTurns = Math.max(r.fearTurns, 2);
+      break;
+    }
+    case 'crime':
+      state.crimeBoost += e.amount;
+      break;
     case 'layoff': {
       const targets = state.buildings.filter((x) => x.type === e.building && x.open);
       for (let i = 0; i < e.amount && targets.length; i++) layOffOne(state, rng, pick(rng, targets));
@@ -162,13 +175,19 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
   const openShops = shops.filter((x) => x.open);
   const openFuns = funs.filter((x) => x.open);
 
+  // In a town ridden with crime fear does not pass, and the scared move away (CONCEPT.md §5.6).
+  const pressure = crimePressure(state, c);
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
     const g = groupOf(c, r.group);
     if (r.protestTurns > 0) r.protestTurns--;
     // Scared of crime: stays at home, skips the bars and often the shop too.
     const scared = r.fearTurns > 0;
-    if (scared) r.fearTurns--;
+    if (scared && !chance(rng, pressure * b.fearHold)) r.fearTurns--;
+    if (scared && chance(rng, b.fearLeave * b.leaveScale)) {
+      leaveCity(r);
+      continue;
+    }
 
     if (r.job !== null) r.money += b.wage;
     else if (g.jobs.length > 0) {
@@ -218,12 +237,18 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
   for (const x of state.buildings) {
     if (!x.open || x.jobs === 0) continue;
     const staff = workers.get(x.id) ?? 0;
-    // A hunted place closes once half its people are gone (CONCEPT.md §3.6а).
+    // A hunted place closes once half its people are gone; a small one the scandal shuts down (CONCEPT.md §3.6а).
+    if (x.jobs <= b.stainShutdownJobs && (state.stains[x.id] ?? 0) >= b.stainShutdown) {
+      x.open = false;
+      for (const r of state.residents) if (r.job === x.id) r.job = null;
+      notes.push(closedLine(state, c, x.id));
+      continue;
+    }
     const minStaff = x.type === 'factory' ? x.jobs * b.factoryCloseShare : (state.stains[x.id] ?? 0) >= b.stainCloseMin ? x.jobs * b.stainCloseShare : 1;
     if (staff < minStaff) {
       x.open = false;
       for (const r of state.residents) if (r.job === x.id) r.job = null;
-      notes.push(`${buildingName(state, c, x.id)} закрылся`);
+      notes.push(closedLine(state, c, x.id));
     }
   }
 

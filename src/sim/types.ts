@@ -13,7 +13,8 @@ export type BuildingType =
   | 'entertainment'
   | 'hospital'
   | 'cityHall'
-  | 'factCheckers';
+  | 'factCheckers'
+  | 'police';
 export type Topic = 'factory' | 'food' | 'fun' | 'health' | 'power' | 'crime';
 /** 0 = правда, 1 = полуправда, 2 = ложь */
 export type TruthLevel = 0 | 1 | 2;
@@ -154,6 +155,8 @@ export interface UpgradeEffects {
   rivalStealMul?: number;
   /** Multiplies the impact of stories on these topics (a desk of the paper). */
   topicImpactMul?: Partial<Record<Topic, number>>;
+  /** Chance that a reporter without an assignment searches this topic (a desk's own reporter). */
+  topicFind?: Partial<Record<Topic, number>>;
 }
 
 export interface UpgradeDef {
@@ -203,7 +206,8 @@ export interface CardEffect {
 }
 
 export interface CityEffect {
-  type: 'mood' | 'money' | 'layoff';
+  /** fear: this share of residents is afraid for a few days; crime: the town's crime pressure grows for good (a gang, CONCEPT.md §5.6). */
+  type: 'mood' | 'money' | 'layoff' | 'fear' | 'crime';
   building?: BuildingType;
   amount: number;
 }
@@ -379,6 +383,8 @@ export interface BuildingDef {
   /** Footprint on the isometric map in tiles: 1 = 1×1, 2 = 2×2. */
   size: 1 | 2;
   color: string;
+  /** «закрылась» / «закрылись» when the name is not masculine (default «закрылся»). */
+  closed?: string;
 }
 
 export interface Balance {
@@ -477,12 +483,31 @@ export interface Balance {
   /** A place stained at least this much closes when its staff falls below `stainCloseShare` of its jobs. */
   stainCloseMin: number;
   stainCloseShare: number;
+  /** A small place (at most `stainShutdownJobs` jobs) stained this much is shut down by the scandal at once. */
+  stainShutdown: number;
+  stainShutdownJobs: number;
   /** Strikes at the rival (CONCEPT.md §8.4): share of its readers our issue of each level takes, among those it caught. */
   rivalSteal: [number, number, number, number];
   /** Luring its author away: the price (it grows by itself each time), how many, and its readers' trust lost. */
   rivalLureCost: number;
   rivalLureMax: number;
   rivalLureTrust: number;
+  /** Crime (CONCEPT.md §5.6): chance of a real crime a day = base + spiral × pressure (scared and jobless share), up to this many a day. */
+  crimeBase: number;
+  crimeSpiral: number;
+  crimeMaxEvents: number;
+  /** An open police station multiplies the pressure by this; a closed one costs this much order. */
+  policeCrimeMul: number;
+  policeClosedOrder: number;
+  /** Below this order a gang comes: the gang arc starts by itself. */
+  gangOrder: number;
+  /** Heat a believed crime story adds per impact × believed share; it cools by this share a day. The jobless count this much. */
+  crimeHeatGain: number;
+  crimeHeatDecay: number;
+  crimeJobless: number;
+  /** A scared resident's fear does not pass on a day with chance crime pressure × this; they leave the town with chance this × `leaveScale`. */
+  fearHold: number;
+  fearLeave: number;
   /** The town's mood falls by this when the campaign closes its target. */
   huntWinMood: number;
   /** Each day of the hunt in a row raises the fact-check risk of stories about its target by this share. */
@@ -1221,6 +1246,10 @@ export interface GameState {
   hunt: HuntState | null;
   /** How tainted a place is in people's eyes, by building id (0..1): customers stay away, workers quit. */
   stains: Record<number, number>;
+  /** Crime pressure added for good, by a gang that took the town (CONCEPT.md §5.6). */
+  crimeBoost: number;
+  /** How heated the town is about crime after our stories (0..1, cools down day by day). */
+  crimeHeat: number;
   /** Free cards from the upgrade deck won by tasks (CONCEPT.md §4.8). */
   vouchers: number;
   /** Sales minus upkeep of the last issue: the «прибыль в день» of tasks. */

@@ -38,6 +38,14 @@
       "variants": 1,
       "size": 1
     },
+    "police": {
+      "states": [
+        "active",
+        "closed"
+      ],
+      "variants": 1,
+      "size": 1
+    },
     "factory": {
       "states": [
         "active",
@@ -304,6 +312,13 @@
     "cityhall_meeting",
     "shop_expired",
     "bar_owner",
-    "kompromat_guardian"
+    "kompromat_guardian",
+    "street_robbery",
+    "kiosk_burglary",
+    "car_arson",
+    "police_bribes",
+    "police_understaffed",
+    "police_drunk",
+    "police_cuts"
   ]
 }

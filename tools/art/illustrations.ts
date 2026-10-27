@@ -1321,6 +1321,14 @@ scenes.kompromat_mayor = scenes.mayor_affair;
 scenes.kompromat_factory = scenes.factory_waste;
 scenes.kompromat_rival = scenes.debunk;
 scenes.kompromat_guardian = scenes.debunk;
+// Crime (CONCEPT.md §5.6): real crime and the police.
+scenes.street_robbery = scenes.crime_wave;
+scenes.kiosk_burglary = scenes.shop_robbery;
+scenes.car_arson = scenes.crime_wave;
+scenes.police_bribes = scenes.police_patrol;
+scenes.police_understaffed = scenes.police_patrol;
+scenes.police_drunk = scenes.police_patrol;
+scenes.police_cuts = scenes.police_patrol;
 // Campaign targets (CONCEPT.md §3.6а): stories about the fact-checkers, the city hall, a shop and a bar.
 scenes.factcheck_bias = scenes.library_reopen;
 scenes.factcheck_report = scenes.library_reopen;

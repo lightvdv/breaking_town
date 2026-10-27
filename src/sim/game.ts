@@ -1,3 +1,4 @@
+import { crimeEvents, heatCrime } from './crime';
 import { pressHunt, settleHunt } from './hunt';
 import { createRng, int, weightedPick, type RngState } from './rng';
 import {
@@ -16,7 +17,7 @@ import { assignTasks, updateTasks } from './tasks';
 import { advanceTwist, settleAudit } from './twists';
 import { assignPeople, snapshotPeople, updatePeople } from './people';
 import { createBuildings } from './map';
-import { averageTrust, groupOf, templateOf } from './lookup';
+import { averageTrust, groupOf, templateOf, closedLine } from './lookup';
 import { getModifiers, placementSlots, type Modifiers } from './modifiers';
 import { effectiveTier, issueLevel, issueScore, maxDistortion, minDistortion, processLateExposures, publish, storyEffect, verifyNews, type PublishedNews } from './news';
 import { advanceRelations, createTension, fillTitle, pairKeys, pairOf, tensionLevel } from './relations';
@@ -119,6 +120,8 @@ export function createGame(
     twist: null,
     budgetCut: 0,
     hunt: null,
+    crimeBoost: 0,
+    crimeHeat: 0,
     stains: {},
     vouchers: 0,
     lastProfit: 0,
@@ -163,6 +166,8 @@ function generateEvents(state: GameState, c: Content, rng: RngState): CardTempla
     state.todayEvents.push(tpl.titles[0] ?? tpl.id);
     out.push(tpl);
   }
+  // Fear makes itself come true: real crime on top (CONCEPT.md §5.6).
+  out.push(...crimeEvents(state, c, rng, out));
   return out;
 }
 
@@ -196,7 +201,8 @@ function startTurn(state: GameState, c: Content): { notes: string[]; twist: { st
   const dug = advanceInvestigations(state, c, state.rng);
   const { cards, finds, missed } = findNews(state, c, state.rng, getModifiers(state, c), events, pairs);
   const incidentTitles = new Map(relations.incidents.map((i) => [i.templateId, i.title]));
-  state.missedEvents = missed.map((t) => incidentTitles.get(t.id) ?? t.titles[0] ?? t.id);
+  // A rumor stage of an arc has no true title: its mildest one is what people say.
+  state.missedEvents = missed.map((t) => incidentTitles.get(t.id) ?? t.titles.find((x) => x !== null) ?? t.id);
   state.hand = [...state.hand, ...dug.cards, ...cards];
   state.lastFinds = [...dug.finds, ...finds];
   // Save mode: the rival writes today's issue; it comes out with ours (CONCEPT.md §8).
@@ -336,6 +342,8 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   // The hunt against a place (CONCEPT.md §3.6а): today's hits stain it (after the fact-check, which
   // looks at its stories as hard as the days in a row so far deserve).
   const huntTarget = state.hunt?.building ?? null;
+  // Believed crime stories heat the town up (CONCEPT.md §5.6).
+  heatCrime(state, c, published);
   const pressed = pressHunt(state, c, published, (n) => storyEffect(c, state.hand.find((x) => x.uid === n.pub.cardUid)!, n.pub.distortion));
   const cleanStreak = advanceCleanStreak(state, c, published);
   verifyRival(state, c, rivalRng, rivalNews);
@@ -466,7 +474,7 @@ function findHighlights(
   const left = state.residents.filter((r) => r.status === 'left' && before.activeBefore.has(r.id)).length;
   if (left >= b.highlightLeaveMin) out.push({ kind: 'exodus', title: `Из города уехали ${left} человек`, building: null, groups: [] });
   for (const x of state.buildings) {
-    if (!x.open && before.openBefore.has(x.id)) out.push({ kind: 'closed', title: `${buildingName(c, x.type)} закрылся`, building: x.id, groups: [] });
+    if (!x.open && before.openBefore.has(x.id)) out.push({ kind: 'closed', title: closedLine(state, c, x.id), building: x.id, groups: [] });
   }
   if (before.reconciliationStarted) {
     out.push({
@@ -479,6 +487,3 @@ function findHighlights(
   return out.slice(0, 3);
 }
 
-function buildingName(c: Content, type: string): string {
-  return c.buildings.find((x) => x.type === type)?.name ?? type;
-}

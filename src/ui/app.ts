@@ -2,10 +2,13 @@ import { ASSET_BASE } from '../assets';
 import { CityScene, REACTION_ICON, type HoverTarget } from '../render/scene';
 import {
   averageTrust,
+  closedLine,
   huntBonus,
   endHunt,
   isHuntStory,
   startHunt,
+  crimePressure,
+  policeLost,
   buildingDefOf,
   buildingName,
   cancelInvestigation,
@@ -966,7 +969,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...r.tasks.done.map((id) => h('li', { class: 'good' }, `✓ Задание выполнено: ${taskOf(c, id).title} (${prizeText(taskOf(c, id))})`)),
       ...r.tasks.failed.map((id) => h('li', { class: 'bad' }, `✗ Задание провалено: ${taskOf(c, id).title}`)),
       ...twistLines(r).map((x) => h('li', {}, x)),
-      ...(r.hunt?.won ? [h('li', { class: 'good' }, `🎯 Травля удалась: ${r.hunt.won} закрылся. Город потрясён`)] : []),
+      ...(r.hunt?.won ? [h('li', { class: 'good' }, `🎯 Травля удалась: ${lowerFirst(r.hunt.won)}. Город потрясён`)] : []),
     ];
     return new Promise((done) => {
       const finish = () => {
@@ -1324,6 +1327,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...state.missedEvents.filter((e) => !state.todayEvents.includes(e)).map((e) => h('div', { class: 'event missed', title: 'Свободного репортёра не нашлось' }, `• ${e} — никто не написал`)),
       ...(rec ? [h('div', { class: 'event peace' }, `☮ Примирение: ${pairNames(rec.pair, ' и ')} · ещё ${rec.turnsLeft} ${turnsWord(rec.turnsLeft)}`)] : []),
       ...(mayorName() ? [h('div', { class: 'event' }, `Мэр: ${mayorName()}`)] : []),
+      // Crime (CONCEPT.md §5.6): how ripe the town is, the gang that stayed, a town without police.
+      ...crimeLines().map((t) => h('div', { class: 'event crime' }, t)),
       // Investigations under way (CONCEPT.md §3.3а): who digs under whom, and the day before it is ready.
       ...state.investigations.map((x) => {
         const who = reporterOf(c, x.reporterId).name;
@@ -1331,6 +1336,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
         return h('div', { class: 'event digging' }, x.turnsLeft <= 1 ? `⛏ Завтра: эксклюзив про ${whom} (${who})` : `⛏ ${who} копает под ${whom} — ещё ${x.turnsLeft} ${turnsWord(x.turnsLeft)}`);
       }),
     );
+  }
+
+  /** «Преступность: неспокойно», «Банда держит улицы», «В городе нет полиции». */
+  function crimeLines(): string[] {
+    const p = crimePressure(state, c);
+    const out: string[] = [];
+    if (p >= 0.1) out.push(`🚨 Преступность: ${p >= 0.4 ? 'разгул' : p >= 0.2 ? 'растёт' : 'неспокойно'}`);
+    if (state.crimeBoost > 0) out.push('🚨 Банда держит улицы');
+    if (policeLost(state)) out.push('🚨 В городе нет полиции');
+    return out;
   }
 
   const pairNames = (key: string, sep: string) =>
@@ -1547,7 +1562,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const place = e.building !== undefined && state.buildings[e.building] ? buildingName(state, c, e.building) : 'работа';
     switch (e.kind) {
       case 'lostJob':
-        return state.buildings[e.building ?? -1]?.open === false ? `${place} закрылся — остал${p.female ? 'ась' : 'ся'} без работы` : `потерял${a} работу (${lowerFirst(place)})`;
+        return state.buildings[e.building ?? -1]?.open === false ? `${closedLine(state, c, e.building!)} — остал${p.female ? 'ась' : 'ся'} без работы` : `потерял${a} работу (${lowerFirst(place)})`;
       case 'gotJob':
         return `${p.female ? 'нашла' : 'нашёл'} работу: ${lowerFirst(place)}`;
       case 'left':

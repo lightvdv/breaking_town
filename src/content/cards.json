@@ -4593,9 +4593,8 @@
     "requires": "shop",
     "witness": "shop",
     "cityEffect": {
-      "type": "layoff",
-      "building": "shop",
-      "amount": 3
+      "type": "crime",
+      "amount": 0.1
     },
     "softTitles": [
       "Полиция взяла улицы под контроль",
@@ -5441,6 +5440,319 @@
     "tiers": [
       2,
       3
+    ]
+  },
+  {
+    "id": "street_robbery",
+    "source": "event",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Вечером на улице ограбили прохожего",
+      "Грабители выходят на охоту каждый вечер",
+      "На улицах грабят прямо средь бела дня"
+    ],
+    "effects": [
+      {
+        "type": "fear",
+        "strength": 0.05,
+        "duration": 2
+      },
+      {
+        "type": "fear",
+        "strength": 0.18,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.32,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "intelligentsia"
+    ],
+    "interest": 0.6,
+    "engagement": 0.6,
+    "weight": 3,
+    "cityEffect": {
+      "type": "fear",
+      "amount": 0.04
+    },
+    "tiers": [
+      1,
+      3
+    ],
+    "softTitles": [
+      "Грабителя прохожего быстро задержали",
+      "На улицах спокойно, полиция на посту"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "kiosk_burglary",
+    "source": "event",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Ночью вскрыли магазин",
+      "Магазины грабят ночь за ночью",
+      "Торговцы боятся открываться: грабят всех"
+    ],
+    "effects": [
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.05,
+        "duration": 2
+      },
+      {
+        "type": "fear",
+        "strength": 0.15,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.3,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "workers",
+      "pensioners"
+    ],
+    "interest": 0.55,
+    "engagement": 0.5,
+    "weight": 2,
+    "requires": "shop",
+    "witness": "shop",
+    "cityEffect": {
+      "type": "fear",
+      "amount": 0.03
+    },
+    "tiers": [
+      1,
+      2
+    ],
+    "softTitles": [
+      "Взломщика магазина уже ищут",
+      "Магазины в безопасности"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "car_arson",
+    "source": "event",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Ночью во дворе сгорела машина",
+      "Во дворах жгут машины",
+      "По ночам город горит: поджигатели на свободе"
+    ],
+    "effects": [
+      {
+        "type": "fear",
+        "strength": 0.06,
+        "duration": 2
+      },
+      {
+        "type": "fear",
+        "strength": 0.2,
+        "duration": 3
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.05
+      }
+    ],
+    "audience": [
+      "workers",
+      "intelligentsia"
+    ],
+    "interest": 0.6,
+    "engagement": 0.6,
+    "weight": 2,
+    "cityEffect": {
+      "type": "fear",
+      "amount": 0.05
+    },
+    "tiers": [
+      1,
+      3
+    ],
+    "softTitles": [
+      "Машина сгорела из-за неисправной проводки",
+      "Поджогов в городе нет"
+    ],
+    "softEffects": [
+      null,
+      {
+        "type": "moodUp",
+        "strength": 0.03
+      }
+    ]
+  },
+  {
+    "id": "police_bribes",
+    "source": "rumor",
+    "topic": "crime",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Полиция берёт деньги с ларёчников",
+      "Полиция крышует банды"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "fear",
+        "strength": 0.15,
+        "duration": 3
+      },
+      {
+        "type": "protest",
+        "strength": 0.2
+      }
+    ],
+    "audience": [
+      "workers",
+      "pensioners"
+    ],
+    "interest": 0.65,
+    "engagement": 0.6,
+    "weight": 2,
+    "witness": "police",
+    "requires": "police",
+    "tiers": [
+      1,
+      3
+    ]
+  },
+  {
+    "id": "police_understaffed",
+    "source": "fact",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "В полиции сменился начальник",
+      "Полиция не выезжает на вызовы",
+      "Полиция бросила город на произвол банд"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "fear",
+        "strength": 0.15,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.3,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "intelligentsia"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 2,
+    "witness": "police",
+    "requires": "police",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "police_drunk",
+    "source": "rumor",
+    "topic": "crime",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Патрульные пьют на дежурстве",
+      "Пьяные полицейские избили прохожего"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "fear",
+        "strength": 0.12,
+        "duration": 3
+      },
+      {
+        "type": "protest",
+        "strength": 0.2
+      }
+    ],
+    "audience": [
+      "youth",
+      "workers"
+    ],
+    "interest": 0.6,
+    "engagement": 0.6,
+    "weight": 2,
+    "witness": "police",
+    "requires": "police",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "police_cuts",
+    "source": "fact",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Полиции урезали бюджет на бензин",
+      "Патрули отменены: полиции не на что ездить",
+      "Полиция распущена, город без защиты"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "fear",
+        "strength": 0.15,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.3,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 2,
+    "witness": "police",
+    "requires": "police",
+    "tiers": [
+      0,
+      2
     ]
   }
 ]

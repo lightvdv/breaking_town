@@ -5477,6 +5477,10 @@ button.publish.nudge {
   margin-top: 6px;
 }
 
+.city-events .event.crime {
+  color: #f08a8f;
+}
+
 .city-events .event.digging {
   color: var(--accent);
 }

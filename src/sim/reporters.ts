@@ -121,7 +121,9 @@ export function findNews(
     candidates = notRecent.length ? notRecent : oldestSeen(candidates);
     // The player's assignment comes first, then the reporter's own specialties.
     const assigned = state.reporterTopics[r.id] ?? [];
-    const focus = assigned.length ? (chance(rng, b.assignFocus) ? assigned : []) : s.topics.length && chance(rng, b.topicFocus) ? s.topics : [];
+    // A desk's own reporter (CONCEPT.md §3.5): an unassigned search may go to its topic.
+    const desk = (Object.entries(mods.topicFind) as [Topic, number][]).find(([, p]) => chance(rng, p));
+    const focus = assigned.length ? (chance(rng, b.assignFocus) ? assigned : []) : desk ? [desk[0]] : s.topics.length && chance(rng, b.topicFocus) ? s.topics : [];
     if (focus.length) {
       const focused = candidates.filter((t) => focus.includes(t.topic));
       if (focused.length) candidates = focused;

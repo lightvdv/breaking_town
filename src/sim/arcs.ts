@@ -1,3 +1,4 @@
+import { gangDue } from './crime';
 import { applyCityEffect } from './city';
 import { templateOf } from './lookup';
 import { chance, pick, type RngState } from './rng';
@@ -44,8 +45,16 @@ export function advanceArcs(state: GameState, c: Content, rng: RngState): { even
     notes.push(`Сюжет «${def.name}» закончился ${bad ? 'плохо' : 'хорошо'}`);
     state.arcs = state.arcs.filter((x) => x !== arc);
   }
-  if (state.turn >= b.arcStartTurn && state.arcs.length < b.arcsMax && chance(rng, b.arcChance)) {
-    const pool = c.arcs.filter((a) => !state.arcsDone.includes(a.id) && canStart(state, a));
+  // A gang comes by itself once order breaks down (CONCEPT.md §5.6).
+  const gang = c.arcs.find((a) => a.id === 'street_gang');
+  if (gang && gangDue(state, c) && canStart(state, gang) && !state.arcs.some((x) => x.id === gang.id)) {
+    state.arcs.push({ id: gang.id, stage: 1, pressure: 0, startTurn: state.turn });
+    state.arcsDone.push(gang.id);
+    events.push(templateOf(c, gang.stages[0]));
+    notes.push('В городе завелась банда');
+  } else if (state.turn >= b.arcStartTurn && state.arcs.length < b.arcsMax && chance(rng, b.arcChance)) {
+    // The gang never comes by chance: only a town whose order broke down gets one (CONCEPT.md §5.6).
+    const pool = c.arcs.filter((a) => a.id !== 'street_gang' && !state.arcsDone.includes(a.id) && canStart(state, a));
     if (pool.length) {
       const def = pick(rng, pool);
       state.arcs.push({ id: def.id, stage: 1, pressure: 0, startTurn: state.turn });

@@ -29,6 +29,7 @@ import {
   playTurn,
   previewPublication,
   purchase,
+  setReporterTopics,
   rankedPlacements,
   totalUpkeep,
   pairKey,
@@ -261,9 +262,25 @@ function manageInvestigations(s: GameState): void {
   startInvestigation(s, content, r, 'workers');
 }
 
+/**
+ * The crime path (CONCEPT.md §5.6): the thoughtful bot whose reporters chase crime, which buys the
+ * crime desk first and hounds the police station; it prints everything else the way `mixed` does.
+ */
+function criminal(s: GameState): Decision {
+  for (const id of s.reporters) if (!(s.reporterTopics[id] ?? []).includes('crime')) setReporterTopics(s, content, id, ['crime']);
+  const desk = listPurchases(s, content).find((p) => p.id === 'crime_desk' && p.affordable && p.unlocked);
+  if (desk && s.money - desk.cost >= totalUpkeep(s, content) * 2) purchase(s, content, desk.id);
+  if (!s.hunt && s.turn >= 3) {
+    const police = s.buildings.find((x) => x.type === 'police' && x.open);
+    if (police) startHunt(s, police.id);
+  }
+  return mixed(s);
+}
+
 const strategies: Record<string, Strategy> = {
   mixed,
   agitator,
+  criminal,
   honest: () => ({ distortion: 'none', placement: 0, harmfulOnly: false }),
   liar: () => ({ distortion: 'max', placement: 2, harmfulOnly: true }),
   moderate: () => ({ distortion: 'half', placement: 1, harmfulOnly: true }),
@@ -418,6 +435,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
     }
   }
   if (trace) console.log(s.outcome, 'upgrades:', s.upgrades.join(', '));
+  if (process.env.BOT_STATS) console.error('STAT', strategy.name, s.buildings.filter((x) => !x.open && x.jobs > 0).map((x) => x.type).join(','), s.arcsDone.includes('street_gang') ? 'gang' : '', s.crimeBoost > 0 ? 'gangStayed' : '');
   return { outcome: s.outcome, turns: s.turn, cityIndex: s.metrics.cityIndex };
 }
 

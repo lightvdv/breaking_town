@@ -36,6 +36,11 @@ export function buildingName(state: GameState, c: Content, id: number): string {
   return def.names?.length ? `${def.name} ${def.names[k % def.names.length]}` : def.name;
 }
 
+/** «Больница закрылась», «Фактчекеры закрылись», «Завод закрылся». */
+export function closedLine(state: GameState, c: Content, id: number): string {
+  return `${buildingName(state, c, id)} ${buildingDefOf(c, state.buildings[id].type).closed ?? 'закрылся'}`;
+}
+
 /** Share of a group that follows at least one owned channel, 0..1. */
 export function coverageOf(state: GameState, group: GroupDef): number {
   let miss = 1;

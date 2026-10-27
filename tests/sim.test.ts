@@ -11,6 +11,7 @@ import { giveTask, scoreOf, taskOf, updateTasks } from '../src/sim/tasks';
 import { twistMods } from '../src/sim/twists';
 import { withTown } from '../src/sim/town';
 import { settleHunt } from '../src/sim/hunt';
+import { crimeEvents, crimePressure, gangDue } from '../src/sim/crime';
 import {
   averageTrust,
   createGame,
@@ -141,8 +142,8 @@ describe('game', () => {
     expect(s.turn).toBe(1);
     expect(s.reporters).toEqual(content.balance.startReporters);
     expect(s.hand.length).toBeGreaterThanOrEqual(1);
-    // One search per reporter plus one write-up per event of the day.
-    expect(s.lastFinds.length).toBe(s.reporters.length + s.todayEvents.length);
+    // One find per reporter: a write-up of an event of the day or a search of their own.
+    expect(s.lastFinds.length).toBe(s.reporters.length);
     expect(s.ownedChannels).toEqual(['newspaper']);
     expect(s.outcome).toBeNull();
   });
@@ -874,6 +875,8 @@ describe('group relations', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
       const s = createGame(c, seed);
       for (const k of pairKeys(c)) s.tension[k] = 70;
+      // Enough hands for the day's crime and the incidents both (CONCEPT.md §5.6).
+      for (const id of c.reporters.slice(0, 4).map((x) => x.id)) hire(s, id);
       const r = playTurn(s, c, { publish: [] });
       incidents += s.todayIncidents.length;
       fights += r.highlights.filter((h) => h.kind === 'fight').length;
@@ -1346,6 +1349,30 @@ describe('attacking the town (CONCEPT.md §3.5, §3.6а, §8.4)', () => {
     startInvestigation(s, content, s.reporters[0], RIVAL_DIG);
     for (let i = 0; i < 6 && !s.hand.some((x) => x.templateId === 'kompromat_guardian'); i++) playTurn(s, content, { publish: [] });
     expect(s.hand.some((x) => x.templateId === 'kompromat_guardian')).toBe(true);
+  });
+});
+
+describe('crime (CONCEPT.md §5.6)', () => {
+  it('heat breeds real crime, the police hold it back, a lost police costs order, a broken order brings the gang', () => {
+    const s = createGame(content, 31);
+    const calm = crimePressure(s, content);
+    s.crimeHeat = 0.5;
+    const hot = crimePressure(s, content);
+    expect(hot).toBeGreaterThan(calm);
+    const police = s.buildings.find((x) => x.type === 'police')!;
+    police.open = false;
+    expect(crimePressure(s, content)).toBeGreaterThan(hot);
+    // A hot town without police has real crime nearly every day.
+    let crimes = 0;
+    for (let i = 0; i < 20; i++) crimes += crimeEvents(s, content, s.rng, []).length, s.lastSeen = {};
+    expect(crimes).toBeGreaterThan(10);
+    // Order is lower without the police.
+    const order = s.metrics.order;
+    playTurn(s, content, { publish: [] });
+    expect(s.metrics.order).toBeLessThan(Math.max(order, 1));
+    s.arcsDone = s.arcsDone.filter((x) => x !== 'street_gang');
+    s.metrics.order = content.balance.gangOrder - 0.1;
+    expect(gangDue(s, content)).toBe(true);
   });
 });
 

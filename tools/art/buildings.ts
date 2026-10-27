@@ -193,6 +193,33 @@ const factCheckers: BuildingArt = {
   },
 };
 
+const police: BuildingArt = {
+  type: 'police',
+  size: 1,
+  states: ['active', 'closed'],
+  variants: 1,
+  draw(r, state, _variant, frame) {
+    const d = pad(r, 1);
+    const closed = state === 'closed';
+    const h = 19;
+    box(r, d, h, { top: 'slate', left: 'navyBlue', right: 'blue', rim: 'darkGrey' });
+    // A white stripe around the station, windows above it and a door.
+    for (const side of ['left', 'right'] as const) {
+      wallRect(r, d, side, 0, 8, 20, 2, () => (closed ? 'grey' : 'white'));
+    }
+    for (const u of [4, 11]) window(r, d, 'left', u, 12, !closed, closed);
+    window(r, d, 'right', 11, 12, !closed, closed);
+    door(r, d, 'right', 3, 'navyBlue', closed);
+    // A star badge and a flashing light on the roof: red and blue in turn.
+    const top = topOf(d, h);
+    const y0 = upperY(top, top.cx) - 2;
+    r.art(top.cx - 3, y0, ['...x...', '..xxx..', 'xxxxxxx', '.xxxxx.', '.xx.xx.'], { x: closed ? 'darkGrey' : 'amber' });
+    const ly = upperY(top, top.cx + 9) + 3;
+    r.rect(top.cx + 8, ly - 3, 3, 3, closed ? 'darkGrey' : frame % 2 === 0 ? 'hotRed' : 'blue');
+    r.rect(top.cx + 8, ly, 3, 1, 'darkGrey');
+  },
+};
+
 const factory: BuildingArt = {
   type: 'factory',
   size: 2,
@@ -323,4 +350,4 @@ const cityHall: BuildingArt = {
   },
 };
 
-export const buildingArts: BuildingArt[] = [home, shop, bar, factCheckers, factory, hospital, cityHall];
+export const buildingArts: BuildingArt[] = [home, shop, bar, factCheckers, police, factory, hospital, cityHall];

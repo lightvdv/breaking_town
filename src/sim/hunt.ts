@@ -1,4 +1,4 @@
-import { buildingName, clamp } from './lookup';
+import { clamp, closedLine } from './lookup';
 import type { Modifiers } from './modifiers';
 import { isHarmful, type PublishedNews } from './news';
 import { chance, type RngState } from './rng';
@@ -64,7 +64,8 @@ export function pressHunt(state: GameState, c: Content, published: PublishedNews
     if (!card || !isHuntStory(state, card, effectOf(n))) continue;
     hit = true;
     const believed = n.report.reached ? n.report.believed / n.report.reached : 0;
-    stain = clamp(stain + b.huntStain * n.impact * believed);
+    // The story's own strength, not the difficulty's scale of impact (`impactNorm`).
+    stain = clamp(stain + b.huntStain * n.impact * b.impactNorm * believed);
   }
   state.stains[camp.building] = stain;
   if (hit) {
@@ -95,7 +96,7 @@ export function quitStained(state: GameState, c: Content, rng: RngState): void {
 export function settleHunt(state: GameState, c: Content): string | null {
   const camp = state.hunt;
   if (!camp || state.buildings[camp.building].open) return null;
-  const name = buildingName(state, c, camp.building);
+  const name = closedLine(state, c, camp.building);
   for (const r of state.residents) if (r.status === 'active') r.mood = clamp(r.mood - c.balance.huntWinMood);
   state.hunt = null;
   return name;

@@ -36,6 +36,8 @@ export interface Modifiers {
   rivalStealMul: number;
   /** Impact of stories by topic: the paper's desks (CONCEPT.md §3.5). */
   topicImpactMul: Partial<Record<Topic, number>>;
+  /** Chance a free reporter searches this topic: the desk's own reporter (CONCEPT.md §3.5). */
+  topicFind: Partial<Record<Topic, number>>;
   channels: Record<ChannelId, ChannelMods>;
 }
 
@@ -66,6 +68,7 @@ export function modifiersOf(c: Content, upgrades: string[]): Modifiers {
     huntFindAdd: 0,
     rivalStealMul: 1,
     topicImpactMul: {},
+    topicFind: {},
     channels: {},
   };
   for (const ch of c.channels) m.channels[ch.id] = { reachAdd: 0, reachMul: 1, adRateAdd: 0, upkeepAdd: 0, frontReadMul: 1, groupReach: {} };
@@ -91,6 +94,7 @@ export function modifiersOf(c: Content, upgrades: string[]): Modifiers {
     m.huntFindAdd += e.huntFindAdd ?? 0;
     m.rivalStealMul *= e.rivalStealMul ?? 1;
     for (const [t, v] of Object.entries(e.topicImpactMul ?? {}) as [Topic, number][]) m.topicImpactMul[t] = (m.topicImpactMul[t] ?? 1) * v;
+    for (const [t, v] of Object.entries(e.topicFind ?? {}) as [Topic, number][]) m.topicFind[t] = Math.max(m.topicFind[t] ?? 0, v);
     for (const [g, v] of Object.entries(e.groupChurn ?? {})) m.groupChurn[g] = (m.groupChurn[g] ?? 0) + (v ?? 0);
     if (e.channel) {
       const cm = m.channels[e.channel];

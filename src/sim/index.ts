@@ -8,7 +8,7 @@ export { cityStateOf, wealthOf } from './city';
 export { getModifiers, placementSlots, rankedPlacements, type Modifiers } from './modifiers';
 export { previewPublication, storyEffect, cardTruth, effectiveTier, framingOf, isHarmful, issueLevel, limitSensations, issueScore, isSoothed, maxDistortion, minDistortion, outletReach, storyTitle, type IssueStory, type PublicationPreview } from './news';
 export { createTension, fillTitle, pairKey, pairKeys, pairOf, startTension, tensionLevel } from './relations';
-export { averageTrust, rivalStarted, buildingDefOf, buildingName, channelOf, groupOf, templateOf } from './lookup';
+export { averageTrust, closedLine, rivalStarted, buildingDefOf, buildingName, channelOf, groupOf, templateOf } from './lookup';
 export { validateContent } from './validateContent';
 export { DEBUNK_TEMPLATE, debunkTargets, lureBlock, lureCost, lureRivalAuthor, rivalReaders, rivalTrust, setRivalWatch } from './rival';
 export { ARC_DAYS, arcInfo, arcLean, arcOf } from './arcs';
@@ -23,3 +23,4 @@ export { huntBonus, huntTargets, endHunt, isHuntStory, startHunt } from './hunt'
 export { electionLeader, runningTwist, twistOf } from './twists';
 export { isRoadTile, mapSizeFor } from './map';
 export { abilitiesOf, abilityBlock, advanceShop, dealShop, deckCards, forkChoice, onSale, openForks, refreshShop, useAbility } from './shop';
+export { crimePressure, policeLost } from './crime';

@@ -41,7 +41,7 @@
     "share": 0.15,
     "skepticism": 0.55,
     "channels": { "newspaper": 0.7 },
-    "jobs": ["hospital", "cityHall", "factCheckers", "shop"],
+    "jobs": ["hospital", "cityHall", "factCheckers", "police", "shop"],
     "pension": 0,
     "color": "#7bd389",
     "forms": { "one": "интеллигент", "oneAcc": "интеллигента", "oneDat": "интеллигенту", "oneIns": "интеллигентом", "many": "интеллигенты", "manyGen": "интеллигентов", "manyDat": "интеллигентам", "manyIns": "интеллигентами" },

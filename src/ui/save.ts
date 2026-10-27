@@ -75,6 +75,8 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.twist ??= null;
     s.budgetCut ??= 0;
     s.hunt ??= null;
+    s.crimeBoost ??= 0;
+    s.crimeHeat ??= 0;
     s.stains ??= {};
     s.vouchers ??= 0;
     s.lastProfit ??= 0;

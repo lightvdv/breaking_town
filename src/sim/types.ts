@@ -812,6 +812,10 @@ export interface TaskDef {
   prize?: TaskPrize;
   /** A twist's task (the audit): never among the ordinary tasks; failing it costs this much upkeep a day. */
   penalty?: number;
+  /** How to do it, in a line under the task (CONCEPT.md §4.8). */
+  hint?: string;
+  /** Which stories help (any of these): the «Какие новости?» button lights them up in the issue. */
+  match?: { topics?: Topic[]; effects?: CardEffect['type'][]; audience?: GroupId[]; conflict?: boolean; harmful?: boolean; minTier?: number };
   twist?: boolean;
 }
 

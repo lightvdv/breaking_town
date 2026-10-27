@@ -38,6 +38,8 @@ export interface PublicationPreview {
   exposureRisk: number;
   /** Conflict stories: the pair and how much its tension would move if a tenth of the pair believed. */
   tension: { pair: string; delta: number } | null;
+  /** How many readers are expected to believe it, without word of mouth (the truth menu, CONCEPT.md §7.3). */
+  believers: number;
 }
 
 /**
@@ -222,7 +224,20 @@ export function previewPublication(
     reachChance: outletReach(state, c, pub.placement),
     exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25) * reporterCheckMul(state, c, card) * huntWatch(state, c, card, storyEffect(c, card, pub.distortion)),
     tension: card.conflict ? { pair: pairKey(c, ...card.conflict), delta: tensionShift(state, c, card, pub.distortion, impact, 0.1) } : null,
+    believers: expectedBelievers(state, c, mods, tpl, truth, pub.placement),
   };
+}
+
+/** Expected believers among our readers: each reads it by its place in the paper and believes it by their trust. */
+function expectedBelievers(state: GameState, c: Content, mods: Modifiers, tpl: CardTemplate, truth: TruthLevel, placement: Placement): number {
+  const frontRead = Math.max(1, ...state.ownedChannels.map((ch) => mods.channels[ch]?.frontReadMul ?? 1));
+  const read = c.balance.placementRead[placement] * (placement === 2 ? frontRead : 1);
+  let sum = 0;
+  for (const r of state.residents) {
+    if (r.status !== 'active' || followedChannels(state, r).length === 0) continue;
+    sum += read * beliefChance(state, c, mods, r, tpl, truth);
+  }
+  return sum;
 }
 
 /** How much a conflict story moves its pair's tension, given the share of the pair that believed it. */

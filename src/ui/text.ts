@@ -114,6 +114,32 @@ export function effectText(c: Content, e: CardEffect | null, target?: string): s
   }
 }
 
+/** The effect in a few words for the truth menu (CONCEPT.md §7.3): what the believers will do. */
+export function effectShort(c: Content, e: CardEffect | null): string {
+  if (!e) return 'ничего не изменит';
+  const building = e.building ? buildingDefOf(c, e.building).name.toLowerCase() : '';
+  switch (e.type) {
+    case 'quitJob':
+      return `уволятся: ${building}`;
+    case 'avoid':
+      return `будут обходить: ${building}`;
+    case 'leaveCity':
+      return 'задумаются об отъезде';
+    case 'protest':
+      return 'выйдут протестовать';
+    case 'moodDown':
+      return 'расстроятся';
+    case 'moodUp':
+      return 'обрадуются — городу лучше';
+    case 'debunk':
+      return 'передумают';
+    case 'fear':
+      return 'будут бояться выходить';
+    case 'stigma':
+      return 'ополчатся на группу';
+  }
+}
+
 /** The rival paper of each mode in the forms the interface needs (CONCEPT.md §8). */
 export const rivalNames: Record<RivalKind, { name: string; short: string; gen: string; ins: string }> = {
   tabloid: { name: 'Вечерний Набат', short: 'Набат', gen: 'Набата', ins: 'Набатом' },

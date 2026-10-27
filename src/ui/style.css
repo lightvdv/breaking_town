@@ -4185,6 +4185,23 @@ button.publish.level-3.bump-up {
   cursor: pointer;
 }
 
+.guide-go {
+  align-self: center;
+  margin-left: auto;
+  padding: 6px 10px;
+  background: #b5531a;
+  color: #fff6c8;
+  border: 0;
+  border-radius: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.guide-go + .guide-ok {
+  margin-left: 6px;
+}
+
 .guide-ok {
   align-self: center;
   margin-left: auto;
@@ -5987,5 +6004,97 @@ span.hunt-chip {
     margin-left: 6px;
     padding: 1px 7px 0;
     border-width: 2px;
+  }
+}
+
+/* ---------- For or against the goal (CONCEPT.md §7.3) ---------- */
+.today-line .goal-word.for {
+  color: #2f7d4f;
+  font-weight: 700;
+}
+
+.today-line .goal-word.against {
+  color: #b8262e;
+  font-weight: 700;
+}
+
+.masthead.mode-destroy .issue-stamp.stamp-clean {
+  color: #8a7a66;
+  opacity: 0.45;
+}
+
+.help-chip {
+  flex: none;
+  padding: 3px 8px;
+  font: 700 12px/18px var(--font);
+  white-space: nowrap;
+  color: #8c1f2a;
+  border: 1px dashed #b8262e;
+  border-radius: 6px;
+  cursor: help;
+}
+
+.at-0 .help-chip,
+.at-out .help-chip {
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.truth-menu .opt-effect {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  color: #6b5a4a;
+}
+
+.truth-menu .opt-effect.for {
+  color: #2f7d4f;
+  font-weight: 700;
+}
+
+.truth-menu .opt-effect.against {
+  color: #b8262e;
+}
+
+/* An empty place with no story left to put in it calls for another reporter (CONCEPT.md §7.3). */
+.zone-empty.hire {
+  border-color: #b5531a;
+  color: #b5531a;
+  font-weight: 700;
+}
+
+/* Task hints (CONCEPT.md §4.8): how to do it, and the stories that help lit up in the issue. */
+.task-hint {
+  flex-basis: 100%;
+  padding-left: 22px;
+  font-size: 12px;
+  color: #6b5a4a;
+}
+
+.task-find {
+  margin-left: 8px;
+  padding: 1px 8px;
+  font: 700 12px/16px var(--font);
+  color: var(--paper-ink);
+  background: transparent;
+  border: 1px solid var(--paper-ink);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.task-find.on {
+  color: #fff6c8;
+  background: var(--paper-ink);
+}
+
+.news.task-match {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  animation: task-glow 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes task-glow {
+  to {
+    outline-color: rgba(254, 174, 52, 0.35);
   }
 }

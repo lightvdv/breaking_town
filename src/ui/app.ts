@@ -2,6 +2,7 @@ import { ASSET_BASE } from '../assets';
 import { CityScene, REACTION_ICON, type HoverTarget } from '../render/scene';
 import {
   averageTrust,
+  isHarmful,
   closedLine,
   huntBonus,
   endHunt,
@@ -111,6 +112,7 @@ import {
   type NewsTier,
   type IssueLevel,
   type Reaction,
+  type PublicationPreview,
   type Requirement,
   type UpgradeDef,
   type WealthClass,
@@ -133,6 +135,7 @@ import {
   tensionLabels,
   effectLabels,
   effectText,
+  effectShort,
   placementLabels,
   issueLevelLabels,
   outcomeText,
@@ -386,6 +389,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const empty = h('button', {
       class: 'zone-empty',
       onclick: () => {
+        // No story left to put here and room on the staff: the place calls for another reporter (CONCEPT.md §7.3).
+        if (empty.classList.contains('hire')) return openModal('team');
         chooserFor = chooserFor === key ? null : key;
         truthMenuFor = null;
         moveMenuFor = null;
@@ -914,7 +919,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const counts = new Map<Reaction, number>();
     for (const x of Object.values(state.lastReactions)) counts.set(x, (counts.get(x) ?? 0) + 1);
     const ranked = [...counts.entries()].filter(([x]) => x !== 'talk').sort((a, b) => b[1] - a[1]).slice(0, 3);
-    for (const [x, n] of ranked) chips.push(chip(`${assetBase}sprites/fx/${REACTION_ICON[x]}.png`, `${n} ${morningLabels[x]}`, `react-${x}`));
+    // Joy is the other side's win when we attack the town, fear when we defend it.
+    const goalOf = (x: Reaction) => (x === 'happy' ? (state.mode === 'destroy' ? ' down' : ' up') : x === 'scared' ? (state.mode === 'destroy' ? ' up' : ' down') : '');
+    for (const [x, n] of ranked) chips.push(chip(`${assetBase}sprites/fx/${REACTION_ICON[x]}.png`, `${n} ${morningLabels[x]}`, `react-${x}${goalOf(x)}`));
     return h('span', { class: 'morning-chips' }, ...chips);
   }
 
@@ -1395,6 +1402,26 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return `${now}${days} · ${prizeText(def)}`;
   }
 
+  /** The task whose helpful stories are lit up in the issue (CONCEPT.md §4.8). */
+  let taskLight: string | null = null;
+
+  /** Does this story help the lit task: its topic, its effects, its audience? */
+  function helpsTask(card: CardInstance): boolean {
+    const task = taskLight ? state.tasks.find((t) => t.id === taskLight && t.status === 'active') : null;
+    const m = task ? taskOf(c, task.id).match : undefined;
+    if (!m) return false;
+    const tpl = templateOf(c, card.templateId);
+    const effects = [...tpl.effects, ...(tpl.softEffects ?? [])].filter((e): e is CardEffect => !!e);
+    return (
+      !!m.topics?.includes(tpl.topic) ||
+      effects.some((e) => m.effects?.includes(e.type)) ||
+      !!(m.audience && (tpl.audience ?? []).some((g) => m.audience!.includes(g))) ||
+      (!!m.conflict && !!card.conflict) ||
+      (!!m.harmful && effects.some((e) => isHarmful(e))) ||
+      (m.minTier !== undefined && card.tier >= m.minTier)
+    );
+  }
+
   /** The game's tasks: folded to one line by default, like the rival's plaque (CONCEPT.md §4.8). */
   function renderTasks(): void {
     const list = state.tasks.filter((t) => t.status === 'active' || t.endTurn === state.turn - 1);
@@ -1429,6 +1456,31 @@ export function mountApp(root: HTMLElement, base: Content): void {
             h('span', { class: 'task-mark' }, t.status === 'done' ? '✓' : t.status === 'failed' ? '✗' : '○'),
             h('span', { class: 'task-title' }, taskOf(c, t.id).title),
             h('span', { class: 'task-line' }, taskLine(t)),
+            // How to do it, and which of today's stories help (CONCEPT.md §4.8).
+            ...(t.status === 'active' && taskOf(c, t.id).hint
+              ? [
+                  h(
+                    'span',
+                    { class: 'task-hint' },
+                    taskOf(c, t.id).hint!,
+                    taskOf(c, t.id).match
+                      ? h(
+                          'button',
+                          {
+                            class: `task-find${taskLight === t.id ? ' on' : ''}`,
+                            title: 'Подсветить в выпуске новости, которые помогут',
+                            onclick: (e: Event) => {
+                              e.stopPropagation();
+                              taskLight = taskLight === t.id ? null : t.id;
+                              render();
+                            },
+                          },
+                          taskLight === t.id ? 'Скрыть' : 'Какие новости?',
+                        )
+                      : null,
+                  ),
+                ]
+              : []),
           ),
         ),
       ),
@@ -1484,9 +1536,19 @@ export function mountApp(root: HTMLElement, base: Content): void {
       );
       return;
     }
+    // Some notes lead straight to what they talk about (CONCEPT.md §7.3).
+    const act = n.action;
+    const go = () => {
+      settings.notesSeen = [...settings.notesSeen, n.id];
+      if (act?.open === 'rival') settings.rivalOpen = true;
+      saveSettings(settings);
+      if (act?.open === 'shop' || act?.open === 'team') openModal(act.open);
+      else render();
+    };
     guideNote.replaceChildren(
       h('div', { class: 'guide-text' }, head(), n.text),
       h('button', { class: 'guide-hide', title: 'Свернуть подсказки', 'aria-expanded': 'true', onclick: fold(false) }, '▴'),
+      ...(act ? [h('button', { class: 'guide-go', onclick: go }, act.label)] : []),
       h(
         'button',
         {
@@ -2113,11 +2175,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
           { class: 'opt' },
           h('span', { class: 'opt-head' }, h('b', {}, toneOf(card, dist)), h('small', {}, blockedHint ?? stats)),
           h('span', { class: 'opt-title' }, `«${preview.title}»`),
+          effectLine(preview),
         ),
       );
     };
     const steps: number[] = [];
     for (let dist = minDistortion(card); dist <= maxDistortion(card); dist++) steps.push(dist);
+    // The strongest choice for the goal first: blown up when attacking the town, calmed when defending it.
+    if (state.mode === 'destroy') steps.reverse();
     const truthMenu = menuOpen
       ? h(
           'div',
@@ -2172,7 +2237,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const withImage = where === 2 || where === 1;
     // The editor's red pencil in the margin of an untrue story that may be caught (CONCEPT.md §7.3 «Риск выпуска»).
     const pencil = where !== 'out' && p.truth > 0 && p.exposureRisk > 0 && unlocked('framing') ? riskStep(p.exposureRisk) : null;
-    const cls = ['news', `at-${where}`, `truth-${p.truth}`, `tier-${tier}`, investigation ? 'investigation' : '', selected === card.uid ? 'selected' : '', pencil !== null ? `pencil pencil-${pencil}` : '']
+    const cls = ['news', `at-${where}`, `truth-${p.truth}`, `tier-${tier}`, investigation ? 'investigation' : '', selected === card.uid ? 'selected' : '', pencil !== null ? `pencil pencil-${pencil}` : '', helpsTask(card) ? 'task-match' : '']
       .filter(Boolean)
       .join(' ');
     const children: (HTMLElement | null)[] = [
@@ -2200,6 +2265,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           { class: 'head-tools' },
           unlocked('framing') ? truthButton : null,
           huntChip(card, p.effect),
+          where !== 'out' ? helpChip(p.effect) : null,
           pencil !== null ? h('span', { class: 'pencil-note', title: `Риск разоблачения ${Math.round(p.exposureRisk * 100)}%` }, riskNotes[pencil]) : null,
           outButton,
         ),
@@ -2284,6 +2350,28 @@ export function mountApp(root: HTMLElement, base: Content): void {
       },
       '🎯 Травить',
     );
+  }
+
+  /**
+   * A story that works for the other side gets a warning next to «Подача» (CONCEPT.md §7.3): good news
+   * cheers the town up when we are out to break it.
+   */
+  function helpChip(effect: CardEffect | null): HTMLElement | null {
+    if (state.mode !== 'destroy' || effect?.type !== 'moodUp') return null;
+    return h(
+      'span',
+      { class: 'help-chip', title: 'Хорошая новость радует горожан — городу станет лучше. Вам нужно наоборот: подайте её страшнее или уберите в «Не печатать».' },
+      '⚠ Поможет городу',
+    );
+  }
+
+  /** «≈12 поверят · боятся выходить» under a framing in the truth menu, in the goal's colours (CONCEPT.md §7.3). */
+  function effectLine(p: PublicationPreview): HTMLElement {
+    const short = effectShort(c, p.effect);
+    const helps = p.effect === null ? 0 : p.effect.type === 'moodUp' ? 1 : p.effect.type === 'debunk' ? 0 : -1;
+    const toGoal = helps === 0 ? 0 : (helps < 0) === (state.mode === 'destroy') ? 1 : -1;
+    const n = Math.round(p.believers);
+    return h('span', { class: `opt-effect${toGoal > 0 ? ' for' : toGoal < 0 ? ' against' : ''}` }, p.effect ? `≈${n} ${plural(n, 'поверит', 'поверят', 'поверят')} · ${short}` : short);
   }
 
   /** The hunt plaque (CONCEPT.md §3.6а): the target, the days in a row, how it holds, «Снять». */
@@ -2518,7 +2606,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const here = ordered.filter((card) => whereOf(card) === key);
       zones[key].empty.hidden = here.length > 0 || key === 'out';
       // Phones tap, wide screens drag or tap (CONCEPT.md §7.3).
-      zones[key].empty.textContent = isPhone() ? `＋ Выбрать ${zoneTexts[key][1]}` : `Перетащите сюда ${zoneTexts[key][1]} — или нажмите и выберите`;
+      const spare = ordered.some((card) => whereOf(card) === 'out');
+      const hire = key !== 'out' && !spare && !searching && unlocked('hire') && state.reporters.length < c.balance.maxReporters && !state.outcome;
+      zones[key].empty.classList.toggle('hire', hire);
+      zones[key].empty.textContent = hire
+        ? `Больше новостей нет: ${state.reporters.length === 1 ? 'репортёр приносит одну' : 'каждый репортёр приносит одну'} в день. ＋ Нанять ещё`
+        : isPhone()
+          ? `＋ Выбрать ${zoneTexts[key][1]}`
+          : `Перетащите сюда ${zoneTexts[key][1]} — или нажмите и выберите`;
       if (zones[key].empty.hidden && chooserFor === key) chooserFor = null;
       zones[key].chooser.replaceChildren(...(chooserFor === key && key !== 'out' ? [storyChooser(key, ordered, whereOf)] : []));
       zones[key].root.classList.toggle('here', !!picked && whereOf(picked) === key);
@@ -2585,6 +2680,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function renderToday(): void {
     const { printed, untrue, risk } = issueRisk();
     const stamp = searching ? null : issueStampOf(untrue, risk, printed);
+    // «Чисто» is praise only for the honest paper: attacking the town, it is a plain grey mark.
+    masthead.classList.toggle('mode-destroy', state.mode === 'destroy');
     issueStamp.hidden = !stamp;
     issueStamp.className = `issue-stamp${stamp ? ` stamp-${stamp}` : ''}`;
     issueStamp.replaceChildren(...(stamp ? [h('b', {}, stampLabels[stamp][0]), h('small', {}, stampLabels[stamp][1])] : []));
@@ -2610,7 +2707,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const here = cityStateOf(c, state.metrics.cityIndex);
       const next = cityStateOf(c, fc.cityIndex);
       const diff = fc.cityIndex - state.metrics.cityIndex;
-      parts.push(next !== here ? `город ≈ → ${c.balance.cityStates[next].name.toLowerCase()}` : Math.abs(diff) < 1 ? 'город почти не заметит' : diff < 0 ? 'город просядет' : 'городу станет лучше');
+      // In the player's colours (CONCEPT.md §7.3): what brings the goal nearer, and a warning when the issue helps the other side.
+      const text = next !== here ? `город ≈ → ${c.balance.cityStates[next].name.toLowerCase()}` : Math.abs(diff) < 1 ? 'город почти не заметит' : diff < 0 ? 'город просядет' : 'городу станет лучше';
+      const toGoal = Math.abs(diff) < 1 ? 0 : (diff < 0) === (state.mode === 'destroy') ? 1 : -1;
+      parts.push(
+        toGoal === 0
+          ? text
+          : h('span', { class: `goal-word ${toGoal > 0 ? 'for' : 'against'}`, title: toGoal > 0 ? 'Это приближает вашу цель' : 'Это уводит от вашей цели' }, toGoal < 0 ? `⚠ ${text}` : text),
+      );
     }
     todayLine.replaceChildren('Сегодня в номере: ', ...parts.flatMap((x, i) => (i ? [' · ', x] : [x])));
   }

@@ -5584,10 +5584,28 @@ button.publish.nudge {
   .streak-badge {
     font-size: 11px;
   }
+}
 
-  .streak-prize {
-    display: none;
-  }
+/* A tap on the badge opens what the streak gives (phones have no hover title). */
+.streak-badge {
+  position: relative;
+}
+
+.streak-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  width: min(240px, 80vw);
+  padding: 6px 9px;
+  background: var(--paper);
+  border: 1.5px solid var(--paper-ink);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
 }
 
 /* ---------- Upgrades: forks, the deck, abilities (CONCEPT.md §3.5) ---------- */
@@ -6004,6 +6022,11 @@ span.hunt-chip {
     margin-left: 6px;
     padding: 1px 7px 0;
     border-width: 2px;
+  }
+
+  .stamp-box .streak-tip {
+    left: auto;
+    right: 0;
   }
 }
 

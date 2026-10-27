@@ -411,7 +411,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const todayLine = h('span', { class: 'today-line' });
   const issueStamp = h('div', { class: 'issue-stamp', hidden: true });
   // The clean streak under the stamp: «Без лжи 3 из 5 → +3% репутации» (CONCEPT.md §5.3).
-  const streakBadge = h('div', { class: 'streak-badge', hidden: true });
+  const streakBadge = h('div', { class: 'streak-badge', hidden: true, role: 'button', tabindex: '0' });
+  // A tap opens what the streak gives: phones have no hover title.
+  let streakTipOpen = false;
+  streakBadge.addEventListener('click', () => {
+    streakTipOpen = !streakTipOpen;
+    renderStreak(streakBadge.classList.contains('dim'));
+  });
   // Two rows (CONCEPT.md §7.3): the name of the paper, then the cover price on the left, «Сегодня в номере» and the issue number on the right.
   const masthead = h(
     'header',
@@ -2730,11 +2736,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const days = state.cleanStreak;
     const breaks = lieLaidOut && days > 0;
     streakBadge.className = `streak-badge${breaks ? ' breaks' : ''}${lieLaidOut ? ' dim' : ''}`;
-    streakBadge.title = `${b.cleanStreakDays} выпусков подряд без полуправды и лжи — +${b.cleanStreakBonus}% репутации у всего города. Ложь обнуляет серию, пустой выпуск её не двигает.`;
+    const about = `${b.cleanStreakDays} выпусков подряд без полуправды и лжи — +${b.cleanStreakBonus}% репутации у всего города. Ложь обнуляет серию, пустой выпуск её не двигает.`;
+    streakBadge.title = streakTipOpen ? '' : about;
     streakBadge.replaceChildren(
       h('span', { class: 'streak-label' }, breaks ? 'Серия прервётся' : 'Без лжи'),
       h('span', { class: 'streak-pips', 'aria-label': `${days} из ${b.cleanStreakDays}` }, ...Array.from({ length: b.cleanStreakDays }, (_, i) => h('i', { class: i < days ? 'on' : '' }))),
       h('span', { class: 'streak-prize' }, `→ +${b.cleanStreakBonus}% репутации`),
+      ...(streakTipOpen ? [h('span', { class: 'streak-tip' }, `${about} Сейчас: ${days} из ${b.cleanStreakDays}.`)] : []),
     );
   }
 

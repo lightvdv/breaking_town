@@ -4265,25 +4265,6 @@ button.publish.level-3.bump-up {
   white-space: nowrap;
 }
 
-.tutorial-pick {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 10px 14px;
-  text-align: left;
-}
-
-.tutorial-pick b {
-  font-size: 18px;
-}
-
-.tutorial-pick span {
-  font-size: 13px;
-  font-weight: 400;
-}
-
 .tutorial-done {
   font-weight: 700;
 }

@@ -178,6 +178,7 @@ type Modal =
   | 'settings'
   | 'about'
   | 'newgame'
+  | 'tutorial'
   | 'campaignNew'
   | 'carry'
   | null;
@@ -3955,11 +3956,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
       settings: 'Настройки',
       about: 'Об игре',
       newgame: 'Новая игра',
+      tutorial: 'Обучение',
       campaignNew: 'Новая кампания',
       carry: 'Кто поедет дальше',
     };
     const body =
-      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'dig' ? digContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : shopContent();
+      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'dig' ? digContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'tutorial' ? tutorialStartContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
     const panel = h(
       'div',
@@ -4307,7 +4309,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           // The tutorial mission first for a newcomer (CONCEPT.md §7.3 «Обучение»); a running game is not thrown away without asking.
           h(
             'button',
-            { class: `title-item${!settings.tutorialDone && !(hasGame && !state.outcome) ? ' primary' : ''}`, onclick: () => (hasGame && !state.outcome ? openModal('newgame') : void startGame('destroy', undefined, true)) },
+            { class: `title-item${!settings.tutorialDone && !(hasGame && !state.outcome) ? ' primary' : ''}`, onclick: () => (hasGame && !state.outcome ? openModal('tutorial') : void startGame('destroy', undefined, true)) },
             h('span', {}, 'Обучение'),
             h('small', {}, settings.tutorialDone ? 'пройдено · можно сыграть ещё раз' : 'короткая лёгкая партия: задание за заданием'),
           ),
@@ -4391,6 +4393,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
     ].filter((x): x is HTMLElement => x !== null);
   }
 
+  /** The tutorial over a game in progress: it has its own settings, so only the warning and «Начать». */
+  function tutorialStartContent(): HTMLElement[] {
+    return [
+      h('p', {}, 'Лёгкая короткая партия: игра шаг за шагом показывает, как нанимать репортёров, приукрашивать новости, копать компромат, стравливать горожан и травить завод. Нужная кнопка подсвечивается.'),
+      h('p', { class: 'bad' }, 'Текущая партия будет потеряна.'),
+      h('button', { class: 'primary big', onclick: () => void startGame('destroy', undefined, true) }, 'Начать обучение'),
+      h('button', { class: 'ghost', onclick: () => openModal(null) }, '← Назад'),
+    ];
+  }
+
   /** New game: the mode is chosen with a picture card (CONCEPT.md §8); a running game is lost. */
   function newGameContent(): HTMLElement[] {
     const card = (mode: GameMode, art: string, title: string, text: string) =>
@@ -4465,13 +4477,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...(hasGame && !state.outcome ? [h('p', { class: 'bad' }, 'Текущая партия будет потеряна.')] : []),
       lengths,
       levels,
-      // The tutorial mission: an easy short game, one task at a time (CONCEPT.md §7.3 «Обучение»).
-      h(
-        'button',
-        { class: `tutorial-pick${settings.tutorialDone ? '' : ' primary'}`, onclick: () => void startGame('destroy', undefined, true) },
-        h('b', {}, 'Обучение'),
-        h('span', {}, 'Лёгкая короткая партия: игра шаг за шагом показывает, как нанимать репортёров, приукрашивать новости, копать компромат, стравливать горожан и травить завод. Нужная кнопка подсвечивается.'),
-      ),
       h(
         'div',
         { class: 'mode-cards' },

@@ -2513,9 +2513,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
     );
   }
 
-  /** «Весь выпуск: город ≈−3.2 · читатели ≈+5» under a truth menu option, the town in the colours of the goal. */
+  /** «Прогноз: город ≈−3.2 · читатели ≈+5» under a truth menu option, the town in the colours of the goal. */
   function forecastLine(f: Forecast | null | undefined): HTMLElement | null {
-    if (f === undefined) return h('span', { class: 'opt-forecast' }, 'Весь выпуск: считаем…');
+    if (f === undefined) return h('span', { class: 'opt-forecast' }, 'Прогноз: считаем…');
     if (!f) return null;
     const city = Math.round((f.cityIndex - state.metrics.cityIndex) * 10) / 10;
     const goodForGoal = city === 0 ? 0 : (city < 0) === (state.mode === 'destroy') ? 1 : -1;
@@ -2523,7 +2523,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h(
       'span',
       { class: 'opt-forecast' },
-      'Весь выпуск: ',
+      'Прогноз: ',
       h('b', { class: goodForGoal > 0 ? 'for' : goodForGoal < 0 ? 'against' : '' }, `город ≈${city > 0 ? '+' : city < 0 ? '−' : ''}${Math.abs(city).toFixed(1)}`),
       ` · читатели ≈${readers > 0 ? '+' : readers < 0 ? '−' : ''}${Math.abs(readers)}`,
     );

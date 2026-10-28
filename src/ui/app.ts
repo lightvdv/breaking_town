@@ -2468,7 +2468,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
 
   /** «≈12 поверят · боятся выходить» under a framing in the truth menu, in the goal's colours (CONCEPT.md §7.3). */
   function effectLine(p: PublicationPreview, huntBase: number | null = null): HTMLElement {
-    const short = effectShort(c, p.effect);
+    const short = effectShort(c, p.effect, p.impact);
     const helps = p.effect === null ? 0 : p.effect.type === 'moodUp' ? 1 : p.effect.type === 'debunk' ? 0 : -1;
     const toGoal = helps === 0 ? 0 : (helps < 0) === (state.mode === 'destroy') ? 1 : -1;
     const n = Math.round(p.believers);

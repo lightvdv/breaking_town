@@ -25,6 +25,6 @@
       "offerStartTurn": 3,
       "poachStartTurn": 99
     },
-    "balanceMul": { "impactNorm": 1.23 }
+    "balanceMul": { "impactNorm": 1.28 }
   }
 ]

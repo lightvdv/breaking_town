@@ -675,6 +675,8 @@ export interface Balance {
   articleSlots: number;
   /** Global multiplier on card effect strength. */
   effectScale: number;
+  /** Each louder telling gives at least this much more than the one below: expected believers × strength (CONCEPT.md §5.2а). */
+  louderGain: number;
 
   /** Investigations (CONCEPT.md §3.3а). */
   investigationTurns: number;

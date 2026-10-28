@@ -120,7 +120,7 @@ export function isHarmful(effect: CardEffect | null): boolean {
  * Impact of a story — how strongly viewers react (CONCEPT.md §5.2а). It never changes reach.
  * 1 means a normal story; divided by impactNorm so content `interest` values stay readable.
  */
-function impactOf(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, repeatsThisTurn: number, hunt = false): number {
+function baseImpact(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, repeatsThisTurn: number, hunt: boolean): number {
   const b = c.balance;
   const streak = (state.topicStreak[tpl.topic] ?? 0) + repeatsThisTurn;
   // A hunt story grows with every day in a row (CONCEPT.md §3.6а), and readers tire of it less.
@@ -131,6 +131,34 @@ function impactOf(state: GameState, c: Content, mods: Modifiers, card: CardInsta
   const style = isHarmful(storyEffect(c, card, pub.distortion)) ? mods.scaryImpactMul : 1;
   const desk = mods.topicImpactMul[tpl.topic] ?? 1;
   return (tpl.interest * b.tierInterest[effectiveTier(card, pub.distortion)] * scope * placement * fatigue * style * desk) / b.impactNorm;
+}
+
+/**
+ * A riskier telling always hits harder (CONCEPT.md §5.2а): every louder step — closer to a lie —
+ * gives at least `louderGain` more than the step below in expected believers × strength, even when
+ * the level is already a sensation and fewer people believe a lie. The rival's stories keep their
+ * plain strength.
+ */
+function impactOf(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, repeatsThisTurn: number, hunt = false, louder = true): number {
+  const impact = baseImpact(state, c, mods, card, tpl, pub, repeatsThisTurn, hunt);
+  if (!louder || pub.distortion <= 0) return impact;
+  const effect = storyEffect(c, card, pub.distortion);
+  if (!effect) return impact;
+  const prevPub = { ...pub, distortion: pub.distortion - 1 };
+  const prevEffect = storyEffect(c, card, prevPub.distortion);
+  if (!prevEffect) return impact;
+  const prev = impactOf(state, c, mods, card, tpl, prevPub, repeatsThisTurn, isHuntStory(state, card, prevEffect), louder);
+  const now = expectedBelievers(state, c, mods, tpl, cardTruth(card, pub.distortion), pub.placement);
+  const before = expectedBelievers(state, c, mods, tpl, cardTruth(card, prevPub.distortion), pub.placement);
+  if (now.believers <= 0 || effect.strength <= 0) return impact;
+  const gain = 1 + c.balance.louderGain;
+  let needed = (prev * before.believers * prevEffect.strength * gain) / (now.believers * effect.strength);
+  // In a hunt the target's stain counts doubters too (`huntStainOf`): it must grow as well.
+  if (hunt && isHuntStory(state, card, prevEffect) && now.readers > 0) {
+    const took = (x: { readers: number; believers: number }) => x.believers / x.readers + c.balance.huntDoubtShare * (1 - x.believers / x.readers);
+    needed = Math.max(needed, (prev * took(before) * gain) / took(now));
+  }
+  return Math.max(impact, needed);
 }
 
 /** Owned channels a resident follows; only followers see the issue (CONCEPT.md §5.2). */
@@ -393,7 +421,7 @@ export function publish(
   const soothed = isSoothed(card, pub.distortion);
   const effect = calm ? null : soothed ? tpl.softEffects?.[-pub.distortion - 1] ?? null : tpl.effects[truth];
   // The rival's stories have their own strength (`rivalImpactMul`).
-  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn, !rival && isHuntStory(state, card, effect)) * (rival ? b.rivalImpactMul[state.rival?.kind ?? 'tabloid'] : 1);
+  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn, !rival && isHuntStory(state, card, effect), !rival) * (rival ? b.rivalImpactMul[state.rival?.kind ?? 'tabloid'] : 1);
   // Interesting stories are retold more, and viral channels spread them further.
   const retell = clamp(
     b.wordOfMouthChance * (0.5 + tpl.engagement * b.tierEngagement[effectiveTier(card, pub.distortion)]) * (1 + outletVirality(state, c)) * mods.wordOfMouthMul,

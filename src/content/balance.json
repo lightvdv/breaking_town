@@ -217,6 +217,7 @@
   "frontPageSlots": 1,
   "articleSlots": 1,
   "effectScale": 3.5,
+  "louderGain": 0.15,
   "placementExposureRisk": [
     0.6,
     1,

@@ -62,6 +62,7 @@ import {
   fillTitle,
   storyTitle,
   startHunt,
+  storyEffect,
   huntBonus,
   lureBlock,
   lureRivalAuthor,
@@ -1507,5 +1508,42 @@ describe('short game (CONCEPT.md §4.6а)', () => {
     const s = createGame(short, 3, 'destroy', 'hard', { length: 'short' });
     expect(s.length).toBe('short');
     expect(s.reporters.length).toBe(short.balance.startReporters.length);
+  });
+});
+
+describe('a riskier telling always hits harder (CONCEPT.md §5.2а)', () => {
+  it('every louder step gives more believers × strength, and in a hunt a harder hit', () => {
+    const c = withDifficulty(realContent, 'normal', 'destroy');
+    let checked = 0;
+    let capped = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+      const s = createGame(c, seed);
+      for (let t = 0; t < 10 && !s.outcome; t++) {
+        const hunted = s.hand.find((x) => x.building !== undefined && s.buildings[x.building].open && s.buildings[x.building].jobs > 0);
+        if (t === 4 && hunted) startHunt(s, hunted.building!);
+        const mods = getModifiers(s, c);
+        for (const card of s.hand) {
+          for (const placement of [0, 1, 2] as const) {
+            const result = (d: number) => {
+              const p = previewPublication(s, c, mods, { cardUid: card.uid, placement, distortion: d });
+              return { p, value: p.believers * p.impact * (storyEffect(c, card, d)?.strength ?? 0) };
+            };
+            for (let d = Math.max(1, minDistortion(card) + 1); d <= maxDistortion(card); d++) {
+              const prev = result(d - 1);
+              const now = result(d);
+              if (!prev.p.effect || !now.p.effect || prev.value === 0) continue;
+              checked++;
+              if (effectiveTier(card, d) === effectiveTier(card, d - 1)) capped++;
+              expect(now.value).toBeGreaterThan(prev.value);
+              if (prev.p.huntHit && now.p.huntHit !== null) expect(now.p.huntHit).toBeGreaterThan(prev.p.huntHit);
+            }
+          }
+        }
+        playTurn(s, c, { publish: s.hand.map((x, i) => ({ cardUid: x.uid, placement: (i === 0 ? 2 : i === 1 ? 1 : 0) as 0 | 1 | 2, distortion: 0 })) });
+      }
+    }
+    expect(checked).toBeGreaterThan(50);
+    // The case that used to fail: the level already a sensation, a lie believed by fewer.
+    expect(capped).toBeGreaterThan(0);
   });
 });

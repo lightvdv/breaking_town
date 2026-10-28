@@ -473,8 +473,10 @@ export interface Balance {
   /** A campaign against a place (CONCEPT.md §3.6а): extra impact per day in a row, up to this many steps. */
   huntStep: number;
   huntMaxSteps: number;
-  /** Stain a campaign story leaves on its place per impact × share of viewers who believed it. */
+  /** Stain a hunt story leaves on its place per impact × share of viewers who took it in (`huntStainOf`).*/
   huntStain: number;
+  /** Readers who doubted a hunt story still count for this much of a believer («дыма без огня не бывает»). */
+  huntDoubtShare: number;
   /** Chance that a free reporter digs up a story about the target instead of searching at random. */
   huntFindChance: number;
   /** A worker of a stained place quits with chance stain × this a day; the stain fades by `stainDecay` a day. */

@@ -2257,6 +2257,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     // Each option shows what the player gets and pays: the headline it turns into, its truth, the
     // story's level and the fact-check risk (CONCEPT.md §7.3). Which options there are depends on the
     // story: only bad true news can be soothed, a rumor cannot be told «как есть», a conflict is framed.
+    // A hunt story (CONCEPT.md §3.6а): each option says how hard it hits the target next to the story told as it is.
+    const huntBase = state.hunt && card.building === state.hunt.building ? (previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: Math.max(0, minDistortion(card)) }).huntHit ?? 0) : null;
     const option = (dist: number, icon: Node, blockedHint: string | null) => {
       const preview = previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: dist });
       const steps = preview.tier - card.tier;
@@ -2271,7 +2273,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           { class: 'opt' },
           h('span', { class: 'opt-head' }, h('b', {}, toneOf(card, dist)), h('small', {}, blockedHint ?? stats)),
           h('span', { class: 'opt-title' }, `«${preview.title}»`),
-          effectLine(preview),
+          effectLine(preview, huntBase),
         ),
       );
       // The tutorial lights up the louder framings (CONCEPT.md §7.3 «Обучение»).
@@ -2465,12 +2467,19 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   /** «≈12 поверят · боятся выходить» under a framing in the truth menu, in the goal's colours (CONCEPT.md §7.3). */
-  function effectLine(p: PublicationPreview): HTMLElement {
+  function effectLine(p: PublicationPreview, huntBase: number | null = null): HTMLElement {
     const short = effectShort(c, p.effect);
     const helps = p.effect === null ? 0 : p.effect.type === 'moodUp' ? 1 : p.effect.type === 'debunk' ? 0 : -1;
     const toGoal = helps === 0 ? 0 : (helps < 0) === (state.mode === 'destroy') ? 1 : -1;
     const n = Math.round(p.believers);
-    return h('span', { class: `opt-effect${toGoal > 0 ? ' for' : toGoal < 0 ? ' against' : ''}` }, p.effect ? `≈${n} ${plural(n, 'поверит', 'поверят', 'поверят')} · ${short}` : short);
+    // In a hunt: how hard this telling hits the target, next to the story told as it is.
+    const hit = huntBase === null ? null : !p.huntHit ? '🎯 по цели не ударит' : huntBase > 0 ? `🎯 удар ×${(p.huntHit / huntBase).toFixed(1)}` : '🎯 ударит по цели';
+    return h(
+      'span',
+      { class: `opt-effect${toGoal > 0 ? ' for' : toGoal < 0 ? ' against' : ''}` },
+      p.effect ? `≈${n} ${plural(n, 'поверит', 'поверят', 'поверят')} · ${short}` : short,
+      hit ? h('span', { class: 'opt-hunt' }, ` · ${hit}`) : null,
+    );
   }
 
   /** The hunt plaque (CONCEPT.md §3.6а): the target, the days in a row, how it holds, «Снять». */

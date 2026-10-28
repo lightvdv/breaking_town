@@ -1,6 +1,6 @@
 import { clamp, closedLine } from './lookup';
 import type { Modifiers } from './modifiers';
-import { isHarmful, type PublishedNews } from './news';
+import { huntStainOf, isHarmful, type PublishedNews } from './news';
 import { chance, type RngState } from './rng';
 import type { Building, CardEffect, CardInstance, CardTemplate, Content, GameState } from './types';
 
@@ -64,8 +64,7 @@ export function pressHunt(state: GameState, c: Content, published: PublishedNews
     if (!card || !isHuntStory(state, card, effectOf(n))) continue;
     hit = true;
     const believed = n.report.reached ? n.report.believed / n.report.reached : 0;
-    // The story's own strength, not the difficulty's scale of impact (`impactNorm`).
-    stain = clamp(stain + b.huntStain * n.impact * b.impactNorm * believed);
+    stain = clamp(stain + huntStainOf(c, n.impact, believed));
   }
   state.stains[camp.building] = stain;
   if (hit) {

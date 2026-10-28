@@ -3295,7 +3295,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const r = report;
     const reasons: Record<ChurnReason, string> = {
       exposed: 'увидели разоблачённую ложь',
-      doubted: 'не поверили новости',
+      doubted: 'проигнорировали новость',
       boring: 'выпуск их не зацепил',
       empty: 'выпуска не было',
       price: 'цена им не по карману или кажется высокой',
@@ -3478,7 +3478,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'div',
           { class: `report-item truth-${p.truth}${p.exposed ? ' exposed' : ''}` },
           h('strong', { class: 'headline' }, `«${p.title}»`),
-          h('p', {}, `${truthLabels[p.truth]}, ${placementLabels[p.placement].toLowerCase()}. Увидели ${p.reached}, поверили ${p.believed}, не поверили ${p.doubted}, пересказали ${p.wordOfMouth}.`),
+          h('p', {}, `${truthLabels[p.truth]}, ${placementLabels[p.placement].toLowerCase()}. Увидели ${p.reached}, поверили ${p.believed}, проигнорировали ${p.doubted}, пересказали ${p.wordOfMouth}.`),
           h('p', { class: 'muted' }, Object.entries(p.byChannel).map(([ch, v]) => `${channelOf(c, ch).name}: ${v}`).join(' · ')),
           Object.keys(p.effects).length
             ? h('p', {}, Object.entries(p.effects).map(([k, v]) => `${effectLabels[k as keyof typeof effectLabels]}: ${v}`).join(' · '))

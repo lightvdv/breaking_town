@@ -15,7 +15,7 @@ export { ARC_DAYS, arcInfo, arcLean, arcOf } from './arcs';
 export { answerOffer, dealBrokenBy, offerOf, offerText, retainCost } from './offers';
 export { levelOf, skilledReporter, staffOf } from './staff';
 export { personResident } from './people';
-export { withDifficulty } from './difficulty';
+export { withDifficulty, withLength } from './difficulty';
 export { townDays, townOf, withTown } from './town';
 export { forecastTurn, type Forecast } from './forecast';
 export { scoreOf, taskOf, taskProgress, taskReward } from './tasks';

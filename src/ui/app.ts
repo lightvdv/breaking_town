@@ -41,6 +41,7 @@ import {
   tensionLevel,
   arcInfo,
   withDifficulty,
+  withLength,
   scoreOf,
   townDays,
   withTown,
@@ -98,6 +99,7 @@ import {
   setRivalWatch,
   type GameMode,
   type Difficulty,
+  type GameLength,
   type CardInstance,
   type Content,
   type ChurnReason,
@@ -122,7 +124,8 @@ import { h, pct, svg } from './dom';
 import { loadSave, writeSave } from './save';
 import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
-import { pendingNotes, unlockDay, type Feature } from './guide';
+import { pendingNotes } from './guide';
+import { currentStep, issueFlags, skipStep, stepTargets, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
 import { recordOf, starLine, submitRecord } from './records';
 import { campaignStars, loadCampaign, newCampaign, saveCampaign, townState, winTown, type Campaign } from './campaign';
 import { drawRegion, drawTownArt, MAP_H, MAP_W, townIcon } from './campaignMap';
@@ -254,16 +257,20 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const saveModeShown = false;
   // The game runs on the content of its difficulty (CONCEPT.md §4.6); `c` follows the current game.
   /** The content a game runs on: its difficulty's, and in the campaign its town's too (CONCEPT.md §4.6, §9). */
-  const contentFor = (difficulty: Difficulty, mode: GameMode, town: string | null) => {
-    const x = withDifficulty(base, difficulty, mode);
-    return town ? withTown(x, town, mode) : x;
+  // A short game and the tutorial mission patch it further (CONCEPT.md §4.6а, §7.3 «Обучение»).
+  const contentFor = (difficulty: Difficulty, mode: GameMode, town: string | null, length: GameLength = 'full', tutorialGame = false) => {
+    const x = withLength(withDifficulty(base, difficulty, mode), length, difficulty);
+    const y = town ? withTown(x, town, mode) : x;
+    return tutorialGame ? withTutorial(y) : y;
   };
-  let c = contentFor(saved?.state.difficulty ?? settings.difficulty, saved?.state.mode ?? urlMode, saved?.state.town ?? null);
+  let c = saved
+    ? contentFor(saved.state.difficulty, saved.state.mode, saved.state.town, saved.state.length, !!saved.tutorial)
+    : contentFor(settings.difficulty, urlMode, null, settings.length);
   /** The campaign (CONCEPT.md §9): its own storage; the map screen is open over the drifting city. */
   let campaign: Campaign | null = loadCampaign(base);
   let campaignOpen = false;
   let campaignSel = 0;
-  let state: GameState = saved?.state ?? createGame(c, seedFromUrl(), urlMode, settings.difficulty);
+  let state: GameState = saved?.state ?? createGame(c, seedFromUrl(), urlMode, settings.difficulty, { length: settings.length });
   let drafts = new Map<number, Draft>(saved?.drafts ?? []);
   // A saved layout that no longer fits the slots (e.g. two front pages from a removed upgrade) is laid out anew.
   {
@@ -275,12 +282,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let report: TurnReport | null = saved?.report ?? null;
   /** The game just ended with a result better than the record (CONCEPT.md §4.8). */
   let newRecord = false;
-  /** A novice's game opens the paper's controls day by day (CONCEPT.md §7.3 «Постепенное открытие»). */
-  let guided = saved ? saved.guided : settings.experience === 'novice';
-  /** A control is there for a veteran from the start, for a novice from its day. */
-  const unlocked = (f: Feature) => !guided || state.turn >= unlockDay(f, state.mode);
-  /** On the day it opens, a control carries a «Новое» badge. */
-  const isNew = (f: Feature) => guided && state.turn === unlockDay(f, state.mode);
+  /** The tutorial mission's progress (CONCEPT.md §7.3 «Обучение»); null in an ordinary game. */
+  let tutorial: TutorialProgress | null = saved?.tutorial ?? null;
   let error = '';
   let busy = false;
   let issueOpen = true;
@@ -401,7 +404,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const chooser = h('div', { class: 'zone-chooser' });
     const label = h('h4', { class: 'zone-label' }, zoneTexts[key][0]);
     // While a story is picked, every other place shows a big target; a tap on it moves the story.
-    const target = h('button', { class: 'zone-target', onclick: () => moveSelected(key) }, h('span', {}, `Сюда: ${targetTexts[key]}`));
+    const target = h('button', { class: 'zone-target', 'data-tut': key === 2 ? 'to-front' : undefined, onclick: () => moveSelected(key) }, h('span', {}, `Сюда: ${targetTexts[key]}`));
     const root = h('section', { class: `zone zone-${key}`, 'data-zone': String(key) }, label, items, empty, chooser, target);
     return { root, items, empty, chooser, label, target };
   };
@@ -435,6 +438,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // Exposures and the mayor's reconciliation are announced by plaques above the paper (CONCEPT.md §7.3).
   // The novice's note of the day: a sticker above the paper (CONCEPT.md §7.3 «Постепенное открытие»).
   const guideNote = h('section', { class: 'guide-note', hidden: true, role: 'status' });
+  // The tutorial's step in one line in an open window, under its title (CONCEPT.md §7.3 «Обучение»).
+  const tutorialBar = h('div', { class: 'tutorial-bar', hidden: true, role: 'status' });
   const exposureNotice = h('section', { class: 'notice notice-exposed', hidden: true, role: 'status' });
   const reconcileNotice = h('section', { class: 'notice notice-peace', hidden: true, role: 'status' });
   // «Расследование готово» on the day the dirt comes in (CONCEPT.md §3.3а).
@@ -675,8 +680,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
         )
       : null;
     priceSelect.replaceChildren(h('span', { class: 'price-label' }, 'Цена газеты:'), chip, ...(menu ? [menu] : []));
-    priceSelect.hidden = !unlocked('price');
-    chip.classList.toggle('is-new', isNew('price'));
   }
 
   /** One sensation per issue (CONCEPT.md §4.2а): a story brought back or moved up is toned down if needed. */
@@ -787,14 +790,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
     issue.animate(frames, { duration: 320, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' });
   }
 
-  const newGame = (seed = randomSeed(), mode: GameMode = 'destroy', town: string | null = null) => {
+  const newGame = (seed = randomSeed(), mode: GameMode = 'destroy', town: string | null = null, tutorialGame = false) => {
     hasGame = true;
-    // A campaign town keeps the campaign's difficulty and starts with the reporter brought along.
-    const difficulty = town && campaign ? campaign.difficulty : settings.difficulty;
-    c = contentFor(difficulty, mode, town);
+    // A campaign town keeps the campaign's difficulty and starts with the reporter brought along;
+    // the tutorial is an easy short game of its own (CONCEPT.md §7.3 «Обучение»).
+    const difficulty = tutorialGame ? tutorialDifficulty : town && campaign ? campaign.difficulty : settings.difficulty;
+    const length: GameLength = tutorialGame ? tutorialLength : town ? 'full' : settings.length;
+    c = contentFor(difficulty, mode, town, length, tutorialGame);
     reporterBar.c = c;
-    state = createGame(c, seed, mode, difficulty, town ? { town, ...(campaign?.carry ? { reporters: [campaign.carry] } : {}) } : {});
-    guided = settings.experience === 'novice';
+    state = createGame(c, seed, mode, difficulty, { ...(town ? { town, ...(campaign?.carry ? { reporters: [campaign.carry] } : {}) } : {}), length });
+    tutorial = tutorialGame ? { step: 0, flags: [] } : null;
     newRecord = false;
     drafts = new Map();
     report = null;
@@ -853,12 +858,19 @@ export function mountApp(root: HTMLElement, base: Content): void {
 
   const endTurn = () => {
     const decision = currentDecision();
+    const hand = state.hand;
     try {
       report = playTurn(state, c, decision);
       error = '';
+      // The tutorial's steps that are done by printing (CONCEPT.md §7.3 «Обучение»).
+      if (tutorial) tutorial.flags = [...new Set([...tutorial.flags, ...issueFlags(hand, c, decision, report)])];
+      if (tutorial && state.outcome && !settings.tutorialDone) {
+        settings.tutorialDone = true;
+        saveSettings(settings);
+      }
       // A won game may beat the record of its mode and difficulty.
       // A won single game may beat the record; a won campaign town opens the next one (CONCEPT.md §4.8, §9).
-      if (state.outcome?.result === 'win' && !state.town) newRecord = submitRecord(state.mode, state.difficulty, { stars: scoreOf(state, c).stars, days: report.turn });
+      if (state.outcome?.result === 'win' && !state.town && !tutorial) newRecord = submitRecord(state.mode, state.difficulty, state.length, { stars: scoreOf(state, c).stars, days: report.turn });
       if (state.outcome?.result === 'win' && state.town && campaign) {
         winTown(base, campaign, state.town, { stars: scoreOf(state, c).stars, days: report.turn });
         saveCampaign(campaign);
@@ -916,7 +928,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       chip(`${assetBase}sprites/ui/money.png`, `${signed(r.moneyDelta)} ₽`, r.moneyDelta > 0 ? 'up' : r.moneyDelta < 0 ? 'down' : ''),
     ];
     const trust = Math.round(r.trustAfter - r.trustBefore);
-    if (unlocked('framing') && trust !== 0) chips.push(chip(`${assetBase}sprites/ui/reputation.png`, `${signed(trust)}% репутации`, trust > 0 ? 'up' : trust < 0 ? 'down' : ''));
+    if (trust !== 0) chips.push(chip(`${assetBase}sprites/ui/reputation.png`, `${signed(trust)}% репутации`, trust > 0 ? 'up' : trust < 0 ? 'down' : ''));
     const city = Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex);
     chips.push(
       chip(
@@ -1259,20 +1271,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
         () => openModal('readers'),
         fc?.readers ?? null,
       ),
-      // A novice meets reputation together with the framing of stories (CONCEPT.md §7.3).
-      !unlocked('framing')
-        ? null
-        : resource(
-            'reputation',
-            'Репутация',
-            `${Math.round(trust)}%`,
-            r ? Math.round(r.trustAfter - r.trustBefore) : null,
-            'Чем выше, тем больше верят и реже проверяют. Упадёт до нуля — игра проиграна. Нажмите — подробности.',
-            `${trust < 20 ? 'bad' : ''}${isNew('framing') ? ' is-new' : ''}`,
-            '%',
-            () => openModal('reputation'),
-            fc?.trust ?? null,
-          ),
+      resource(
+        'reputation',
+        'Репутация',
+        `${Math.round(trust)}%`,
+        r ? Math.round(r.trustAfter - r.trustBefore) : null,
+        'Чем выше, тем больше верят и реже проверяют. Упадёт до нуля — игра проиграна. Нажмите — подробности.',
+        trust < 20 ? 'bad' : '',
+        '%',
+        () => openModal('reputation'),
+        fc?.trust ?? null,
+      ),
       resource(
         `city_state_${cityStateOf(c, state.metrics.cityIndex)}`,
         'Город',
@@ -1288,8 +1297,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     ];
     hudRes.replaceChildren(...items.filter((x): x is HTMLElement => x !== null));
     hudTeam.style.setProperty('--team-slots', String(c.balance.maxReporters));
-    hudShop.hidden = !unlocked('shop');
-    hudShop.classList.toggle('is-new', isNew('shop'));
     // While the issue is open: its level and «В печать»; folded: «Выпуск» brings it back.
     const publishing = issueOpen && !state.outcome;
     hudActions.replaceChildren(
@@ -1325,7 +1332,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h(
       'button',
       // A novice's first day: the button glows, it is the one thing to press (CONCEPT.md §7.3).
-      { class: `publish level-${level}${levelBump ? ` ${levelBump}` : ''}${guided && state.turn === 1 ? ' nudge' : ''}`, title: hint, onclick: endTurn, disabled },
+      { class: `publish level-${level}${levelBump ? ` ${levelBump}` : ''}`, title: hint, onclick: endTurn, disabled },
       h('img', { src: `${assetBase}sprites/ui/issue_${level}.png`, alt: '', width: 24, height: 24 }),
       h('span', {}, 'В печать · ', h('b', {}, level === 3 ? 'СЕНСАЦИЯ!' : issueLevelLabels[level])),
       riskDot(),
@@ -1518,9 +1525,84 @@ export function mountApp(root: HTMLElement, base: Content): void {
     );
   }
 
-  /** The novice's notes, one at a time: the day's new control, then what is on screen for the first time. */
+  /** The tutorial's view of the screen: the laid-out issue, an open truth menu, the search. */
+  function tutorialView(): TutorialView {
+    return {
+      state,
+      c,
+      laidOut: state.hand.filter((x) => draftOf(x).publish).map((x) => ({ card: x, placement: draftOf(x).placement, distortion: draftOf(x).distortion })),
+      menuOpen: truthMenuFor !== null,
+      searching: searching || busy,
+    };
+  }
+
+  /** The step the tutorial is on now, or null outside it and once it is over. */
+  const tutorialStep = () => (tutorial && !state.outcome ? currentStep(tutorial, tutorialView()) : null);
+
+  /**
+   * The tutorial's note above the paper (CONCEPT.md §7.3 «Обучение»): one task at a time, with its
+   * number; it cannot be folded, any step can be skipped.
+   */
+  function renderTutorial(): void {
+    const step = tutorialStep();
+    guideNote.hidden = !step || !issueOpen;
+    guideNote.classList.add('tutorial-note');
+    guideNote.classList.remove('folded');
+    if (!step) return;
+    const skip = () => {
+      skipStep(tutorial!, step.def.id);
+      render();
+    };
+    guideNote.replaceChildren(
+      h(
+        'div',
+        { class: 'guide-text' },
+        h('span', { class: 'tut-count' }, `Обучение · шаг ${step.index + 1} из ${tutorialSteps.length}`),
+        h('b', { class: 'guide-title' }, step.def.title),
+        step.ready ? step.def.text : (step.def.ready ?? step.def.text),
+      ),
+      ...(step.def.id === 'goal' ? [] : [h('button', { class: 'guide-skip ghost', title: 'Пропустить этот шаг', onclick: skip }, 'Пропустить')]),
+    );
+  }
+
+  /** Scrolled to once per step and target, so the player sees where to press. */
+  let tutorialScrolled = '';
+
+  /** The button to press now glows; over a window, a bar repeats the step in one line. */
+  function renderTutorialTargets(): void {
+    for (const el of document.querySelectorAll('.tut-target')) el.classList.remove('tut-target');
+    const step = tutorialStep();
+    tutorialBar.hidden = !step || modal === null || titleOpen;
+    if (!step || titleOpen || busy || searching) return;
+    if (!tutorialBar.hidden) {
+      tutorialBar.replaceChildren(h('span', { class: 'tut-count' }, `Шаг ${step.index + 1}`), step.def.hint);
+      // Under the window's title, so it never covers the button to press.
+      modalLayer.querySelector('.modal-title')?.after(tutorialBar);
+    }
+    if (!step.ready) return;
+    // Over a window only its buttons count; without one, only the game's.
+    const scope: ParentNode = modal !== null ? modalLayer : document;
+    for (const sel of stepTargets(step.def.id, tutorialView())) {
+      const el = [...scope.querySelectorAll<HTMLElement>(sel)].find((x) => x.getClientRects().length > 0 && (modal !== null || !modalLayer.contains(x)));
+      if (!el) continue;
+      el.classList.add('tut-target');
+      const key = `${step.index}|${sel}`;
+      if (key !== tutorialScrolled) {
+        tutorialScrolled = key;
+        const r = el.getBoundingClientRect();
+        if (r.top < 0 || r.bottom > innerHeight) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+      return;
+    }
+    // The step is done elsewhere: the window's «×» glows.
+    if (modal !== null) modalLayer.querySelector('.modal-title .icon-btn')?.classList.add('tut-target');
+  }
+
+  /** First-encounter notes, one at a time: what is on screen for the first time (CONCEPT.md §7.3 «Подсказки»). */
   function renderGuide(): void {
-    const show = guided && issueOpen && !searching && !busy && !state.outcome;
+    if (tutorial) return renderTutorial();
+    guideNote.classList.remove('tutorial-note');
+    const show = settings.hints && issueOpen && !searching && !busy && !state.outcome;
     const notes = show ? pendingNotes({ state, c, report, rivalShown: !rivalNotice.hidden }, settings.notesSeen) : [];
     guideNote.hidden = !notes.length;
     if (!notes.length) return;
@@ -1889,6 +1971,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'button',
         {
           class: 'ghost strike',
+          'data-tut': 'lure',
           disabled: !!block,
           title: block ? lureWhy[block] : 'Его ведущий автор уходит к нам: «Голос» печатает на одну новость в день меньше, его читатели доверяют ему меньше',
           onclick: actNow(() => lureRivalAuthor(state, c)),
@@ -2105,8 +2188,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
         ? h(
             'div',
             { class: 'place-menu move-menu', role: 'menu' },
-            ...([2, 1, 0] as Placement[]).map((pl) =>
-              menuItem(
+            ...([2, 1, 0] as Placement[]).map((pl) => {
+              const item = menuItem(
                 where === pl,
                 false,
                 moveTo(pl),
@@ -2116,8 +2199,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
                   { class: 'opt' },
                   h('span', { class: 'opt-head' }, h('b', {}, placementLabels[pl]), taken(pl) && where !== pl ? h('small', {}, 'поменяется местами') : null),
                 ),
-              ),
-            ),
+              );
+              if (pl === 2) item.dataset.tut = 'to-front';
+              return item;
+            }),
             menuItem(where === 'out', false, moveTo('out'), h('span', { class: 'move-out' }, '✕'), h('span', { class: 'opt' }, h('span', { class: 'opt-head' }, h('b', {}, 'Не печатать')))),
           )
         : null;
@@ -2136,7 +2221,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const truthButton = h(
       'button',
       {
-        class: `truth-chip ${d.distortion < 0 && card.conflict ? 'calm' : `t${p.truth}`}${menuOpen ? ' on' : ''}${isNew('framing') && where === 2 ? ' is-new' : ''}`,
+        class: `truth-chip ${d.distortion < 0 && card.conflict ? 'calm' : `t${p.truth}`}${menuOpen ? ' on' : ''}`,
+        'data-tut': 'framing',
         title: `${toneOf(card, d.distortion)} (${truthLabels[p.truth].toLowerCase()}) — изменить подачу`,
         'aria-haspopup': 'menu',
         'aria-expanded': String(menuOpen),
@@ -2175,7 +2261,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const preview = previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: dist });
       const steps = preview.tier - card.tier;
       const stats = `${truthLabels[preview.truth]} · ${tierLabels[preview.tier]}${steps > 0 ? ` ${'↑'.repeat(steps)}` : steps < 0 ? ` ${'↓'.repeat(-steps)}` : ''} · риск ${Math.round(preview.exposureRisk * 100)}%`;
-      return menuItem(
+      const item = menuItem(
         d.distortion === dist,
         !!blockedHint,
         () => (d.distortion = dist),
@@ -2188,6 +2274,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
           effectLine(preview),
         ),
       );
+      // The tutorial lights up the louder framings (CONCEPT.md §7.3 «Обучение»).
+      if (dist > 0) item.dataset.tut = 'distort';
+      return item;
     };
     const steps: number[] = [];
     for (let dist = minDistortion(card); dist <= maxDistortion(card); dist++) steps.push(dist);
@@ -2246,7 +2335,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
 
     const withImage = where === 2 || where === 1;
     // The editor's red pencil in the margin of an untrue story that may be caught (CONCEPT.md §7.3 «Риск выпуска»).
-    const pencil = where !== 'out' && p.truth > 0 && p.exposureRisk > 0 && unlocked('framing') ? riskStep(p.exposureRisk) : null;
+    const pencil = where !== 'out' && p.truth > 0 && p.exposureRisk > 0 ? riskStep(p.exposureRisk) : null;
     const cls = ['news', `at-${where}`, `truth-${p.truth}`, `tier-${tier}`, investigation ? 'investigation' : '', selected === card.uid ? 'selected' : '', pencil !== null ? `pencil pencil-${pencil}` : '', helpsTask(card) ? 'task-match' : '']
       .filter(Boolean)
       .join(' ');
@@ -2273,7 +2362,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'div',
           { class: 'head-tools' },
-          unlocked('framing') ? truthButton : null,
+          truthButton,
           huntChip(card, p.effect),
           where !== 'out' ? helpChip(p.effect) : null,
           pencil !== null ? h('span', { class: 'pencil-note', title: `Риск разоблачения ${Math.round(p.exposureRisk * 100)}%` }, riskNotes[pencil]) : null,
@@ -2336,7 +2425,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * story about a workplace, «🎯 Травля · +40%» on a story about the target.
    */
   function huntChip(card: CardInstance, effect: CardEffect | null): HTMLElement | null {
-    if (card.building === undefined || !unlocked('framing')) return null;
+    if (card.building === undefined) return null;
     const x = state.buildings[card.building];
     if (!x) return null;
     const name = buildingName(state, c, card.building).toLowerCase();
@@ -2617,7 +2706,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       zones[key].empty.hidden = here.length > 0 || key === 'out';
       // Phones tap, wide screens drag or tap (CONCEPT.md §7.3).
       const spare = ordered.some((card) => whereOf(card) === 'out');
-      const hire = key !== 'out' && !spare && !searching && unlocked('hire') && state.reporters.length < c.balance.maxReporters && !state.outcome;
+      const hire = key !== 'out' && !spare && !searching && state.reporters.length < c.balance.maxReporters && !state.outcome;
       zones[key].empty.classList.toggle('hire', hire);
       zones[key].empty.textContent = hire
         ? `Больше новостей нет: ${state.reporters.length === 1 ? 'репортёр приносит одну' : 'каждый репортёр приносит одну'} в день. ＋ Нанять ещё`
@@ -2705,7 +2794,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     }
     const level = currentIssueLevel();
     const parts: (HTMLElement | string)[] = [printed ? h('b', {}, level === 3 ? 'сенсация' : `${issueLevelLabels[level].toLowerCase()} выпуск`) : h('b', {}, 'газета выйдет пустой')];
-    if (printed && unlocked('framing'))
+    if (printed)
       parts.push(
         !untrue
           ? 'всё правда'
@@ -2714,7 +2803,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             : h('span', {}, 'есть неправда — ', h('b', { class: `risk-word step-${stamp === 'danger' ? 3 : riskStep(risk)}` }, stamp === 'danger' ? 'опасно' : risk < 0.1 ? 'риск небольшой' : 'рискованно')),
       );
     // An untrue story from yesterday may still be caught today: the forecast leaves it out, this says it.
-    if (state.pendingLies.length && unlocked('framing')) parts.push(h('span', { class: 'late-risk' }, 'вчерашняя ложь ещё может всплыть'));
+    if (state.pendingLies.length) parts.push(h('span', { class: 'late-risk' }, 'вчерашняя ложь ещё может всплыть'));
     const fc = currentForecast();
     if (fc) {
       const here = cityStateOf(c, state.metrics.cityIndex);
@@ -2738,7 +2827,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
    */
   function renderStreak(lieLaidOut: boolean): void {
     const b = c.balance;
-    streakBadge.hidden = !unlocked('framing') || searching || !!state.outcome;
+    streakBadge.hidden = searching || !!state.outcome;
     if (streakBadge.hidden) return;
     const days = state.cleanStreak;
     const breaks = lieLaidOut && days > 0;
@@ -2881,14 +2970,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
           `найм ${r.hireCost} · зарплата ${r.salary}/ход`,
           h(
             'button',
-            { class: state.money >= r.hireCost ? 'primary' : '', disabled: full || state.money < r.hireCost || !!state.outcome, onclick: act(() => hireFromAgency(state, c, id)) },
+            { class: state.money >= r.hireCost ? 'primary' : '', 'data-tut': 'hire', disabled: full || state.money < r.hireCost || !!state.outcome, onclick: act(() => hireFromAgency(state, c, id)) },
             `Нанять (−${r.hireCost})`,
           ),
         );
       }),
       h(
         'button',
-        { class: state.agencyOffer.length ? '' : 'primary', disabled: !canCall, onclick: act(() => callAgency(state, c)) },
+        { class: state.agencyOffer.length ? '' : 'primary', 'data-tut': 'agency', disabled: !canCall, onclick: act(() => callAgency(state, c)) },
         state.agencyOffer.length ? `Искать других (${price})` : `Найти репортёров (${price})`,
       ),
     ];
@@ -2992,7 +3081,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const price = (u: UpgradeDef) => {
       const o = options.get(u.id);
       const free = o?.cost === 0 && u.cost > 0;
-      return h('button', { class: o?.affordable ? 'primary' : '', disabled: !o?.affordable || !!state.outcome, onclick: () => buy(u.id) }, free ? 'бесплатно' : `${u.cost}`);
+      return h('button', { class: o?.affordable ? 'primary' : '', 'data-tut': 'buy', disabled: !o?.affordable || !!state.outcome, onclick: () => buy(u.id) }, free ? 'бесплатно' : `${u.cost}`);
     };
     const icon = (u: UpgradeDef, cls = 'upg-icon') => h('span', { class: cls, 'aria-hidden': 'true' }, u.icon ?? '★');
     const series = (u: UpgradeDef) => (u.series ? c.upgrades.filter((x) => x.series === u.series) : null);
@@ -3748,12 +3837,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
         ...topics.map((t) => {
           const special = r.skills.topics.includes(t);
           const on = assigned.includes(t);
-          return chip(
+          const el = chip(
             `${special ? '★ ' : ''}${topicLabels[t]}`,
             on,
             () => setReporterTopics(state, c, id, on ? assigned.filter((x) => x !== t) : [...assigned, t]),
             special ? 'Специальность репортёра' : '',
           );
+          el.dataset.tut = `topic-${t}`;
+          return el;
         }),
       ),
     ];
@@ -3827,7 +3918,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             ),
             open ? digPromise(g.id, id) : null,
           ),
-          h('button', { class: 'primary', disabled: !!state.outcome, onclick: act(() => startInvestigation(state, c, id, g.id)) }, 'Копать'),
+          h('button', { class: 'primary', 'data-tut': 'dig', disabled: !!state.outcome, onclick: act(() => startInvestigation(state, c, id, g.id)) }, 'Копать'),
         );
       }),
     ];
@@ -3878,7 +3969,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function outcomeStars(): HTMLElement {
     const s = scoreOf(state, c);
     const row = (ok: boolean, text: string) => h('li', { class: ok ? 'ok' : '' }, `${ok ? '★' : '☆'} ${text}`);
-    const best = recordOf(state.mode, state.difficulty);
+    const best = tutorial ? null : recordOf(state.mode, state.difficulty, state.length);
     return h(
       'div',
       { class: 'outcome-stars' },
@@ -3922,6 +4013,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('h2', {}, state.outcome.result === 'win' ? 'Победа' : 'Поражение'),
         h('p', {}, outcomeText(state.outcome, state.mode)),
         h('p', { class: 'muted' }, `Сыграно ходов: ${Math.min(state.turn - 1, c.balance.turnLimit)}. Город: ${cityStage().name.toLowerCase()}.`),
+        tutorial
+          ? h('p', { class: 'tutorial-done' }, 'Обучение пройдено. Теперь — настоящая партия: короткая или полная, на любой сложности («Новая игра»).')
+          : null,
         outcomeStars(),
         h(
           'div',
@@ -3940,7 +4034,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     levelBump = level === null || shownLevel === null || level === shownLevel ? '' : level > shownLevel ? 'bump-up' : 'bump-down';
     shownLevel = level;
     renderHud();
-    reporterBar.hiring = unlocked('hire') ? (isNew('hire') ? 'new' : 'open') : 'closed';
     reporterBar.render(state, repStatus, searching);
     // A promoted reporter's portrait celebrates once the day's search is over (CONCEPT.md §3.3б).
     if (report && !searching && !busy && promotedTurn !== report.turn) {
@@ -3964,6 +4057,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderOutcome();
     renderTitle();
     renderCampaign();
+    renderTutorialTargets();
     saveSoon();
   }
   // ---------- Campaign (CONCEPT.md §9) ----------
@@ -4201,8 +4295,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
             h('span', {}, 'Кампания'),
             campaign ? h('small', {}, `${sideNames[campaign.side]} · ★ ${campaignStars(campaign)} · ${campaign.finished ? 'пройдена' : `город ${campaign.reached + 1} из ${base.towns.length}`}`) : h('small', {}, 'семь городов области'),
           ),
-          // A running game is not thrown away without asking.
-          item('Новая игра', () => openModal('newgame'), hasGame && !state.outcome ? '' : 'primary'),
+          // The tutorial mission first for a newcomer (CONCEPT.md §7.3 «Обучение»); a running game is not thrown away without asking.
+          h(
+            'button',
+            { class: `title-item${!settings.tutorialDone && !(hasGame && !state.outcome) ? ' primary' : ''}`, onclick: () => (hasGame && !state.outcome ? openModal('newgame') : void startGame('destroy', undefined, true)) },
+            h('span', {}, 'Обучение'),
+            h('small', {}, settings.tutorialDone ? 'пройдено · можно сыграть ещё раз' : 'короткая лёгкая партия: задание за заданием'),
+          ),
+          item('Новая игра', () => openModal('newgame'), hasGame && !state.outcome ? '' : settings.tutorialDone ? 'primary' : ''),
           item('Как играть', () => openModal('howto')),
           item('Настройки', () => openModal('settings')),
           item('Об игре', () => openModal('about')),
@@ -4230,14 +4330,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   /** Starts a new game; before the first one of each mode its opening story plays (CONCEPT.md §1.1, §8). */
-  async function startGame(mode: GameMode = 'destroy', seed?: number): Promise<void> {
+  async function startGame(mode: GameMode = 'destroy', seed?: number, tutorialGame = false): Promise<void> {
     modal = null;
     titleOpen = false;
     render();
     // For now the opening story plays before every new game (CONCEPT.md §1.1).
     await watchIntro(mode);
     scene?.stopTour();
-    newGame(seed, mode);
+    newGame(seed, mode, null, tutorialGame);
   }
 
   /** The opening story over the drifting city. */
@@ -4272,7 +4372,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
         item('Главное меню', () => showTitle()),
         debugMode ? item('Отладка', () => openModal('debug'), 'ghost') : null,
       ),
-      hasGame ? h('p', { class: 'hint pause-difficulty' }, `Сложность: ${base.difficulties.find((d) => d.id === state.difficulty)?.name ?? ''}`) : null,
+      hasGame
+        ? h(
+            'p',
+            { class: 'hint pause-difficulty' },
+            tutorial ? 'Обучение' : `Сложность: ${base.difficulties.find((d) => d.id === state.difficulty)?.name ?? ''} · ${state.length === 'short' ? 'короткая' : 'полная'} партия`,
+          )
+        : null,
     ].filter((x): x is HTMLElement => x !== null);
   }
 
@@ -4289,7 +4395,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('small', { class: 'mode-record' }, recordLine(mode)),
       );
     const recordLine = (mode: GameMode) => {
-      const r = recordOf(mode, settings.difficulty);
+      const r = recordOf(mode, settings.difficulty, settings.length);
       return r ? `Рекорд: ${starLine(r.stars)} · ${r.days} ${daysWord(r.days)}` : 'Рекорда пока нет';
     };
     // Difficulty (CONCEPT.md §4.6): remembered in the settings for the next games.
@@ -4319,41 +4425,44 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ),
       h('small', { class: 'hint' }, base.difficulties.find((d) => d.id === settings.difficulty)?.text ?? ''),
     );
-    // Novice or veteran (CONCEPT.md §7.3 «Постепенное открытие»): remembered for the next games too.
-    const kinds = [
-      { id: 'novice', name: 'Новичок', text: 'Возможности газеты открываются в первые дни по одной, с короткими записками.' },
-      { id: 'veteran', name: 'Опытный', text: 'Всё доступно сразу, без подсказок.' },
-    ] as const;
-    const experience = h(
+    // Short or full game (CONCEPT.md §4.6а): remembered for the next games too.
+    const lengths = h(
       'div',
       { class: 'difficulty' },
-      h('span', { class: 'difficulty-label' }, 'Опыт'),
+      h('span', { class: 'difficulty-label' }, 'Партия'),
       h(
         'div',
         { class: 'chips' },
-        ...kinds.map((k) =>
+        ...base.lengths.map((l) =>
           h(
             'button',
             {
-              class: `chip${settings.experience === k.id ? ' on' : ''}`,
-              'aria-pressed': String(settings.experience === k.id),
-              title: k.text,
+              class: `chip${settings.length === l.id ? ' on' : ''}`,
+              'aria-pressed': String(settings.length === l.id),
+              title: l.text,
               onclick: () => {
-                settings.experience = k.id;
+                settings.length = l.id;
                 saveSettings(settings);
                 render();
               },
             },
-            k.name,
+            l.name,
           ),
         ),
       ),
-      h('small', { class: 'hint' }, kinds.find((k) => k.id === settings.experience)!.text),
+      h('small', { class: 'hint' }, base.lengths.find((l) => l.id === settings.length)?.text ?? ''),
     );
     return [
       ...(hasGame && !state.outcome ? [h('p', { class: 'bad' }, 'Текущая партия будет потеряна.')] : []),
-      experience,
+      lengths,
       levels,
+      // The tutorial mission: an easy short game, one task at a time (CONCEPT.md §7.3 «Обучение»).
+      h(
+        'button',
+        { class: `tutorial-pick${settings.tutorialDone ? '' : ' primary'}`, onclick: () => void startGame('destroy', undefined, true) },
+        h('b', {}, 'Обучение'),
+        h('span', {}, 'Лёгкая короткая партия: игра шаг за шагом показывает, как нанимать репортёров, приукрашивать новости, копать компромат, стравливать горожан и травить завод. Нужная кнопка подсвечивается.'),
+      ),
       h(
         'div',
         { class: 'mode-cards' },
@@ -4365,7 +4474,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   function settingsContent(): HTMLElement[] {
-    const toggle = (label: string, hint: string, key: 'fastSearch' | 'skipCutscenes') =>
+    const toggle = (label: string, hint: string, key: 'fastSearch' | 'skipCutscenes' | 'hints') =>
       h(
         'label',
         { class: 'setting' },
@@ -4383,6 +4492,19 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('h3', { class: 'section' }, 'Анимации'),
       toggle('Быстрый поиск', 'находки репортёров появляются сразу, без анимации', 'fastSearch'),
       toggle('Без роликов дня', 'не показывать драки, протесты и другие яркие события перед выпуском', 'skipCutscenes'),
+      h('h3', { class: 'section' }, 'Подсказки'),
+      toggle('Подсказки над газетой', 'короткая записка, когда в игре впервые появляется что-то новое: конфликт, конкурент, разоблачение…', 'hints'),
+      h(
+        'button',
+        {
+          onclick: () => {
+            settings.notesSeen = [];
+            saveSettings(settings);
+            render();
+          },
+        },
+        'Показать прочитанные подсказки снова',
+      ),
       h('h3', { class: 'section' }, 'Вступление'),
       h('button', { onclick: () => void watchIntro() }, 'Посмотреть вступление ещё раз'),
       h('button', { class: 'ghost', onclick: () => openModal(titleOpen ? null : 'pause') }, '← Назад'),
@@ -4402,7 +4524,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const step = (n: number, title: string, text: string) =>
       h('div', { class: 'howto-step' }, h('span', { class: 'howto-num' }, String(n)), h('div', {}, h('b', {}, title), h('p', {}, text)));
     // Each mode's numbers at the chosen difficulty: `c` is adjusted for the current game's mode only.
-    const balanceOf = (mode: GameMode) => withDifficulty(base, titleOpen ? settings.difficulty : state.difficulty, mode).balance;
+    const balanceOf = (mode: GameMode) =>
+      !titleOpen && mode === state.mode ? c.balance : withLength(withDifficulty(base, settings.difficulty, mode), settings.length, settings.difficulty).balance;
     const lose = (b: typeof c.balance) => `банкротство (деньги в минусе ${b.brokeTurnsLimit} дня подряд) или потеря репутации — вам перестали верить`;
     const goals: Record<GameMode, () => HTMLElement> = {
       destroy: () => {
@@ -4492,7 +4615,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     // Nothing is written until the player has actually played a turn: the title screen's fresh city
     // must not turn into a «Продолжить» on the next visit.
     if (!hasGame || state.turn <= 1) return;
-    writeSave<Draft>({ state, report, drafts: [...drafts], guided });
+    writeSave<Draft>({ state, report, drafts: [...drafts], tutorial });
   };
   /** Every change is saved shortly after it (renders come in bursts during animations). */
   function saveSoon(): void {

@@ -44,6 +44,7 @@ import {
   setRivalWatch,
   answerOffer,
   withDifficulty,
+  withLength,
   forecastTurn,
   levelOf,
   skilledReporter,
@@ -1491,5 +1492,20 @@ describe('reputation (CONCEPT.md §5.3)', () => {
     const front = gainAt(2);
     expect(front.all).toBeGreaterThan(gainAt(0).all);
     expect(front.outsider).toBeGreaterThan(0);
+  });
+});
+
+describe('short game (CONCEPT.md §4.6а)', () => {
+  it('a short game has its own days by difficulty, a nearer goal and a quicker start', () => {
+    const full = withLength(withDifficulty(realContent, 'hard', 'destroy'), 'full', 'hard');
+    expect(full.balance).toEqual(withDifficulty(realContent, 'hard', 'destroy').balance);
+    const short = withLength(withDifficulty(realContent, 'hard', 'destroy'), 'short', 'hard');
+    const def = realContent.lengths.find((x) => x.id === 'short')!;
+    expect(short.balance.turnLimit).toBe(def.days!.hard);
+    expect(short.balance.winCityIndex).toBeGreaterThan(realContent.balance.winCityIndex);
+    expect(short.balance.impactNorm).toBeCloseTo(withDifficulty(realContent, 'hard', 'destroy').balance.impactNorm * def.balanceMul!.impactNorm!);
+    const s = createGame(short, 3, 'destroy', 'hard', { length: 'short' });
+    expect(s.length).toBe('short');
+    expect(s.reporters.length).toBe(short.balance.startReporters.length);
   });
 });

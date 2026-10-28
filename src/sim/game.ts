@@ -39,10 +39,11 @@ import type {
   TurnReport,
   GameMode,
   Difficulty,
+  GameLength,
 } from './types';
 
 /**
- * `c` must already be the content of this difficulty (`withDifficulty`) and, in the campaign, of the
+ * `c` must already be the content of this difficulty (`withDifficulty`), of the length (`withLength`) and, in the campaign, of the
  * town (`withTown`). A campaign town may start with a reporter brought from the last town, with their experience.
  */
 export function createGame(
@@ -50,7 +51,7 @@ export function createGame(
   seed: number,
   mode: GameMode = 'destroy',
   difficulty: Difficulty = 'normal',
-  opts: { town?: string; reporters?: { id: string; xp: number }[] } = {},
+  opts: { town?: string; reporters?: { id: string; xp: number }[]; length?: GameLength } = {},
 ): GameState {
   const team = opts.reporters?.length ? opts.reporters : c.balance.startReporters.map((id) => ({ id, xp: 0 }));
   const rng = createRng(seed);
@@ -126,6 +127,7 @@ export function createGame(
     vouchers: 0,
     lastProfit: 0,
     town: opts.town ?? null,
+    length: opts.length ?? 'full',
     outcome: null,
   };
   state.metrics = computeMetrics(state, c);

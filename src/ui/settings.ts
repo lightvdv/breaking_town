@@ -1,4 +1,4 @@
-import type { Difficulty } from '../sim';
+import type { Difficulty, GameLength } from '../sim';
 import { STORAGE_SUFFIX } from '../assets';
 /**
  * Player settings (CONCEPT.md §7.3 «Настройки»): kept in the browser apart from the save, so a new
@@ -16,14 +16,15 @@ export interface Settings {
   difficulty: Difficulty;
   /** The rival paper's stories are unfolded above the issue; once opened they stay open on the next days. */
   rivalOpen: boolean;
-  /**
-   * Novice: the paper's controls open day by day with notes (CONCEPT.md §7.3); veteran: all at once.
-   * Chosen in the new game window and remembered for the next games.
-   */
-  experience: 'novice' | 'veteran';
-  /** Notes of the gradual opening already read: they are never shown again, in any game. */
+  /** Short or full game (CONCEPT.md §4.6а): chosen in the new game window and remembered. */
+  length: GameLength;
+  /** First-encounter notes above the paper (CONCEPT.md §7.3 «Подсказки»); off in the settings. */
+  hints: boolean;
+  /** The tutorial mission was played to the end (the title screen stops offering it first). */
+  tutorialDone: boolean;
+  /** Notes already read: they are never shown again, in any game. */
   notesSeen: string[];
-  /** The novice's notes are unfolded; folded (the default) they are one line until opened. */
+  /** The notes are unfolded; folded (the default) they are one line until opened. */
   guideOpen: boolean;
   /** The tasks plaque is unfolded (the default); folded it is one line. */
   tasksOpen: boolean;
@@ -32,7 +33,7 @@ export interface Settings {
 }
 
 const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
-const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, experience: 'novice', notesSeen: [], guideOpen: false, tasksOpen: true, staffOpen: false };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, length: 'short', hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: true, staffOpen: false };
 
 export function loadSettings(): Settings {
   try {

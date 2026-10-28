@@ -1,8 +1,8 @@
-import type { Difficulty, GameMode } from '../sim';
+import type { Difficulty, GameLength, GameMode } from '../sim';
 import { STORAGE_SUFFIX } from '../assets';
 
 /**
- * Best results by mode and difficulty (CONCEPT.md §4.8): the most stars, and with them the fewest
+ * Best results by mode, difficulty and length (CONCEPT.md §4.8): the most stars, and with them the fewest
  * days. Kept in the browser apart from the save; reads and writes never throw.
  */
 export interface GameRecord {
@@ -11,7 +11,8 @@ export interface GameRecord {
 }
 
 const KEY = `breaking-town-records${STORAGE_SUFFIX}`;
-const keyOf = (mode: GameMode, difficulty: Difficulty) => `${mode}|${difficulty}`;
+// The full game keeps the old key, so records made before short games existed stay.
+const keyOf = (mode: GameMode, difficulty: Difficulty, length: GameLength) => `${mode}|${difficulty}${length === 'full' ? '' : `|${length}`}`;
 
 function load(): Record<string, GameRecord> {
   try {
@@ -21,16 +22,16 @@ function load(): Record<string, GameRecord> {
   }
 }
 
-export function recordOf(mode: GameMode, difficulty: Difficulty): GameRecord | null {
-  return load()[keyOf(mode, difficulty)] ?? null;
+export function recordOf(mode: GameMode, difficulty: Difficulty, length: GameLength): GameRecord | null {
+  return load()[keyOf(mode, difficulty, length)] ?? null;
 }
 
 /** Keeps a won game's result if it beats the record; returns whether it did. */
-export function submitRecord(mode: GameMode, difficulty: Difficulty, result: GameRecord): boolean {
+export function submitRecord(mode: GameMode, difficulty: Difficulty, length: GameLength, result: GameRecord): boolean {
   const all = load();
-  const old = all[keyOf(mode, difficulty)];
+  const old = all[keyOf(mode, difficulty, length)];
   if (old && (old.stars > result.stars || (old.stars === result.stars && old.days <= result.days))) return false;
-  all[keyOf(mode, difficulty)] = result;
+  all[keyOf(mode, difficulty, length)] = result;
   try {
     localStorage.setItem(KEY, JSON.stringify(all));
   } catch {

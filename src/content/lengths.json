@@ -1,0 +1,30 @@
+[
+  {
+    "id": "full",
+    "name": "Полная",
+    "text": "Около 40 дней: довести город до «Упадка».",
+    "goal": "Упадок"
+  },
+  {
+    "id": "short",
+    "name": "Короткая",
+    "text": "Около 20 дней: довести город до «Кризиса». Сразу два репортёра и больше читателей.",
+    "goal": "Кризис",
+    "days": { "easy": 23, "normal": 20, "hard": 18 },
+    "balance": {
+      "winCityIndex": 71,
+      "startMoney": 600,
+      "startFollowShare": 2.5,
+      "startReporters": ["petrova", "gusev"],
+      "factCheckStartTurn": 3,
+      "conflictStartTurn": 3,
+      "rivalStartTurn": { "destroy": 5, "save": 3 },
+      "arcStartTurn": 2,
+      "taskStartTurn": 2,
+      "twistTurn": 8,
+      "offerStartTurn": 3,
+      "poachStartTurn": 99
+    },
+    "balanceMul": { "impactNorm": 1.23 }
+  }
+]

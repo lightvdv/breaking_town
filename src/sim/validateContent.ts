@@ -154,6 +154,15 @@ export function validateContent(c: Content): string[] {
   for (const d of c.difficulties) {
     for (const [k, v] of Object.entries({ ...d.balance, ...d.modes.destroy, ...d.modes.save })) if (typeof (c.balance as unknown as Record<string, unknown>)[k] !== typeof v) errors.push(`difficulty ${d.id}: bad balance key ${k}`);
   }
+  // Game lengths (CONCEPT.md §4.6а): the full and the short game, patching only known balance numbers.
+  for (const id of ['full', 'short']) if (!c.lengths.some((x) => x.id === id)) errors.push(`missing length ${id}`);
+  for (const l of c.lengths) {
+    for (const [k, v] of Object.entries({ ...l.balance, ...l.balanceMul })) {
+      const base = (c.balance as unknown as Record<string, unknown>)[k];
+      if (typeof base !== typeof v && !(l.balanceMul && k in l.balanceMul && typeof base === 'number')) errors.push(`length ${l.id}: bad balance key ${k}`);
+    }
+    for (const r of l.balance?.startReporters ?? []) if (!c.reporters.some((x) => x.id === r)) errors.push(`length ${l.id}: unknown reporter ${r}`);
+  }
   // Named residents and their letters (CONCEPT.md §2.2а).
   unique('person', c.people.map((x) => x.id));
   for (const p of c.people) {

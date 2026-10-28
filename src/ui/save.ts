@@ -1,5 +1,6 @@
 import { createTension, type Content, type GameState, type TurnReport } from '../sim';
 import { STORAGE_SUFFIX } from '../assets';
+import type { TutorialProgress } from './tutorial';
 
 /**
  * Autosave in the browser (CONCEPT.md §7.3): the game state is plain JSON, so it is kept in
@@ -13,8 +14,8 @@ export interface SaveData<D> {
   report: TurnReport | null;
   /** The player's layout of the current issue, by card uid. */
   drafts: [number, D][];
-  /** The game opens its controls day by day (a novice's game, CONCEPT.md §7.3). */
-  guided: boolean;
+  /** The tutorial mission's progress (CONCEPT.md §7.3 «Обучение»); null in an ordinary game. */
+  tutorial: TutorialProgress | null;
 }
 
 /** Returns the saved game, or null when there is none or it does not fit the current content. */
@@ -55,6 +56,7 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.letters ??= [];
     s.fates ??= [];
     s.difficulty ??= 'normal';
+    s.length ??= 'full';
     s.rivalWatch ??= [];
     // Channels and upgrades that left the game (radio, TV, social networks) are dropped; the rest stays.
     s.ownedChannels = s.ownedChannels.filter((id) => c.channels.some((x) => x.id === id));
@@ -88,7 +90,7 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     if (s.twist && !c.twists.some((x) => x.id === s.twist!.id)) s.twist = null;
     // Upgrades removed from the content (e.g. the extra front page) are dropped.
     s.upgrades = s.upgrades.filter((id) => c.upgrades.some((u) => u.id === id));
-    return { state: s, report: data.report ?? null, drafts: Array.isArray(data.drafts) ? data.drafts : [], guided: data.guided === true };
+    return { state: s, report: data.report ?? null, drafts: Array.isArray(data.drafts) ? data.drafts : [], tutorial: data.tutorial && typeof data.tutorial.step === 'number' ? data.tutorial : null };
   } catch {
     return null;
   }

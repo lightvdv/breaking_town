@@ -37,8 +37,10 @@ import {
   rivalTrust,
   setRivalWatch,
   withDifficulty,
+  withLength,
   withTown,
   type Difficulty,
+  type GameLength,
   answerOffer,
   offerOf,
   retainCost,
@@ -61,6 +63,11 @@ const content = withDifficulty(baseContent, difficulty, process.argv.includes('s
 // --town id: every game is played in this campaign town (CONCEPT.md §9).
 const townIndex = process.argv.indexOf('--town');
 const town = townIndex >= 0 ? process.argv[townIndex + 1] : null;
+// --length short (CONCEPT.md §4.6а): every game is a short one.
+const lengthIndex = process.argv.indexOf('--length');
+const length = (lengthIndex >= 0 ? process.argv[lengthIndex + 1] : 'full') as GameLength;
+if (!baseContent.lengths.some((x) => x.id === length)) throw new Error(`Unknown length ${length}`);
+Object.assign(content, withLength(content, length, difficulty));
 if (town) Object.assign(content, withTown(content, town, process.argv.includes('save') && process.argv.includes('--mode') ? 'save' : 'destroy'));
 // --twist id: every game gets only this mid-game twist (to see what one twist does to the balance).
 const twistIndex = process.argv.indexOf('--twist');
@@ -400,7 +407,7 @@ function answerOffers(s: GameState, strategy: Strategy): void {
 }
 
 function playGame(seed: number, strategy: Strategy, trace = false): Result {
-  const s = createGame(content, seed, saveMode ? 'save' : 'destroy', difficulty, town ? { town } : {});
+  const s = createGame(content, seed, saveMode ? 'save' : 'destroy', difficulty, { ...(town ? { town } : {}), length });
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
     if ((strategy === mixed || strategy === agitator) && !noInvestigations) manageInvestigations(s);

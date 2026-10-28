@@ -870,6 +870,7 @@ export interface Content {
   tasks: TaskDef[];
   twists: TwistDef[];
   towns: TownDef[];
+  lengths: LengthDef[];
   letters: LetterTemplates;
   balance: Balance;
 }
@@ -1141,6 +1142,22 @@ export interface TownDef {
   stars: number;
 }
 
+/** How long a game lasts (CONCEPT.md §4.6а): the full game or a short one with a nearer goal. */
+export type GameLength = 'full' | 'short';
+
+export interface LengthDef {
+  id: GameLength;
+  name: string;
+  text: string;
+  /** The city stage to bring the town down to, in words. */
+  goal: string;
+  /** The turn limit by difficulty; none keeps the difficulty's. */
+  days?: Record<Difficulty, number>;
+  balance?: Partial<Balance>;
+  /** Balance numbers multiplied, so they keep the difficulty's scale. */
+  balanceMul?: Partial<Record<keyof Balance, number>>;
+}
+
 export interface DifficultyDef {
   id: Difficulty;
   name: string;
@@ -1176,6 +1193,8 @@ export interface GameState {
   deals: Deal[];
   /** The level the game is played at; its content comes from `withDifficulty`. */
   difficulty: Difficulty;
+  /** Full or short game; its content comes from `withLength`. */
+  length: GameLength;
   /** Named residents (CONCEPT.md §2.2а): person id → resident id; today's letters; what happened to them. */
   people: Record<string, number>;
   letters: Letter[];

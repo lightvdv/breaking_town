@@ -856,6 +856,36 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return forecast;
   };
 
+  /**
+   * The forecast with one story told another way (the truth menu, CONCEPT.md §7.3): the same
+   * rehearsal as the top bar's, memoized per layout, so every option shows what it does to the town.
+   */
+  // Rehearsals are slow on a phone, so the menu opens at once and they fill in one by one.
+  const optionForecasts = new Map<string, Forecast | null>();
+  const forecastQueue = new Map<string, Decision>();
+  let forecastTimer = 0;
+  const runForecasts = () => {
+    forecastTimer = 0;
+    const next = forecastQueue.entries().next();
+    if (next.done) return;
+    const [key, decision] = next.value;
+    forecastQueue.delete(key);
+    if (optionForecasts.size > 100) optionForecasts.clear();
+    optionForecasts.set(key, forecastTurn(state, c, decision));
+    render();
+  };
+  /** undefined while it is being worked out, null when the story is not in the issue. */
+  const forecastWith = (uid: number, distortion: number): Forecast | null | undefined => {
+    const decision = currentDecision();
+    if (!decision.publish.some((p) => p.cardUid === uid)) return null;
+    decision.publish = decision.publish.map((p) => (p.cardUid === uid ? { ...p, distortion } : p));
+    const key = `${state.turn}|${state.price}|${state.money}|${state.upgrades.length}|${state.reporters.join()}|${JSON.stringify(decision)}`;
+    if (optionForecasts.has(key)) return optionForecasts.get(key) ?? null;
+    forecastQueue.set(key, decision);
+    if (!forecastTimer) forecastTimer = window.setTimeout(runForecasts, 30);
+    return undefined;
+  };
+
   const endTurn = () => {
     const decision = currentDecision();
     const hand = state.hand;
@@ -2274,6 +2304,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           h('span', { class: 'opt-head' }, h('b', {}, toneOf(card, dist)), h('small', {}, blockedHint ?? stats)),
           h('span', { class: 'opt-title' }, `«${preview.title}»`),
           effectLine(preview, huntBase),
+          blockedHint ? null : forecastLine(forecastWith(card.uid, dist)),
         ),
       );
       // The tutorial lights up the louder framings (CONCEPT.md §7.3 «Обучение»).
@@ -2479,6 +2510,22 @@ export function mountApp(root: HTMLElement, base: Content): void {
       { class: `opt-effect${toGoal > 0 ? ' for' : toGoal < 0 ? ' against' : ''}` },
       p.effect ? `≈${n} ${plural(n, 'поверит', 'поверят', 'поверят')} · ${short}` : short,
       hit ? h('span', { class: 'opt-hunt' }, ` · ${hit}`) : null,
+    );
+  }
+
+  /** «Прогноз: город ≈−3.2 · читатели ≈+5» under a truth menu option, the town in the colours of the goal. */
+  function forecastLine(f: Forecast | null | undefined): HTMLElement | null {
+    if (f === undefined) return h('span', { class: 'opt-forecast' }, 'Прогноз: считаем…');
+    if (!f) return null;
+    const city = Math.round((f.cityIndex - state.metrics.cityIndex) * 10) / 10;
+    const goodForGoal = city === 0 ? 0 : (city < 0) === (state.mode === 'destroy') ? 1 : -1;
+    const readers = Math.round(f.readers);
+    return h(
+      'span',
+      { class: 'opt-forecast' },
+      'Прогноз: ',
+      h('b', { class: goodForGoal > 0 ? 'for' : goodForGoal < 0 ? 'against' : '' }, `город ≈${city > 0 ? '+' : city < 0 ? '−' : ''}${Math.abs(city).toFixed(1)}`),
+      ` · читатели ≈${readers > 0 ? '+' : readers < 0 ? '−' : ''}${Math.abs(readers)}`,
     );
   }
 
@@ -4036,6 +4083,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   function render(): void {
+    // Only the forecasts the screen still asks for are worked out (a closed menu drops its own).
+    forecastQueue.clear();
     layOutIssue();
     fitSensations();
     // The publish button bumps once when a change raises or lowers the issue level.

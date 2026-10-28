@@ -6101,21 +6101,6 @@ span.hunt-chip {
   line-height: 16px;
 }
 
-.truth-menu .opt-forecast {
-  display: block;
-  margin-top: 1px;
-  color: var(--paper-muted);
-  font-size: 12px;
-}
-
-.truth-menu .opt-forecast b.for {
-  color: #2f7d4f;
-}
-
-.truth-menu .opt-forecast b.against {
-  color: #b8262e;
-}
-
 .truth-menu .opt-effect {
   display: block;
   margin-top: 1px;

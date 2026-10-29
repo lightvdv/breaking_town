@@ -15,6 +15,8 @@ export interface TutorialProgress {
   flags: string[];
   /** Steps done or skipped, also out of order: a done step stays done. */
   done?: string[];
+  /** Steps whose money «Медиа-Плюс» already sent. */
+  granted?: string[];
 }
 
 export interface TutorialStep {
@@ -25,6 +27,10 @@ export interface TutorialStep {
   hint: string;
   /** Shown instead of the text while the step cannot be done yet. */
   ready?: string;
+  /** Money «Медиа-Плюс» sends when the step can be done, so the start is lean and money comes when it is needed. */
+  grant?: number;
+  /** What the money is for: «на нового репортёра». */
+  grantNote?: string;
 }
 
 export const tutorialSteps = tutorial.steps as TutorialStep[];
@@ -134,6 +140,18 @@ export function currentStep(p: TutorialProgress, v: TutorialView): { def: Tutori
   p.step = open[0].index;
   if (open[0].ready || open[0].def.id === 'goal') return open[0];
   return open.find((x) => x.ready && x.def.id !== 'goal') ?? open[0];
+}
+
+/**
+ * The step's money, once, when it can be done (CONCEPT.md §7.3 «Обучение»): returns the amount sent
+ * now, 0 if none or already sent.
+ */
+export function grantFor(p: TutorialProgress, state: GameState, step: { def: TutorialStep; ready: boolean }): number {
+  const amount = step.def.grant ?? 0;
+  if (!amount || !step.ready || (p.granted ?? []).includes(step.def.id)) return 0;
+  p.granted = [...(p.granted ?? []), step.def.id];
+  state.money += amount;
+  return amount;
 }
 
 /** Skips a step (it counts as done). */

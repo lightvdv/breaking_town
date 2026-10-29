@@ -125,7 +125,7 @@ import { loadSave, writeSave } from './save';
 import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
 import { pendingNotes } from './guide';
-import { currentStep, issueFlags, skipStep, stepTargets, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
+import { currentStep, grantFor, issueFlags, skipStep, stepTargets, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
 import { recordOf, starLine, submitRecord } from './records';
 import { campaignStars, loadCampaign, newCampaign, saveCampaign, townState, winTown, type Campaign } from './campaign';
 import { drawRegion, drawTownArt, MAP_H, MAP_W, townIcon } from './campaignMap';
@@ -1561,6 +1561,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('span', { class: 'tut-count' }, `Обучение · шаг ${step.index + 1} из ${tutorialSteps.length}`),
         h('b', { class: 'guide-title' }, step.def.title),
         step.ready ? step.def.text : (step.def.ready ?? step.def.text),
+        // The money for this step, once it can be done (CONCEPT.md §7.3 «Обучение»).
+        step.ready && step.def.grant && (tutorial!.granted ?? []).includes(step.def.id)
+          ? h('span', { class: 'tut-grant' }, `«Медиа-Плюс» прислал ${step.def.grant} ₽ — ${step.def.grantNote ?? ''}`)
+          : null,
       ),
       ...(step.def.id === 'goal' ? [] : [h('button', { class: 'guide-skip ghost', title: 'Пропустить этот шаг', onclick: skip }, 'Пропустить')]),
     );
@@ -4038,6 +4042,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   function render(): void {
+    // The tutorial sends a step's money before the panel shows it (CONCEPT.md §7.3 «Обучение»).
+    if (tutorial && !busy && !searching) {
+      const step = tutorialStep();
+      if (step) grantFor(tutorial, state, step);
+    }
     layOutIssue();
     fitSensations();
     // The publish button bumps once when a change raises or lowers the issue level.

@@ -64,6 +64,7 @@ import {
   storyTitle,
   startHunt,
   storyEffect,
+  tipConflict,
   huntBonus,
   lureBlock,
   lureRivalAuthor,
@@ -1613,5 +1614,25 @@ describe('the truth menu reads a louder telling as stronger (CONCEPT.md §7.3)',
       }
     }
     expect(pairs).toBeGreaterThan(30);
+  });
+});
+
+describe('tutorial quarrel tip (CONCEPT.md §7.3 «Обучение»)', () => {
+  it('a reporter brings a true quarrel story about the tensest pair into the hand', () => {
+    const c = withDifficulty(realContent, 'easy', 'destroy');
+    const s = createGame(c, 4);
+    const before = s.hand.length;
+    const card = tipConflict(s, c)!;
+    expect(card).not.toBeNull();
+    expect(s.hand.length).toBe(before + 1);
+    expect(card.conflict).toBeDefined();
+    expect(card.baseTruth).toBe(0);
+    const tensest = [...pairKeys(c)].sort((a, b) => s.tension[b] - s.tension[a])[0];
+    expect(pairKey(c, ...card.conflict!)).toBe(tensest);
+    // It can be heated like any quarrel and the issue is valid.
+    const pub = s.hand.map((x, i) => ({ cardUid: x.uid, placement: (x.uid === card.uid ? 0 : i === 0 ? 2 : 1) as 0 | 1 | 2, distortion: x.uid === card.uid ? maxDistortion(card) : 0 }));
+    const used = [0, 0, 0];
+    const fitted = pub.map((p) => (p.placement > 0 && used[p.placement]++ > 0 ? { ...p, placement: 0 as const } : p));
+    expect(() => playTurn(s, c, { publish: fitted })).not.toThrow();
   });
 });

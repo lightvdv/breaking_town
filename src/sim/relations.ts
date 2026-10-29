@@ -2,7 +2,7 @@ import { chance, int, pick, weightedPick, type RngState } from './rng';
 import { clamp, conflictsStarted, groupOf } from './lookup';
 import { isRecent } from './reporters';
 import { twistMods } from './twists';
-import type { CardTemplate, Content, GameState, GroupId, Incident } from './types';
+import type { CardInstance, CardTemplate, Content, GameState, GroupId, Incident, NewsTier } from './types';
 
 /**
  * Relations between social groups (CONCEPT.md §5.5): every pair of groups has a tension 0..100.
@@ -152,4 +152,38 @@ export function advanceRelations(state: GameState, c: Content, rng: RngState): {
     incidents.push({ templateId: tpl.id, pair, building, title });
   }
   return { notes, incidents };
+}
+
+/**
+ * A reporter brings a quarrel story into today's news at once (the tutorial's «Стравите горожан»,
+ * CONCEPT.md §7.3): a true conflict event about the tensest pair, written by the first reporter.
+ * Returns the card, or null if the content has no conflict event for any pair.
+ */
+export function tipConflict(state: GameState, c: Content): CardInstance | null {
+  const rng = state.rng;
+  const keys = [...pairKeys(c)].sort((a, b) => (state.tension[b] ?? 0) - (state.tension[a] ?? 0));
+  for (const key of keys) {
+    const pair = pairOf(key);
+    const pool = c.cards.filter((t) => t.source === 'event' && t.baseTruth === 0 && !t.arc && fits(t, pair));
+    if (!pool.length) continue;
+    const fresh = pool.filter((t) => !isRecent(state, c, t.id));
+    const tpl = weightedPick(rng, (fresh.length ? fresh : pool).map((x) => ({ x, weight: x.weight }))).x;
+    state.lastSeen[tpl.id] = state.turn;
+    const [lo, hi] = tpl.tiers ?? [0, 3];
+    const card: CardInstance = {
+      uid: state.nextUid++,
+      templateId: tpl.id,
+      baseTruth: tpl.baseTruth,
+      createdTurn: state.turn,
+      tier: Math.min(hi, Math.max(lo, 1)) as NewsTier,
+      scope: 'local',
+      reporterId: state.reporters[0] ?? '',
+      conflict: chance(rng, 0.5) ? pair : [pair[1], pair[0]],
+    };
+    const places = tpl.place ? state.buildings.filter((x) => x.type === tpl.place && x.open) : [];
+    if (places.length) card.building = pick(rng, places).id;
+    state.hand.push(card);
+    return card;
+  }
+  return null;
 }

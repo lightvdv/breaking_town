@@ -1,5 +1,5 @@
 import tutorial from '../content/tutorial.json';
-import { cardTruth, lureBlock, templateOf, type Balance, type CardInstance, type Content, type Decision, type Difficulty, type GameLength, type GameState, type TurnReport } from '../sim';
+import { cardTruth, lureBlock, templateOf, tipConflict, type Balance, type CardInstance, type Content, type Decision, type Difficulty, type GameLength, type GameState, type TurnReport } from '../sim';
 
 /**
  * The tutorial mission (CONCEPT.md §7.3 «Обучение»): an easy short game where the player is given one
@@ -17,6 +17,8 @@ export interface TutorialProgress {
   done?: string[];
   /** Steps whose money «Медиа-Плюс» already sent. */
   granted?: string[];
+  /** Steps whose story a reporter already brought (the quarrel for «Стравите горожан»). */
+  tipped?: string[];
 }
 
 export interface TutorialStep {
@@ -152,6 +154,18 @@ export function grantFor(p: TutorialProgress, state: GameState, step: { def: Tut
   p.granted = [...(p.granted ?? []), step.def.id];
   state.money += amount;
   return amount;
+}
+
+/**
+ * A step that needs a story the town may not make soon (a quarrel) gets one: when it is the first
+ * open step and still has nothing to work with, a reporter brings the story into today's news, once.
+ */
+export function tipFor(p: TutorialProgress, v: TutorialView): CardInstance | null {
+  const def = tutorialSteps[p.step];
+  if (def?.id !== 'conflict' || (p.tipped ?? []).includes(def.id) || logic.conflict.ready!(v) || v.state.outcome) return null;
+  const card = tipConflict(v.state, v.c);
+  if (card) p.tipped = [...(p.tipped ?? []), def.id];
+  return card;
 }
 
 /** Skips a step (it counts as done). */

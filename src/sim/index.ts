@@ -7,7 +7,7 @@ export { buyWillingness, expectedJoins, followersOf, readerCount } from './reade
 export { cityStateOf, wealthOf } from './city';
 export { getModifiers, placementSlots, rankedPlacements, type Modifiers } from './modifiers';
 export { previewPublication, storyEffect, cardTruth, effectiveTier, framingOf, isHarmful, issueLevel, limitSensations, issueScore, isSoothed, maxDistortion, minDistortion, outletReach, storyTitle, type IssueStory, type PublicationPreview } from './news';
-export { createTension, fillTitle, pairKey, pairKeys, pairOf, startTension, tensionLevel } from './relations';
+export { createTension, fillTitle, pairKey, pairKeys, pairOf, startTension, tensionLevel, tipConflict } from './relations';
 export { averageTrust, closedLine, rivalStarted, buildingDefOf, buildingName, channelOf, groupOf, templateOf } from './lookup';
 export { validateContent } from './validateContent';
 export { DEBUNK_TEMPLATE, debunkTargets, lureBlock, lureCost, lureRivalAuthor, rivalReaders, rivalTrust, setRivalWatch } from './rival';

@@ -126,7 +126,7 @@ import { loadSave, writeSave } from './save';
 import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
 import { pendingNotes } from './guide';
-import { currentStep, grantFor, issueFlags, skipStep, stepTargets, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
+import { currentStep, grantFor, issueFlags, skipStep, tipFor, stepTargets, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
 import { recordOf, starLine, submitRecord } from './records';
 import { campaignStars, loadCampaign, newCampaign, saveCampaign, townState, winTown, type Campaign } from './campaign';
 import { drawRegion, drawTownArt, MAP_H, MAP_W, townIcon } from './campaignMap';
@@ -4170,6 +4170,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (tutorial && !busy && !searching) {
       const step = tutorialStep();
       if (step) grantFor(tutorial, state, step);
+      // «Стравите горожан» never waits for the town to quarrel on its own: a reporter brings one.
+      const tip = step ? tipFor(tutorial, tutorialView()) : null;
+      if (tip) {
+        // It lands as a brief, already shown, like a night shift's story.
+        revealed.add(tip.uid);
+        drafts.set(tip.uid, { publish: true, placement: 0, distortion: 0 });
+      }
     }
     layOutIssue();
     fitSensations();

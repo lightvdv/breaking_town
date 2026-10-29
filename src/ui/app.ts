@@ -289,6 +289,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let tutorial: TutorialProgress | null = saved?.tutorial ?? null;
   let error = '';
   let busy = false;
+  /** The opening story is on: the last game's result and windows stay hidden under it. */
+  let introPlaying = false;
   let issueOpen = true;
   let modal: Modal = null;
   /** Reporter whose investigation window is open. */
@@ -4132,7 +4134,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ];
     }
     return [
-      win
+      // After the tutorial the real game is chosen in «Новая игра» (length, difficulty).
+      win && !tutorial
         ? h('button', { class: 'primary big', onclick: () => void startGame(state.mode) }, 'Следующий город ▸')
         : h('button', { class: 'primary big', onclick: () => openModal('newgame') }, 'Новая игра'),
       h('button', { onclick: () => showTitle() }, 'Главное меню'),
@@ -4140,8 +4143,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   function renderOutcome(): void {
-    // The main menu and the campaign map cover the finished game: its result is not shown over them.
-    if (!state.outcome || busy || titleOpen || campaignOpen) {
+    // The main menu, the campaign map and the opening story cover the finished game: its result is not shown over them.
+    if (!state.outcome || busy || titleOpen || campaignOpen || introPlaying) {
       outcomeLayer.replaceChildren();
       return;
     }
@@ -4497,11 +4500,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     titleOpen = false;
     modal = null;
     issueOpen = false;
+    introPlaying = true;
     render();
     scene?.startTour();
     // The game interface hides behind the story as it does behind the title screen.
     root.classList.add('at-title');
     await playIntro(root, c, assetBase, mode);
+    introPlaying = false;
     root.classList.remove('at-title');
     if (mode === 'save') settings.introSeenSave = true;
     else settings.introSeen = true;

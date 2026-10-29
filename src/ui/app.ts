@@ -1576,6 +1576,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** The button to press now glows; over a window, a bar repeats the step in one line. */
   function renderTutorialTargets(): void {
     for (const el of document.querySelectorAll('.tut-target')) el.classList.remove('tut-target');
+    spotlightOn(null);
     const step = tutorialStep();
     tutorialBar.hidden = !step || modal === null || titleOpen;
     if (!step || titleOpen || busy || searching) return;
@@ -1591,6 +1592,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const el = [...scope.querySelectorAll<HTMLElement>(sel)].find((x) => x.getClientRects().length > 0 && (modal !== null || !modalLayer.contains(x)));
       if (!el) continue;
       el.classList.add('tut-target');
+      // The rest of the screen goes dark; a hint that is only something to look at stays undimmed.
+      if (!el.matches('.streak-badge, .hud-goal')) spotlightOn(el);
       const key = `${step.index}|${sel}`;
       if (key !== tutorialScrolled) {
         tutorialScrolled = key;
@@ -1600,7 +1603,52 @@ export function mountApp(root: HTMLElement, base: Content): void {
       return;
     }
     // The step is done elsewhere: the window's «×» glows.
-    if (modal !== null) modalLayer.querySelector('.modal-title .icon-btn')?.classList.add('tut-target');
+    const close = modal !== null ? modalLayer.querySelector<HTMLElement>('.modal-title .icon-btn') : null;
+    if (close) {
+      close.classList.add('tut-target');
+      spotlightOn(close);
+    }
+  }
+
+  /**
+   * The tutorial's shade (CONCEPT.md §7.3 «Обучение»): the screen goes semi-dark except the button
+   * to press and the step's own text; presses still go through. It follows the button every frame,
+   * so scrolling and animations never leave the hole behind.
+   */
+  const shadePath = svg('path', { 'fill-rule': 'evenodd' });
+  const shade = svg('svg', { class: 'tut-shade', 'aria-hidden': 'true' }, shadePath);
+  shade.style.display = 'none';
+  root.append(shade);
+  let spotlight: HTMLElement | null = null;
+  let spotFrame = 0;
+  function spotlightOn(el: HTMLElement | null): void {
+    spotlight = el;
+    if (!el) {
+      shade.style.display = 'none';
+      cancelAnimationFrame(spotFrame);
+      spotFrame = 0;
+      return;
+    }
+    shade.style.display = '';
+    if (!spotFrame) spotFrame = requestAnimationFrame(drawShade);
+  }
+  function drawShade(): void {
+    spotFrame = 0;
+    if (!spotlight || !spotlight.isConnected) return spotlightOn(null);
+    const w = innerWidth;
+    const hgt = innerHeight;
+    const hole = (el: Element | null, pad: number) => {
+      if (!el || !el.getClientRects().length) return '';
+      const r = el.getBoundingClientRect();
+      const x = Math.max(0, r.left - pad);
+      const y = Math.max(0, r.top - pad);
+      return ` M${x} ${y} H${Math.min(w, r.right + pad)} V${Math.min(hgt, r.bottom + pad)} H${x} Z`;
+    };
+    // The step's text stays readable: the note over the paper, or the step line in a window.
+    const text = modal !== null ? (tutorialBar.isConnected && !tutorialBar.hidden ? tutorialBar : null) : guideNote.hidden ? null : guideNote;
+    shadePath.setAttribute('d', `M0 0 H${w} V${hgt} H0 Z` + hole(spotlight, 8) + hole(text, 4));
+    shade.setAttribute('viewBox', `0 0 ${w} ${hgt}`);
+    spotFrame = requestAnimationFrame(drawShade);
   }
 
   /** First-encounter notes, one at a time: what is on screen for the first time (CONCEPT.md §7.3 «Подсказки»). */

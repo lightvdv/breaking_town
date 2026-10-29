@@ -15,6 +15,7 @@ import {
 export const reactionLabels: Record<Reaction, string> = {
   scared: 'поверил плохому',
   happy: 'поверил хорошему',
+  calm: 'принял к сведению',
   doubted: 'проигнорировал',
   talk: 'пересказывает',
   outraged: 'возмущён разоблачением',
@@ -33,6 +34,7 @@ export function plural(n: number, one: string, few: string, many: string): strin
 export const morningLabels: Record<Reaction, string> = {
   scared: 'испугались',
   happy: 'обрадовались',
+  calm: 'приняли к сведению',
   doubted: 'проигнорировали',
   talk: 'пересказывают',
   outraged: 'возмутились',

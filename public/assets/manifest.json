@@ -85,6 +85,7 @@
   "fx": [
     "believed_bad",
     "believed_good",
+    "noted",
     "doubted",
     "talk",
     "exposed",

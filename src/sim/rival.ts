@@ -289,7 +289,7 @@ export function updateRivalReaders(state: GameState, c: Content, rng: RngState, 
       continue;
     }
     const caught = state.lastReactions[r.id];
-    if (r.rivalReader && steal > 0 && (caught === 'scared' || caught === 'talk' || caught === 'happy') && chance(rng, steal)) {
+    if (r.rivalReader && steal > 0 && (caught === 'scared' || caught === 'talk' || caught === 'happy' || caught === 'calm') && chance(rng, steal)) {
       r.rivalReader = false;
       continue;
     }

@@ -1412,7 +1412,10 @@ button.publish.level-3.bump-up {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: min(520px, calc(100% - 32px));
+  width: min(560px, calc(100% - 32px));
+  /* A long day scrolls inside the card instead of running off the screen. */
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
   padding: 14px 18px 16px;
   background: var(--paper);
   color: var(--paper-ink);
@@ -1437,6 +1440,158 @@ button.publish.level-3.bump-up {
 .summary-title {
   font-size: 21px;
   line-height: 1.2;
+}
+
+/* The issue: its number and level, the front page story, the rest behind an unfold. */
+.summary-issue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f3dfb2;
+  border: 1px solid var(--paper-muted);
+}
+
+.summary-issue-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-issue-head b {
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.summary-level {
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--paper-muted);
+}
+
+.summary-level.level-0 {
+  background: #8b9bb4;
+}
+
+.summary-level.level-2 {
+  background: var(--blue);
+}
+
+.summary-level.level-3 {
+  background: var(--truth-2);
+}
+
+.summary-count {
+  margin-left: auto;
+  color: var(--paper-muted);
+  font-size: 12px;
+}
+
+.summary-story {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-story-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.summary-place {
+  color: var(--paper-muted);
+}
+
+.summary-truth,
+.summary-exposed {
+  padding: 0 5px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+}
+
+.summary-truth.t0 {
+  color: var(--truth-0);
+}
+
+.summary-truth.t1 {
+  color: #b5541a;
+}
+
+.summary-truth.t2,
+.summary-exposed {
+  color: var(--truth-2);
+}
+
+.summary-story-title {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.summary-story.main .summary-story-title {
+  font-size: 20px;
+}
+
+.story-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.story-facts .morning-chip {
+  font-size: 14px;
+}
+
+.story-read,
+.story-deeds {
+  color: var(--paper-muted);
+  font-size: 13px;
+}
+
+.summary-more summary {
+  padding: 4px 0;
+  color: var(--paper-muted);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.summary-more[open] summary {
+  margin-bottom: 6px;
+}
+
+.summary-more .summary-story {
+  padding: 8px 0;
+  border-top: 1px dashed rgba(115, 62, 57, 0.5);
+}
+
+/* Groups under the issue: «Газета», «Город», «События дня». */
+.summary-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary-group h4 {
+  margin: 0;
+  color: var(--paper-muted);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.summary-group .morning-chips {
+  margin-top: 2px;
 }
 
 .summary-events {

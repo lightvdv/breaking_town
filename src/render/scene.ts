@@ -19,6 +19,7 @@ type Stop = 'home' | 'work' | 'shop' | 'bar' | 'stroll' | 'other';
 const REACTION_ANIM: Record<Reaction, string> = {
   scared: 'react_scared',
   happy: 'react_happy',
+  calm: 'idle_front',
   doubted: 'react_shrug',
   talk: 'react_talk',
   outraged: 'react_outraged',
@@ -26,6 +27,7 @@ const REACTION_ANIM: Record<Reaction, string> = {
 export const REACTION_ICON: Record<Reaction, string> = {
   scared: 'believed_bad',
   happy: 'believed_good',
+  calm: 'noted',
   doubted: 'doubted',
   talk: 'talk',
   outraged: 'exposed',

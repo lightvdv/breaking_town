@@ -65,7 +65,7 @@ function baseChurn(c: Content, state: GameState, r: Resident, issueSize: number,
   if (reaction === 'outraged') return { reason: 'exposed', chance: b.churnExposed };
   if (reaction === 'doubted') return { reason: 'doubted', chance: b.churnDoubt };
   // Believers mostly stay, but a boring issue bores even them a little (CONCEPT.md §4.2а).
-  const touched = reaction === 'scared' || reaction === 'happy' || reaction === 'talk';
+  const touched = reaction === 'scared' || reaction === 'happy' || reaction === 'calm' || reaction === 'talk';
   const chance = touched ? b.issueChurnBelievers[level] : b.issueChurn[level];
   return chance > 0 ? { reason: 'boring', chance } : null;
 }

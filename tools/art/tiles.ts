@@ -175,6 +175,11 @@ export const fxIcons: Record<string, { rows: string[]; key: Record<string, Color
     rows: ['.kk.kk..', 'kppkppk.', 'kpppppk.', 'kpppppk.', '.kpppk..', '..kpk...', '...k....', '........'],
     key: { k: 'ink', p: 'pink' },
   },
+  // A plain fact believed: a blue tick — noted, neither fear nor joy.
+  noted: {
+    rows: ['......kk', '.....kbk', 'k...kbk.', 'kk.kbk..', 'kbkbk...', '.kbk....', '..k.....', '........'],
+    key: { k: 'ink', b: 'blue' },
+  },
   doubted: {
     rows: ['.kkkkk..', 'kssssk..', 'kkkssk..', '..kssk..', '..kkk...', '..ksk...', '..kkk...', '........'],
     key: { k: 'ink', s: 'silver' },

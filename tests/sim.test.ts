@@ -1306,6 +1306,23 @@ describe('tasks and stars (CONCEPT.md §4.8)', () => {
   });
 });
 
+describe('reactions follow the story', () => {
+  it('a plain fact neither scares nor cheers: its believers just take note', () => {
+    const s = createGame(content, 21);
+    s.hand = [];
+    const card: CardInstance = { uid: s.nextUid++, templateId: 'cityhall_meeting', baseTruth: 0, createdTurn: s.turn, tier: 1, scope: 'local', reporterId: s.reporters[0] };
+    s.hand.push(card);
+    const report = playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 2, distortion: 0 }] });
+    const pub = report.publications[0];
+    expect(pub.believed).toBeGreaterThan(0);
+    expect(pub.mood).toBe('calm');
+    const reactions = Object.values(s.lastReactions);
+    expect(reactions).toContain('calm');
+    expect(reactions).not.toContain('scared');
+    expect(reactions).not.toContain('happy');
+  });
+});
+
 describe('attacking the town (CONCEPT.md §3.5, §3.6а, §8.4)', () => {
   it('a hunt makes stories about its target hit harder day after day, stains it and is won when it closes', () => {
     const s = createGame(content, 21);

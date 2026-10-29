@@ -1108,8 +1108,11 @@ export interface CityMetrics {
   activeResidents: number;
 }
 
-/** Reaction to this turn's news, shown as an animation above the resident (CONCEPT.md §7.2). */
-export type Reaction = 'scared' | 'happy' | 'doubted' | 'talk' | 'outraged';
+/**
+ * Reaction to this turn's news, shown as an animation above the resident (CONCEPT.md §7.2).
+ * calm = believed a story that is neither good nor bad (a plain fact): noted, no joy, no fear.
+ */
+export type Reaction = 'scared' | 'happy' | 'calm' | 'doubted' | 'talk' | 'outraged';
 
 /** destroy = ruin the town for the holding; save = defend it from the holding's rival paper (CONCEPT.md §8). */
 export type GameMode = 'destroy' | 'save';
@@ -1302,8 +1305,8 @@ export interface PublicationReport {
   wordOfMouth: number;
   effects: Partial<Record<EffectType, number>>;
   exposed: boolean;
-  /** How its believers react: happy for good or calming news, scared otherwise (the morning scene acts it out). */
-  mood?: 'happy' | 'scared';
+  /** How its believers react: happy for good or calming news, scared for harmful ones, calm for a plain fact (the morning scene acts it out). */
+  mood?: 'happy' | 'scared' | 'calm';
   /** The place the story is about, if any: the morning after the issue starts there (CONCEPT.md §7.3). */
   building?: number;
   /** Investigations: who was targeted and what the stigma did to them. */

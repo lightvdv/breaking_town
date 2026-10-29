@@ -115,6 +115,7 @@ import {
   type IssueLevel,
   type Reaction,
   type PublicationPreview,
+  type PublicationReport,
   type Requirement,
   type UpgradeDef,
   type WealthClass,
@@ -919,33 +920,78 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const newsArt = (templateId: string, pair?: [string, string]) =>
     `${assetBase}sprites/news/${templateId}${pair && templateOf(c, templateId).conflict === 'any' ? `__${pair[0]}__${pair[1]}` : ''}.png`;
 
-  /** The day's result in a few chips: readers, money and how the town took the issue. */
-  function morningChips(r: TurnReport): HTMLElement {
-    const chip = (icon: string, text: string, cls = '') => h('span', { class: `morning-chip ${cls}` }, h('img', { src: icon, alt: '', width: 16, height: 16 }), text);
-    const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n)}`;
+  const summaryChip = (icon: string, text: string, cls = '') => h('span', { class: `morning-chip ${cls}` }, h('img', { src: icon, alt: '', width: 16, height: 16 }), text);
+  const signedNum = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n)}`;
+  /** Joy is the other side's win when we attack the town, fear when we defend it. */
+  const reactionGoal = (x: Reaction) => (x === 'happy' ? (state.mode === 'destroy' ? ' down' : ' up') : x === 'scared' ? (state.mode === 'destroy' ? ' up' : ' down') : '');
+
+  /** «Газета»: readers, money and reputation after the issue. */
+  function paperChips(r: TurnReport): HTMLElement {
     const readers = r.readers.after - r.readers.before;
     const chips = [
-      chip(`${assetBase}sprites/ui/readers.png`, `${signed(readers)} ${plural(Math.abs(readers), 'читатель', 'читателя', 'читателей')}`, readers > 0 ? 'up' : readers < 0 ? 'down' : ''),
-      chip(`${assetBase}sprites/ui/money.png`, `${signed(r.moneyDelta)} ₽`, r.moneyDelta > 0 ? 'up' : r.moneyDelta < 0 ? 'down' : ''),
+      summaryChip(`${assetBase}sprites/ui/readers.png`, `${signedNum(readers)} ${plural(Math.abs(readers), 'читатель', 'читателя', 'читателей')}`, readers > 0 ? 'up' : readers < 0 ? 'down' : ''),
+      summaryChip(`${assetBase}sprites/ui/money.png`, `${signedNum(r.moneyDelta)} ₽`, r.moneyDelta > 0 ? 'up' : r.moneyDelta < 0 ? 'down' : ''),
     ];
     const trust = Math.round(r.trustAfter - r.trustBefore);
-    if (trust !== 0) chips.push(chip(`${assetBase}sprites/ui/reputation.png`, `${signed(trust)}% репутации`, trust > 0 ? 'up' : trust < 0 ? 'down' : ''));
+    if (trust !== 0) chips.push(summaryChip(`${assetBase}sprites/ui/reputation.png`, `${signedNum(trust)}% репутации`, trust > 0 ? 'up' : 'down'));
+    return h('span', { class: 'morning-chips' }, ...chips);
+  }
+
+  /**
+   * «Город»: its stage. How people took the news is told per story above: a resident keeps one
+   * reaction a day, so totals for the whole issue would not add up with the stories' numbers.
+   */
+  function cityChips(r: TurnReport): HTMLElement {
     const city = Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex);
-    chips.push(
-      chip(
+    return h(
+      'span',
+      { class: 'morning-chips' },
+      summaryChip(
         `${assetBase}sprites/ui/city_state_${cityStateOf(c, r.metricsAfter.cityIndex)}.png`,
-        `город: ${stageChange(r.metricsBefore.cityIndex, r.metricsAfter.cityIndex)}${city ? (city > 0 ? ' ▲' : ' ▼') : ''}`,
+        `${stageChange(r.metricsBefore.cityIndex, r.metricsAfter.cityIndex)}${city ? (city > 0 ? ' ▲' : ' ▼') : ''}`,
         // What is good for the town is good for us only when we defend it.
         city === 0 ? '' : (city > 0) === (state.mode === 'save') ? 'up' : 'down',
       ),
     );
-    const counts = new Map<Reaction, number>();
-    for (const x of Object.values(state.lastReactions)) counts.set(x, (counts.get(x) ?? 0) + 1);
-    const ranked = [...counts.entries()].filter(([x]) => x !== 'talk').sort((a, b) => b[1] - a[1]).slice(0, 3);
-    // Joy is the other side's win when we attack the town, fear when we defend it.
-    const goalOf = (x: Reaction) => (x === 'happy' ? (state.mode === 'destroy' ? ' down' : ' up') : x === 'scared' ? (state.mode === 'destroy' ? ' up' : ' down') : '');
-    for (const [x, n] of ranked) chips.push(chip(`${assetBase}sprites/fx/${REACTION_ICON[x]}.png`, `${n} ${morningLabels[x]}`, `react-${x}${goalOf(x)}`));
-    return h('span', { class: 'morning-chips' }, ...chips);
+  }
+
+  /** One printed story in the summary: its place, headline, truth, who read and believed it, what it did. */
+  function summaryStory(p: PublicationReport, main = false): HTMLElement {
+    const mood = p.mood ?? 'scared';
+    // A bad story that only spoils the mood upsets people; fear is for stories that scare them off.
+    const kinds = Object.keys(p.effects).filter((t) => (p.effects[t as keyof typeof p.effects] ?? 0) > 0);
+    const feeling = mood === 'scared' && kinds.length > 0 && kinds.every((t) => t === 'moodDown') ? effectLabels.moodDown : morningLabels[mood];
+    // What believers did beyond joy and fear; the mood itself is the first chip.
+    const deeds = (Object.entries(p.effects) as [keyof typeof effectLabels, number][])
+      .filter(([t, n]) => n > 0 && t !== 'moodUp' && t !== 'moodDown')
+      .map(([t, n]) => `${n} ${effectLabels[t]}`);
+    return h(
+      'div',
+      { class: `summary-story${main ? ' main' : ''}` },
+      h(
+        'div',
+        { class: 'summary-story-head' },
+        h('span', { class: 'summary-place' }, placementLabels[p.placement]),
+        h('span', { class: `summary-truth t${p.truth}` }, truthLabels[p.truth]),
+        p.exposed ? h('span', { class: 'summary-exposed' }, 'Разоблачена') : null,
+      ),
+      h(main ? 'b' : 'span', { class: 'summary-story-title' }, p.title),
+      h(
+        'span',
+        { class: 'story-facts' },
+        h('span', { class: 'story-read' }, `прочитали ${p.reached}`),
+        // The reaction follows the story: fear for a harmful one, joy for a good one, a plain fact is just noted.
+        p.believed
+          ? summaryChip(
+              `${assetBase}sprites/fx/${REACTION_ICON[mood]}.png`,
+              mood === 'calm' ? `${p.believed} ${morningLabels.calm}` : `${p.believed} поверили и ${feeling}`,
+              `react-${mood}${reactionGoal(mood)}`,
+            )
+          : null,
+        p.doubted ? summaryChip(`${assetBase}sprites/fx/${REACTION_ICON.doubted}.png`, `${p.doubted} ${morningLabels.doubted}`, 'react-doubted') : null,
+      ),
+      deeds.length ? h('span', { class: 'story-deeds' }, deeds.join(' · ')) : null,
+    );
   }
 
   /** The issue's main story: the front page, else the most believed one. */
@@ -986,7 +1032,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * happened in town. It stays until the player presses «Следующий день» (or Enter).
    */
   function showSummary(r: TurnReport): Promise<void> {
-    const main = mainStory(r);
+    // The issue first: its front page, then the rest behind one unfold (CONCEPT.md §7.3 «Итоги дня»).
+    const stories = [...r.publications].sort((a, b) => b.placement - a.placement || b.believed - a.believed);
+    const main = stories[0];
+    const rest = stories.slice(1);
+    const group = (title: string, ...body: (HTMLElement | null)[]) => h('section', { class: 'summary-group' }, h('h4', {}, title), ...body);
     const events: HTMLElement[] = [
       ...r.highlights.map((x) => h('li', {}, x.title)),
       ...r.exposures.map((x) => h('li', { class: 'bad' }, `Разоблачили: «${x.title}»`)),
@@ -1014,10 +1064,30 @@ export function mountApp(root: HTMLElement, base: Content): void {
       };
       const next = h('button', { class: 'primary big summary-next', onclick: finish }, state.outcome ? 'Чем всё кончилось ▸' : 'Следующий день ▸');
       daySummary.replaceChildren(
-        h('span', { class: 'summary-kicker' }, `Итоги дня ${r.turn} · выпуск ${issueLevelLabels[r.issue.level].toLowerCase()}`),
-        h('b', { class: 'summary-title' }, main ? main.title : 'Газета не вышла'),
-        morningChips(r),
-        ...(events.length ? [h('ul', { class: 'summary-events' }, ...events)] : []),
+        h('span', { class: 'summary-kicker' }, `Итоги дня ${r.turn}`),
+        h(
+          'section',
+          { class: 'summary-issue' },
+          h(
+            'div',
+            { class: 'summary-issue-head' },
+            h('b', {}, `Выпуск № ${r.turn}`),
+            h('span', { class: `summary-level level-${r.issue.level}` }, issueLevelLabels[r.issue.level]),
+            h('span', { class: 'summary-count' }, main ? `${stories.length} ${plural(stories.length, 'новость', 'новости', 'новостей')}` : ''),
+          ),
+          main ? summaryStory(main, true) : h('b', { class: 'summary-title' }, 'Газета не вышла'),
+          rest.length
+            ? h(
+                'details',
+                { class: 'summary-more' },
+                h('summary', {}, `Весь выпуск: ещё ${rest.length} ${plural(rest.length, 'новость', 'новости', 'новостей')}`),
+                ...rest.map((p) => summaryStory(p)),
+              )
+            : null,
+        ),
+        group('Газета', paperChips(r)),
+        group('Город', cityChips(r)),
+        ...(events.length ? [group('События дня', h('ul', { class: 'summary-events' }, ...events))] : []),
         next,
       );
       tooltip.hidden = true;

@@ -376,7 +376,8 @@ function applyEffect(
   }
 }
 
-const reactionPriority: Record<Reaction, number> = { doubted: 1, happy: 2, scared: 2, talk: 3, outraged: 4 };
+// Joy or fear from another story outweighs a fact merely taken note of.
+const reactionPriority: Record<Reaction, number> = { doubted: 1, calm: 1.5, happy: 2, scared: 2, talk: 3, outraged: 4 };
 
 /** Keeps the most telling reaction when several news reach the same resident in one turn. */
 function setReaction(reactions: Record<number, Reaction>, id: number, reaction: Reaction): void {
@@ -455,7 +456,8 @@ export function publish(
   // A debunk brings relief from a scary story, and the fear back when it takes away a false comfort:
   // everything «Голос города» prints comforts and everything «Набат» prints scares (RIVAL_TEMPLATES).
   const takesComfort = card.templateId === 'debunk_guardian' || card.templateId === 'tabloid_debunk' || card.templateId === 'kompromat_guardian';
-  const mood = effect?.type === 'debunk' ? (takesComfort ? 'scared' : 'happy') : good || calm ? 'happy' : 'scared';
+  // A story that changes nothing (a plain fact) neither scares nor cheers: its believers just take note.
+  const mood = effect?.type === 'debunk' ? (takesComfort ? 'scared' : 'happy') : good || calm ? 'happy' : effect ? 'scared' : 'calm';
   report.mood = mood;
 
   const consider = (r: Resident, factor: number): boolean => {

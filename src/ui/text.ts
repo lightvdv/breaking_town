@@ -120,8 +120,8 @@ export function impactStep(impact: number): 0 | 1 | 2 {
 }
 
 /**
- * The effect in a few words for the truth menu (CONCEPT.md §7.3): what the believers will do, and
- * how hard — a weak story makes them wary, a sensation makes them panic.
+ * The effect in a few words for the truth menu (CONCEPT.md §7.3): what the believers will want to do,
+ * and how hard — intentions, not deeds: each of them acts on it only by chance.
  */
 export function effectShort(c: Content, e: CardEffect | null, impact = 0.8): string {
   if (!e) return 'ничего не изменит';
@@ -129,13 +129,13 @@ export function effectShort(c: Content, e: CardEffect | null, impact = 0.8): str
   const by = (light: string, normal: string, strong: string) => [light, normal, strong][impactStep(impact)];
   switch (e.type) {
     case 'quitJob':
-      return by(`задумаются, не уволиться ли: ${building}`, `уволятся: ${building}`, `побегут увольняться: ${building}`);
+      return by(`задумаются, не уволиться ли: ${building}`, `захотят уволиться: ${building}`, `будут рваться уволиться: ${building}`);
     case 'avoid':
-      return by(`станут реже заходить: ${building}`, `будут обходить: ${building}`, `будут обходить за версту: ${building}`);
+      return by(`подумают, стоит ли ходить: ${building}`, `захотят обходить: ${building}`, `захотят обходить за версту: ${building}`);
     case 'leaveCity':
-      return by('задумаются об отъезде', 'начнут собирать чемоданы', 'побегут из города');
+      return by('задумаются об отъезде', 'заговорят об отъезде', 'всерьёз захотят уехать');
     case 'protest':
-      return by('поворчат, кто-то выйдет на улицу', 'выйдут протестовать', 'толпой выйдут на площадь');
+      return by('начнут ворчать на власти', 'захотят выйти протестовать', 'будут рваться на площадь');
     case 'moodDown':
       return by('немного приуныют', 'расстроятся', 'впадут в уныние');
     case 'moodUp':
@@ -143,7 +143,7 @@ export function effectShort(c: Content, e: CardEffect | null, impact = 0.8): str
     case 'debunk':
       return 'передумают';
     case 'fear':
-      return by('станут реже выходить по вечерам', 'будут бояться выходить', 'в панике перестанут выходить на улицу');
+      return by('станут опасаться выходить по вечерам', 'будут бояться выходить', 'в панике будут бояться выйти на улицу');
     case 'stigma':
       return by('косо посмотрят на группу', 'ополчатся на группу', 'возненавидят группу');
   }

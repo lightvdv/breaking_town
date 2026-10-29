@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { content as realContent } from '../src/content';
+import { effectShort, framingScale } from '../src/ui/text';
 
 // Most tests look at the mechanics themselves: everything starts on day 1 there (the gentle first days are tested apart).
 const content = {
@@ -1562,5 +1563,55 @@ describe('a riskier telling always hits harder (CONCEPT.md §5.2а)', () => {
     expect(checked).toBeGreaterThan(50);
     // The case that used to fail: the level already a sensation, a lie believed by fewer.
     expect(capped).toBeGreaterThan(0);
+  });
+});
+
+describe('the truth menu reads a louder telling as stronger (CONCEPT.md §7.3)', () => {
+  it('two frightening tellings with the same strength band still read differently', () => {
+    const avoid = { type: 'avoid' as const, strength: 0.2, building: 'entertainment' as const };
+    const scale = framingScale([
+      { dist: 0, effect: { type: 'moodUp', strength: 0.02 }, believers: 63, impact: 0.5 },
+      { dist: 1, effect: avoid, believers: 47, impact: 0.62 },
+      { dist: 2, effect: avoid, believers: 31, impact: 0.95 },
+    ]);
+    expect(scale.get(2)!.step).toBeGreaterThan(scale.get(1)!.step);
+    expect(effectShort(realContent, avoid, 0.95, scale.get(2)!.step)).not.toBe(effectShort(realContent, avoid, 0.62, scale.get(1)!.step));
+    // The good «как есть» is not the yardstick; the louder lie says it hits harder than the half-truth.
+    expect(scale.get(1)!.ratio).toBeNull();
+    expect(scale.get(2)!.ratio!).toBeGreaterThan(1);
+  });
+
+  it('on real stories every louder step of the same effect reads stronger and hits harder', () => {
+    const c = withDifficulty(realContent, 'normal', 'destroy');
+    let pairs = 0;
+    for (let seed = 1; seed <= 10; seed++) {
+      const s = createGame(c, seed);
+      for (let t = 0; t < 8 && !s.outcome; t++) {
+        const mods = getModifiers(s, c);
+        for (const card of s.hand) {
+          for (const placement of [0, 1, 2] as const) {
+            const options = [];
+            for (let d = minDistortion(card); d <= maxDistortion(card); d++) {
+              const p = previewPublication(s, c, mods, { cardUid: card.uid, placement, distortion: d });
+              options.push({ dist: d, effect: p.effect, believers: p.believers, impact: p.impact });
+            }
+            const scale = framingScale(options);
+            for (const o of options) {
+              const prev = options.find((x) => x.dist === o.dist - 1);
+              if (!prev || o.dist <= 0 || !prev.effect || !o.effect || prev.effect.type !== o.effect.type) continue;
+              pairs++;
+              const a = scale.get(prev.dist)!;
+              const b = scale.get(o.dist)!;
+              if (a.step < 2) expect(b.step).toBeGreaterThan(a.step);
+              else expect(b.step).toBe(2);
+              if (a.ratio !== null) expect(b.ratio!).toBeGreaterThan(a.ratio);
+              else if (b.ratio !== null) expect(b.ratio).toBeGreaterThan(1);
+            }
+          }
+        }
+        playTurn(s, c, { publish: s.hand.map((x, i) => ({ cardUid: x.uid, placement: (i === 0 ? 2 : i === 1 ? 1 : 0) as 0 | 1 | 2, distortion: 0 })) });
+      }
+    }
+    expect(pairs).toBeGreaterThan(30);
   });
 });

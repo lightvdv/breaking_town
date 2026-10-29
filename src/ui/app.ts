@@ -140,6 +140,7 @@ import {
   effectLabels,
   effectText,
   effectShort,
+  framingScale,
   placementLabels,
   issueLevelLabels,
   outcomeText,
@@ -2382,8 +2383,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
     // story: only bad true news can be soothed, a rumor cannot be told «как есть», a conflict is framed.
     // A hunt story (CONCEPT.md §3.6а): each option says how hard it hits the target next to the story told as it is.
     const huntBase = state.hunt && card.building === state.hunt.building ? (previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: Math.max(0, minDistortion(card)) }).huntHit ?? 0) : null;
+    // A louder telling reads stronger and says how much harder it hits (CONCEPT.md §7.3).
+    const tellings = new Map<number, PublicationPreview>();
+    for (let dist = minDistortion(card); dist <= maxDistortion(card); dist++) tellings.set(dist, previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: dist }));
+    const scale = framingScale([...tellings].map(([dist, p]) => ({ dist, effect: p.effect, believers: p.believers, impact: p.impact })));
     const option = (dist: number, icon: Node, blockedHint: string | null) => {
-      const preview = previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: dist });
+      const preview = tellings.get(dist)!;
       const steps = preview.tier - card.tier;
       const stats = `${truthLabels[preview.truth]} · ${tierLabels[preview.tier]}${steps > 0 ? ` ${'↑'.repeat(steps)}` : steps < 0 ? ` ${'↓'.repeat(-steps)}` : ''} · риск ${Math.round(preview.exposureRisk * 100)}%`;
       const item = menuItem(
@@ -2396,7 +2401,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           { class: 'opt' },
           h('span', { class: 'opt-head' }, h('b', {}, toneOf(card, dist)), h('small', {}, blockedHint ?? stats)),
           h('span', { class: 'opt-title' }, `«${preview.title}»`),
-          effectLine(preview, huntBase),
+          effectLine(preview, huntBase, scale.get(dist)),
         ),
       );
       // The tutorial lights up the louder framings (CONCEPT.md §7.3 «Обучение»).
@@ -2590,8 +2595,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   /** «≈12 поверят · боятся выходить» under a framing in the truth menu, in the goal's colours (CONCEPT.md §7.3). */
-  function effectLine(p: PublicationPreview, huntBase: number | null = null): HTMLElement {
-    const short = effectShort(c, p.effect, p.impact);
+  function effectLine(p: PublicationPreview, huntBase: number | null = null, scaled?: { step: 0 | 1 | 2; ratio: number | null }): HTMLElement {
+    const short = effectShort(c, p.effect, p.impact, scaled?.step);
     const helps = p.effect === null ? 0 : p.effect.type === 'moodUp' ? 1 : p.effect.type === 'debunk' ? 0 : -1;
     const toGoal = helps === 0 ? 0 : (helps < 0) === (state.mode === 'destroy') ? 1 : -1;
     const n = Math.round(p.believers);
@@ -2601,6 +2606,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       'span',
       { class: `opt-effect${toGoal > 0 ? ' for' : toGoal < 0 ? ' against' : ''}` },
       p.effect ? `≈${n} ${plural(n, 'поверит', 'поверят', 'поверят')} · ${short}` : short,
+      scaled?.ratio && scaled.ratio > 1.05 && !hit ? h('span', { class: 'opt-hunt' }, ` · сильнее ×${scaled.ratio.toFixed(1)}`) : null,
       hit ? h('span', { class: 'opt-hunt' }, ` · ${hit}`) : null,
     );
   }

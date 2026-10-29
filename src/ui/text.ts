@@ -125,10 +125,10 @@ export function impactStep(impact: number): 0 | 1 | 2 {
  * The effect in a few words for the truth menu (CONCEPT.md §7.3): what the believers will want to do,
  * and how hard — intentions, not deeds: each of them acts on it only by chance.
  */
-export function effectShort(c: Content, e: CardEffect | null, impact = 0.8): string {
+export function effectShort(c: Content, e: CardEffect | null, impact = 0.8, step: 0 | 1 | 2 = impactStep(impact)): string {
   if (!e) return 'ничего не изменит';
   const building = e.building ? buildingDefOf(c, e.building).name.toLowerCase() : '';
-  const by = (light: string, normal: string, strong: string) => [light, normal, strong][impactStep(impact)];
+  const by = (light: string, normal: string, strong: string) => [light, normal, strong][step];
   switch (e.type) {
     case 'quitJob':
       return by(`задумаются, не уволиться ли: ${building}`, `захотят уволиться: ${building}`, `будут рваться уволиться: ${building}`);
@@ -149,6 +149,43 @@ export function effectShort(c: Content, e: CardEffect | null, impact = 0.8): str
     case 'stigma':
       return by('косо посмотрят на группу', 'ополчатся на группу', 'возненавидят группу');
   }
+}
+
+/** One telling of a story in the truth menu: its effect, expected believers and strength per believer. */
+export interface FramingOption {
+  dist: number;
+  effect: CardEffect | null;
+  believers: number;
+  impact: number;
+}
+
+const harmful = (e: CardEffect | null) => !!e && e.type !== 'moodUp' && e.type !== 'debunk';
+/** Expected result of a telling: believers × strength (what the sim guarantees to grow, `louderGain`). */
+const resultOf = (o: FramingOption) => o.believers * o.impact * (o.effect?.strength ?? 0);
+
+/**
+ * How the truth menu words each telling (CONCEPT.md §7.3): a louder telling of the same effect hits
+ * harder, so its words are always stronger than the step below («подумают, стоит ли ходить» →
+ * «захотят обходить» → «захотят обходить за версту»), and next to the mildest frightening telling it
+ * says how much harder it hits overall («сильнее ×1.6»), though fewer believe it.
+ */
+export function framingScale(options: FramingOption[]): Map<number, { step: 0 | 1 | 2; ratio: number | null }> {
+  const out = new Map<number, { step: 0 | 1 | 2; ratio: number | null }>();
+  const sorted = [...options].sort((a, b) => a.dist - b.dist);
+  const ref = sorted.find((o) => o.dist >= 0 && harmful(o.effect) && resultOf(o) > 0);
+  let prev: FramingOption | null = null;
+  let prevStep: 0 | 1 | 2 = 0;
+  for (const o of sorted) {
+    let step = impactStep(o.impact);
+    if (prev && o.dist > 0 && prev.effect && o.effect && prev.effect.type === o.effect.type && resultOf(o) > resultOf(prev)) {
+      step = Math.max(step, Math.min(2, prevStep + 1)) as 0 | 1 | 2;
+    }
+    const ratio = ref && o.dist > ref.dist && harmful(o.effect) ? resultOf(o) / resultOf(ref) : null;
+    out.set(o.dist, { step, ratio });
+    prev = o;
+    prevStep = step;
+  }
+  return out;
 }
 
 /** The rival paper of each mode in the forms the interface needs (CONCEPT.md §8). */

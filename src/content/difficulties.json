@@ -11,9 +11,35 @@
       "debunkTrust": 8
     },
     "modes": {
-      "destroy": { "tensionNews": { "destroy": [-16, 0, 30, 44], "save": [-16, 0, 25, 38] }, "impactNorm": 1.4, "rivalSteal": [0, 0.01, 0.03, 0.07], "rivalLureMax": 1 },
+      "destroy": {
+        "tensionNews": {
+          "destroy": [
+            -16,
+            0,
+            30,
+            44
+          ],
+          "save": [
+            -16,
+            0,
+            25,
+            38
+          ]
+        },
+        "impactNorm": 1.4,
+        "rivalSteal": [
+          0,
+          0.01,
+          0.03,
+          0.07
+        ],
+        "rivalLureMax": 1
+      },
       "save": {
-        "rivalImpactMul": { "tabloid": 0.9, "guardian": 0.86 },
+        "rivalImpactMul": {
+          "tabloid": 0.9,
+          "guardian": 0.86
+        },
         "turnLimit": 34,
         "rivalTrustCollapse": 12
       }
@@ -39,16 +65,33 @@
     },
     "modes": {
       "destroy": {
-        "tensionNews": { "destroy": [-16, 0, 15, 23], "save": [-16, 0, 25, 38] },
+        "tensionNews": {
+          "destroy": [
+            -16,
+            0,
+            15,
+            23
+          ],
+          "save": [
+            -16,
+            0,
+            25,
+            38
+          ]
+        },
         "guardianStoriesMax": 3,
         "turnLimit": 39,
-        "impactNorm": 1.35
+        "impactNorm": 1.35,
+        "huntStain": 0.1
       },
       "save": {
         "turnLimit": 46,
         "rivalStoriesMax": 4,
         "assignFocus": 0.45,
-        "rivalImpactMul": { "tabloid": 0.85, "guardian": 0.86 },
+        "rivalImpactMul": {
+          "tabloid": 0.85,
+          "guardian": 0.86
+        },
         "debunkWindow": 1,
         "electionPivot": 0.6,
         "taskRewardMul": 0.8

@@ -51,7 +51,7 @@ export function createGame(
   seed: number,
   mode: GameMode = 'destroy',
   difficulty: Difficulty = 'normal',
-  opts: { town?: string; reporters?: { id: string; xp: number }[]; length?: GameLength } = {},
+  opts: { town?: string; reporters?: { id: string; xp: number }[]; length?: GameLength; collection?: Record<string, number> } = {},
 ): GameState {
   const team = opts.reporters?.length ? opts.reporters : c.balance.startReporters.map((id) => ({ id, xp: 0 }));
   const rng = createRng(seed);
@@ -128,6 +128,7 @@ export function createGame(
     lastProfit: 0,
     town: opts.town ?? null,
     length: opts.length ?? 'full',
+    collection: opts.collection ?? null,
     outcome: null,
   };
   state.metrics = computeMetrics(state, c);

@@ -255,9 +255,9 @@ export function previewPublication(
     tier: effectiveTier(card, pub.distortion),
     reachChance: outletReach(state, c, pub.placement),
     exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25) * reporterCheckMul(state, c, card) * huntWatch(state, c, card, storyEffect(c, card, pub.distortion)),
-    tension: card.conflict ? { pair: pairKey(c, ...card.conflict), delta: tensionShift(state, c, card, pub.distortion, impact, 0.1) } : null,
+    tension: card.conflict ? { pair: pairKey(c, ...card.conflict), delta: tensionShift(state, c, card, pub.distortion, impact, 0.1, mods) } : null,
     believers: audience.believers,
-    huntHit: hunted ? huntStainOf(c, impact, audience.readers ? audience.believers / audience.readers : 0) : null,
+    huntHit: hunted ? huntStainOf(c, impact, audience.readers ? audience.believers / audience.readers : 0, mods.stainMul) : null,
   };
 }
 
@@ -280,15 +280,15 @@ function expectedBelievers(state: GameState, c: Content, mods: Modifiers, tpl: C
  * believers fully, doubters by `huntDoubtShare` («дыма без огня не бывает»), so a louder story that
  * fewer believe still hits harder.
  */
-export function huntStainOf(c: Content, impact: number, believedShare: number): number {
+export function huntStainOf(c: Content, impact: number, believedShare: number, stainMul = 1): number {
   const b = c.balance;
-  return b.huntStain * impact * b.impactNorm * (believedShare + b.huntDoubtShare * (1 - believedShare));
+  return b.huntStain * impact * b.impactNorm * (believedShare + b.huntDoubtShare * (1 - believedShare)) * stainMul;
 }
 
 /** How much a conflict story moves its pair's tension, given the share of the pair that believed it. */
-function tensionShift(state: GameState, c: Content, card: CardInstance, distortion: number, impact: number, share: number): number {
+function tensionShift(state: GameState, c: Content, card: CardInstance, distortion: number, impact: number, share: number, mods?: Modifiers): number {
   const b = c.balance;
-  return b.tensionNews[state.mode][framingOf(card, distortion)] * impact * (b.tensionReachBase + share * b.tensionShareMul);
+  return b.tensionNews[state.mode][framingOf(card, distortion)] * impact * (b.tensionReachBase + share * b.tensionShareMul) * (mods?.tensionMul ?? 1);
 }
 
 function beliefChance(
@@ -558,7 +558,7 @@ export function publish(
     const members = state.residents.filter((r) => r.status === 'active' && (r.group === a || r.group === z));
     const memberIds = new Set(members.map((r) => r.id));
     const believedInPair = state.residents.filter((r) => memberIds.has(r.id) && r.beliefs.some((x) => x.cardUid === card.uid)).length;
-    const delta = tensionShift(state, c, card, pub.distortion, impact, believedInPair / Math.max(1, members.length));
+    const delta = tensionShift(state, c, card, pub.distortion, impact, believedInPair / Math.max(1, members.length), rival ? undefined : mods);
     addTension(state, key, delta);
     report.tension = { [key]: delta };
     // Calming earns the trust of both groups' readers.

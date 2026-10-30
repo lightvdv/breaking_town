@@ -2,6 +2,7 @@ import { chance, int, pick, weightedPick, type RngState } from './rng';
 import { clamp, conflictsStarted, groupOf } from './lookup';
 import { isRecent } from './reporters';
 import { twistMods } from './twists';
+import { getModifiers } from './modifiers';
 import type { CardInstance, CardTemplate, Content, GameState, GroupId, Incident, NewsTier } from './types';
 
 /**
@@ -85,6 +86,7 @@ export function advanceRelations(state: GameState, c: Content, rng: RngState): {
   const active = state.residents.filter((r) => r.status === 'active');
   // The mayor elected mid-game changes how the town lives with its quarrels (CONCEPT.md §4.9).
   const mayor = twistMods(state, c);
+  const mods = getModifiers(state, c);
 
   for (const key of pairKeys(c)) {
     const t = state.tension[key] ?? startTension(c, key);
@@ -135,7 +137,7 @@ export function advanceRelations(state: GameState, c: Content, rng: RngState): {
     if (incidents.length >= b.incidentsMax) break;
     const t = state.tension[key];
     if (t < friction) continue;
-    const odds = b.incidentChance * mayor.incidentMul * (0.25 + (0.75 * (t - friction)) / (100 - friction));
+    const odds = b.incidentChance * mayor.incidentMul * mods.incidentMul * (0.25 + (0.75 * (t - friction)) / (100 - friction));
     if (!chance(rng, odds)) continue;
     const pair: [GroupId, GroupId] = chance(rng, 0.5) ? pairOf(key) : [pairOf(key)[1], pairOf(key)[0]];
     const all = c.cards.filter((x) => x.source === 'event' && fits(x, pair));

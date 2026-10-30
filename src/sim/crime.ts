@@ -1,4 +1,5 @@
 import { applyCityEffect } from './city';
+import { getModifiers } from './modifiers';
 import { groupOf, templateOf } from './lookup';
 import type { PublishedNews } from './news';
 import { isRecent, scopeOf } from './reporters';
@@ -34,7 +35,7 @@ export function heatCrime(state: GameState, c: Content, published: PublishedNews
   for (const n of published) {
     const card = state.hand.find((x) => x.uid === n.pub.cardUid);
     if (!card || templateOf(c, card.templateId).topic !== 'crime' || !n.report.reached) continue;
-    heat += b.crimeHeatGain * n.impact * b.impactNorm * (n.report.believed / n.report.reached);
+    heat += b.crimeHeatGain * n.impact * b.impactNorm * (n.report.believed / n.report.reached) * getModifiers(state, c).crimeHeatMul;
   }
   state.crimeHeat = Math.min(1, heat);
   return state.crimeHeat;

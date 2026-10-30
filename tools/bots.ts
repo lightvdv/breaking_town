@@ -376,7 +376,9 @@ function shop(s: GameState): void {
       if (best) hireFromAgency(s, content, best);
       continue;
     }
-    const option = step !== undefined ? options.find((p) => p.id === step) : [...options].sort((a, b) => a.cost - b.cost)[0];
+    // One card of the board's three is taken (CONCEPT.md §3.5б): the rarest, then the dearest — they are the strongest.
+    const rank = (id: string) => ['common', 'rare', 'legendary'].indexOf(content.upgrades.find((u) => u.id === id)?.rarity ?? 'common');
+    const option = step !== undefined ? options.find((p) => p.id === step) : [...options].filter((p) => p.affordable).sort((a, b) => rank(b.id) - rank(a.id) || b.cost - a.cost)[0];
     if (!option || !option.affordable || s.money - option.cost < reserve) return;
     purchase(s, content, option.id);
   }
@@ -406,8 +408,17 @@ function answerOffers(s: GameState, strategy: Strategy): void {
   answerOffer(s, content, (thoughtful && kind === 'kompromat' && trust >= 45) || (defending && ((kind === 'subsidy' && trust >= 45) || kind === 'kompromat')));
 }
 
+// --collection starter|all|max (CONCEPT.md §3.5б): the player's cards — a newcomer's starter set (the
+// default, which the balance targets are for), every card at level 1, or every card at the top level.
+const collectionIndex = process.argv.indexOf('--collection');
+const collectionKind = collectionIndex >= 0 ? process.argv[collectionIndex + 1] : 'starter';
+if (!['starter', 'all', 'max'].includes(collectionKind)) throw new Error(`Unknown collection ${collectionKind}`);
+const botCollection: Record<string, number> = Object.fromEntries(
+  baseContent.upgrades.filter((u) => !u.fork && u.rarity && (collectionKind !== 'starter' || u.starter)).map((u) => [u.id, collectionKind === 'max' ? 3 : 1]),
+);
+
 function playGame(seed: number, strategy: Strategy, trace = false): Result {
-  const s = createGame(content, seed, saveMode ? 'save' : 'destroy', difficulty, { ...(town ? { town } : {}), length });
+  const s = createGame(content, seed, saveMode ? 'save' : 'destroy', difficulty, { ...(town ? { town } : {}), length, collection: botCollection });
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
     if ((strategy === mixed || strategy === agitator) && !noInvestigations) manageInvestigations(s);

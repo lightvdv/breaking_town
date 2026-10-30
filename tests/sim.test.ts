@@ -64,6 +64,10 @@ import {
   storyTitle,
   startHunt,
   storyEffect,
+  modifiersOf,
+  levelEffects,
+  dealShop,
+  lureCost,
   tipConflict,
   huntBonus,
   lureBlock,
@@ -281,6 +285,7 @@ describe('readers', () => {
     expect(() => purchase(s, content, 'kiosk_2')).toThrow();
     purchase(s, content, 'kiosk_1');
     const one = salesOf(s, content, 'newspaper', 100);
+    s.shopOffer.push('kiosk_2');
     purchase(s, content, 'kiosk_2');
     expect(one).toBeGreaterThan(base);
     expect(salesOf(s, content, 'newspaper', 100)).toBeGreaterThan(one);
@@ -742,6 +747,7 @@ describe('purchases', () => {
     expect(() => purchase(s, content, 'newspaper_quality_2')).toThrow();
     expect(listPurchases(s, content).find((p) => p.id === 'newspaper_quality_2')?.unlocked).toBe(false);
     purchase(s, content, 'newspaper_quality_1');
+    s.shopOffer.push('newspaper_quality_2');
     purchase(s, content, 'newspaper_quality_2');
     expect(s.upgrades).toContain('newspaper_quality_2');
   });
@@ -1634,5 +1640,55 @@ describe('tutorial quarrel tip (CONCEPT.md §7.3 «Обучение»)', () => {
     const used = [0, 0, 0];
     const fitted = pub.map((p) => (p.placement > 0 && used[p.placement]++ > 0 ? { ...p, placement: 0 as const } : p));
     expect(() => playTurn(s, c, { publish: fitted })).not.toThrow();
+  });
+});
+
+describe('the collection: draft, levels, sets (CONCEPT.md §3.5б)', () => {
+  it('the draft offers only cards of the collection, and taking one closes the offer', () => {
+    const collection = { photographer: 1, cartoonist: 1, gossip_column: 1, tabloid_king: 2 };
+    const s = createGame(realContent, 3, 'destroy', 'normal', { collection });
+    s.money = 10_000;
+    dealShop(s, realContent, s.rng);
+    expect(s.shopOffer.length).toBe(3);
+    for (const id of s.shopOffer) expect(Object.keys(collection)).toContain(id);
+    purchase(s, realContent, s.shopOffer[0]);
+    expect(s.shopOffer).toEqual([]);
+  });
+
+  it('a level grows a card\'s benefits and leaves its drawbacks', () => {
+    const e = { scaryImpactMul: 1.3, trustGainMul: 0.8, checkerMul: 0.9, upkeepAdd: 15, groupReach: { youth: 0.2, pensioners: -0.3 } };
+    const up = levelEffects(e, 2);
+    expect(up.scaryImpactMul).toBeCloseTo(1.6);
+    expect(up.trustGainMul).toBe(0.8);
+    expect(up.checkerMul).toBeCloseTo(0.8);
+    expect(up.upkeepAdd).toBe(15);
+    expect(up.groupReach).toEqual({ youth: 0.4, pensioners: -0.3 });
+    const m1 = modifiersOf(realContent, ['tabloid_king'], { tabloid_king: 1 });
+    const m3 = modifiersOf(realContent, ['tabloid_king'], { tabloid_king: 3 });
+    expect(m3.scaryImpactMul).toBeGreaterThan(m1.scaryImpactMul);
+    expect(m3.trustGainMul).toBe(m1.trustGainMul);
+  });
+
+  it('three cards of one direction make a set', () => {
+    const two = modifiersOf(realContent, ['photographer', 'cartoonist']);
+    const three = modifiersOf(realContent, ['photographer', 'cartoonist', 'gossip_column']);
+    expect(two.synergies).not.toContain('yellow');
+    expect(three.synergies).toContain('yellow');
+    expect(three.scaryImpactMul).toBeGreaterThan(two.scaryImpactMul);
+  });
+
+  it('the new cards change their mechanics', () => {
+    const s = createGame(realContent, 5, 'destroy', 'normal');
+    const salary = totalUpkeep(s, realContent);
+    const turns = investigationTurns(realContent, reporterOf(realContent, s.reporters[0]), getModifiers(s, realContent));
+    const lure = lureCost(s, realContent);
+    s.upgrades.push('interns', 'smear_lab', 'defectors');
+    expect(totalUpkeep(s, realContent)).toBeLessThan(salary);
+    expect(investigationTurns(realContent, reporterOf(realContent, s.reporters[0]), getModifiers(s, realContent))).toBe(turns - 1);
+    expect(lureCost(s, realContent)).toBeLessThan(lure);
+    const money = s.money;
+    s.upgrades.push('media_baron');
+    playTurn(s, realContent, { publish: [] });
+    expect(s.money).toBeGreaterThan(money - totalUpkeep(s, realContent) + 60);
   });
 });

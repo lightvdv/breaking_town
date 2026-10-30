@@ -3,7 +3,7 @@ import { debunkTargets, makeDebunk } from './rival';
 import { skilledReporter } from './staff';
 import { chance, int, pick, weightedPick, type RngState } from './rng';
 import { clamp, conflictsStarted } from './lookup';
-import type { Modifiers } from './modifiers';
+import { getModifiers, type Modifiers } from './modifiers';
 import { pickPair } from './relations';
 import type { CardInstance, CardTemplate, Content, Find, GameState, GroupId, NewsScope, NewsTier, ReporterDef, Topic } from './types';
 
@@ -221,9 +221,9 @@ export function findNews(
 /** The investigation target that means the rival paper, not a group. */
 export const RIVAL_DIG = 'rival';
 
-export function investigationTurns(c: Content, r: ReporterDef): number {
+export function investigationTurns(c: Content, r: ReporterDef, mods?: Modifiers): number {
   const b = c.balance;
-  return b.investigationTurns - (r.skills.nose >= b.investigationFastNose ? 1 : 0);
+  return Math.max(1, b.investigationTurns - (r.skills.nose >= b.investigationFastNose ? 1 : 0) + Math.round(mods?.investigationTurnsAdd ?? 0));
 }
 
 export function startInvestigation(state: GameState, c: Content, reporterId: string, target: string): void {
@@ -233,7 +233,7 @@ export function startInvestigation(state: GameState, c: Content, reporterId: str
   // Digging into «Голос города» itself (CONCEPT.md §8.4): its money, its masters.
   if (target === RIVAL_DIG ? !state.rival || state.rival.closed : !c.groups.some((g) => g.id === target)) throw new Error(`Unknown target ${target}`);
   if (!c.cards.some((t) => t.source === 'investigation' && t.target === target)) throw new Error(`No investigation story about ${target}`);
-  const total = investigationTurns(c, reporterOf(c, reporterId));
+  const total = investigationTurns(c, reporterOf(c, reporterId), getModifiers(state, c));
   state.investigations.push({ reporterId, target, turnsLeft: total, total });
 }
 

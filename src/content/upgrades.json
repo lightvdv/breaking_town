@@ -12,7 +12,12 @@
       "reachAdd": 0.05,
       "adRateAdd": 0.3
     },
-    "section": "Продажи"
+    "section": "Продажи",
+    "rarity": "common",
+    "tags": [
+      "money"
+    ],
+    "starter": true
   },
   {
     "id": "kiosk_2",
@@ -29,7 +34,12 @@
       "reachAdd": 0.05,
       "adRateAdd": 0.3
     },
-    "section": "Продажи"
+    "section": "Продажи",
+    "rarity": "common",
+    "tags": [
+      "money"
+    ],
+    "starter": true
   },
   {
     "id": "kiosk_3",
@@ -46,7 +56,12 @@
       "reachAdd": 0.05,
       "adRateAdd": 0.3
     },
-    "section": "Продажи"
+    "section": "Продажи",
+    "rarity": "common",
+    "tags": [
+      "money"
+    ],
+    "starter": true
   },
   {
     "id": "kiosk_4",
@@ -63,7 +78,12 @@
       "reachAdd": 0.05,
       "adRateAdd": 0.3
     },
-    "section": "Продажи"
+    "section": "Продажи",
+    "rarity": "common",
+    "tags": [
+      "money"
+    ],
+    "starter": true
   },
   {
     "id": "subscription",
@@ -75,7 +95,12 @@
     "effects": {
       "churnMul": 0.75
     },
-    "section": "Продажи"
+    "section": "Продажи",
+    "rarity": "common",
+    "tags": [
+      "money"
+    ],
+    "starter": true
   },
   {
     "id": "paid_subscription",
@@ -89,7 +114,11 @@
       "churnMul": 0.5,
       "acquisitionMul": 0.6
     },
-    "section": "Продажи"
+    "section": "Продажи",
+    "rarity": "common",
+    "tags": [
+      "money"
+    ]
   },
   {
     "id": "newspaper_quality_1",
@@ -103,7 +132,12 @@
       "reachMul": 1.15,
       "trustBonus": 5
     },
-    "section": "Содержание"
+    "section": "Содержание",
+    "rarity": "common",
+    "tags": [
+      "trust"
+    ],
+    "starter": true
   },
   {
     "id": "newspaper_quality_2",
@@ -119,7 +153,11 @@
       "reachMul": 1.2,
       "trustBonus": 5
     },
-    "section": "Содержание"
+    "section": "Содержание",
+    "rarity": "rare",
+    "tags": [
+      "trust"
+    ]
   },
   {
     "id": "tv_guide",
@@ -134,7 +172,12 @@
         "pensioners": 0.15
       }
     },
-    "section": "Содержание"
+    "section": "Содержание",
+    "rarity": "common",
+    "tags": [
+      "money"
+    ],
+    "starter": true
   },
   {
     "id": "sports_page",
@@ -149,7 +192,12 @@
         "workers": 0.3
       }
     },
-    "section": "Содержание"
+    "section": "Содержание",
+    "rarity": "rare",
+    "tags": [
+      "money",
+      "split"
+    ]
   },
   {
     "id": "youth_insert",
@@ -166,7 +214,11 @@
         "youth": 0.35
       }
     },
-    "section": "Содержание"
+    "section": "Содержание",
+    "rarity": "rare",
+    "tags": [
+      "yellow"
+    ]
   },
   {
     "id": "photographer",
@@ -181,7 +233,12 @@
       "frontReadMul": 1.2,
       "upkeepAdd": 10
     },
-    "section": "Содержание"
+    "section": "Содержание",
+    "rarity": "common",
+    "tags": [
+      "yellow"
+    ],
+    "starter": true
   },
   {
     "id": "editorial_1",
@@ -193,7 +250,12 @@
     "effects": {
       "reporterLuck": 0.1
     },
-    "section": "Редакция"
+    "section": "Редакция",
+    "rarity": "common",
+    "tags": [
+      "staff"
+    ],
+    "starter": true
   },
   {
     "id": "experts",
@@ -205,7 +267,11 @@
     "effects": {
       "plausibilityAdd": 0.1
     },
-    "section": "Редакция"
+    "section": "Редакция",
+    "rarity": "rare",
+    "tags": [
+      "trust"
+    ]
   },
   {
     "id": "trolls",
@@ -220,7 +286,12 @@
       "wordOfMouthMul": 1.4,
       "exposurePenaltyMul": 1.2
     },
-    "section": "Редакция"
+    "section": "Редакция",
+    "rarity": "rare",
+    "tags": [
+      "yellow",
+      "split"
+    ]
   },
   {
     "id": "hotline",
@@ -236,7 +307,12 @@
       "debunkFindAdd": 0.2,
       "upkeepAdd": 10
     },
-    "section": "Редакция"
+    "section": "Редакция",
+    "rarity": "common",
+    "tags": [
+      "trust"
+    ],
+    "starter": true
   },
   {
     "id": "mole",
@@ -246,11 +322,14 @@
     "drawback": "Каждый день 5% — крота раскроют: −5% репутации, и он пропадёт.",
     "cost": 420,
     "requires": null,
-    "rare": true,
     "effects": {
       "seeRivalPlan": true
     },
-    "section": "Редакция"
+    "section": "Редакция",
+    "rarity": "legendary",
+    "tags": [
+      "rival"
+    ]
   },
   {
     "id": "night_shift",
@@ -265,7 +344,12 @@
       "cost": 15
     },
     "effects": {},
-    "section": "Приёмы"
+    "section": "Приёмы",
+    "rarity": "common",
+    "tags": [
+      "staff"
+    ],
+    "starter": true
   },
   {
     "id": "sensation_day",
@@ -275,13 +359,16 @@
     "drawback": "20 ₽ за раз, потом 5 дней перезарядки.",
     "cost": 300,
     "requires": null,
-    "rare": true,
     "ability": {
       "cooldown": 5,
       "cost": 20
     },
     "effects": {},
-    "section": "Приёмы"
+    "section": "Приёмы",
+    "rarity": "rare",
+    "tags": [
+      "yellow"
+    ]
   },
   {
     "id": "yellow_layout",
@@ -309,7 +396,10 @@
         "pensioners": 0.04,
         "intelligentsia": 0.06
       }
-    }
+    },
+    "tags": [
+      "yellow"
+    ]
   },
   {
     "id": "solid_style",
@@ -323,7 +413,10 @@
     "effects": {
       "trustGainMul": 2,
       "scaryImpactMul": 0.8
-    }
+    },
+    "tags": [
+      "trust"
+    ]
   },
   {
     "id": "cheap_paper",
@@ -339,7 +432,10 @@
       "upkeepAdd": -15,
       "acquisitionMul": 1.3,
       "churnMul": 1.15
-    }
+    },
+    "tags": [
+      "money"
+    ]
   },
   {
     "id": "gloss",
@@ -354,7 +450,10 @@
       "channel": "newspaper",
       "adRateAdd": 0.6,
       "upkeepAdd": 15
-    }
+    },
+    "tags": [
+      "money"
+    ]
   },
   {
     "id": "lawyers",
@@ -369,7 +468,10 @@
       "exposurePenaltyMul": 0.7,
       "channel": "newspaper",
       "upkeepAdd": 10
-    }
+    },
+    "tags": [
+      "trust"
+    ]
   },
   {
     "id": "insider",
@@ -383,7 +485,10 @@
     "effects": {
       "checkerMul": 0.75,
       "exposurePenaltyMul": 1.15
-    }
+    },
+    "tags": [
+      "rival"
+    ]
   },
   {
     "id": "crime_desk",
@@ -403,7 +508,12 @@
         "crime": 0.2
       }
     },
-    "section": "Отделы"
+    "section": "Отделы",
+    "rarity": "common",
+    "tags": [
+      "crime"
+    ],
+    "starter": true
   },
   {
     "id": "factory_desk",
@@ -420,7 +530,12 @@
         "factory": 1.3
       }
     },
-    "section": "Отделы"
+    "section": "Отделы",
+    "rarity": "common",
+    "tags": [
+      "hunt"
+    ],
+    "starter": true
   },
   {
     "id": "health_desk",
@@ -437,7 +552,11 @@
         "health": 1.3
       }
     },
-    "section": "Отделы"
+    "section": "Отделы",
+    "rarity": "common",
+    "tags": [
+      "yellow"
+    ]
   },
   {
     "id": "power_desk",
@@ -454,7 +573,11 @@
         "power": 1.3
       }
     },
-    "section": "Отделы"
+    "section": "Отделы",
+    "rarity": "common",
+    "tags": [
+      "split"
+    ]
   },
   {
     "id": "dossier",
@@ -467,7 +590,11 @@
     "effects": {
       "huntStepMul": 1.5
     },
-    "section": "Нападение"
+    "section": "Нападение",
+    "rarity": "rare",
+    "tags": [
+      "hunt"
+    ]
   },
   {
     "id": "insiders",
@@ -483,7 +610,11 @@
       "upkeepAdd": 10,
       "huntFindAdd": 0.25
     },
-    "section": "Нападение"
+    "section": "Нападение",
+    "rarity": "rare",
+    "tags": [
+      "hunt"
+    ]
   },
   {
     "id": "interceptors",
@@ -499,7 +630,11 @@
       "upkeepAdd": 6,
       "rivalStealMul": 2
     },
-    "section": "Нападение"
+    "section": "Нападение",
+    "rarity": "rare",
+    "tags": [
+      "rival"
+    ]
   },
   {
     "id": "cartoonist",
@@ -511,7 +646,12 @@
     "effects": {
       "wordOfMouthMul": 1.25
     },
-    "section": "Содержание"
+    "section": "Содержание",
+    "rarity": "common",
+    "tags": [
+      "yellow"
+    ],
+    "starter": true
   },
   {
     "id": "gate_handout",
@@ -528,7 +668,13 @@
       },
       "adRateAdd": -0.2
     },
-    "section": "Продажи"
+    "section": "Продажи",
+    "rarity": "common",
+    "tags": [
+      "money",
+      "split"
+    ],
+    "starter": true
   },
   {
     "id": "proofreader",
@@ -538,12 +684,453 @@
     "drawback": "12 ₽ в день.",
     "cost": 300,
     "requires": null,
-    "rare": true,
     "effects": {
       "channel": "newspaper",
       "upkeepAdd": 12,
       "checkerMul": 0.85
     },
-    "section": "Редакция"
+    "section": "Редакция",
+    "rarity": "rare",
+    "tags": [
+      "staff"
+    ]
+  },
+  {
+    "id": "newsboys",
+    "name": "Мальчишки-газетчики",
+    "icon": "🧢",
+    "description": "Кричат заголовки на каждом углу: газету берут чаще.",
+    "cost": 150,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "reachAdd": 0.04,
+      "acquisitionMul": 1.15
+    },
+    "section": "Продажи",
+    "rarity": "common",
+    "tags": [
+      "money"
+    ]
+  },
+  {
+    "id": "job_ads",
+    "name": "Объявления о работе",
+    "icon": "📌",
+    "description": "Безработные покупают газету ради объявлений: +0.2 ₽ с читателя.",
+    "cost": 150,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "adRateAdd": 0.2,
+      "groupReach": {
+        "workers": 0.1
+      }
+    },
+    "section": "Продажи",
+    "rarity": "common",
+    "tags": [
+      "money"
+    ]
+  },
+  {
+    "id": "police_scanner",
+    "name": "Полицейская рация",
+    "icon": "📻",
+    "description": "Свободный репортёр часто едет туда, где случилась беда: новостей о криминале больше.",
+    "cost": 180,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "topicFind": {
+        "crime": 0.3
+      }
+    },
+    "section": "Отделы",
+    "rarity": "common",
+    "tags": [
+      "crime"
+    ]
+  },
+  {
+    "id": "gossip_column",
+    "name": "Колонка сплетен",
+    "icon": "🗣",
+    "description": "Новости пересказывают охотнее.",
+    "drawback": "Правда приносит чуть меньше репутации.",
+    "cost": 160,
+    "requires": null,
+    "effects": {
+      "wordOfMouthMul": 1.2,
+      "trustGainMul": 0.9
+    },
+    "section": "Содержание",
+    "rarity": "common",
+    "tags": [
+      "yellow"
+    ]
+  },
+  {
+    "id": "archive",
+    "name": "Архив редакции",
+    "icon": "🗄",
+    "description": "Старые подшивки: расследование идёт на день быстрее.",
+    "cost": 200,
+    "requires": null,
+    "effects": {
+      "investigationTurnsAdd": -1
+    },
+    "section": "Редакция",
+    "rarity": "common",
+    "tags": [
+      "staff"
+    ]
+  },
+  {
+    "id": "interns",
+    "name": "Стажёры",
+    "icon": "🎒",
+    "description": "Черновую работу делают стажёры: зарплаты репортёров на 15% меньше.",
+    "cost": 180,
+    "requires": null,
+    "effects": {
+      "salaryMul": 0.85
+    },
+    "section": "Редакция",
+    "rarity": "common",
+    "tags": [
+      "staff"
+    ]
+  },
+  {
+    "id": "angry_letters",
+    "name": "Рубрика «Народный гнев»",
+    "icon": "✊",
+    "description": "Письма злых горожан: подогретые ссоры разгораются сильнее.",
+    "cost": 200,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "tensionMul": 1.2
+    },
+    "section": "Нападение",
+    "rarity": "common",
+    "tags": [
+      "split"
+    ]
+  },
+  {
+    "id": "bar_regulars",
+    "name": "Завсегдатаи бара",
+    "icon": "🍺",
+    "description": "Всё слышат первыми: новости о цели травли приходят чаще.",
+    "cost": 170,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "huntFindAdd": 0.15
+    },
+    "section": "Нападение",
+    "rarity": "common",
+    "tags": [
+      "hunt"
+    ]
+  },
+  {
+    "id": "sponsor",
+    "name": "Тайный спонсор",
+    "icon": "💼",
+    "description": "Каждый день 40 ₽ в конверте.",
+    "drawback": "Горожане чуют: −3 к репутации у всех.",
+    "cost": 250,
+    "requires": null,
+    "effects": {
+      "moneyPerDay": 40,
+      "trustBonus": -3
+    },
+    "section": "Продажи",
+    "rarity": "rare",
+    "tags": [
+      "money"
+    ]
+  },
+  {
+    "id": "night_patrol",
+    "name": "Ночной патруль",
+    "icon": "🔦",
+    "description": "Репортёр ездит с патрулём: криминальные новости бьют сильнее и сильнее нагревают город.",
+    "cost": 300,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "crimeHeatMul": 1.5,
+      "topicImpactMul": {
+        "crime": 1.15
+      }
+    },
+    "section": "Отделы",
+    "rarity": "rare",
+    "tags": [
+      "crime"
+    ]
+  },
+  {
+    "id": "provocateurs",
+    "name": "Провокаторы",
+    "icon": "🧨",
+    "description": "Свои люди в толпе: стычки между группами случаются заметно чаще.",
+    "drawback": "Если вскроется — скандал: проверяют на 5% строже.",
+    "cost": 320,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "incidentMul": 1.6,
+      "checkerMul": 1.05
+    },
+    "section": "Нападение",
+    "rarity": "rare",
+    "tags": [
+      "split"
+    ]
+  },
+  {
+    "id": "smear_lab",
+    "name": "Лаборатория компромата",
+    "icon": "🧪",
+    "description": "Расследования вдвое дешевле и на день быстрее.",
+    "cost": 320,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "investigationCostMul": 0.5,
+      "investigationTurnsAdd": -1
+    },
+    "section": "Нападение",
+    "rarity": "rare",
+    "tags": [
+      "split",
+      "hunt"
+    ]
+  },
+  {
+    "id": "epidemiologist",
+    "name": "Эпидемиолог на зарплате",
+    "icon": "🦠",
+    "description": "Новости о здоровье и еде бьют сильнее.",
+    "cost": 260,
+    "requires": null,
+    "effects": {
+      "topicImpactMul": {
+        "health": 1.3,
+        "food": 1.2
+      }
+    },
+    "section": "Отделы",
+    "rarity": "rare",
+    "tags": [
+      "yellow"
+    ]
+  },
+  {
+    "id": "defectors",
+    "name": "Перебежчики",
+    "icon": "🚪",
+    "description": "Авторы «Голоса» сами просятся к нам: сманить автора на 40% дешевле.",
+    "cost": 240,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "lureCostMul": 0.6
+    },
+    "section": "Нападение",
+    "rarity": "rare",
+    "tags": [
+      "rival"
+    ]
+  },
+  {
+    "id": "press_cards",
+    "name": "Пресс-карты",
+    "icon": "🪪",
+    "description": "Репортёров пускают везде: удача +0.08, ложь проверяют чуть мягче.",
+    "cost": 300,
+    "requires": null,
+    "effects": {
+      "reporterLuck": 0.08,
+      "checkerMul": 0.92
+    },
+    "section": "Редакция",
+    "rarity": "rare",
+    "tags": [
+      "staff"
+    ]
+  },
+  {
+    "id": "health_inspector",
+    "name": "Санитарная проверка",
+    "icon": "🧾",
+    "description": "Свой человек в санэпидстанции: травля оставляет пятно на 40% больше.",
+    "cost": 300,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "stainMul": 1.4
+    },
+    "section": "Нападение",
+    "rarity": "rare",
+    "tags": [
+      "hunt"
+    ]
+  },
+  {
+    "id": "radio_ads",
+    "name": "Реклама на радио",
+    "icon": "📡",
+    "description": "Новые читатели приходят на 30% чаще.",
+    "drawback": "15 ₽ в день.",
+    "cost": 260,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "acquisitionMul": 1.3,
+      "upkeepAdd": 15
+    },
+    "section": "Продажи",
+    "rarity": "rare",
+    "tags": [
+      "money"
+    ]
+  },
+  {
+    "id": "factchecker_friend",
+    "name": "Друг среди фактчекеров",
+    "icon": "🤝",
+    "description": "Предупреждает заранее: разоблачение стоит на 20% меньше репутации, проверяют мягче.",
+    "cost": 350,
+    "requires": null,
+    "effects": {
+      "exposurePenaltyMul": 0.8,
+      "checkerMul": 0.9
+    },
+    "section": "Редакция",
+    "rarity": "rare",
+    "tags": [
+      "trust"
+    ]
+  },
+  {
+    "id": "holding_lawyer",
+    "name": "Адвокат холдинга",
+    "icon": "🦈",
+    "description": "Любое разоблачение стоит вдвое меньше репутации, а фактчекеры осторожнее.",
+    "cost": 500,
+    "requires": null,
+    "effects": {
+      "exposurePenaltyMul": 0.5,
+      "checkerMul": 0.85
+    },
+    "section": "Редакция",
+    "rarity": "legendary",
+    "tags": [
+      "trust"
+    ]
+  },
+  {
+    "id": "city_hall_leaks",
+    "name": "Утечки из мэрии",
+    "icon": "📂",
+    "description": "Новости о власти бьют на 40% сильнее, ссоры разгораются сильнее и чаще.",
+    "cost": 500,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "topicImpactMul": {
+        "power": 1.4
+      },
+      "tensionMul": 1.3,
+      "incidentMul": 1.3
+    },
+    "section": "Нападение",
+    "rarity": "legendary",
+    "tags": [
+      "split"
+    ]
+  },
+  {
+    "id": "gang_contact",
+    "name": "Свой человек в банде",
+    "icon": "🃏",
+    "description": "Криминальные новости вдвое сильнее нагревают город, репортёры чаще пишут о криминале.",
+    "drawback": "Проверяют на 10% строже.",
+    "cost": 450,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "crimeHeatMul": 2,
+      "topicFind": {
+        "crime": 0.3
+      },
+      "checkerMul": 1.1
+    },
+    "section": "Отделы",
+    "rarity": "legendary",
+    "tags": [
+      "crime"
+    ]
+  },
+  {
+    "id": "tabloid_king",
+    "name": "Король таблоидов",
+    "icon": "👑",
+    "description": "Страшные новости бьют на 30% сильнее, их пересказывают на 30% чаще.",
+    "drawback": "Правда приносит меньше репутации.",
+    "cost": 500,
+    "requires": null,
+    "effects": {
+      "scaryImpactMul": 1.3,
+      "wordOfMouthMul": 1.3,
+      "trustGainMul": 0.8
+    },
+    "section": "Содержание",
+    "rarity": "legendary",
+    "tags": [
+      "yellow"
+    ]
+  },
+  {
+    "id": "media_baron",
+    "name": "Медиамагнат",
+    "icon": "🏦",
+    "description": "Холдинг вкладывается: 70 ₽ в день и +0.3 ₽ с каждого читателя.",
+    "cost": 500,
+    "requires": null,
+    "effects": {
+      "channel": "newspaper",
+      "moneyPerDay": 70,
+      "adRateAdd": 0.3
+    },
+    "section": "Продажи",
+    "rarity": "legendary",
+    "tags": [
+      "money"
+    ]
+  },
+  {
+    "id": "smear_machine",
+    "name": "Машина травли",
+    "icon": "⚙",
+    "description": "Травля оставляет пятно на 60% больше и разгоняется вдвое быстрее.",
+    "cost": 500,
+    "requires": null,
+    "mode": "destroy",
+    "effects": {
+      "stainMul": 1.6,
+      "huntStepMul": 1.5
+    },
+    "section": "Нападение",
+    "rarity": "legendary",
+    "tags": [
+      "hunt"
+    ]
   }
 ]

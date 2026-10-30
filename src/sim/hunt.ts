@@ -1,5 +1,5 @@
 import { clamp, closedLine } from './lookup';
-import type { Modifiers } from './modifiers';
+import { getModifiers, type Modifiers } from './modifiers';
 import { huntStainOf, isHarmful, type PublishedNews } from './news';
 import { chance, type RngState } from './rng';
 import type { Building, CardEffect, CardInstance, CardTemplate, Content, GameState } from './types';
@@ -64,7 +64,7 @@ export function pressHunt(state: GameState, c: Content, published: PublishedNews
     if (!card || !isHuntStory(state, card, effectOf(n))) continue;
     hit = true;
     const believed = n.report.reached ? n.report.believed / n.report.reached : 0;
-    stain = clamp(stain + huntStainOf(c, n.impact, believed));
+    stain = clamp(stain + huntStainOf(c, n.impact, believed, getModifiers(state, c).stainMul));
   }
   state.stains[camp.building] = stain;
   if (hit) {

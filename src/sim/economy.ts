@@ -80,7 +80,8 @@ export function purchase(state: GameState, c: Content, id: string): void {
   else {
     if (deckFree(state, c.upgrades.find((u) => u.id === id)!)) state.vouchers--;
     state.upgrades.push(id);
-    state.shopOffer = state.shopOffer.filter((x) => x !== id);
+    // One card of the draft is taken, the others go back (CONCEPT.md §3.5б); a fork's option leaves the draft as it is.
+    if (state.shopOffer.includes(id)) state.shopOffer = [];
   }
 }
 
@@ -89,9 +90,9 @@ export function upkeepItems(state: GameState, c: Content): UpkeepItem[] {
   const mods = getModifiers(state, c);
   return [
     ...state.ownedChannels.map((id) => ({ kind: 'channel' as const, id, amount: Math.max(0, channelOf(c, id).upkeep + mods.channels[id].upkeepAdd) })),
-    ...state.reporters.map((id) => ({ kind: 'salary' as const, id, amount: reporterOf(c, id).salary })),
+    ...state.reporters.map((id) => ({ kind: 'salary' as const, id, amount: Math.round(reporterOf(c, id).salary * mods.salaryMul) })),
     // Digging dirt costs money every turn: sources, bribes, stakeouts (CONCEPT.md §3.3а).
-    ...state.investigations.map((x) => ({ kind: 'investigation' as const, id: x.reporterId, amount: c.balance.investigationCost })),
+    ...state.investigations.map((x) => ({ kind: 'investigation' as const, id: x.reporterId, amount: Math.round(c.balance.investigationCost * mods.investigationCostMul) })),
     // A failed audit cut the budget for the rest of the game (CONCEPT.md §4.9).
     ...(state.budgetCut > 0 ? [{ kind: 'budget' as const, id: 'audit', amount: state.budgetCut }] : []),
   ];
@@ -131,6 +132,9 @@ export function collectIncome(
 ): { income: Record<ChannelId, number>; upkeep: number; upkeepItems: UpkeepItem[] } {
   const income: Record<ChannelId, number> = {};
   for (const ch of state.ownedChannels) income[ch] = salesOf(state, c, ch, buyers[ch] ?? 0);
+  // A sponsor's money comes with the sales (CONCEPT.md §3.5б).
+  const sponsor = getModifiers(state, c).moneyPerDay;
+  if (sponsor && state.ownedChannels.length) income[state.ownedChannels[0]] += Math.round(sponsor);
   const items = upkeepItems(state, c);
   const upkeep = items.reduce((s, x) => s + x.amount, 0);
   state.money += Object.values(income).reduce((s, x) => s + x, 0) - upkeep;

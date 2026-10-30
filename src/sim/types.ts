@@ -157,6 +157,39 @@ export interface UpgradeEffects {
   topicImpactMul?: Partial<Record<Topic, number>>;
   /** Chance that a reporter without an assignment searches this topic (a desk's own reporter). */
   topicFind?: Partial<Record<Topic, number>>;
+  /** Money the paper gets every day on top of its sales (a sponsor). */
+  moneyPerDay?: number;
+  /** Multiplies the reporters' salaries. */
+  salaryMul?: number;
+  /** Added to the days an investigation takes (negative = faster). */
+  investigationTurnsAdd?: number;
+  /** Multiplies the daily cost of an investigation. */
+  investigationCostMul?: number;
+  /** Multiplies how much our conflict stories heat (or cool) a pair. */
+  tensionMul?: number;
+  /** Multiplies the chance of incidents between groups. */
+  incidentMul?: number;
+  /** Multiplies the crime heat our crime stories raise. */
+  crimeHeatMul?: number;
+  /** Multiplies the stain a hunt story leaves on its target. */
+  stainMul?: number;
+  /** Multiplies the price of luring the rival's authors. */
+  lureCostMul?: number;
+}
+
+/** How rare a card of the collection is (CONCEPT.md §3.5б): packs give rare ones less often, the draft too. */
+export type Rarity = 'common' | 'rare' | 'legendary';
+
+/** Three or more cards of one direction give a set bonus (CONCEPT.md §3.5б). */
+export interface SynergyDef {
+  tag: string;
+  /** «Таблоид» */
+  name: string;
+  /** What the set gives, in words. */
+  description: string;
+  /** Cards of the tag needed. */
+  count: number;
+  effects: UpgradeEffects;
 }
 
 export interface UpgradeDef {
@@ -180,6 +213,12 @@ export interface UpgradeDef {
   mode?: GameMode;
   /** Comes up in the deck less often (`shopRareWeight`). */
   rare?: boolean;
+  /** Its rarity in the collection (CONCEPT.md §3.5б); forks have none. */
+  rarity?: Rarity;
+  /** Directions of the card: three of one direction make a set (`synergies.json`). */
+  tags?: string[];
+  /** Owned from the first game (the starter collection). */
+  starter?: boolean;
   /** An active ability: used from the bar above the paper for `cost`, then waits `cooldown` days. */
   ability?: { cooldown: number; cost: number };
 }
@@ -437,6 +476,10 @@ export interface Balance {
   shopRefreshDays: number;
   shopRefreshCost: number;
   shopRareWeight: number;
+  /** How much stronger a card's benefits are at levels 1, 2, 3 of the collection (its drawbacks stay). */
+  cardLevelPower: number[];
+  /** How often each rarity comes up in the draft and in packs. */
+  rarityWeight: Record<Rarity, number>;
   /** The mole at the rival's: the daily chance to be found out and the reputation it costs. */
   moleRisk: number;
   molePenalty: number;
@@ -875,6 +918,7 @@ export interface Content {
   twists: TwistDef[];
   towns: TownDef[];
   lengths: LengthDef[];
+  synergies: SynergyDef[];
   letters: LetterTemplates;
   balance: Balance;
 }
@@ -1202,6 +1246,11 @@ export interface GameState {
   difficulty: Difficulty;
   /** Full or short game; its content comes from `withLength`. */
   length: GameLength;
+  /**
+   * The player's collection for this game (CONCEPT.md §3.5б): card id → level 1..3. Only these cards
+   * come up in the draft, levelled up. Null: every card at level 1 (bots, tests, old saves).
+   */
+  collection: Record<string, number> | null;
   /** Named residents (CONCEPT.md §2.2а): person id → resident id; today's letters; what happened to them. */
   people: Record<string, number>;
   letters: Letter[];

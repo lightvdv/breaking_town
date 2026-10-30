@@ -100,6 +100,7 @@ import {
   type GameMode,
   type Difficulty,
   type GameLength,
+  type CardTemplate,
   type CardInstance,
   type Content,
   type ChurnReason,
@@ -128,6 +129,7 @@ import { playIntro } from './intro';
 import { pendingNotes } from './guide';
 import { currentStep, grantFor, issueFlags, skipStep, tipFor, stepTargets, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
 import { recordOf, starLine, submitRecord } from './records';
+import { collectable, levelCost, levelUp, loadCollection, MAX_LEVEL, openPack, packs, rarityNames, rewardFor, saveCollection, tagNames, type Collection, type PackResult } from './collection';
 import { campaignStars, loadCampaign, newCampaign, saveCampaign, townState, winTown, type Campaign } from './campaign';
 import { drawRegion, drawTownArt, MAP_H, MAP_W, townIcon } from './campaignMap';
 import { aboutLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillTiers, topicLine, type RepStatus } from './reporterBar';
@@ -181,6 +183,7 @@ type Modal =
   | 'about'
   | 'newgame'
   | 'tutorial'
+  | 'office'
   | 'campaignNew'
   | 'carry'
   | null;
@@ -271,6 +274,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
     : contentFor(settings.difficulty, urlMode, null, settings.length);
   /** The campaign (CONCEPT.md §9): its own storage; the map screen is open over the drifting city. */
   let campaign: Campaign | null = loadCampaign(base);
+  /** The collection of cards between games and the «связи» to grow it (CONCEPT.md §3.5б). */
+  let collection: Collection = loadCollection(base);
+  /** «Связи» the game that just ended brought (the outcome window says it). */
+  let lastReward = 0;
+  /** What the last pack gave, shown in the office until the next action. */
+  let packResult: PackResult | null = null;
   let campaignOpen = false;
   let campaignSel = 0;
   let state: GameState = saved?.state ?? createGame(c, seedFromUrl(), urlMode, settings.difficulty, { length: settings.length });
@@ -803,7 +812,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const length: GameLength = tutorialGame ? tutorialLength : town ? 'full' : settings.length;
     c = contentFor(difficulty, mode, town, length, tutorialGame);
     reporterBar.c = c;
-    state = createGame(c, seed, mode, difficulty, { ...(town ? { town, ...(campaign?.carry ? { reporters: [campaign.carry] } : {}) } : {}), length });
+    // The draft deals only cards of the player's collection, at their levels (CONCEPT.md §3.5б).
+    collection = loadCollection(base);
+    state = createGame(c, seed, mode, difficulty, { ...(town ? { town, ...(campaign?.carry ? { reporters: [campaign.carry] } : {}) } : {}), length, collection: { ...collection.cards } });
+    lastReward = 0;
     tutorial = tutorialGame ? { step: 0, flags: [] } : null;
     newRecord = false;
     drafts = new Map();
@@ -872,6 +884,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
       if (tutorial && state.outcome && !settings.tutorialDone) {
         settings.tutorialDone = true;
         saveSettings(settings);
+      }
+      // Every finished game brings «связи» for the office (CONCEPT.md §3.5б).
+      if (state.outcome) {
+        lastReward = rewardFor({ win: state.outcome.result === 'win', stars: scoreOf(state, c).stars, difficulty: state.difficulty, length: state.length, tutorial: !!tutorial });
+        collection = loadCollection(base);
+        collection.currency += lastReward;
+        saveCollection(collection);
       }
       // A won game may beat the record of its mode and difficulty.
       // A won single game may beat the record; a won campaign town opens the next one (CONCEPT.md §4.8, §9).
@@ -2501,6 +2520,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           outButton,
         ),
         h('h3', { class: 'headline' }, p.title, ' ', tierLabel),
+        where === 'out' ? null : boostLine(card, tpl, p),
         truthMenu,
         moveMenu,
       ),
@@ -3205,6 +3225,164 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   /**
+   * A card of the collection (CONCEPT.md §3.5б): its rarity frame, icon, name, level stars, directions,
+   * what it gives and costs. Locked ones are a silhouette with their rarity only.
+   */
+  function cardFace(u: UpgradeDef, opts: { level?: number; locked?: boolean; fresh?: boolean; foot?: HTMLElement | null; extra?: HTMLElement | null } = {}): HTMLElement {
+    const rarity = u.rarity ?? 'common';
+    if (opts.locked) {
+      return h('div', { class: `coll-card rarity-${rarity} locked` }, h('span', { class: 'coll-rarity' }, rarityNames[rarity]), h('span', { class: 'coll-icon' }, '?'), h('b', {}, '???'), h('p', { class: 'hint' }, 'Выпадает в конвертах и сейфах.'));
+    }
+    const level = opts.level ?? 1;
+    const power = c.balance.cardLevelPower[level - 1] ?? 1;
+    return h(
+      'div',
+      { class: `coll-card rarity-${rarity}${u.ability ? ' ability' : ''}` },
+      h('span', { class: 'coll-rarity' }, rarityNames[rarity]),
+      opts.fresh ? h('span', { class: 'coll-new' }, 'Новая') : null,
+      h('span', { class: 'coll-icon', 'aria-hidden': 'true' }, u.icon ?? '★'),
+      h('b', {}, u.name),
+      h('span', { class: 'coll-level', title: `Уровень ${level} из ${MAX_LEVEL}${power > 1 ? `: польза ×${power}` : ''}` }, '★'.repeat(level) + '☆'.repeat(MAX_LEVEL - level), power > 1 ? h('small', {}, ` польза ×${power}`) : null),
+      u.tags?.length ? h('span', { class: 'coll-tags' }, ...u.tags.map((t) => h('span', { class: `tag-chip tag-${t}` }, tagNames[t] ?? t))) : null,
+      h('p', { class: 'upg-plus' }, `+ ${u.description}`),
+      u.drawback ? h('p', { class: 'upg-minus' }, `− ${u.drawback}`) : null,
+      opts.extra ?? null,
+      opts.foot ?? null,
+    );
+  }
+
+  /**
+   * «Кабинет редактора» (CONCEPT.md §3.5б): the «связи» earned in games buy packs with a random new
+   * card and level the cards up; the whole collection is laid out by rarity, with the sets it can make.
+   */
+  function officeContent(): HTMLElement[] {
+    collection = loadCollection(base);
+    const all = collectable(base).sort((a, z) => ['legendary', 'rare', 'common'].indexOf(a.rarity!) - ['legendary', 'rare', 'common'].indexOf(z.rarity!) || a.name.localeCompare(z.name));
+    const owned = all.filter((u) => collection.cards[u.id]).length;
+    const act = (f: () => void) => () => {
+      try {
+        f();
+        saveCollection(collection);
+        error = '';
+      } catch (e) {
+        error = e instanceof Error ? e.message : String(e);
+      }
+      render();
+    };
+    const result = packResult;
+    const reveal = result
+      ? 'card' in result
+        ? h('div', { class: `pack-reveal rarity-${result.rarity}` }, h('p', { class: 'pack-reveal-title' }, result.rarity === 'legendary' ? 'Легендарная карта!' : result.rarity === 'rare' ? 'Редкая карта!' : 'Новая карта'), cardFace(result.card, { level: 1 }))
+        : h('div', { class: 'pack-reveal' }, h('p', { class: 'pack-reveal-title' }, `Все карты уже у вас — вернули ${result.refund} ✦`))
+      : null;
+    const kinds = ['legendary', 'rare', 'common'] as const;
+    return [
+      h('p', { class: 'office-wallet' }, h('b', {}, `✦ ${collection.currency} связей`), ` · собрано ${owned} из ${all.length} карт`),
+      h('p', { class: 'hint' }, 'Связи холдинга дают за каждую партию: больше за победу, звёзды и сложность. В партии «Совет директоров» каждые несколько дней предлагает три карты из вашей коллекции — одну можно взять. Чем выше уровень карты, тем сильнее её польза; минусы не растут.'),
+      ...(error ? [h('p', { class: 'bad' }, error)] : []),
+      h(
+        'div',
+        { class: 'packs' },
+        ...packs.map((p) =>
+          h(
+            'button',
+            {
+              class: `pack pack-${p.id}`,
+              disabled: collection.currency < p.cost,
+              onclick: act(() => {
+                packResult = openPack(collection, base, p);
+              }),
+            },
+            h('span', { class: 'pack-art', 'aria-hidden': 'true' }, p.id === 'safe' ? '🗄' : '✉'),
+            h('b', {}, p.name),
+            h('small', {}, p.text),
+            h('span', { class: 'pack-cost' }, `✦ ${p.cost}`),
+          ),
+        ),
+      ),
+      ...(reveal ? [reveal] : []),
+      ...kinds.flatMap((r) => {
+        const list = all.filter((u) => u.rarity === r);
+        return [
+          h('h3', { class: `section rarity-head rarity-${r}` }, `${r === 'legendary' ? 'Легендарные' : r === 'rare' ? 'Редкие' : 'Обычные'} · ${list.filter((u) => collection.cards[u.id]).length} из ${list.length}`),
+          h(
+            'div',
+            { class: 'coll-grid' },
+            ...list.map((u) => {
+              const level = collection.cards[u.id];
+              if (!level) return cardFace(u, { locked: true });
+              const cost = levelCost(u, level);
+              return cardFace(u, {
+                level,
+                fresh: collection.fresh.includes(u.id),
+                foot:
+                  cost === null
+                    ? h('span', { class: 'coll-max' }, 'Высший уровень')
+                    : h('button', { class: collection.currency >= cost ? 'primary' : '', disabled: collection.currency < cost, onclick: act(() => levelUp(collection, u)) }, `Улучшить · ✦ ${cost}`),
+              });
+            }),
+          ),
+        ];
+      }),
+      h('h3', { class: 'section' }, 'Наборы'),
+      h('p', { class: 'hint' }, 'Три карты одного направления в одной партии дают бонус набора.'),
+      h('div', { class: 'sets' }, ...base.synergies.map((x) => h('p', { class: 'set-line' }, h('span', { class: `tag-chip tag-${x.tag}` }, tagNames[x.tag] ?? x.tag), h('b', {}, ` ${x.name}`), ` — ${x.description}`))),
+      h(
+        'button',
+        {
+          class: 'ghost',
+          onclick: () => {
+            // The «Новая» badges are seen.
+            collection.fresh = [];
+            saveCollection(collection);
+            packResult = null;
+            openModal(null);
+          },
+        },
+        'Закрыть',
+      ),
+    ];
+  }
+
+  /**
+   * Which of the paper's cards make this story hit harder (CONCEPT.md §3.5б), so the player sees
+   * them at work: desks by topic, the yellow ones for frightening stories, hunt cards in a hunt.
+   */
+  function boostLine(card: CardInstance, tpl: CardTemplate, p: PublicationPreview): HTMLElement | null {
+    const harmful = !!p.effect && p.effect.type !== 'moodUp' && p.effect.type !== 'debunk';
+    const hunted = p.huntHit !== null;
+    const names = c.upgrades
+      .filter((u) => state.upgrades.includes(u.id))
+      .filter((u) => {
+        const e = u.effects;
+        return (e.topicImpactMul?.[tpl.topic] ?? 1) > 1 || (harmful && (e.scaryImpactMul ?? 1) > 1) || (hunted && ((e.stainMul ?? 1) > 1 || (e.huntStepMul ?? 1) > 1)) || (!!card.conflict && (e.tensionMul ?? 1) > 1) || (tpl.topic === 'crime' && (e.crimeHeatMul ?? 1) > 1);
+      })
+      .map((u) => `${u.icon ?? '★'} ${u.name}`);
+    const sets = getModifiers(state, c).synergies.map((t) => c.synergies.find((x) => x.tag === t)!).filter((x) => (x.effects.topicImpactMul?.[tpl.topic] ?? 1) > 1 || (harmful && (x.effects.scaryImpactMul ?? 1) > 1) || (hunted && (x.effects.stainMul ?? 1) > 1) || (!!card.conflict && (x.effects.tensionMul ?? 1) > 1));
+    const all = [...names, ...sets.map((x) => `набор «${x.name}»`)];
+    return all.length ? h('p', { class: 'boost-line', title: 'Карты газеты, которые делают эту новость сильнее' }, 'Усиливают: ', all.join(', ')) : null;
+  }
+
+  /** Sets in this game: how many cards of each direction are owned, and the bonus once there are enough. */
+  function setLines(): HTMLElement[] {
+    const owned = c.upgrades.filter((u) => state.upgrades.includes(u.id));
+    const active = getModifiers(state, c).synergies;
+    const lines = c.synergies
+      .map((x) => ({ x, n: owned.filter((u) => u.tags?.includes(x.tag)).length }))
+      .filter((y) => y.n > 0)
+      .map(({ x, n }) =>
+        h(
+          'p',
+          { class: `set-line${active.includes(x.tag) ? ' on' : ''}` },
+          h('span', { class: `tag-chip tag-${x.tag}` }, tagNames[x.tag] ?? x.tag),
+          h('b', {}, ` ${x.name} ${Math.min(n, x.count)}/${x.count}`),
+          active.includes(x.tag) ? ` — действует: ${x.description}` : ` — ещё ${x.count - n}: ${x.description}`,
+        ),
+      );
+    return lines.length ? [h('h3', { class: 'section' }, 'Наборы'), ...lines] : [];
+  }
+
+  /**
    * The upgrades window (CONCEPT.md §3.5): the paper's style from the forks taken, the open fork (one
    * of two for good), today's deck with plus and minus on every card, and what is owned.
    */
@@ -3221,7 +3399,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const price = (u: UpgradeDef) => {
       const o = options.get(u.id);
       const free = o?.cost === 0 && u.cost > 0;
-      return h('button', { class: o?.affordable ? 'primary' : '', 'data-tut': 'buy', disabled: !o?.affordable || !!state.outcome, onclick: () => buy(u.id) }, free ? 'бесплатно' : `${u.cost}`);
+      const label = u.fork ? (free ? 'бесплатно' : `${u.cost}`) : free ? 'Взять бесплатно' : `Взять · ${u.cost}`;
+      return h('button', { class: o?.affordable ? 'primary' : '', 'data-tut': 'buy', disabled: !o?.affordable || !!state.outcome, onclick: () => buy(u.id) }, label);
     };
     const icon = (u: UpgradeDef, cls = 'upg-icon') => h('span', { class: cls, 'aria-hidden': 'true' }, u.icon ?? '★');
     const series = (u: UpgradeDef) => (u.series ? c.upgrades.filter((x) => x.series === u.series) : null);
@@ -3255,15 +3434,20 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('div', { class: 'fork-buy' }, price(u)),
       );
     };
+    const levelOf = (u: UpgradeDef) => state.collection?.[u.id] ?? 1;
     const card = (u: UpgradeDef) => {
       const line = series(u);
+      const rarity = u.rarity ?? 'common';
+      const level = levelOf(u);
       return h(
         'div',
-        { class: `deck-card${u.rare ? ' rare' : ''}${u.ability ? ' ability' : ''}` },
-        u.ability ? h('span', { class: 'deck-tag tag-ability' }, 'приём') : u.rare ? h('span', { class: 'deck-tag tag-rare' }, 'редкое') : null,
+        { class: `deck-card rarity-${rarity}${u.ability ? ' ability' : ''}` },
+        h('span', { class: `deck-tag tag-${rarity}` }, u.ability ? `приём · ${rarityNames[rarity]}` : rarityNames[rarity]),
         u.id === best ? h('span', { class: 'best-mark' }, 'выгоднее всего') : null,
         icon(u),
         h('b', {}, line ? `${seriesNames[u.series!] ?? u.name}: ${u.name.toLowerCase()}` : u.name, line ? pips(line) : null),
+        h('span', { class: 'coll-level', title: `Уровень карты в вашей коллекции: ${level} из ${MAX_LEVEL}` }, '★'.repeat(level) + '☆'.repeat(MAX_LEVEL - level), level > 1 ? h('small', {}, ` польза ×${b.cardLevelPower[level - 1]}`) : null),
+        u.tags?.length ? h('span', { class: 'coll-tags' }, ...u.tags.map((t) => h('span', { class: `tag-chip tag-${t}` }, tagNames[t] ?? t))) : null,
         h('p', { class: 'upg-plus' }, `+ ${u.description}`),
         minus(u),
         options.get(u.id) && !options.get(u.id)!.unlocked ? h('p', { class: 'req' }, requirementText(u.requires)) : null,
@@ -3286,8 +3470,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       next ? h('p', { class: 'fork-next' }, `Следующая развилка — «${next.title}»: ${next.options.map((id) => c.upgrades.find((u) => u.id === id)!.name.toLowerCase()).join(' или ')} (на ${next.day}-й день)`) : null,
       ...infoSection(
         'deck',
-        'Сегодня предлагают',
-        `Каждые ${b.shopRefreshDays} дня — ${b.shopOfferSize} новых предложения из колоды; раньше — за ${b.shopRefreshCost} ₽. Купленное уходит из колоды. «Приём» — кнопка над газетой, срабатывает раз в несколько дней. «Редкое» выпадает нечасто.`,
+        'Совет директоров предлагает — возьмите одну',
+        `Каждые ${b.shopRefreshDays} дня совет присылает ${b.shopOfferSize} карты из вашей коллекции; взять можно одну, остальные уйдут. Раньше срока — за ${b.shopRefreshCost} ₽. Редкие и легендарные выпадают реже. Звёзды — уровень карты: улучшайте её в «Кабинете редактора» между партиями. Три карты одного направления дают бонус набора. «Приём» — кнопка над газетой, срабатывает раз в несколько дней.`,
       ),
       h(
         'div',
@@ -3307,10 +3491,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
               render();
             },
           },
-          `Обновить −${b.shopRefreshCost}`,
+          `Другие три −${b.shopRefreshCost}`,
         ),
       ),
-      deck.length ? h('div', { class: 'deck' }, ...deck.map(card)) : h('p', { class: 'hint' }, 'Сегодня всё раскупили — новые предложения скоро.'),
+      deck.length ? h('div', { class: 'deck' }, ...deck.map(card)) : h('p', { class: 'hint' }, 'Карту из этого предложения уже взяли — следующее скоро.'),
+      // Sets of three cards of one direction (CONCEPT.md §3.5б): what is gathered and what it gives.
+      ...setLines(),
       ...(owned.length
         ? [
             h('h3', { class: 'section' }, 'Ваша газета'),
@@ -3319,7 +3505,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
               { class: 'owned-list' },
               ...owned.map((u) => {
                 const line = series(u);
-                return h('span', { class: 'owned-chip', title: `${u.description}${u.drawback ? ` ${u.drawback}` : ''}` }, icon(u, 'style-icon'), line ? seriesNames[u.series!] ?? u.name : u.name, line ? pips(line) : null);
+                return h(
+                  'span',
+                  { class: `owned-chip rarity-${u.rarity ?? 'common'}`, title: `${u.description}${u.drawback ? ` ${u.drawback}` : ''}` },
+                  icon(u, 'style-icon'),
+                  line ? seriesNames[u.series!] ?? u.name : u.name,
+                  line ? pips(line) : null,
+                  u.fork ? null : h('small', { class: 'owned-level' }, ' ' + '★'.repeat(levelOf(u))),
+                );
               }),
             ),
           ]
@@ -4087,15 +4280,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
       about: 'Об игре',
       newgame: 'Новая игра',
       tutorial: 'Обучение',
+      office: 'Кабинет редактора',
       campaignNew: 'Новая кампания',
       carry: 'Кто поедет дальше',
     };
     const body =
-      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'dig' ? digContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'tutorial' ? tutorialStartContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : shopContent();
+      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'dig' ? digContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'tutorial' ? tutorialStartContent() : modal === 'office' ? officeContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
     const panel = h(
       'div',
-      { class: 'modal window' },
+      { class: `modal window${modal === 'office' ? ' office' : ''}` },
       h('div', { class: 'modal-title' }, h('h2', {}, titles[modal]), h('button', { class: 'icon-btn', title: 'Закрыть', onclick: () => openModal(null) }, '×')),
       h('div', { class: 'modal-body' }, ...body),
     );
@@ -4159,6 +4353,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
           ? h('p', { class: 'tutorial-done' }, 'Обучение пройдено. Теперь — настоящая партия: короткая или полная, на любой сложности («Новая игра»).')
           : null,
         outcomeStars(),
+        // «Связи» for the office (CONCEPT.md §3.5б).
+        lastReward
+          ? h(
+              'p',
+              { class: 'reward-line' },
+              h('b', {}, `+${lastReward} ✦ связей`),
+              ' — на новые карты и их улучшение. ',
+              h('button', { class: 'ghost', onclick: () => openModal('office') }, 'Кабинет редактора'),
+            )
+          : null,
         h(
           'div',
           { class: 'outcome-actions' },
@@ -4296,6 +4500,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('span', { class: `camp-side ${camp.side}` }, sideNames[camp.side]),
         h('span', { class: 'camp-diff' }, base.difficulties.find((d) => d.id === camp.difficulty)?.name ?? ''),
         h('span', { class: 'camp-stars' }, `★ ${stars}`, h('small', {}, camp.finished ? ' · кампания пройдена' : stars < need ? ` · для финала нужно ${need}` : ' · финал открыт')),
+        h('button', { onclick: () => openModal('office') }, 'Кабинет редактора'),
         h('button', { class: 'ghost', onclick: () => openModal('campaignNew') }, 'Новая кампания'),
         h(
           'button',
@@ -4457,6 +4662,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
             h('small', {}, settings.tutorialDone ? 'пройдено · можно сыграть ещё раз' : 'короткая лёгкая партия: задание за заданием'),
           ),
           item('Новая игра', () => openModal('newgame'), hasGame && !state.outcome ? '' : settings.tutorialDone ? 'primary' : ''),
+          // The collection between games (CONCEPT.md §3.5б).
+          h(
+            'button',
+            { class: 'title-item', onclick: () => openModal('office') },
+            h('span', {}, 'Кабинет редактора'),
+            h('small', {}, `✦ ${collection.currency} · карт ${collectable(base).filter((u) => collection.cards[u.id]).length} из ${collectable(base).length}`),
+          ),
           item('Как играть', () => openModal('howto')),
           item('Настройки', () => openModal('settings')),
           item('Об игре', () => openModal('about')),
@@ -4622,6 +4834,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...(hasGame && !state.outcome ? [h('p', { class: 'bad' }, 'Текущая партия будет потеряна.')] : []),
       lengths,
       levels,
+      // What the board of directors will deal from (CONCEPT.md §3.5б).
+      h(
+        'p',
+        { class: 'deck-note' },
+        `Ваша колода: ${collectable(base).filter((u) => collection.cards[u.id]).length} карт · ✦ ${collection.currency} связей. `,
+        h('button', { class: 'ghost', onclick: () => openModal('office') }, 'Кабинет редактора'),
+      ),
       h(
         'div',
         { class: 'mode-cards' },

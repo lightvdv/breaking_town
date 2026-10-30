@@ -1,6 +1,6 @@
 import { chance, int, next, weightedPick, type RngState } from './rng';
 import { clamp, conflictsStarted, rivalStarted, templateOf } from './lookup';
-import { modifiersOf } from './modifiers';
+import { getModifiers, modifiersOf } from './modifiers';
 import { effectiveTier, isSoothed, limitSensations, maxDistortion, minDistortion, publish, storyTitle, type PublishedNews } from './news';
 import { pickPair } from './relations';
 import { isRecent, scopeOf } from './reporters';
@@ -311,7 +311,7 @@ export function updateRivalReaders(state: GameState, c: Content, rng: RngState, 
 
 /** What luring its next author away costs: dearer each time (CONCEPT.md §8.4). */
 export function lureCost(state: GameState, c: Content): number {
-  return Math.round(c.balance.rivalLureCost * (1 + (state.rival?.lured ?? 0)));
+  return Math.round(c.balance.rivalLureCost * (1 + (state.rival?.lured ?? 0)) * getModifiers(state, c).lureCostMul);
 }
 
 /** Why its author cannot be lured away now, or null. */

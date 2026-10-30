@@ -1,4 +1,4 @@
-import type { ChannelId, Content, GameState, GroupId, Placement, Topic } from './types';
+import type { ChannelId, Content, GameState, GroupId, Placement, Topic, UpgradeEffects } from './types';
 
 export interface ChannelMods {
   reachAdd: number;
@@ -38,15 +38,53 @@ export interface Modifiers {
   topicImpactMul: Partial<Record<Topic, number>>;
   /** Chance a free reporter searches this topic: the desk's own reporter (CONCEPT.md §3.5). */
   topicFind: Partial<Record<Topic, number>>;
+  moneyPerDay: number;
+  salaryMul: number;
+  investigationTurnsAdd: number;
+  investigationCostMul: number;
+  tensionMul: number;
+  incidentMul: number;
+  crimeHeatMul: number;
+  stainMul: number;
+  lureCostMul: number;
+  /** Sets of three cards of one direction in force (`synergies.json`), by tag. */
+  synergies: string[];
   channels: Record<ChannelId, ChannelMods>;
 }
 
-export function getModifiers(state: GameState, c: Content): Modifiers {
-  return modifiersOf(c, state.upgrades);
+/** Fields where a smaller value is the benefit (a multiplier below 1, a negative add). */
+const LOWER_IS_BETTER = new Set<keyof UpgradeEffects>(['exposurePenaltyMul', 'checkerMul', 'upkeepAdd', 'churnMul', 'groupChurn', 'salaryMul', 'investigationTurnsAdd', 'investigationCostMul', 'lureCostMul']);
+
+/**
+ * A card's effects at its collection level (CONCEPT.md §3.5б): every benefit grows by `power`
+ * (×1.5, ×2), every drawback stays as it is. Multipliers grow their distance from 1, adds their size.
+ */
+export function levelEffects(e: UpgradeEffects, power: number): UpgradeEffects {
+  if (power === 1) return e;
+  const out: Record<string, unknown> = {};
+  const scale = (key: keyof UpgradeEffects, v: number) => {
+    const mul = key.endsWith('Mul');
+    const better = LOWER_IS_BETTER.has(key) ? (mul ? v < 1 : v < 0) : mul ? v > 1 : v > 0;
+    if (!better) return v;
+    return mul ? 1 + (v - 1) * power : v * power;
+  };
+  for (const [key, v] of Object.entries(e) as [keyof UpgradeEffects, unknown][]) {
+    if (typeof v === 'number') out[key] = scale(key, v);
+    else if (v && typeof v === 'object') out[key] = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, typeof x === 'number' ? scale(key, x) : x]));
+    else out[key] = v;
+  }
+  return out as UpgradeEffects;
 }
 
-/** Modifiers of a set of upgrades; with none, those of an outlet without upgrades (the rival paper). */
-export function modifiersOf(c: Content, upgrades: string[]): Modifiers {
+export function getModifiers(state: GameState, c: Content): Modifiers {
+  return modifiersOf(c, state.upgrades, state.collection ?? undefined);
+}
+
+/**
+ * Modifiers of a set of upgrades at their collection levels, with the sets they make; with none,
+ * those of an outlet without upgrades (the rival paper).
+ */
+export function modifiersOf(c: Content, upgrades: string[], levels: Record<string, number> = {}): Modifiers {
   const m: Modifiers = {
     reporterLuck: 0,
     frontPageSlots: c.balance.frontPageSlots,
@@ -69,14 +107,30 @@ export function modifiersOf(c: Content, upgrades: string[]): Modifiers {
     rivalStealMul: 1,
     topicImpactMul: {},
     topicFind: {},
+    moneyPerDay: 0,
+    salaryMul: 1,
+    investigationTurnsAdd: 0,
+    investigationCostMul: 1,
+    tensionMul: 1,
+    incidentMul: 1,
+    crimeHeatMul: 1,
+    stainMul: 1,
+    lureCostMul: 1,
+    synergies: [],
     channels: {},
   };
   for (const ch of c.channels) m.channels[ch.id] = { reachAdd: 0, reachMul: 1, adRateAdd: 0, upkeepAdd: 0, frontReadMul: 1, groupReach: {} };
 
-  for (const id of upgrades) {
-    const u = c.upgrades.find((x) => x.id === id);
-    if (!u) continue;
-    const e = u.effects;
+  const power = c.balance.cardLevelPower ?? [1];
+  const owned = upgrades.map((id) => c.upgrades.find((x) => x.id === id)).filter((u) => !!u);
+  const sources: UpgradeEffects[] = owned.map((u) => levelEffects(u.effects, power[Math.min(power.length, Math.max(1, levels[u.id] ?? 1)) - 1] ?? 1));
+  // Three cards of one direction make a set (CONCEPT.md §3.5б).
+  for (const s of c.synergies ?? []) {
+    if (owned.filter((u) => u.tags?.includes(s.tag)).length < s.count) continue;
+    m.synergies.push(s.tag);
+    sources.push(s.effects);
+  }
+  for (const e of sources) {
     m.reporterLuck += e.reporterLuck ?? 0;
     m.exposurePenaltyMul *= e.exposurePenaltyMul ?? 1;
     m.checkerMul *= e.checkerMul ?? 1;
@@ -96,6 +150,15 @@ export function modifiersOf(c: Content, upgrades: string[]): Modifiers {
     for (const [t, v] of Object.entries(e.topicImpactMul ?? {}) as [Topic, number][]) m.topicImpactMul[t] = (m.topicImpactMul[t] ?? 1) * v;
     for (const [t, v] of Object.entries(e.topicFind ?? {}) as [Topic, number][]) m.topicFind[t] = Math.max(m.topicFind[t] ?? 0, v);
     for (const [g, v] of Object.entries(e.groupChurn ?? {})) m.groupChurn[g] = (m.groupChurn[g] ?? 0) + (v ?? 0);
+    m.moneyPerDay += e.moneyPerDay ?? 0;
+    m.salaryMul *= e.salaryMul ?? 1;
+    m.investigationTurnsAdd += e.investigationTurnsAdd ?? 0;
+    m.investigationCostMul *= e.investigationCostMul ?? 1;
+    m.tensionMul *= e.tensionMul ?? 1;
+    m.incidentMul *= e.incidentMul ?? 1;
+    m.crimeHeatMul *= e.crimeHeatMul ?? 1;
+    m.stainMul *= e.stainMul ?? 1;
+    m.lureCostMul *= e.lureCostMul ?? 1;
     if (e.channel) {
       const cm = m.channels[e.channel];
       cm.reachAdd += e.reachAdd ?? 0;

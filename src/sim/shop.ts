@@ -21,10 +21,14 @@ export function forkChoice(state: GameState, f: ForkDef): string | null {
   return f.options.find((id) => state.upgrades.includes(id)) ?? null;
 }
 
-/** Cards the deck can offer now: not owned, not a fork option, of this mode, requirements met, a series only by its next step. */
+/**
+ * Cards the draft can offer now: in the player's collection, not owned, not a fork option, of this
+ * mode, requirements met, a series only by its next step.
+ */
 export function deckCards(state: GameState, c: Content): UpgradeDef[] {
   return c.upgrades.filter((u) => {
     if (state.upgrades.includes(u.id) || u.fork || (u.mode && u.mode !== state.mode)) return false;
+    if (state.collection && !state.collection[u.id]) return false;
     if (!requirementMet(state, u.requires)) return false;
     if (u.effects.channel && !state.ownedChannels.includes(u.effects.channel)) return false;
     if (u.series) return u === c.upgrades.find((x) => x.series === u.series && !state.upgrades.includes(x.id));
@@ -32,10 +36,10 @@ export function deckCards(state: GameState, c: Content): UpgradeDef[] {
   });
 }
 
-/** Deals the deck: `shopOfferSize` cards at random, rare ones less often. */
+/** Deals the draft (CONCEPT.md §3.5б): `shopOfferSize` cards of the collection at random, rarer ones less often; one may be taken. */
 export function dealShop(state: GameState, c: Content, rng: RngState): void {
   const b = c.balance;
-  const pool = deckCards(state, c).map((u) => ({ u, weight: u.rare ? b.shopRareWeight : 1 }));
+  const pool = deckCards(state, c).map((u) => ({ u, weight: (b.rarityWeight?.[u.rarity ?? 'common'] ?? 1) * (u.rare ? b.shopRareWeight : 1) }));
   const offer: string[] = [];
   while (offer.length < b.shopOfferSize && pool.length) {
     const pick = weightedPick(rng, pool);

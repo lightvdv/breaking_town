@@ -199,6 +199,15 @@ export function validateContent(c: Content): string[] {
       else if (u.fork !== f.id) errors.push(`fork ${f.id}: upgrade ${id} must have fork "${f.id}"`);
     }
   }
+  // The collection (CONCEPT.md §3.5б): every draft card has a rarity, its tags make sets.
+  const tags = new Set(c.synergies.map((x) => x.tag));
+  unique('synergy', c.synergies.map((x) => x.tag));
+  for (const u of c.upgrades) {
+    if (!u.fork && !['common', 'rare', 'legendary'].includes(u.rarity ?? '')) errors.push(`upgrade ${u.id}: rarity must be common, rare or legendary`);
+    for (const t of u.tags ?? []) if (!tags.has(t)) errors.push(`upgrade ${u.id}: unknown tag ${t}`);
+    if (u.starter && u.rarity !== 'common') errors.push(`upgrade ${u.id}: a starter card must be common`);
+  }
+  for (const syn of c.synergies) if (c.upgrades.filter((u) => u.tags?.includes(syn.tag)).length < syn.count) errors.push(`synergy ${syn.tag}: fewer cards than it needs`);
   for (const u of c.upgrades) {
     if (u.fork && !c.forks.some((f) => f.id === u.fork && f.options.includes(u.id))) errors.push(`upgrade ${u.id}: fork ${u.fork} does not list it`);
     if (u.ability && !(u.ability.cooldown >= 1 && u.ability.cost >= 0)) errors.push(`upgrade ${u.id}: an ability needs a cooldown ≥ 1 and a cost ≥ 0`);

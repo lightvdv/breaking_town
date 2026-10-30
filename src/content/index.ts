@@ -16,6 +16,7 @@ import tasks from './tasks.json';
 import twists from './twists.json';
 import towns from './towns.json';
 import lengths from './lengths.json';
+import synergies from './synergies.json';
 
 // JSON imports are typed loosely (string instead of literal unions); validateContent checks the shape.
-export const content = { arcs, balance, difficulties, buildings, cards, channels, groups, lengths, letters, offers, people, reporters, tasks, towns, twists, upgrades, forks } as unknown as Content;
+export const content = { arcs, balance, difficulties, buildings, cards, channels, groups, lengths, letters, synergies, offers, people, reporters, tasks, towns, twists, upgrades, forks } as unknown as Content;

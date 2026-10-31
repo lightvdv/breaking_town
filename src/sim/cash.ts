@@ -15,6 +15,28 @@ export function cashOf(c: Content, id: string): CashDef {
   return def;
 }
 
+/** The card that opened a move, if any. */
+function cardOf(state: GameState, c: Content, id: string) {
+  return c.upgrades.find((u) => u.cash === id && state.upgrades.includes(u.id));
+}
+
+/** Is the move in the cash: a base one, or opened by an owned card? */
+export function cashOpen(state: GameState, c: Content, id: string): boolean {
+  return !!cashOf(c, id).base || !!cardOf(state, c, id);
+}
+
+/** The moves the cash offers now, in content order. */
+export function cashMoves(state: GameState, c: Content): CashDef[] {
+  return c.cash.filter((x) => cashOpen(state, c, x.id));
+}
+
+/** A move's price: a card of a higher level in the collection makes it cheaper (÷ `cardLevelPower`). */
+export function cashCost(state: GameState, c: Content, id: string): number {
+  const card = cardOf(state, c, id);
+  const level = card ? (state.collection?.[card.id] ?? 1) : 1;
+  return Math.round(cashOf(c, id).cost / (c.balance.cardLevelPower?.[level - 1] ?? 1));
+}
+
 /** Is a move bought today (or for tomorrow) still waiting to act on `turn`? */
 export function cashActive(state: GameState, id: string, turn = state.turn): boolean {
   return state.cashEffects?.[id] === turn;
@@ -22,11 +44,11 @@ export function cashActive(state: GameState, id: string, turn = state.turn): boo
 
 /** Why a move cannot be bought now, or null. */
 export function cashBlock(state: GameState, c: Content, id: string): string | null {
-  const def = cashOf(c, id);
   if (state.outcome) return 'Партия окончена';
+  if (!cashOpen(state, c, id)) return 'нужна карта';
   const ready = state.cashReady?.[id] ?? 0;
   if (ready > state.turn) return `через ${ready - state.turn} ${ready - state.turn === 1 ? 'день' : 'дня'}`;
-  if (state.money < def.cost) return 'не хватает денег';
+  if (state.money < cashCost(state, c, id)) return 'не хватает денег';
   if (id === 'paparazzi' && !state.hunt) return 'нет травли';
   if (id === 'leak' && !leakPool(state, c).length) return 'источник молчит';
   return null;
@@ -44,7 +66,7 @@ export function useCash(state: GameState, c: Content, id: string): CardInstance 
   if (block) throw new Error(`Cannot use ${id}: ${block}`);
   const def = cashOf(c, id);
   const rng = state.rng;
-  state.money -= def.cost;
+  state.money -= cashCost(state, c, id);
   state.cashReady = { ...state.cashReady, [id]: state.turn + def.cooldown };
   state.cashEffects = { ...state.cashEffects };
   switch (id) {

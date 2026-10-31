@@ -63,6 +63,8 @@ import {
   abilitiesOf,
   cashActive,
   cashBlock,
+  cashCost,
+  cashMoves,
   useCash,
   type CashDef,
   abilityBlock,
@@ -3454,7 +3456,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       return h(
         'div',
         { class: `deck-card rarity-${rarity}${u.ability ? ' ability' : ''}` },
-        h('span', { class: `deck-tag tag-${rarity}` }, u.ability ? `приём · ${rarityNames[rarity]}` : rarityNames[rarity]),
+        h('span', { class: `deck-tag tag-${rarity}` }, u.ability ? `приём · ${rarityNames[rarity]}` : u.cash ? `касса · ${rarityNames[rarity]}` : rarityNames[rarity]),
         u.id === best ? h('span', { class: 'best-mark' }, 'выгоднее всего') : null,
         icon(u),
         h('b', {}, line ? `${seriesNames[u.series!] ?? u.name}: ${u.name.toLowerCase()}` : u.name, line ? pips(line) : null),
@@ -3985,14 +3987,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
       'nothing to raise': 'нечего усиливать',
       'no money': 'не хватает денег',
     };
-    const ready = c.cash.filter((x) => !cashBlock(state, c, x.id)).length;
+    const ready = cashMoves(state, c).filter((x) => !cashBlock(state, c, x.id)).length;
     const active = activeCash();
     abilityBar.replaceChildren(
       h(
         'button',
         { class: `ability cash-open${ready ? ' ready' : ' wait'}`, disabled: busy, title: 'Деньги газеты на разовые ходы', onclick: () => openModal('cash') },
         h('span', { class: 'ability-icon', 'aria-hidden': 'true' }, '💰'),
-        h('span', { class: 'ability-text' }, h('b', {}, 'Чёрная касса'), h('small', {}, ready ? `доступно ходов: ${ready}` : 'пока нечего купить')),
+        h('span', { class: 'ability-text' }, h('b', {}, 'Чёрная касса'), h('small', {}, ready ? `можно купить: ${ready}` : 'пока нечего купить')),
       ),
       ...active.map((x) => h('span', { class: 'cash-chip', title: x.def.text }, `${x.def.icon} ${x.label}`)),
       ...(owned.length ? [h('span', { class: 'ability-label' }, 'Приёмы')] : []),
@@ -4042,15 +4044,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * «Чёрная касса» (CONCEPT.md §3.5в): money buys one-off moves with a cooldown. A leak lands in
    * the briefs at once, like a story from an ability.
    */
-  function cashContent(): HTMLElement[] {
+  function cashContent(): (HTMLElement | null)[] {
     const active = new Set(activeCash().map((x) => x.def.id));
+    const closed = c.cash.length - cashMoves(state, c).length;
     return [
-      h('p', { class: 'hint' }, `У вас ${state.money} ₽ · расходы ${totalUpkeep(state, c)} ₽ в день. Улучшения дарит совет директоров, а деньги газеты идут сюда — на разовые ходы. После хода касса ждёт несколько дней.`),
+      h('p', { class: 'hint' }, `У вас ${state.money} ₽ · расходы ${totalUpkeep(state, c)} ₽ в день. Деньги газеты идут сюда — на разовые ходы. После хода он ждёт несколько дней.`),
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
       h(
         'div',
         { class: 'deck cash-list' },
-        ...c.cash.map((def) => {
+        ...cashMoves(state, c).map((def) => {
           const block = cashBlock(state, c, def.id);
           return h(
             'div',
@@ -4083,12 +4086,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
                     render();
                   },
                 },
-                block ?? `Купить · ${def.cost} ₽`,
+                block ?? `Купить · ${cashCost(state, c, def.id)} ₽`,
               ),
             ),
           );
         }),
       ),
+      ...(closed ? [h('p', { class: 'hint cash-more' }, `Ещё ${closed} ${plural(closed, 'ход откроет', 'хода откроют', 'ходов откроют')} карты совета директоров — с пометкой «касса».`)] : []),
     ];
   }
 

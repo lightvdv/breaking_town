@@ -18,6 +18,8 @@ import {
   bribeMul,
   cashActive,
   cashBlock,
+  cashCost,
+  cashMoves,
   readerCount,
   useCash,
   createGame,
@@ -1711,8 +1713,20 @@ describe('the collection: draft, levels, sets (CONCEPT.md §3.5б)', () => {
 });
 
 describe('the black cash (CONCEPT.md §3.5в)', () => {
+  it('only the base move is open; cards open the rest, and a card\'s level makes its move cheaper', () => {
+    const s = createGame(content, 5, 'destroy', 'normal', { collection: { informant: 3 } });
+    s.money = 10_000;
+    expect(cashMoves(s, content).map((x) => x.id)).toEqual(content.cash.filter((x) => x.base).map((x) => x.id));
+    expect(cashBlock(s, content, 'leak')).toBe('нужна карта');
+    s.upgrades.push('informant');
+    expect(cashBlock(s, content, 'leak')).toBeNull();
+    const leak = content.cash.find((x) => x.id === 'leak')!;
+    expect(cashCost(s, content, 'leak')).toBe(Math.round(leak.cost / content.balance.cardLevelPower[2]));
+  });
+
   it('a move costs money, waits its cooldown and acts on its day', () => {
     const s = createGame(content, 5);
+    s.upgrades.push('fact_friend', 'hired_crowd', 'paparazzi_team');
     s.money = 10_000;
     const bribe = content.cash.find((x) => x.id === 'bribe')!;
     expect(cashBlock(s, content, 'bribe')).toBeNull();
@@ -1733,6 +1747,7 @@ describe('the black cash (CONCEPT.md §3.5в)', () => {
 
   it('a leak puts a loud rumor into today\'s hand; ads bring readers', () => {
     const s = createGame(content, 6);
+    s.upgrades.push('informant');
     s.money = 10_000;
     const hand = s.hand.length;
     const card = useCash(s, content, 'leak')!;

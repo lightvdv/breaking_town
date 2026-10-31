@@ -1132,5 +1132,90 @@
     "tags": [
       "hunt"
     ]
+  },
+  {
+    "id": "informant",
+    "name": "Информатор",
+    "icon": "📨",
+    "description": "Открывает в «Чёрной кассе» ход «Купить слив»: сенсация сразу ложится в выпуск.",
+    "drawback": "Каждый слив стоит денег, и каждый четвёртый — подстава.",
+    "cost": 200,
+    "requires": null,
+    "cash": "leak",
+    "effects": {},
+    "section": "Чёрная касса",
+    "rarity": "common",
+    "tags": [
+      "yellow"
+    ],
+    "starter": true
+  },
+  {
+    "id": "fact_friend",
+    "name": "Знакомый в фактчеке",
+    "icon": "💵",
+    "description": "Открывает в «Чёрной кассе» ход «Занести фактчекерам»: в этот день ложь проверяют впятеро реже.",
+    "drawback": "Каждый конверт стоит денег; старая ложь всплывает как обычно.",
+    "cost": 300,
+    "requires": null,
+    "cash": "bribe",
+    "effects": {},
+    "section": "Чёрная касса",
+    "rarity": "rare",
+    "tags": [
+      "yellow"
+    ]
+  },
+  {
+    "id": "hired_crowd",
+    "name": "Люди из подворотни",
+    "icon": "👊",
+    "description": "Открывает в «Чёрной кассе» ход «Нанять провокаторов»: назавтра самая напряжённая пара групп точно сцепится.",
+    "drawback": "Каждый заказ стоит денег.",
+    "cost": 260,
+    "requires": null,
+    "cash": "provoke",
+    "mode": "destroy",
+    "effects": {},
+    "section": "Чёрная касса",
+    "rarity": "rare",
+    "tags": [
+      "split"
+    ]
+  },
+  {
+    "id": "paparazzi_team",
+    "name": "Папарацци на подхвате",
+    "icon": "📸",
+    "description": "Открывает в «Чёрной кассе» ход «Папарацци»: назавтра точно будет новость о цели травли.",
+    "drawback": "Каждая съёмка стоит денег; без травли ход не работает.",
+    "cost": 180,
+    "requires": null,
+    "cash": "paparazzi",
+    "mode": "destroy",
+    "effects": {},
+    "section": "Чёрная касса",
+    "rarity": "common",
+    "tags": [
+      "hunt"
+    ],
+    "starter": true
+  },
+  {
+    "id": "free_run",
+    "name": "Свой тираж",
+    "icon": "🗞",
+    "description": "Открывает в «Чёрной кассе» ход «Раздать газету бесплатно»: выпуск дня читает весь город.",
+    "drawback": "Каждая раздача стоит денег.",
+    "cost": 200,
+    "requires": null,
+    "cash": "giveaway",
+    "effects": {},
+    "section": "Чёрная касса",
+    "rarity": "common",
+    "tags": [
+      "money"
+    ],
+    "starter": true
   }
 ]

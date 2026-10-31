@@ -211,7 +211,9 @@ export function validateContent(c: Content): string[] {
   for (const u of c.upgrades) {
     if (u.fork && !c.forks.some((f) => f.id === u.fork && f.options.includes(u.id))) errors.push(`upgrade ${u.id}: fork ${u.fork} does not list it`);
     if (u.ability && !(u.ability.cooldown >= 1 && u.ability.cost >= 0)) errors.push(`upgrade ${u.id}: an ability needs a cooldown ≥ 1 and a cost ≥ 0`);
+    if (u.cash && !c.cash.some((x) => x.id === u.cash)) errors.push(`upgrade ${u.id}: unknown cash move ${u.cash}`);
   }
+  for (const x of c.cash) if (!x.base && !c.upgrades.some((u) => u.cash === x.id)) errors.push(`cash ${x.id}: no card opens it`);
   for (const mode of ['destroy', 'save'] as const) {
     const deck = c.upgrades.filter((u) => !u.fork && (!u.mode || u.mode === mode));
     if (deck.length < c.balance.shopOfferSize * 2) errors.push(`the ${mode} deck needs at least ${c.balance.shopOfferSize * 2} cards`);

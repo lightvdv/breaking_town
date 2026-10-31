@@ -24,4 +24,4 @@ export { electionLeader, runningTwist, twistOf } from './twists';
 export { isRoadTile, mapSizeFor } from './map';
 export { abilitiesOf, abilityBlock, advanceShop, dealShop, deckCards, forkChoice, onSale, openForks, refreshShop, useAbility } from './shop';
 export { crimePressure, policeLost } from './crime';
-export { bribeMul, cashActive, cashBlock, cashOf, isLeak, useCash } from './cash';
+export { bribeMul, cashActive, cashBlock, cashCost, cashMoves, cashOf, cashOpen, isLeak, useCash } from './cash';

@@ -185,6 +185,8 @@ export interface CashDef {
   text: string;
   cost: number;
   cooldown: number;
+  /** Open from the start; every other move is opened by a card with `UpgradeDef.cash`. */
+  base?: boolean;
   /** leak: chance the sensation is a setup. */
   setupChance?: number;
   /** bribe: the fact-check's chance today. */
@@ -237,6 +239,8 @@ export interface UpgradeDef {
   starter?: boolean;
   /** An active ability: used from the bar above the paper for `cost`, then waits `cooldown` days. */
   ability?: { cooldown: number; cost: number };
+  /** Opens this move of the black cash (CONCEPT.md §3.5в); the card's level makes it cheaper. */
+  cash?: string;
 }
 
 /** A fork of the upgrades (CONCEPT.md §3.5): from `day` on, the player may take one of two options for good. */

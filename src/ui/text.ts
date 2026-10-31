@@ -8,6 +8,10 @@ import {
   type RivalKind,
   type NewsScope,
   type Outcome,
+  type TownGoal,
+  type BuildingType,
+  type GoalProgress,
+  groupOf,
   type Reaction,
   type Topic,
 } from '../sim';
@@ -194,8 +198,66 @@ export const rivalNames: Record<RivalKind, { name: string; short: string; gen: s
   guardian: { name: 'Голос города', short: 'Голос', gen: 'Голоса', ins: 'Голосом' },
 };
 
-export function outcomeText(o: Outcome, mode: GameMode = 'destroy'): string {
+/** Buildings a «close» goal names, in the accusative: «закрыть завод». */
+const closeNames: Partial<Record<BuildingType, string>> = {
+  factory: 'завод',
+  shop: 'все магазины',
+  entertainment: 'все бары',
+  hospital: 'больницу',
+  police: 'полицию',
+  cityHall: 'мэрию',
+  factCheckers: 'фактчекеров',
+};
+
+/** «Закрыть 2 бара / 5 баров». */
+const closeCounted: Partial<Record<BuildingType, [string, string]>> = {
+  shop: ['магазина', 'магазинов'],
+  entertainment: ['бара', 'баров'],
+};
+
+/** A town's main goal in words (CONCEPT.md §9.2), as an order: «Закрыть завод». */
+export function goalTitle(c: Content, g: TownGoal): string {
+  switch (g.type) {
+    case 'stage': {
+      const stage = c.balance.cityStates.find((s) => s.min < g.index)!.name;
+      return g.index <= 30 ? `Стереть город с лица земли — довести до «${stage}»` : `Довести город до стадии «${stage}»`;
+    }
+    case 'close':
+      return g.count ? `Закрыть ${g.count} ${(closeCounted[g.building] ?? [g.building, g.building])[g.count < 5 ? 0 : 1]}` : `Закрыть ${closeNames[g.building] ?? g.building}`;
+    case 'drive':
+      return `Выжить из города ${Math.round(g.share * 100)}% ${groupOf(c, g.group).forms.manyGen}`;
+    case 'clashes':
+      return `Довести горожан до драк и держать так ${g.days} ${g.days === 1 ? 'день' : g.days < 5 ? 'дня' : 'дней'} подряд`;
+    case 'rival':
+      return 'Закрыть «Голос города»';
+    case 'gang':
+      return 'Отдать улицы банде';
+  }
+}
+
+/** How far the goal is, one short line: «открыто: 1», «уехало 12 из 30», «драки 2 из 3 дней». */
+export function goalLine(p: GoalProgress): string {
+  const g = p.goal;
+  switch (g.type) {
+    case 'stage':
+      return `индекс города ${p.now}, нужно ниже ${p.need}`;
+    case 'close':
+      return `закрыто ${p.now} из ${p.need}${p.staff && !p.done ? ` · работают ${p.staff.workers} из ${p.staff.jobs}` : ''}`;
+    case 'drive':
+      return `уехало ${p.now} из ${p.need}`;
+    case 'clashes':
+      return `драки ${p.now} из ${p.need} дней подряд`;
+    case 'rival':
+      return p.done ? '«Голос» закрыт' : '«Голос» ещё выходит';
+    case 'gang':
+      return p.done ? 'банда хозяйничает' : `порядок ${p.now}%, банда придёт ниже ${p.need}%`;
+  }
+}
+
+export function outcomeText(o: Outcome, mode: GameMode = 'destroy', goal = ''): string {
   switch (o.reason) {
+    case 'goalDone':
+      return `Победа! ${goal ? `${goal} — сделано. ` : ''}Совет директоров «Медиа-Плюс» доволен и отдаёт вам следующий город.`;
     case 'cityDestroyed':
       return 'Победа! Город опустел, а газета на плаву: страх продаётся. Совет директоров «Медиа-Плюс» доволен и отдаёт вам следующий город.';
     case 'bankrupt':

@@ -35,6 +35,25 @@
           "rivalStoriesMax": 3
         }
       }
+    },
+    "goals": {
+      "easy": {
+        "type": "stage",
+        "index": 50
+      },
+      "normal": {
+        "type": "close",
+        "building": "factory"
+      },
+      "hard": {
+        "type": "stage",
+        "index": 30
+      }
+    },
+    "passDays": {
+      "easy": 33,
+      "normal": 30,
+      "hard": 38
     }
   },
   {
@@ -83,6 +102,25 @@
       "save": {
         "days": 29
       }
+    },
+    "goals": {
+      "easy": {
+        "type": "close",
+        "building": "factory"
+      },
+      "normal": {
+        "type": "close",
+        "building": "factory"
+      },
+      "hard": {
+        "type": "stage",
+        "index": 30
+      }
+    },
+    "passDays": {
+      "easy": 38,
+      "normal": 36,
+      "hard": 30
     }
   },
   {
@@ -118,6 +156,24 @@
       "save": {
         "days": 33
       }
+    },
+    "goals": {
+      "easy": {
+        "type": "stage",
+        "index": 50
+      },
+      "normal": {
+        "type": "gang"
+      },
+      "hard": {
+        "type": "stage",
+        "index": 30
+      }
+    },
+    "passDays": {
+      "easy": 45,
+      "normal": 45,
+      "hard": 52
     }
   },
   {
@@ -159,6 +215,28 @@
       "save": {
         "days": 33
       }
+    },
+    "goals": {
+      "easy": {
+        "type": "drive",
+        "group": "youth",
+        "share": 0.35
+      },
+      "normal": {
+        "type": "drive",
+        "group": "youth",
+        "share": 0.38
+      },
+      "hard": {
+        "type": "drive",
+        "group": "youth",
+        "share": 0.4
+      }
+    },
+    "passDays": {
+      "easy": 44,
+      "normal": 44,
+      "hard": 44
     }
   },
   {
@@ -199,6 +277,26 @@
       "save": {
         "days": 31
       }
+    },
+    "goals": {
+      "easy": {
+        "type": "drive",
+        "group": "pensioners",
+        "share": 0.3
+      },
+      "normal": {
+        "type": "stage",
+        "index": 50
+      },
+      "hard": {
+        "type": "stage",
+        "index": 30
+      }
+    },
+    "passDays": {
+      "easy": 32,
+      "normal": 32,
+      "hard": 46
     }
   },
   {
@@ -235,6 +333,24 @@
           "conflictStartTurn": 4
         }
       }
+    },
+    "goals": {
+      "easy": {
+        "type": "clashes",
+        "days": 3
+      },
+      "normal": {
+        "type": "gang"
+      },
+      "hard": {
+        "type": "stage",
+        "index": 30
+      }
+    },
+    "passDays": {
+      "easy": 35,
+      "normal": 35,
+      "hard": 44
     }
   },
   {
@@ -243,11 +359,11 @@
     "type": "областной центр · финал",
     "rule": {
       "title": "Финал",
-      "text": "Большой город и сильнейший конкурент. Чтобы войти, нужно 10 ★ за прошлые города."
+      "text": "Большой город и сильнейший конкурент. Чтобы войти, нужно 18 ★ за прошлые города."
     },
     "days": 45,
     "stars": 5,
-    "starsToEnter": 10,
+    "starsToEnter": 18,
     "balance": {
       "population": 300,
       "maxPopulation": 380
@@ -270,6 +386,25 @@
       "save": {
         "days": 40
       }
+    },
+    "goals": {
+      "easy": {
+        "type": "stage",
+        "index": 50
+      },
+      "normal": {
+        "type": "close",
+        "building": "factory"
+      },
+      "hard": {
+        "type": "stage",
+        "index": 30
+      }
+    },
+    "passDays": {
+      "easy": 35,
+      "normal": 40,
+      "hard": 44
     }
   }
 ]

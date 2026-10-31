@@ -1,0 +1,418 @@
+{
+  "names": {
+    "first": [
+      "Ново",
+      "Старо",
+      "Верхне",
+      "Нижне",
+      "Красно",
+      "Бело",
+      "Тихо",
+      "Светло",
+      "Сосново",
+      "Каменно",
+      "Медно",
+      "Злато",
+      "Ясно",
+      "Глухо"
+    ],
+    "second": [
+      "горск",
+      "речье",
+      "озёрск",
+      "дольск",
+      "полье",
+      "бережье",
+      "ярск",
+      "мостье",
+      "лесск",
+      "градск",
+      "борск",
+      "заводск",
+      "ключье",
+      "поле"
+    ],
+    "adjectives": [
+      "Северный",
+      "Южный",
+      "Верхний",
+      "Нижний",
+      "Старый",
+      "Новый",
+      "Дальний",
+      "Ближний"
+    ],
+    "nouns": [
+      "Посад",
+      "Затон",
+      "Бор",
+      "Причал",
+      "Острог",
+      "Перевал",
+      "Карьер",
+      "Яр"
+    ]
+  },
+  "sizes": [
+    {
+      "id": "small",
+      "name": "малый",
+      "population": 150,
+      "maxPopulation": 190,
+      "days": 30,
+      "buildingMul": 0.7,
+      "stars": 1
+    },
+    {
+      "id": "medium",
+      "name": "средний",
+      "population": 240,
+      "maxPopulation": 300,
+      "days": 38,
+      "buildingMul": 1,
+      "stars": 3
+    },
+    {
+      "id": "big",
+      "name": "большой",
+      "population": 330,
+      "maxPopulation": 400,
+      "days": 44,
+      "buildingMul": 1.35,
+      "stars": 4
+    }
+  ],
+  "archetypes": [
+    {
+      "id": "sleepy",
+      "type": "сонный городок",
+      "text": "Обычный тихий город: здесь всё держится на привычке.",
+      "goals": {
+        "easy": [
+          {
+            "type": "stage",
+            "index": 50
+          }
+        ],
+        "normal": [
+          {
+            "type": "stage",
+            "index": 50
+          },
+          {
+            "type": "clashes",
+            "days": 2
+          }
+        ],
+        "hard": [
+          {
+            "type": "stage",
+            "index": 30
+          }
+        ]
+      }
+    },
+    {
+      "id": "mono",
+      "type": "моногород",
+      "text": "Почти все работают на одном заводе.",
+      "groups": {
+        "pensioners": 0.2,
+        "workers": 0.5,
+        "youth": 0.2,
+        "intelligentsia": 0.1
+      },
+      "buildings": {
+        "factory": {
+          "jobs": 140
+        },
+        "shop": {
+          "count": 2
+        },
+        "entertainment": {
+          "count": 1
+        }
+      },
+      "goals": {
+        "easy": [
+          {
+            "type": "close",
+            "building": "factory"
+          }
+        ],
+        "normal": [
+          {
+            "type": "close",
+            "building": "factory"
+          },
+          {
+            "type": "clashes",
+            "days": 2
+          }
+        ],
+        "hard": [
+          {
+            "type": "stage",
+            "index": 30
+          },
+          {
+            "type": "close",
+            "building": "factory"
+          }
+        ]
+      }
+    },
+    {
+      "id": "resort",
+      "type": "курорт",
+      "text": "Бары и магазины на каждом углу, денег у людей больше.",
+      "buildings": {
+        "shop": {
+          "count": 5
+        },
+        "entertainment": {
+          "count": 4
+        }
+      },
+      "balance": {
+        "wage": 12
+      },
+      "goals": {
+        "easy": [
+          {
+            "type": "stage",
+            "index": 50
+          }
+        ],
+        "normal": [
+          {
+            "type": "gang"
+          }
+        ],
+        "hard": [
+          {
+            "type": "stage",
+            "index": 30
+          },
+          {
+            "type": "gang"
+          }
+        ]
+      }
+    },
+    {
+      "id": "student",
+      "type": "студенческий город",
+      "text": "Молодёжи и интеллигенции много, и молодёжь легко выходит на протест.",
+      "groups": {
+        "pensioners": 0.2,
+        "workers": 0.28,
+        "youth": 0.32,
+        "intelligentsia": 0.2
+      },
+      "balanceMul": {
+        "clashProtest": 1.3,
+        "stigmaProtest": 1.3
+      },
+      "goals": {
+        "easy": [
+          {
+            "type": "drive",
+            "group": "youth",
+            "share": 0.2
+          }
+        ],
+        "normal": [
+          {
+            "type": "clashes",
+            "days": 2
+          },
+          {
+            "type": "drive",
+            "group": "youth",
+            "share": 0.22
+          }
+        ],
+        "hard": [
+          {
+            "type": "drive",
+            "group": "youth",
+            "share": 0.28
+          },
+          {
+            "type": "stage",
+            "index": 30
+          }
+        ]
+      }
+    },
+    {
+      "id": "old",
+      "type": "стареющий город",
+      "text": "Почти половина жителей — пенсионеры, дорогую газету они бросают быстро.",
+      "groups": {
+        "pensioners": 0.45,
+        "workers": 0.25,
+        "youth": 0.15,
+        "intelligentsia": 0.15
+      },
+      "buildings": {
+        "hospital": {
+          "jobs": 20
+        }
+      },
+      "balanceMul": {
+        "priceChurn": 1.6
+      },
+      "goals": {
+        "easy": [
+          {
+            "type": "drive",
+            "group": "pensioners",
+            "share": 0.3
+          }
+        ],
+        "normal": [
+          {
+            "type": "stage",
+            "index": 50
+          },
+          {
+            "type": "drive",
+            "group": "pensioners",
+            "share": 0.45
+          }
+        ],
+        "hard": [
+          {
+            "type": "stage",
+            "index": 30
+          }
+        ]
+      }
+    },
+    {
+      "id": "port",
+      "type": "портовый город",
+      "text": "Ссоры начинаются почти сразу, и вражда здесь горячее.",
+      "balance": {
+        "conflictStartTurn": 1,
+        "tensionStart": {
+          "pensioners|youth": 40,
+          "workers|intelligentsia": 35,
+          "workers|youth": 25,
+          "pensioners|intelligentsia": 20
+        }
+      },
+      "goals": {
+        "easy": [
+          {
+            "type": "clashes",
+            "days": 3
+          }
+        ],
+        "normal": [
+          {
+            "type": "gang"
+          },
+          {
+            "type": "clashes",
+            "days": 2
+          }
+        ],
+        "hard": [
+          {
+            "type": "stage",
+            "index": 30
+          },
+          {
+            "type": "clashes",
+            "days": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "center",
+      "type": "райцентр",
+      "text": "Мэрия, полиция и больница на виду, а «Голос города» здесь читают все.",
+      "balance": {
+        "rivalStartShare": 0.36
+      },
+      "goals": {
+        "easy": [
+          {
+            "type": "stage",
+            "index": 50
+          }
+        ],
+        "normal": [
+          {
+            "type": "stage",
+            "index": 50
+          },
+          {
+            "type": "gang"
+          }
+        ],
+        "hard": [
+          {
+            "type": "stage",
+            "index": 30
+          }
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "title": "Без особенностей",
+      "text": "Обычные правила."
+    },
+    {
+      "title": "Нет фактчекеров",
+      "text": "Своих фактчекеров в городе нет — ложь ловят реже.",
+      "buildings": {
+        "factCheckers": {
+          "count": 0
+        }
+      }
+    },
+    {
+      "title": "Газете не верят",
+      "text": "Репутация на старте ниже.",
+      "balance": {
+        "startTrust": 38
+      }
+    },
+    {
+      "title": "Богатый город",
+      "text": "Зарплаты выше, денег у газеты на старте больше.",
+      "balance": {
+        "wage": 12,
+        "startMoney": 450
+      }
+    },
+    {
+      "title": "Цепкий «Голос»",
+      "text": "«Голос города» печатает на одну новость больше.",
+      "balance": {
+        "guardianStoriesMax": 3
+      }
+    },
+    {
+      "title": "Строгие фактчекеры",
+      "text": "Ложь проверяют на 20% чаще.",
+      "balanceMul": {
+        "checkerBase": 1.2
+      }
+    },
+    {
+      "title": "Неспокойные улицы",
+      "text": "Преступность выше с первого дня.",
+      "balanceMul": {
+        "crimeBase": 1.6
+      }
+    }
+  ]
+}

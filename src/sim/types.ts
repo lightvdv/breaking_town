@@ -451,6 +451,10 @@ export interface Balance {
   maxPopulation: number;
   turnLimit: number;
   winCityIndex: number;
+  /** The town's main goal on this pass (CONCEPT.md §9.2); none = bring the town down to `winCityIndex`. */
+  goal?: TownGoal;
+  /** Extra days for the full destruction (a stage goal down to «Руины»). */
+  ruinDays: number;
   startMoney: number;
 
   maxReporters: number;
@@ -939,6 +943,7 @@ export interface Content {
   tasks: TaskDef[];
   twists: TwistDef[];
   towns: TownDef[];
+  townGen: TownGenDef;
   lengths: LengthDef[];
   synergies: SynergyDef[];
   cash: CashDef[];
@@ -1191,6 +1196,38 @@ export type Difficulty = 'easy' | 'normal' | 'hard';
  * A town of the campaign (CONCEPT.md §9): its character as patches to the content — who lives
  * there, what is built, balance numbers (some as multipliers, so they keep the difficulty's scale).
  */
+/**
+ * A town's main goal on a pass (CONCEPT.md §9.2): bring it down to a stage (`index` is a `cityStates`
+ * bound: 50 «Упадок», 30 «Руины» — the full destruction), close every building of a type, drive a
+ * share of a group out of town, keep two groups at clashes for days on end, close the rival paper,
+ * or let a gang take the streets.
+ */
+export type TownGoal =
+  | { type: 'stage'; index: number }
+  | { type: 'close'; building: BuildingType; count?: number }
+  | { type: 'drive'; group: GroupId; share: number }
+  | { type: 'clashes'; days: number }
+  | { type: 'rival' }
+  | { type: 'gang' };
+
+/** The town generator's parts (CONCEPT.md §9.5, `townGen.json`). */
+export interface TownGenDef {
+  names: { first: string[]; second: string[]; adjectives: string[]; nouns: string[] };
+  sizes: { id: string; name: string; population: number; maxPopulation: number; days: number; buildingMul: number; stars: number }[];
+  archetypes: {
+    id: string;
+    type: string;
+    text: string;
+    groups?: Partial<Record<GroupId, number>>;
+    buildings?: Partial<Record<BuildingType, { count?: number; jobs?: number }>>;
+    balance?: Partial<Balance>;
+    balanceMul?: Partial<Record<keyof Balance, number>>;
+    /** Goals each pass may get; one is picked. */
+    goals: Record<Difficulty, TownGoal[]>;
+  }[];
+  rules: { title: string; text: string; buildings?: Partial<Record<BuildingType, { count?: number; jobs?: number }>>; balance?: Partial<Balance>; balanceMul?: Partial<Record<keyof Balance, number>> }[];
+}
+
 export interface TownDef {
   id: string;
   name: string;
@@ -1214,6 +1251,12 @@ export interface TownDef {
   map: { x: number; y: number };
   /** 1–5 bars on the town card. */
   stars: number;
+  /** The main goal of each pass (easy, normal, hard); a pass without one brings the town to «Упадок». */
+  goals?: Partial<Record<Difficulty, TownGoal>>;
+  /** The destroy side's length on each pass, when it differs from `modes.destroy.days`. */
+  passDays?: Partial<Record<Difficulty, number>>;
+  /** The size in words for the card (малый / средний / большой), set by the generator. */
+  size?: string;
 }
 
 /** How long a game lasts (CONCEPT.md §4.6а): the full game or a short one with a nearer goal. */
@@ -1244,7 +1287,7 @@ export interface DifficultyDef {
 export interface Outcome {
   result: 'win' | 'lose';
   /** citySaved / rivalClosed / cityFallen belong to the save mode. */
-  reason: 'cityDestroyed' | 'bankrupt' | 'trustCollapse' | 'turnLimit' | 'citySaved' | 'rivalClosed' | 'cityFallen';
+  reason: 'cityDestroyed' | 'bankrupt' | 'trustCollapse' | 'turnLimit' | 'citySaved' | 'rivalClosed' | 'cityFallen' | 'goalDone';
 }
 
 export interface GameState {
@@ -1355,6 +1398,8 @@ export interface GameState {
   stains: Record<number, number>;
   /** Crime pressure added for good, by a gang that took the town (CONCEPT.md §5.6). */
   crimeBoost: number;
+  /** Days in a row some pair of groups has been at clashes (the `clashes` town goal). */
+  clashDays: number;
   /** How heated the town is about crime after our stories (0..1, cools down day by day). */
   crimeHeat: number;
   /** Free cards from the upgrade deck won by tasks (CONCEPT.md §4.8). */

@@ -1,3 +1,4 @@
+import { goalOf, goalProgress, updateGoal } from './goals';
 import { crimeEvents, heatCrime } from './crime';
 import { pressHunt, settleHunt } from './hunt';
 import { createRng, int, weightedPick, type RngState } from './rng';
@@ -122,6 +123,7 @@ export function createGame(
     budgetCut: 0,
     hunt: null,
     crimeBoost: 0,
+    clashDays: 0,
     crimeHeat: 0,
     stains: {},
     vouchers: 0,
@@ -273,7 +275,10 @@ export function validateDecision(state: GameState, c: Content, d: Decision, mods
 
 export function checkOutcome(state: GameState, c: Content): Outcome | null {
   const b = c.balance;
-  if (state.mode === 'destroy' && state.rival?.closed) return { result: 'win', reason: 'rivalClosed' };
+  // A town's main goal (CONCEPT.md §9.2): only it wins; a town brought to a stage also falls with its rival.
+  const goal = goalOf(c);
+  if (state.mode === 'destroy' && goal.type !== 'stage' && goalProgress(state, c).done) return { result: 'win', reason: 'goalDone' };
+  if (state.mode === 'destroy' && goal.type === 'stage' && state.rival?.closed) return { result: 'win', reason: 'rivalClosed' };
   if (state.mode === 'save') {
     // Save the town (CONCEPT.md §8): close the rival or hold out to the end; lose the town and it is over.
     if (state.rival?.closed) return { result: 'win', reason: 'rivalClosed' };
@@ -283,7 +288,7 @@ export function checkOutcome(state: GameState, c: Content): Outcome | null {
     if (state.turn > b.turnLimit) return { result: 'win', reason: 'citySaved' };
     return null;
   }
-  if (state.metrics.cityIndex < b.winCityIndex) return { result: 'win', reason: 'cityDestroyed' };
+  if (goal.type === 'stage' && state.metrics.cityIndex < goal.index) return { result: 'win', reason: 'cityDestroyed' };
   if (state.brokeTurns >= b.brokeTurnsLimit) return { result: 'lose', reason: 'bankrupt' };
   if (averageTrust(state, c) < b.trustCollapse) return { result: 'lose', reason: 'trustCollapse' };
   if (state.turn > b.turnLimit) return { result: 'lose', reason: 'turnLimit' };
@@ -386,6 +391,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const day = startTurn(state, c);
   const notes = day.notes;
   // Tasks are settled for the day that ended; the audit ends with its task.
+  updateGoal(state, c);
   const tasks = updateTasks(state, c, exposures);
   const huntWon = settleHunt(state, c);
   const auditEnded = settleAudit(state, c, tasks.done, tasks.failed);

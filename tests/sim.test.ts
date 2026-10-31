@@ -10,7 +10,10 @@ const content = {
 import { snapshotPeople, updatePeople } from '../src/sim/people';
 import { giveTask, scoreOf, taskOf, updateTasks } from '../src/sim/tasks';
 import { twistMods } from '../src/sim/twists';
-import { withTown } from '../src/sim/town';
+import { townOf, withTown } from '../src/sim/town';
+import { goalOf, goalProgress, updateGoal } from '../src/sim/goals';
+import { generateTown } from '../src/sim/townGen';
+import { checkOutcome } from '../src/sim/game';
 import { settleHunt } from '../src/sim/hunt';
 import { crimeEvents, crimePressure, gangDue } from '../src/sim/crime';
 import {
@@ -1452,7 +1455,7 @@ describe('campaign towns (CONCEPT.md §9)', () => {
       const c = withTown(realContent, t.id, 'destroy');
       const s = createGame(c, 5, 'destroy', 'normal', { town: t.id });
       expect(s.town).toBe(t.id);
-      expect(c.balance.turnLimit).toBe(t.modes?.destroy?.days ?? t.days);
+      expect(c.balance.turnLimit).toBe(t.passDays?.normal ?? t.modes?.destroy?.days ?? t.days);
       for (const [type, patch] of Object.entries(t.buildings ?? {})) {
         if (patch?.count !== undefined) expect(s.buildings.filter((x) => x.type === type)).toHaveLength(patch.count);
       }
@@ -1471,23 +1474,27 @@ describe('campaign towns (CONCEPT.md §9)', () => {
 });
 
 describe('campaign progress', () => {
-  it('opens towns in a row and gates the final by stars', async () => {
-    const { newCampaign, townState, winTown, campaignStars } = await import('../src/ui/campaign');
-    const camp = newCampaign('destroy', 'normal');
+  it('opens towns in a row, passes one after another, and gates the final by stars', async () => {
+    const { newCampaign, townState, passState, winTown, campaignStars } = await import('../src/ui/campaign');
+    const camp = newCampaign('destroy');
     const last = realContent.towns.length - 1;
     expect(townState(realContent, camp, 0)).toBe('now');
     expect(townState(realContent, camp, 1)).toBe('locked');
-    for (let i = 0; i < last; i++) winTown(realContent, camp, realContent.towns[i].id, { stars: 1, days: 30 });
+    expect(passState(realContent, camp, 0, 'easy')).toBe('open');
+    expect(passState(realContent, camp, 0, 'normal')).toBe('locked');
+    for (let i = 0; i < last; i++) winTown(realContent, camp, realContent.towns[i].id, 'easy', { stars: 1, days: 30 });
+    expect(passState(realContent, camp, 0, 'normal')).toBe('open');
+    expect(passState(realContent, camp, 0, 'hard')).toBe('locked');
     expect(camp.reached).toBe(last);
     expect(campaignStars(camp)).toBe(last);
     expect(townState(realContent, camp, last)).toBe('gated');
-    // A replay keeps the better result.
-    winTown(realContent, camp, realContent.towns[0].id, { stars: 3, days: 40 });
-    winTown(realContent, camp, realContent.towns[1].id, { stars: 3, days: 40 });
-    winTown(realContent, camp, realContent.towns[2].id, { stars: 0, days: 10 });
-    expect(campaignStars(camp)).toBe(last + 4);
+    // A replay keeps the better result; every pass adds its own stars.
+    winTown(realContent, camp, realContent.towns[0].id, 'easy', { stars: 3, days: 40 });
+    winTown(realContent, camp, realContent.towns[0].id, 'easy', { stars: 0, days: 10 });
+    for (let i = 0; i < last; i++) winTown(realContent, camp, realContent.towns[i].id, 'normal', { stars: 2, days: 40 });
+    expect(campaignStars(camp)).toBe(last + 2 + 2 * last);
     expect(townState(realContent, camp, last)).toBe('now');
-    winTown(realContent, camp, realContent.towns[last].id, { stars: 2, days: 35 });
+    winTown(realContent, camp, realContent.towns[last].id, 'easy', { stars: 2, days: 35 });
     expect(camp.finished).toBe(true);
   });
 });
@@ -1757,5 +1764,48 @@ describe('the black cash (CONCEPT.md §3.5в)', () => {
     const readers = readerCount(s);
     useCash(s, content, 'ads');
     expect(readerCount(s)).toBeGreaterThan(readers);
+  });
+});
+
+describe('town goals and the town generator (CONCEPT.md §9.2, §9.5)', () => {
+  it('a pass\'s goal wins only by itself; a stage goal moves the line, «Руины» is the full destruction', () => {
+    const zav = withTown(realContent, 'zavodsk', 'destroy', 'easy');
+    expect(goalOf(zav)).toEqual({ type: 'close', building: 'factory' });
+    const s = createGame(zav, 3, 'destroy', 'easy', { town: 'zavodsk' });
+    s.rival!.closed = true;
+    expect(checkOutcome(s, zav)).toBeNull();
+    for (const b of s.buildings) if (b.type === 'factory') b.open = false;
+    expect(checkOutcome(s, zav)).toEqual({ result: 'win', reason: 'goalDone' });
+    const hard = withTown(realContent, 'zavodsk', 'destroy', 'hard');
+    expect(hard.balance.winCityIndex).toBe(30);
+  });
+
+  it('counts the days of clashes in a row', () => {
+    const c = withTown(realContent, 'severny', 'destroy', 'easy');
+    const s = createGame(c, 4, 'destroy', 'easy', { town: 'severny' });
+    const key = Object.keys(s.tension)[0];
+    s.tension[key] = 100;
+    for (let i = 0; i < 3; i++) updateGoal(s, c);
+    expect(goalProgress(s, c)).toMatchObject({ done: true, now: 3 });
+    s.tension[key] = 0;
+    for (const k of Object.keys(s.tension)) s.tension[k] = 0;
+    updateGoal(s, c);
+    expect(s.clashDays).toBe(0);
+  });
+
+  it('generates the same town from the same seed, and every generated town plays', () => {
+    expect(generateTown(realContent, 7)).toEqual(generateTown(realContent, 7));
+    const kinds = new Set<string>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const id = `gen-${seed}`;
+      const t = townOf(realContent, id);
+      kinds.add(t.type);
+      for (const level of ['easy', 'normal', 'hard'] as const) expect(t.goals?.[level]).toBeTruthy();
+      const c = withTown(withDifficulty(realContent, 'hard', 'destroy'), id, 'destroy', 'hard');
+      expect(validateContent(c)).toEqual([]);
+      const s = createGame(c, seed, 'destroy', 'hard', { town: id });
+      for (let i = 0; i < 3 && !s.outcome; i++) playTurn(s, c, { publish: [] });
+    }
+    expect(kinds.size).toBeGreaterThan(4);
   });
 });

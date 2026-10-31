@@ -25,3 +25,5 @@ export { isRoadTile, mapSizeFor } from './map';
 export { abilitiesOf, abilityBlock, advanceShop, dealShop, deckCards, forkChoice, onSale, openForks, refreshShop, useAbility } from './shop';
 export { crimePressure, policeLost } from './crime';
 export { bribeMul, cashActive, cashBlock, cashCost, cashMoves, cashOf, cashOpen, isLeak, useCash } from './cash';
+export { goalOf, goalProgress, type GoalProgress } from './goals';
+export { generateTown, isGeneratedTown, GEN_PREFIX } from './townGen';

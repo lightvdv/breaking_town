@@ -1,5 +1,5 @@
 import { lotsNeeded } from './map';
-import type { Content } from './types';
+import type { Content, TownGoal } from './types';
 
 /** Returns a list of problems in the content files; empty when everything is consistent. */
 export function validateContent(c: Content): string[] {
@@ -227,6 +227,20 @@ export function validateContent(c: Content): string[] {
     }
     for (const type of Object.keys(t.buildings ?? {})) if (!c.buildings.some((b) => b.type === type)) errors.push(`town ${t.id}: unknown building ${type}`);
     for (const key of [...Object.keys(t.balance ?? {}), ...Object.keys(t.balanceMul ?? {}), ...Object.values(t.modes ?? {}).flatMap((m) => Object.keys(m?.balance ?? {}))]) if (!(key in c.balance)) errors.push(`town ${t.id}: unknown balance key ${key}`);
+    for (const goal of Object.values(t.goals ?? {})) errors.push(...goalErrors(c, `town ${t.id}`, goal!));
+  }
+  // The town generator (CONCEPT.md §9.5): shares add up, known keys, a goal on every pass.
+  for (const a of c.townGen.archetypes) {
+    const sum = Object.values(a.groups ?? {}).reduce<number>((x, y) => x + (y ?? 0), 0);
+    if (a.groups && Math.abs(sum - 1) > 0.001) errors.push(`archetype ${a.id}: group shares sum to ${sum}`);
+    for (const level of ['easy', 'normal', 'hard'] as const) {
+      if (!a.goals[level]?.length) errors.push(`archetype ${a.id}: no goal for ${level}`);
+      for (const g of a.goals[level] ?? []) errors.push(...goalErrors(c, `archetype ${a.id}`, g));
+    }
+  }
+  for (const x of [...c.townGen.archetypes, ...c.townGen.rules]) {
+    for (const key of [...Object.keys(x.balance ?? {}), ...Object.keys(x.balanceMul ?? {})]) if (!(key in c.balance)) errors.push(`town generator: unknown balance key ${key}`);
+    for (const type of Object.keys(x.buildings ?? {})) if (!c.buildings.some((b) => b.type === type)) errors.push(`town generator: unknown building ${type}`);
   }
   // Tasks and twists (CONCEPT.md §4.8, §4.9).
   for (const mode of ['destroy', 'save'] as const) {
@@ -243,4 +257,14 @@ export function validateContent(c: Content): string[] {
     if (t.kind === 'election' && t.candidates?.length !== 2) errors.push(`twist ${t.id}: needs two candidates`);
   }
   return errors;
+}
+
+/** A town goal must name a stage bound, a building type or a group the content has (CONCEPT.md §9.2). */
+export function goalErrors(c: Content, where: string, g: TownGoal): string[] {
+  const out: string[] = [];
+  if (g.type === 'stage' && !c.balance.cityStates.some((x) => x.min === g.index)) out.push(`${where}: goal stage ${g.index} is not a cityStates bound`);
+  if (g.type === 'close' && !c.buildings.some((b) => b.type === g.building)) out.push(`${where}: goal building ${g.building} unknown`);
+  if (g.type === 'drive' && (!c.groups.some((x) => x.id === g.group) || !(g.share > 0 && g.share < 1))) out.push(`${where}: bad drive goal`);
+  if (g.type === 'clashes' && !(g.days >= 1)) out.push(`${where}: bad clashes goal`);
+  return out;
 }

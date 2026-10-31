@@ -56,6 +56,7 @@ import {
   cashCost,
   cashMoves,
   useCash,
+  goalOf,
 } from '../src/sim';
 import { next } from '../src/sim/rng';
 
@@ -72,7 +73,11 @@ const lengthIndex = process.argv.indexOf('--length');
 const length = (lengthIndex >= 0 ? process.argv[lengthIndex + 1] : 'full') as GameLength;
 if (!baseContent.lengths.some((x) => x.id === length)) throw new Error(`Unknown length ${length}`);
 Object.assign(content, withLength(content, length, difficulty));
-if (town) Object.assign(content, withTown(content, town, process.argv.includes('save') && process.argv.includes('--mode') ? 'save' : 'destroy'));
+// --town random: every game in its own generated town `gen-<seed>` (CONCEPT.md §9.5); a town's pass is the difficulty.
+// The content before the town is taken at the first game, after --set.
+let passContent: typeof content | null = null;
+const sideMode = process.argv.includes('save') && process.argv.includes('--mode') ? 'save' : 'destroy';
+if (town && town !== 'random') Object.assign(content, withTown(content, town, sideMode, difficulty));
 // --twist id: every game gets only this mid-game twist (to see what one twist does to the balance).
 const twistIndex = process.argv.indexOf('--twist');
 if (twistIndex >= 0) content.twists = content.twists.filter((t) => t.id === process.argv[twistIndex + 1]);
@@ -257,7 +262,11 @@ const pairKeyOf = (c: CardInstance) => pairKey(content, c.conflict![0], c.confli
  */
 function attack(s: GameState): void {
   if (!s.hunt && s.turn >= 3) {
-    const target = s.buildings.filter((x) => x.open && x.jobs > 0 && x.type !== 'factCheckers').sort((a, b) => b.jobs - a.jobs)[0];
+    // The town's goal picks the target (CONCEPT.md §9.2): the building to close, the police for a gang.
+    const goal = goalOf(content);
+    const wanted = goal.type === 'close' ? goal.building : goal.type === 'gang' ? 'police' : null;
+    const open = s.buildings.filter((x) => x.open && x.jobs > 0 && x.type !== 'factCheckers');
+    const target = (wanted ? open.filter((x) => x.type === wanted) : []).concat(open.sort((a, b) => b.jobs - a.jobs))[0];
     if (target) startHunt(s, target.id);
   }
   const rival = s.rival;
@@ -270,7 +279,8 @@ function attack(s: GameState): void {
 function manageInvestigations(s: GameState): void {
   if (s.investigations.length || s.reporters.length < 2) return;
   const r = [...s.reporters].sort((a, b) => reporterOf(content, b).skills.nose - reporterOf(content, a).skills.nose)[0];
-  startInvestigation(s, content, r, 'workers');
+  const goal = goalOf(content);
+  startInvestigation(s, content, r, goal.type === 'drive' ? goal.group : 'workers');
 }
 
 /**
@@ -406,6 +416,8 @@ interface Result {
   outcome: Outcome;
   turns: number;
   cityIndex: number;
+  /** The town's goal, «close:factory», «stage:30»… */
+  goal: string;
 }
 
 /**
@@ -433,7 +445,12 @@ const botCollection: Record<string, number> = Object.fromEntries(
 );
 
 function playGame(seed: number, strategy: Strategy, trace = false): Result {
-  const s = createGame(content, seed, saveMode ? 'save' : 'destroy', difficulty, { ...(town ? { town } : {}), length, collection: botCollection });
+  const townId = town === 'random' ? `gen-${seed}` : town;
+  if (town === 'random') {
+    passContent ??= { ...content };
+    Object.assign(content, withTown(passContent, townId!, sideMode, difficulty));
+  }
+  const s = createGame(content, seed, saveMode ? 'save' : 'destroy', difficulty, { ...(townId ? { town: townId } : {}), length, collection: botCollection });
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
     if ((strategy === mixed || strategy === agitator) && !noInvestigations) manageInvestigations(s);
@@ -470,7 +487,9 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
   }
   if (trace) console.log(s.outcome, 'upgrades:', s.upgrades.join(', '));
   if (process.env.BOT_STATS) console.error('STAT', strategy.name, s.buildings.filter((x) => !x.open && x.jobs > 0).map((x) => x.type).join(','), s.arcsDone.includes('street_gang') ? 'gang' : '', s.crimeBoost > 0 ? 'gangStayed' : '');
-  return { outcome: s.outcome, turns: s.turn, cityIndex: s.metrics.cityIndex };
+  const g = goalOf(content);
+  const goal = `${g.type}${g.type === 'stage' ? `:${g.index}` : g.type === 'close' ? `:${g.building}` : g.type === 'drive' ? `:${g.group}` : ''}`;
+  return { outcome: s.outcome, turns: s.turn, cityIndex: s.metrics.cityIndex, goal };
 }
 
 function arg(name: string, fallback: number): number {
@@ -506,6 +525,16 @@ for (const [name, strategy] of Object.entries(saveMode ? saveStrategies : strate
   for (const r of results) reasons[r.outcome.reason] = (reasons[r.outcome.reason] ?? 0) + 1;
   const winRate = wins / games;
   if (winRate > 0.6) flagged = true;
+  // BOT_GOALS=1: wins by the town's goal (CONCEPT.md §9.2), for the campaign and the generator.
+  if (process.env.BOT_GOALS) {
+    const by: Record<string, [number, number]> = {};
+    for (const r of results) {
+      by[r.goal] ??= [0, 0];
+      by[r.goal][1]++;
+      if (r.outcome.result === 'win') by[r.goal][0]++;
+    }
+    console.log(name, Object.entries(by).map(([k, [w, n]]) => `${k} ${w}/${n}`).join(', '));
+  }
   rows.push({
     strategy: name,
     'win %': (winRate * 100).toFixed(0),

@@ -3,6 +3,7 @@
   "maxPopulation": 300,
   "turnLimit": 40,
   "winCityIndex": 50,
+  "ruinDays": 8,
   "startMoney": 350,
   "maxReporters": 5,
   "agencyFee": 50,

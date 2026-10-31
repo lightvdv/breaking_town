@@ -30,10 +30,14 @@ export interface Settings {
   tasksOpen: boolean;
   /** The «Редакция» plaque (promotions, quits) is unfolded; folded (the default) it is one line. */
   staffOpen: boolean;
+  /** A single game in an ordinary town or a generated one (CONCEPT.md §9.5). */
+  townKind: 'usual' | 'random';
+  /** The seed of the generated town shown in the new game window; a new one after each start. */
+  genSeed: number;
 }
 
 const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
-const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, length: 'short', hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: true, staffOpen: false };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, length: 'short', hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: true, staffOpen: false, townKind: 'usual', genSeed: 1 };
 
 export function loadSettings(): Settings {
   try {

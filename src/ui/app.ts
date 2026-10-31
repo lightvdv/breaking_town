@@ -43,8 +43,13 @@ import {
   withDifficulty,
   withLength,
   scoreOf,
-  townDays,
+
   withTown,
+  goalOf,
+  goalProgress,
+  generateTown,
+  isGeneratedTown,
+  GEN_PREFIX,
   levelOf,
   staffOf,
   taskOf,
@@ -136,7 +141,7 @@ import { pendingNotes } from './guide';
 import { currentStep, grantFor, issueFlags, skipStep, tipFor, stepTargets, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
 import { recordOf, starLine, submitRecord } from './records';
 import { collectable, levelCost, levelUp, loadCollection, MAX_LEVEL, openPack, packs, rarityNames, rewardFor, saveCollection, tagNames, type Collection, type PackResult } from './collection';
-import { campaignStars, loadCampaign, newCampaign, saveCampaign, townState, winTown, type Campaign } from './campaign';
+import { campaignStars, loadCampaign, newCampaign, PASSES, passNames, passState, saveCampaign, townStars, townState, winTown, type Campaign } from './campaign';
 import { drawRegion, drawTownArt, MAP_H, MAP_W, townIcon } from './campaignMap';
 import { aboutLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillTiers, topicLine, type RepStatus } from './reporterBar';
 import {
@@ -152,6 +157,8 @@ import {
   placementLabels,
   issueLevelLabels,
   outcomeText,
+  goalTitle,
+  goalLine,
   reactionLabels,
   morningLabels,
   plural,
@@ -273,7 +280,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // A short game and the tutorial mission patch it further (CONCEPT.md §4.6а, §7.3 «Обучение»).
   const contentFor = (difficulty: Difficulty, mode: GameMode, town: string | null, length: GameLength = 'full', tutorialGame = false) => {
     const x = withLength(withDifficulty(base, difficulty, mode), length, difficulty);
-    const y = town ? withTown(x, town, mode) : x;
+    const y = town ? withTown(x, town, mode, difficulty) : x;
     return tutorialGame ? withTutorial(y) : y;
   };
   let c = saved
@@ -289,6 +296,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let packResult: PackResult | null = null;
   let campaignOpen = false;
   let campaignSel = 0;
+  /** The pass of the campaign town being played (CONCEPT.md §9.1): it is the game's difficulty. */
+  let campaignLevel: Difficulty = 'easy';
   let state: GameState = saved?.state ?? createGame(c, seedFromUrl(), urlMode, settings.difficulty, { length: settings.length });
   let drafts = new Map<number, Draft>(saved?.drafts ?? []);
   // A saved layout that no longer fits the slots (e.g. two front pages from a removed upgrade) is laid out anew.
@@ -822,13 +831,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
     hasGame = true;
     // A campaign town keeps the campaign's difficulty and starts with the reporter brought along;
     // the tutorial is an easy short game of its own (CONCEPT.md §7.3 «Обучение»).
-    const difficulty = tutorialGame ? tutorialDifficulty : town && campaign ? campaign.difficulty : settings.difficulty;
+    // A generated town (CONCEPT.md §9.5) is a single game: its pass is the difficulty chosen for new games.
+    const campaignTown = !!town && !!campaign && !isGeneratedTown(town);
+    const difficulty = tutorialGame ? tutorialDifficulty : campaignTown ? campaignLevel : settings.difficulty;
     const length: GameLength = tutorialGame ? tutorialLength : town ? 'full' : settings.length;
     c = contentFor(difficulty, mode, town, length, tutorialGame);
     reporterBar.c = c;
     // The draft deals only cards of the player's collection, at their levels (CONCEPT.md §3.5б).
     collection = loadCollection(base);
-    state = createGame(c, seed, mode, difficulty, { ...(town ? { town, ...(campaign?.carry ? { reporters: [campaign.carry] } : {}) } : {}), length, collection: { ...collection.cards } });
+    state = createGame(c, seed, mode, difficulty, { ...(town ? { town, ...(campaignTown && campaign?.carry ? { reporters: [campaign.carry] } : {}) } : {}), length, collection: { ...collection.cards } });
     lastReward = 0;
     tutorial = tutorialGame ? { step: 0, flags: [] } : null;
     newRecord = false;
@@ -909,8 +920,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       // A won game may beat the record of its mode and difficulty.
       // A won single game may beat the record; a won campaign town opens the next one (CONCEPT.md §4.8, §9).
       if (state.outcome?.result === 'win' && !state.town && !tutorial) newRecord = submitRecord(state.mode, state.difficulty, state.length, { stars: scoreOf(state, c).stars, days: report.turn });
-      if (state.outcome?.result === 'win' && state.town && campaign) {
-        winTown(base, campaign, state.town, { stars: scoreOf(state, c).stars, days: report.turn });
+      if (state.outcome?.result === 'win' && state.town && !isGeneratedTown(state.town) && campaign) {
+        winTown(base, campaign, state.town, state.difficulty, { stars: scoreOf(state, c).stars, days: report.turn });
         saveCampaign(campaign);
       }
       drafts = new Map();
@@ -1266,6 +1277,24 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * a flag on the stage to reach (destroy) or a line not to fall past (save).
    */
   function renderGoal(fc: Forecast | null): void {
+    // A town's own main goal (CONCEPT.md §9.2): its words, a bar and how far it is.
+    const own = goalOf(c);
+    if (state.mode === 'destroy' && own.type !== 'stage') {
+      const p = goalProgress(state, c);
+      const share = p.done ? 1 : own.type === 'close' && p.staff ? Math.max(p.now / Math.max(1, p.need), 1 - p.staff.workers / Math.max(1, p.staff.jobs)) : own.type === 'gang' ? Math.max(0, Math.min(1, (100 - p.now) / Math.max(1, 100 - p.need))) : Math.min(1, p.now / Math.max(1, p.need));
+      hudGoal.replaceChildren(
+        h('b', { class: 'goal-title' }, 'Цель'),
+        h(
+          'div',
+          { class: 'goal-own' },
+          h('span', { class: 'goal-text' }, goalTitle(c, own)),
+          h('span', { class: 'goal-bar' }, h('i', { style: `width: ${Math.round(share * 100)}%` })),
+          h('small', { class: 'goal-note' }, `${goalLine(p)} · город: ${cityStage().name.toLowerCase()}`),
+        ),
+      );
+      hudGoal.title = `${goalTitle(c, own)}.`;
+      return;
+    }
     const stages = c.balance.cityStates;
     const here = cityStateOf(c, state.metrics.cityIndex);
     const next = fc ? cityStateOf(c, fc.cityIndex) : here;
@@ -1323,7 +1352,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const cityGoal = () =>
     state.mode === 'save'
       ? `Не дайте городу скатиться в «${stageBelow(c.balance.saveLoseIndex)}»`
-      : `Цель — довести город до стадии «${stageBelow(c.balance.winCityIndex)}»`;
+      : goalOf(c).type !== 'stage'
+        ? `Цель — ${goalTitle(c, goalOf(c)).replace(/^./, (x) => x.toLowerCase())}`
+        : `Цель — довести город до стадии «${stageBelow(c.balance.winCityIndex)}»`;
 
   function resource(
     icon: string,
@@ -4407,13 +4438,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** After a game: a single one goes on to the next town or a new game; a campaign town back to the map. */
   function outcomeButtons(): HTMLElement[] {
     const win = state.outcome?.result === 'win';
-    if (state.town && campaign) {
+    if (state.town && !isGeneratedTown(state.town) && campaign) {
       const i = base.towns.findIndex((t) => t.id === state.town);
       const last = i === base.towns.length - 1;
+      const level = state.difficulty;
       return [
         win
           ? h('button', { class: 'primary big', onclick: () => (last ? openCampaign() : openModal('carry')) }, last ? 'Кампания пройдена ▸' : 'Кто поедет дальше ▸')
-          : h('button', { class: 'primary big', onclick: () => void startTown(i) }, 'Переиграть город'),
+          : h('button', { class: 'primary big', onclick: () => void startTown(i, level) }, 'Переиграть'),
         h('button', { onclick: () => openCampaign() }, 'На карту'),
       ];
     }
@@ -4437,7 +4469,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: `modal ${state.outcome.result}` },
         h('h2', {}, state.outcome.result === 'win' ? 'Победа' : 'Поражение'),
-        h('p', {}, outcomeText(state.outcome, state.mode)),
+        h('p', {}, outcomeText(state.outcome, state.mode, goalTitle(c, goalOf(c)))),
         h('p', { class: 'muted' }, `Сыграно ходов: ${Math.min(state.turn - 1, c.balance.turnLimit)}. Город: ${cityStage().name.toLowerCase()}.`),
         tutorial
           ? h('p', { class: 'tutorial-done' }, 'Обучение пройдено. Теперь — настоящая партия: короткая или полная, на любой сложности («Новая игра»).')
@@ -4530,10 +4562,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
     render();
   }
 
-  /** Plays a campaign town; the very first one begins with the side's opening story. */
-  async function startTown(i: number): Promise<void> {
+  /** Plays a pass of a campaign town; the very first one begins with the side's opening story. */
+  async function startTown(i: number, level: Difficulty): Promise<void> {
     if (!campaign) return;
     const t = base.towns[i];
+    campaignLevel = level;
     campaignOpen = false;
     modal = null;
     titleOpen = false;
@@ -4554,7 +4587,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     }
     const camp = campaign;
     // Rebuilt only when something on it changes: the map canvas is drawn pixel by pixel.
-    const key = JSON.stringify([camp, campaignSel, settings.difficulty]);
+    const key = JSON.stringify([camp, campaignSel]);
     if (key === campaignKey) return;
     campaignKey = key;
     const stars = campaignStars(camp);
@@ -4563,7 +4596,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     drawRegion(canvas, base.towns);
     const pins = base.towns.map((t, i) => {
       const st = townState(base, camp, i);
-      const res = camp.results[t.id];
+      const won = townStars(camp, t.id);
       return h(
         'button',
         {
@@ -4577,7 +4610,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         },
         h('span', { class: 'pin' }),
         h('span', { class: 'lbl' }, `${i + 1}. ${t.name}`),
-        res ? h('span', { class: 'pin-stars' }, starLine(res.stars)) : null,
+        st === 'done' ? h('span', { class: 'pin-stars' }, `★ ${won}`) : null,
       );
     });
     // The pin icons are tiny inline SVGs.
@@ -4588,7 +4621,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
         { class: 'camp-top' },
         h('b', {}, 'Кампания'),
         h('span', { class: `camp-side ${camp.side}` }, sideNames[camp.side]),
-        h('span', { class: 'camp-diff' }, base.difficulties.find((d) => d.id === camp.difficulty)?.name ?? ''),
         h('span', { class: 'camp-stars' }, `★ ${stars}`, h('small', {}, camp.finished ? ' · кампания пройдена' : stars < need ? ` · для финала нужно ${need}` : ' · финал открыт')),
         h('button', { onclick: () => openModal('office') }, 'Кабинет редактора'),
         h('button', { class: 'ghost', onclick: () => openModal('campaignNew') }, 'Новая кампания'),
@@ -4607,26 +4639,36 @@ export function mountApp(root: HTMLElement, base: Content): void {
     );
   }
 
-  /** The chosen town: its picture, type, special rule, difficulty, length, the rival, the best result, who comes along. */
+  /**
+   * The chosen town: its picture, type, special rule, the rival, who comes along, and its three passes
+   * (CONCEPT.md §9.1) — each with its main goal, days, best stars and a button; a pass opens once
+   * the one before it is won.
+   */
   function townCard(i: number): HTMLElement {
     const camp = campaign!;
     const t = base.towns[i];
     const st = townState(base, camp, i);
-    const res = camp.results[t.id];
     const art = h('canvas', { class: 'town-art' });
     drawTownArt(art, t);
     const pop = t.balance?.population ?? base.balance.population;
     const rival = rivalNames[camp.side === 'save' ? 'tabloid' : 'guardian'].name;
     const who = camp.carry ?? { id: base.balance.startReporters[0], xp: 0 };
     const rep = reporterOf(base, who.id);
-    const action =
-      st === 'done'
-        ? h('button', { class: 'primary big', onclick: () => void startTown(i) }, 'Переиграть ради звёзд')
-        : st === 'now'
-          ? h('button', { class: 'primary big', onclick: () => void startTown(i) }, `Ехать в ${t.name} ▸`)
-          : st === 'gated'
-            ? h('button', { class: 'big', disabled: true }, `Нужно ${t.starsToEnter} ★ (у вас ${campaignStars(camp)})`)
-            : h('button', { class: 'big', disabled: true }, 'Сначала пройдите прошлый город');
+    const pass = (level: Difficulty) => {
+      const ps = passState(base, camp, i, level);
+      const res = camp.results[t.id]?.[level];
+      const pc = withTown(withDifficulty(base, level, camp.side), t.id, camp.side, level);
+      const goal = camp.side === 'destroy' ? goalTitle(pc, goalOf(pc)) : 'Не дать городу пасть';
+      return h(
+        'div',
+        { class: `town-pass ${ps}` },
+        h('div', { class: 'pass-head' }, h('b', {}, passNames[level]), h('span', { class: 'pass-level' }, base.difficulties.find((d) => d.id === level)?.name ?? ''), res ? h('span', { class: 'pass-stars' }, starLine(res.stars)) : null),
+        h('div', { class: 'pass-goal' }, `🎯 ${goal} · ${pc.balance.turnLimit} ${daysWord(pc.balance.turnLimit)}`),
+        ps === 'locked'
+          ? h('span', { class: 'pass-lock' }, st === 'gated' ? `Нужно ${t.starsToEnter} ★ (у вас ${campaignStars(camp)})` : st === 'locked' ? 'Сначала пройдите прошлый город' : `Сначала — ${passNames[PASSES[PASSES.indexOf(level) - 1]].toLowerCase()}`)
+          : h('button', { class: ps === 'open' ? 'primary' : '', onclick: () => void startTown(i, level) }, ps === 'won' ? 'Переиграть ради звёзд' : `Ехать в ${t.name} ▸`),
+      );
+    };
     return h(
       'aside',
       { class: 'town-card' },
@@ -4639,11 +4681,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
         { class: 'town-facts' },
         h('span', {}, 'Сложность'),
         h('span', { class: 'town-bars' }, ...[1, 2, 3, 4, 5].map((k) => h('i', { class: k <= t.stars ? 'on' : '' }))),
-        h('span', {}, 'Дней'),
-        h('span', {}, String(townDays(t, camp.side))),
         h('span', {}, 'Против вас'),
         h('span', {}, `«${rival}»`),
-        ...(res ? [h('span', {}, 'Лучший итог'), h('span', { class: 'town-best' }, `${starLine(res.stars)} · ${res.days} ${daysWord(res.days)}`)] : []),
+        h('span', {}, 'Звёзды'),
+        h('span', { class: 'town-best' }, `★ ${townStars(camp, t.id)} из 9`),
       ),
       st === 'now' || st === 'done'
         ? h(
@@ -4653,11 +4694,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
             h('div', {}, h('b', {}, `${camp.carry ? 'С вами едет' : 'Начнёт с вами'}: ${rep.name}`), h('span', { class: 'level-chip' }, levelNames[levelOf(base, who.xp)])),
           )
         : null,
-      action,
+      h('div', { class: 'town-passes' }, ...PASSES.map(pass)),
     );
   }
 
-  /** A new campaign: the side for the whole of it; the difficulty is the one chosen for new games. */
+  /** A new campaign: the side for the whole of it (the difficulty is each town's pass). */
   function campaignNewContent(): HTMLElement[] {
     const card = (side: GameMode, art: string, title: string, text: string) =>
       h(
@@ -4665,7 +4706,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         {
           class: `mode-card mode-${side}`,
           onclick: () => {
-            campaign = newCampaign(side, settings.difficulty);
+            campaign = newCampaign(side);
             saveCampaign(campaign);
             openCampaign();
           },
@@ -4676,7 +4717,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       );
     return [
       ...(campaign ? [h('p', { class: 'bad' }, 'Текущая кампания будет потеряна.')] : []),
-      h('p', {}, `Семь городов области подряд.${saveModeShown ? ' Сторона — на всю кампанию.' : ''} Сложность: ${base.difficulties.find((d) => d.id === settings.difficulty)?.name ?? ''} (меняется в окне «Новая игра»).`),
+      h('p', {}, `Семь городов области подряд.${saveModeShown ? ' Сторона — на всю кампанию.' : ''} Каждый город — три тиража: лёгкий, средний и тяжёлый, у каждого своя главная цель. Следующий тираж открывается победой в прошлом, следующий город — первой победой.`),
       h(
         'div',
         { class: 'mode-cards' },
@@ -4789,11 +4830,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
   async function startGame(mode: GameMode = 'destroy', seed?: number, tutorialGame = false): Promise<void> {
     modal = null;
     titleOpen = false;
+    // A generated town (CONCEPT.md §9.5): the one shown in the new game window; the next start shows another.
+    const town = !tutorialGame && settings.townKind === 'random' ? `${GEN_PREFIX}${settings.genSeed}` : null;
+    if (town) {
+      settings.genSeed = randomSeed();
+      saveSettings(settings);
+    }
     render();
     // For now the opening story plays before every new game (CONCEPT.md §1.1).
     await watchIntro(mode);
     scene?.stopTour();
-    newGame(seed, mode, null, tutorialGame);
+    newGame(seed, mode, town, tutorialGame);
   }
 
   /** The opening story over the drifting city. */
@@ -4920,9 +4967,55 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ),
       h('small', { class: 'hint' }, base.lengths.find((l) => l.id === settings.length)?.text ?? ''),
     );
+    // An ordinary town or a generated one (CONCEPT.md §9.5): its own size, way of life, rule and main goal.
+    const random = settings.townKind === 'random';
+    const kinds = h(
+      'div',
+      { class: 'difficulty' },
+      h('span', { class: 'difficulty-label' }, 'Город'),
+      h(
+        'div',
+        { class: 'chips' },
+        ...(
+          [
+            ['usual', 'Обычный', 'Обычный город: цель — довести его до «Упадка».'],
+            ['random', 'Случайный', 'Город из генератора: свой размер, уклад, правило и главная цель.'],
+          ] as const
+        ).map(([id, name, text]) =>
+          h(
+            'button',
+            {
+              class: `chip${settings.townKind === id ? ' on' : ''}`,
+              'aria-pressed': String(settings.townKind === id),
+              title: text,
+              onclick: () => {
+                settings.townKind = id;
+                saveSettings(settings);
+                render();
+              },
+            },
+            name,
+          ),
+        ),
+      ),
+    );
+    const genCard = () => {
+      const id = `${GEN_PREFIX}${settings.genSeed}`;
+      const t = generateTown(base, settings.genSeed);
+      const tc = withTown(withDifficulty(base, settings.difficulty, 'destroy'), id, 'destroy', settings.difficulty);
+      return h(
+        'div',
+        { class: 'gen-town' },
+        h('div', { class: 'gen-head' }, h('b', {}, t.name), h('button', { class: 'ghost', onclick: () => ((settings.genSeed = randomSeed()), saveSettings(settings), render()) }, 'Другой город ⟳')),
+        h('div', { class: 'town-type' }, `${t.type} · ${t.size} · жителей ~${tc.balance.population}`),
+        h('div', { class: 'town-rule' }, h('b', {}, t.rule.title), t.rule.text),
+        h('div', { class: 'pass-goal' }, `🎯 ${goalTitle(tc, goalOf(tc))} · ${tc.balance.turnLimit} ${daysWord(tc.balance.turnLimit)}`),
+      );
+    };
     return [
       ...(hasGame && !state.outcome ? [h('p', { class: 'bad' }, 'Текущая партия будет потеряна.')] : []),
-      lengths,
+      kinds,
+      ...(random ? [genCard()] : [lengths]),
       levels,
       // What the board of directors will deal from (CONCEPT.md §3.5б).
       h(
@@ -5005,6 +5098,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           list(
             `Победа: город в «${stageBelow(b.winCityIndex)}» — или закрылся «Голос города», честная газета, которая успокаивает людей и опровергает вашу ложь.`,
             `Поражение: ${lose(b)}, или прошли ${b.turnLimit} дней, а город держится.`,
+            'В кампании и в случайном городе у города своя главная цель: закрыть завод, выжить молодёжь, довести до драк, отдать улицы банде или стереть город до «Руин». Побеждает только она — она написана на месте полоски цели.',
           ),
         );
       },

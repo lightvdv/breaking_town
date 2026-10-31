@@ -6621,3 +6621,107 @@ span.hunt-chip {
 .cash-card.wait {
   opacity: 0.75;
 }
+
+/* A town's own main goal in the HUD (CONCEPT.md §9.2) and on the town cards. */
+.goal-own {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.goal-text {
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goal-bar {
+  display: block;
+  height: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.goal-bar i {
+  display: block;
+  height: 100%;
+  background: var(--danger);
+}
+
+.goal-note {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.town-passes {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.town-pass {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+
+.town-pass.won {
+  border-color: var(--ok);
+}
+
+.town-pass.locked {
+  opacity: 0.6;
+}
+
+.pass-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.pass-level {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pass-stars {
+  margin-left: auto;
+  color: var(--accent);
+}
+
+.pass-goal {
+  font-size: 13px;
+}
+
+.pass-lock {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.gen-town {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+  padding: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+
+.gen-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.gen-head b {
+  font-size: 18px;
+}

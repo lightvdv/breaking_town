@@ -3413,7 +3413,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const price = (u: UpgradeDef) => {
       const o = options.get(u.id);
       const free = o?.cost === 0 && u.cost > 0;
-      const label = u.fork ? (free ? 'бесплатно' : `${u.cost}`) : free ? 'Взять бесплатно' : `Взять вторую · ${u.cost}`;
+      const label = u.fork ? (free ? 'бесплатно' : `${u.cost}`) : 'Взять';
       return h('button', { class: o?.affordable ? 'primary' : '', 'data-tut': 'buy', disabled: !o?.affordable || !!state.outcome, onclick: () => buy(u.id) }, label);
     };
     const icon = (u: UpgradeDef, cls = 'upg-icon') => h('span', { class: cls, 'aria-hidden': 'true' }, u.icon ?? '★');
@@ -3472,7 +3472,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const days = Math.max(0, state.shopRefreshTurn - state.turn);
     return [
       h('p', { class: 'hint' }, `У вас ${state.money} ₽ · расходы ${totalUpkeep(state, c)} ₽ в день. Карты совета действуют до конца партии; свободные деньги — в «Чёрную кассу».`),
-      state.vouchers ? h('p', { class: 'good voucher-line' }, `За задания: ${state.vouchers === 1 ? 'одно улучшение из колоды' : `${state.vouchers} улучшения из колоды`} — бесплатно.`) : null,
+      state.vouchers ? h('p', { class: 'good voucher-line' }, `За задания: из предложения совета можно взять ещё ${state.vouchers === 1 ? 'одну карту' : `${state.vouchers} карты`}.`) : null,
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
       taken.length ? h('div', { class: 'paper-style' }, ...taken.map((u) => h('span', { class: 'style-chip' }, icon(u, 'style-icon'), u.name))) : null,
       ...(open
@@ -3484,8 +3484,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       next ? h('p', { class: 'fork-next' }, `Следующая развилка — «${next.title}»: ${next.options.map((id) => c.upgrades.find((u) => u.id === id)!.name.toLowerCase()).join(' или ')} (на ${next.day}-й день)`) : null,
       ...infoSection(
         'deck',
-        state.shopPicks ? 'Можно взять ещё одну — за деньги' : 'Совет директоров предлагает — одна карта бесплатно',
-        `Каждые ${b.shopRefreshDays} дня совет присылает ${b.shopOfferSize} карты из вашей коллекции: одну можно взять бесплатно, вторую — за её цену, третья уйдёт. Не нравятся — «Другие три» за ${b.shopRefreshCost} ₽. Редкие и легендарные выпадают реже. Звёзды — уровень карты: улучшайте её в «Кабинете редактора» между партиями. Три карты одного направления дают бонус набора. «Приём» — кнопка над газетой, срабатывает раз в несколько дней.`,
+        state.shopPicks ? 'Можно взять ещё одну — за награду задания' : 'Совет директоров предлагает — возьмите одну',
+        `Каждые ${b.shopRefreshDays} дня совет присылает ${b.shopOfferSize} карты из вашей коллекции: одну берёте бесплатно, остальные уходят. Купить карты нельзя — деньги газеты идут в «Чёрную кассу». Не нравятся все три — «Другие три» за ${b.shopRefreshCost} ₽, пока карту не взяли. Редкие и легендарные выпадают реже. Звёзды — уровень карты: улучшайте её в «Кабинете редактора» между партиями. Три карты одного направления дают бонус набора. «Приём» — кнопка над газетой, срабатывает раз в несколько дней.`,
       ),
       h(
         'div',
@@ -3494,7 +3494,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'button',
           {
-            disabled: state.money < b.shopRefreshCost || !!state.outcome,
+            disabled: state.money < b.shopRefreshCost || !!state.shopPicks || !state.shopOffer.length || !!state.outcome,
             onclick: () => {
               try {
                 refreshShop(state, c);
@@ -3508,7 +3508,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           `Другие три −${b.shopRefreshCost}`,
         ),
       ),
-      deck.length ? h('div', { class: 'deck' }, ...deck.map(card)) : h('p', { class: 'hint' }, 'Предложение разобрано — следующее придёт в свой день.'),
+      deck.length ? h('div', { class: 'deck' }, ...deck.map(card)) : h('p', { class: 'hint' }, days > 0 ? `Карта взята. Следующее предложение совета — через ${days} ${plural(days, 'день', 'дня', 'дней')}.` : 'Карта взята. Следующее предложение совета — завтра.'),
       // Sets of three cards of one direction (CONCEPT.md §3.5б): what is gathered and what it gives.
       ...setLines(),
       ...(owned.length

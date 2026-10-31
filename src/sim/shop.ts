@@ -59,6 +59,7 @@ export function advanceShop(state: GameState, c: Content, rng: RngState): void {
 /** Deals the deck before its day, for `shopRefreshCost`. */
 export function refreshShop(state: GameState, c: Content): void {
   if (state.outcome) throw new Error('Game is over');
+  if (state.shopPicks) throw new Error('A card of this offer is already taken');
   if (state.money < c.balance.shopRefreshCost) throw new Error('Not enough money to refresh the shop');
   state.money -= c.balance.shopRefreshCost;
   dealShop(state, c, state.rng);

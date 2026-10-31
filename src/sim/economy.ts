@@ -63,12 +63,11 @@ export function deckFree(state: GameState, u: UpgradeDef): boolean {
 }
 
 /**
- * What a card costs now (CONCEPT.md §3.5б): the first card of the board's offer is free, a second
- * from the same offer costs its price; a fork's option keeps its price (a voucher makes it free).
+ * What a card costs now (CONCEPT.md §3.5б): the board's cards are never bought — one card of an
+ * offer is taken for free (a task's voucher adds one more); a fork's option keeps its price.
  */
-export function boardPrice(state: GameState, u: UpgradeDef): number {
-  if (u.fork) return u.cost;
-  return (state.shopPicks ?? 0) === 0 || deckFree(state, u) ? 0 : u.cost;
+export function boardPrice(_state: GameState, u: UpgradeDef): number {
+  return u.fork ? u.cost : 0;
 }
 
 /** Fires a hired reporter; the last one cannot be fired. */
@@ -88,12 +87,12 @@ export function purchase(state: GameState, c: Content, id: string): void {
   if (option.kind === 'channel') state.ownedChannels.push(id);
   else {
     const u = c.upgrades.find((x) => x.id === id)!;
-    if ((state.shopPicks ?? 0) > 0 && deckFree(state, u)) state.vouchers--;
     state.upgrades.push(id);
-    // The first card of the offer is free, a second costs its price, then the offer is spent (CONCEPT.md §3.5б).
+    // One card of the offer is taken and the offer is spent; a task's voucher keeps it open for one more (CONCEPT.md §3.5б).
     if (state.shopOffer.includes(id)) {
+      if ((state.shopPicks ?? 0) > 0 && deckFree(state, u)) state.vouchers--;
       state.shopPicks = (state.shopPicks ?? 0) + 1;
-      state.shopOffer = state.shopPicks >= 2 ? [] : state.shopOffer.filter((x) => x !== id);
+      state.shopOffer = state.vouchers > 0 ? state.shopOffer.filter((x) => x !== id) : [];
     }
   }
 }

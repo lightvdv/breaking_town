@@ -74,6 +74,7 @@ import {
   modifiersOf,
   levelEffects,
   dealShop,
+  refreshShop,
   lureCost,
   tipConflict,
   huntBonus,
@@ -760,12 +761,11 @@ describe('purchases', () => {
   });
 
   it('cannot buy without enough money', () => {
+    // The board's cards are free; a fork's option costs money.
     const s = createGame(content, 1);
     s.money = 0;
-    s.shopOffer.push('newspaper_quality_1');
-    // The first card of an offer is free; the second costs money.
-    s.shopPicks = 1;
-    expect(() => purchase(s, content, 'newspaper_quality_1')).toThrow();
+    s.turn = content.forks[0].day;
+    expect(() => purchase(s, content, content.forks[0].options[0])).toThrow();
   });
 });
 
@@ -1657,7 +1657,7 @@ describe('tutorial quarrel tip (CONCEPT.md §7.3 «Обучение»)', () => {
 });
 
 describe('the collection: draft, levels, sets (CONCEPT.md §3.5б)', () => {
-  it('the draft offers only cards of the collection: the first pick is free, the second paid, then the offer closes', () => {
+  it('the draft offers only cards of the collection: one card is taken for free and the offer closes', () => {
     const collection = { photographer: 1, cartoonist: 1, gossip_column: 1, tabloid_king: 2 };
     const s = createGame(realContent, 3, 'destroy', 'normal', { collection });
     s.money = 10_000;
@@ -1665,13 +1665,13 @@ describe('the collection: draft, levels, sets (CONCEPT.md §3.5б)', () => {
     expect(s.shopOffer.length).toBe(3);
     for (const id of s.shopOffer) expect(Object.keys(collection)).toContain(id);
     const money = s.money;
-    purchase(s, realContent, s.shopOffer[0]);
+    const [first, second] = s.shopOffer;
+    purchase(s, realContent, first);
     expect(s.money).toBe(money);
-    expect(s.shopOffer.length).toBe(2);
-    const second = realContent.upgrades.find((u) => u.id === s.shopOffer[0])!;
-    purchase(s, realContent, second.id);
-    expect(s.money).toBe(money - second.cost);
     expect(s.shopOffer).toEqual([]);
+    // Nothing more to buy from it, and no reroll for a second free card.
+    expect(() => purchase(s, realContent, second)).toThrow();
+    expect(() => refreshShop(s, realContent)).toThrow();
   });
 
   it('a level grows a card\'s benefits and leaves its drawbacks', () => {

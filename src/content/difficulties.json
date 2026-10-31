@@ -6,7 +6,7 @@
     "balance": {
       "startMoney": 350,
       "checkerBase": 0.17,
-      "rivalCloseShare": 0.03,
+      "rivalCloseShare": 0.026,
       "rivalTrustCollapse": 12,
       "debunkTrust": 8
     },
@@ -26,7 +26,8 @@
             38
           ]
         },
-        "impactNorm": 1.4,
+        "impactNorm": 1.72,
+        "huntStain": 0.052,
         "rivalSteal": [
           0,
           0.01,
@@ -81,8 +82,8 @@
         },
         "guardianStoriesMax": 3,
         "turnLimit": 39,
-        "impactNorm": 1.35,
-        "huntStain": 0.1
+        "impactNorm": 1.71,
+        "huntStain": 0.075
       },
       "save": {
         "turnLimit": 46,

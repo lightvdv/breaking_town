@@ -52,6 +52,10 @@ import {
   type Outcome,
   type Publication,
   type RngState,
+  cashBlock,
+  cashCost,
+  cashMoves,
+  useCash,
 } from '../src/sim';
 import { next } from '../src/sim/rng';
 
@@ -356,6 +360,8 @@ const avoid: Record<GameState['mode'], string[]> = {
   save: ['yellow_layout', 'cheap_paper', 'insider', 'paid_subscription', 'mole'],
 };
 // --avoid id,id: the bots never buy these (to measure what an upgrade adds).
+// --no-cash: the thoughtful bots leave the black cash alone.
+const noCash = process.argv.includes('--no-cash');
 const avoidIndex = process.argv.indexOf('--avoid');
 if (avoidIndex >= 0) for (const id of process.argv[avoidIndex + 1].split(',')) avoid.destroy.push(id), avoid.save.push(id);
 // The fork option is taken only if it is not avoided.
@@ -366,7 +372,7 @@ function shop(s: GameState): void {
   const order = [...buyOrder.slice(0, at), ...forkPicks[s.mode].filter((id) => !avoid[s.mode].includes(id)), ...buyOrder.slice(at)];
   for (;;) {
     const reserve = totalUpkeep(s, content) * 3;
-    const options = listPurchases(s, content).filter((p) => p.unlocked && !avoid[s.mode].includes(p.id) && !content.upgrades.find((u) => u.id === p.id)?.ability);
+    const options = listPurchases(s, content).filter((p) => p.unlocked && !avoid[s.mode].includes(p.id) && !content.upgrades.find((u) => u.id === p.id)?.ability && !content.upgrades.find((u) => u.id === p.id)?.cash);
     const step = order.find((x) => (typeof x === 'number' ? s.reporters.length < x : options.some((p) => p.id === x)));
     if (typeof step === 'number') {
       // Enough for the fee and a typical hire on top of the reserve.
@@ -382,6 +388,15 @@ function shop(s: GameState): void {
     if (!option || !option.affordable || s.money - option.cost < reserve) return;
     purchase(s, content, option.id);
   }
+}
+
+/**
+ * «Чёрная касса» (CONCEPT.md §3.5в): the thoughtful bots spend spare money on the moves that need
+ * no judgement — today only the ad campaign (the bots take no cash cards).
+ */
+function spendCash(s: GameState): void {
+  const reserve = totalUpkeep(s, content) * 3 + 200;
+  for (const def of cashMoves(s, content)) if (def.id === 'ads' && !cashBlock(s, content, def.id) && s.money - cashCost(s, content, def.id) >= reserve) useCash(s, content, def.id);
 }
 
 /** How good a candidate looks to the bot: luck and nose. */
@@ -430,6 +445,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
     answerOffers(s, strategy);
     // The hunt and the strikes at the guardian are the agitator's: `mixed` plays the original concept.
     if (strategy === agitator && !saveMode && !noAttack) attack(s);
+    if ((strategy === mixed || strategy === agitator) && !noCash) spendCash(s);
     const d = decide(s, strategy, rng);
     limitSensations(s, content, d.publish);
     const r = playTurn(s, content, d);

@@ -63,11 +63,11 @@ export function deckFree(state: GameState, u: UpgradeDef): boolean {
 }
 
 /**
- * What a card costs now (CONCEPT.md §3.5б): the board's cards are never bought — one card of an
- * offer is taken for free (a task's voucher adds one more); a fork's option keeps its price.
+ * What a card costs now (CONCEPT.md §3.5б): nothing — the board's cards and the forks' options come
+ * from the head office; one card of an offer is taken (a task's voucher adds one more).
  */
-export function boardPrice(_state: GameState, u: UpgradeDef): number {
-  return u.fork ? u.cost : 0;
+export function boardPrice(_state: GameState, _u: UpgradeDef): number {
+  return 0;
 }
 
 /** Fires a hired reporter; the last one cannot be fired. */

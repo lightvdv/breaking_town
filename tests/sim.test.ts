@@ -760,12 +760,12 @@ describe('purchases', () => {
     expect(s.upgrades).toContain('newspaper_quality_2');
   });
 
-  it('cannot buy without enough money', () => {
-    // The board's cards are free; a fork's option costs money.
+  it('the head office pays: a fork\'s option is free', () => {
     const s = createGame(content, 1);
     s.money = 0;
     s.turn = content.forks[0].day;
-    expect(() => purchase(s, content, content.forks[0].options[0])).toThrow();
+    purchase(s, content, content.forks[0].options[0]);
+    expect(s.money).toBe(0);
   });
 });
 

@@ -49,9 +49,9 @@ export function listPurchases(state: GameState, c: Content): PurchaseOption[] {
       kind: 'upgrade',
       name: u.name,
       description: u.description,
-      cost: deckFree(state, u) ? 0 : u.cost,
+      cost: boardPrice(state, u),
       unlocked,
-      affordable: unlocked && (deckFree(state, u) || state.money >= u.cost),
+      affordable: unlocked && state.money >= boardPrice(state, u),
     });
   }
   return out;
@@ -60,6 +60,15 @@ export function listPurchases(state: GameState, c: Content): PurchaseOption[] {
 /** A task's voucher pays for any card of the deck (never a fork option). */
 export function deckFree(state: GameState, u: UpgradeDef): boolean {
   return state.vouchers > 0 && !u.fork;
+}
+
+/**
+ * What a card costs now (CONCEPT.md §3.5б): the first card of the board's offer is free, a second
+ * from the same offer costs its price; a fork's option keeps its price (a voucher makes it free).
+ */
+export function boardPrice(state: GameState, u: UpgradeDef): number {
+  if (u.fork) return u.cost;
+  return (state.shopPicks ?? 0) === 0 || deckFree(state, u) ? 0 : u.cost;
 }
 
 /** Fires a hired reporter; the last one cannot be fired. */
@@ -78,10 +87,14 @@ export function purchase(state: GameState, c: Content, id: string): void {
   state.money -= option.cost;
   if (option.kind === 'channel') state.ownedChannels.push(id);
   else {
-    if (deckFree(state, c.upgrades.find((u) => u.id === id)!)) state.vouchers--;
+    const u = c.upgrades.find((x) => x.id === id)!;
+    if ((state.shopPicks ?? 0) > 0 && deckFree(state, u)) state.vouchers--;
     state.upgrades.push(id);
-    // One card of the draft is taken, the others go back (CONCEPT.md §3.5б); a fork's option leaves the draft as it is.
-    if (state.shopOffer.includes(id)) state.shopOffer = [];
+    // The first card of the offer is free, a second costs its price, then the offer is spent (CONCEPT.md §3.5б).
+    if (state.shopOffer.includes(id)) {
+      state.shopPicks = (state.shopPicks ?? 0) + 1;
+      state.shopOffer = state.shopPicks >= 2 ? [] : state.shopOffer.filter((x) => x !== id);
+    }
   }
 }
 

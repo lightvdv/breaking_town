@@ -116,7 +116,7 @@ export function createGame(
     exposedTotal: 0,
     cleanStreak: 0,
     shopOffer: [],
-    shopRefreshTurn: 0,
+    shopRefreshTurn: c.balance.shopFirstTurn ?? 0,
     abilityReady: {},
     twist: null,
     budgetCut: 0,
@@ -129,6 +129,9 @@ export function createGame(
     town: opts.town ?? null,
     length: opts.length ?? 'full',
     collection: opts.collection ?? null,
+    cashReady: {},
+    cashEffects: {},
+    shopPicks: 0,
     outcome: null,
   };
   state.metrics = computeMetrics(state, c);

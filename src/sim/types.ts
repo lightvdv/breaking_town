@@ -177,6 +177,22 @@ export interface UpgradeEffects {
   lureCostMul?: number;
 }
 
+/** A move of «Чёрная касса» (CONCEPT.md §3.5в): its price, days of cooldown and own numbers. */
+export interface CashDef {
+  id: string;
+  name: string;
+  icon: string;
+  text: string;
+  cost: number;
+  cooldown: number;
+  /** leak: chance the sensation is a setup. */
+  setupChance?: number;
+  /** bribe: the fact-check's chance today. */
+  checkerMul?: number;
+  /** ads: share of non-readers who start buying. */
+  share?: number;
+}
+
 /** How rare a card of the collection is (CONCEPT.md §3.5б): packs give rare ones less often, the draft too. */
 export type Rarity = 'common' | 'rare' | 'legendary';
 
@@ -476,6 +492,8 @@ export interface Balance {
   shopRefreshDays: number;
   shopRefreshCost: number;
   shopRareWeight: number;
+  /** The day the board's first offer comes (then every `shopRefreshDays`). */
+  shopFirstTurn: number;
   /** How much stronger a card's benefits are at levels 1, 2, 3 of the collection (its drawbacks stay). */
   cardLevelPower: number[];
   /** How often each rarity comes up in the draft and in packs. */
@@ -919,6 +937,7 @@ export interface Content {
   towns: TownDef[];
   lengths: LengthDef[];
   synergies: SynergyDef[];
+  cash: CashDef[];
   letters: LetterTemplates;
   balance: Balance;
 }
@@ -1251,6 +1270,11 @@ export interface GameState {
    * come up in the draft, levelled up. Null: every card at level 1 (bots, tests, old saves).
    */
   collection: Record<string, number> | null;
+  /** «Чёрная касса»: the turn each move can be bought again, and the turn a bought move acts on. */
+  cashReady: Record<string, number>;
+  cashEffects: Record<string, number>;
+  /** Cards taken from the board's current offer: the first is free, a second costs its price. */
+  shopPicks: number;
   /** Named residents (CONCEPT.md §2.2а): person id → resident id; today's letters; what happened to them. */
   people: Record<string, number>;
   letters: Letter[];

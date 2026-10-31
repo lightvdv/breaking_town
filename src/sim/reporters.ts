@@ -4,6 +4,7 @@ import { skilledReporter } from './staff';
 import { chance, int, pick, weightedPick, type RngState } from './rng';
 import { clamp, conflictsStarted } from './lookup';
 import { getModifiers, type Modifiers } from './modifiers';
+import { cashActive } from './cash';
 import { pickPair } from './relations';
 import type { CardInstance, CardTemplate, Content, Find, GameState, GroupId, NewsScope, NewsTier, ReporterDef, Topic } from './types';
 
@@ -138,14 +139,18 @@ export function findNews(
     return write(r, weightedPick(rng, candidates.map((x) => ({ x, weight: x.weight * fade(x) }))).x, forcedTier);
   };
 
+  let papDone = false;
   /** A hunt: a reporter who found something today may have dug into its target (CONCEPT.md §3.6а). */
   const huntFind = (r: ReporterDef): CardInstance | null => {
     const target = state.hunt ? state.buildings[state.hunt.building] : null;
-    if (!target?.open || !chance(rng, b.huntFindChance + mods.huntFindAdd)) return null;
+    // «Папарацци» (CONCEPT.md §3.5в): the first reporter today surely brings a story about the target.
+    const paparazzi = cashActive(state, 'paparazzi') && !papDone;
+    if (!target?.open || !(paparazzi || chance(rng, b.huntFindChance + mods.huntFindAdd))) return null;
     const pool = huntTemplates(c, target, (t) => !t.conflict && (t.source === 'rumor' || t.source === 'fact') && !inHand.has(t.id) && !cards.some((x) => x.templateId === t.id));
     if (!pool.length) return null;
     const card = write(r, weightedPick(rng, pool.map((x) => ({ x, weight: x.weight }))).x, null);
     card.building = target.id;
+    if (paparazzi) papDone = true;
     return card;
   };
 

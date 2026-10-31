@@ -61,6 +61,10 @@ import {
   openForks,
   refreshShop,
   abilitiesOf,
+  cashActive,
+  cashBlock,
+  useCash,
+  type CashDef,
   abilityBlock,
   useAbility,
   expectedJoins,
@@ -174,6 +178,7 @@ type Modal =
   | 'readers'
   | 'reputation'
   | 'shop'
+  | 'cash'
   | 'team'
   | 'investigate'
   | 'dig'
@@ -298,6 +303,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let tutorial: TutorialProgress | null = saved?.tutorial ?? null;
   let error = '';
   let busy = false;
+  /** The day the board's offer window opened by itself (once per offer, CONCEPT.md §3.5в). */
+  let shopAutoTurn = 0;
   /** The opening story is on: the last game's result and windows stay hidden under it. */
   let introPlaying = false;
   let issueOpen = true;
@@ -607,6 +614,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
     }
     searching = false;
     busy = false;
+    // The board's new offer opens by itself the day it comes.
+    if (state.shopOffer.length && !state.shopPicks && shopAutoTurn !== state.turn && !modal && !state.outcome) {
+      shopAutoTurn = state.turn;
+      openModal('shop');
+    }
     render();
     window.setTimeout(() => {
       if (run !== searchRun) return;
@@ -3399,7 +3411,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const price = (u: UpgradeDef) => {
       const o = options.get(u.id);
       const free = o?.cost === 0 && u.cost > 0;
-      const label = u.fork ? (free ? 'бесплатно' : `${u.cost}`) : free ? 'Взять бесплатно' : `Взять · ${u.cost}`;
+      const label = u.fork ? (free ? 'бесплатно' : `${u.cost}`) : free ? 'Взять бесплатно' : `Взять вторую · ${u.cost}`;
       return h('button', { class: o?.affordable ? 'primary' : '', 'data-tut': 'buy', disabled: !o?.affordable || !!state.outcome, onclick: () => buy(u.id) }, label);
     };
     const icon = (u: UpgradeDef, cls = 'upg-icon') => h('span', { class: cls, 'aria-hidden': 'true' }, u.icon ?? '★');
@@ -3457,7 +3469,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const owned = c.upgrades.filter((u) => state.upgrades.includes(u.id) && !(u.series && c.upgrades.filter((x) => x.series === u.series && state.upgrades.includes(x.id)).pop() !== u));
     const days = Math.max(0, state.shopRefreshTurn - state.turn);
     return [
-      h('p', { class: 'hint' }, `У вас ${state.money} ₽ · расходы ${totalUpkeep(state, c)} ₽ в день. Улучшения оплачиваются сразу и действуют до конца партии.`),
+      h('p', { class: 'hint' }, `У вас ${state.money} ₽ · расходы ${totalUpkeep(state, c)} ₽ в день. Карты совета действуют до конца партии; свободные деньги — в «Чёрную кассу».`),
       state.vouchers ? h('p', { class: 'good voucher-line' }, `За задания: ${state.vouchers === 1 ? 'одно улучшение из колоды' : `${state.vouchers} улучшения из колоды`} — бесплатно.`) : null,
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
       taken.length ? h('div', { class: 'paper-style' }, ...taken.map((u) => h('span', { class: 'style-chip' }, icon(u, 'style-icon'), u.name))) : null,
@@ -3470,8 +3482,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       next ? h('p', { class: 'fork-next' }, `Следующая развилка — «${next.title}»: ${next.options.map((id) => c.upgrades.find((u) => u.id === id)!.name.toLowerCase()).join(' или ')} (на ${next.day}-й день)`) : null,
       ...infoSection(
         'deck',
-        'Совет директоров предлагает — возьмите одну',
-        `Каждые ${b.shopRefreshDays} дня совет присылает ${b.shopOfferSize} карты из вашей коллекции; взять можно одну, остальные уйдут. Раньше срока — за ${b.shopRefreshCost} ₽. Редкие и легендарные выпадают реже. Звёзды — уровень карты: улучшайте её в «Кабинете редактора» между партиями. Три карты одного направления дают бонус набора. «Приём» — кнопка над газетой, срабатывает раз в несколько дней.`,
+        state.shopPicks ? 'Можно взять ещё одну — за деньги' : 'Совет директоров предлагает — одна карта бесплатно',
+        `Каждые ${b.shopRefreshDays} дня совет присылает ${b.shopOfferSize} карты из вашей коллекции: одну можно взять бесплатно, вторую — за её цену, третья уйдёт. Не нравятся — «Другие три» за ${b.shopRefreshCost} ₽. Редкие и легендарные выпадают реже. Звёзды — уровень карты: улучшайте её в «Кабинете редактора» между партиями. Три карты одного направления дают бонус набора. «Приём» — кнопка над газетой, срабатывает раз в несколько дней.`,
       ),
       h(
         'div',
@@ -3494,7 +3506,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           `Другие три −${b.shopRefreshCost}`,
         ),
       ),
-      deck.length ? h('div', { class: 'deck' }, ...deck.map(card)) : h('p', { class: 'hint' }, 'Карту из этого предложения уже взяли — следующее скоро.'),
+      deck.length ? h('div', { class: 'deck' }, ...deck.map(card)) : h('p', { class: 'hint' }, 'Предложение разобрано — следующее придёт в свой день.'),
       // Sets of three cards of one direction (CONCEPT.md §3.5б): what is gathered and what it gives.
       ...setLines(),
       ...(owned.length
@@ -3966,15 +3978,24 @@ export function mountApp(root: HTMLElement, base: Content): void {
    */
   function renderAbilities(): void {
     const owned = abilitiesOf(state, c);
-    abilityBar.hidden = !owned.length || searching || !!state.outcome;
+    abilityBar.hidden = searching || !!state.outcome;
     if (abilityBar.hidden) return;
     const reasons: Record<string, string> = {
       'nobody free': 'все репортёры заняты',
       'nothing to raise': 'нечего усиливать',
       'no money': 'не хватает денег',
     };
+    const ready = c.cash.filter((x) => !cashBlock(state, c, x.id)).length;
+    const active = activeCash();
     abilityBar.replaceChildren(
-      h('span', { class: 'ability-label' }, 'Приёмы'),
+      h(
+        'button',
+        { class: `ability cash-open${ready ? ' ready' : ' wait'}`, disabled: busy, title: 'Деньги газеты на разовые ходы', onclick: () => openModal('cash') },
+        h('span', { class: 'ability-icon', 'aria-hidden': 'true' }, '💰'),
+        h('span', { class: 'ability-text' }, h('b', {}, 'Чёрная касса'), h('small', {}, ready ? `доступно ходов: ${ready}` : 'пока нечего купить')),
+      ),
+      ...active.map((x) => h('span', { class: 'cash-chip', title: x.def.text }, `${x.def.icon} ${x.label}`)),
+      ...(owned.length ? [h('span', { class: 'ability-label' }, 'Приёмы')] : []),
       ...owned.map(({ def, readyTurn }) => {
         const block = abilityBlock(state, c, def.id);
         const wait = readyTurn - state.turn;
@@ -4005,6 +4026,70 @@ export function mountApp(root: HTMLElement, base: Content): void {
         );
       }),
     );
+  }
+
+  /** Moves of the black cash that act today or tomorrow, in words for the chips above the paper. */
+  function activeCash(): { def: CashDef; label: string }[] {
+    const out: { def: CashDef; label: string }[] = [];
+    for (const def of c.cash) {
+      if (cashActive(state, def.id)) out.push({ def, label: def.id === 'bribe' ? 'фактчекеры подкуплены' : def.id === 'giveaway' ? 'выпуск раздаётся бесплатно' : 'сегодня' });
+      else if (cashActive(state, def.id, state.turn + 1)) out.push({ def, label: def.id === 'provoke' ? 'провокаторы выйдут завтра' : 'папарацци принесут снимки завтра' });
+    }
+    return out;
+  }
+
+  /**
+   * «Чёрная касса» (CONCEPT.md §3.5в): money buys one-off moves with a cooldown. A leak lands in
+   * the briefs at once, like a story from an ability.
+   */
+  function cashContent(): HTMLElement[] {
+    const active = new Set(activeCash().map((x) => x.def.id));
+    return [
+      h('p', { class: 'hint' }, `У вас ${state.money} ₽ · расходы ${totalUpkeep(state, c)} ₽ в день. Улучшения дарит совет директоров, а деньги газеты идут сюда — на разовые ходы. После хода касса ждёт несколько дней.`),
+      ...(error ? [h('p', { class: 'bad' }, error)] : []),
+      h(
+        'div',
+        { class: 'deck cash-list' },
+        ...c.cash.map((def) => {
+          const block = cashBlock(state, c, def.id);
+          return h(
+            'div',
+            { class: `deck-card cash-card${block ? ' wait' : ''}` },
+            active.has(def.id) ? h('span', { class: 'best-mark' }, 'действует') : null,
+            h('span', { class: 'upg-icon', 'aria-hidden': 'true' }, def.icon),
+            h('b', {}, def.name),
+            h('p', { class: 'upg-plus' }, def.text),
+            h(
+              'div',
+              { class: 'deck-foot' },
+              h('span', { class: 'hint' }, `пауза ${def.cooldown} ${plural(def.cooldown, 'день', 'дня', 'дней')}`),
+              h(
+                'button',
+                {
+                  class: block ? '' : 'primary',
+                  disabled: !!block || busy,
+                  onclick: () => {
+                    try {
+                      const card = useCash(state, c, def.id);
+                      if (card) {
+                        drafts.set(card.uid, { publish: true, placement: 0, distortion: 0 });
+                        revealed.add(card.uid);
+                        flyQueue.add(card.uid);
+                      }
+                      error = '';
+                    } catch (e) {
+                      error = e instanceof Error ? e.message : String(e);
+                    }
+                    render();
+                  },
+                },
+                block ?? `Купить · ${def.cost} ₽`,
+              ),
+            ),
+          );
+        }),
+      ),
+    ];
   }
 
   /** The day the dirt comes in: the exclusive is in today's paper (CONCEPT.md §3.3а). */
@@ -4271,6 +4356,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       readers: 'Читатели',
       reputation: 'Репутация',
       shop: 'Улучшения газеты',
+      cash: 'Чёрная касса',
       team: 'Редакция',
       investigate: 'Репортёр',
       dig: digTarget ? `Компромат на ${groupOf(c, digTarget).forms.manyGen}` : 'Компромат',
@@ -4285,7 +4371,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       carry: 'Кто поедет дальше',
     };
     const body =
-      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'dig' ? digContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'tutorial' ? tutorialStartContent() : modal === 'office' ? officeContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : shopContent();
+      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'dig' ? digContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'tutorial' ? tutorialStartContent() : modal === 'office' ? officeContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : modal === 'cash' ? cashContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
     const panel = h(
       'div',

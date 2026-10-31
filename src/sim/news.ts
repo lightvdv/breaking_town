@@ -1,4 +1,5 @@
 import { huntBonus, huntWatch, isHuntStory } from './hunt';
+import { bribeMul, cashActive } from './cash';
 import { chance, int, type RngState } from './rng';
 import { leaveCity } from './city';
 import { averageTrust, channelOf, clamp, factCheckStarted, groupOf, templateOf } from './lookup';
@@ -220,6 +221,8 @@ export function exposureRiskOf(
       reconcile *
       // The governor's visit: the press is watched closely (CONCEPT.md §4.9).
       twistMods(state, c).checkerMul *
+      // «Чёрная касса»: the fact-checkers took money today (CONCEPT.md §3.5в).
+      bribeMul(state, c) *
       shield,
     0,
     0.95,
@@ -503,7 +506,8 @@ export function publish(
 
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
-    const channels = rival ? [] : followedChannels(state, r);
+    // «Раздать газету бесплатно»: today the whole town reads the issue (CONCEPT.md §3.5в).
+    const channels = rival ? [] : cashActive(state, 'giveaway') ? state.ownedChannels : followedChannels(state, r);
     if ((rival ? !r.rivalReader : channels.length === 0) || !chance(rng, b.placementRead[pub.placement] * (pub.placement === 2 && !rival ? frontRead : 1))) continue;
     for (const ch of channels) report.byChannel[ch]++;
     viewers.push(r.id);

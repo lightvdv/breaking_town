@@ -6604,3 +6604,20 @@ span.hunt-chip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* «Чёрная касса» (CONCEPT.md §3.5в): the button above the paper, its chips and the window's moves. */
+.cash-open.ready {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.cash-chip {
+  padding: 2px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--ink);
+  font-size: 12px;
+}
+
+.cash-card.wait {
+  opacity: 0.75;
+}

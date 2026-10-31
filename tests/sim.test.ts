@@ -15,6 +15,11 @@ import { settleHunt } from '../src/sim/hunt';
 import { crimeEvents, crimePressure, gangDue } from '../src/sim/crime';
 import {
   averageTrust,
+  bribeMul,
+  cashActive,
+  cashBlock,
+  readerCount,
+  useCash,
   createGame,
   createRng,
   fireReporter,
@@ -756,6 +761,8 @@ describe('purchases', () => {
     const s = createGame(content, 1);
     s.money = 0;
     s.shopOffer.push('newspaper_quality_1');
+    // The first card of an offer is free; the second costs money.
+    s.shopPicks = 1;
     expect(() => purchase(s, content, 'newspaper_quality_1')).toThrow();
   });
 });
@@ -764,6 +771,9 @@ describe('the upgrades deck, forks and abilities (CONCEPT.md §3.5)', () => {
   it('the deck offers a few cards of the mode, deals again every few days, and only what is on offer can be bought', () => {
     const b = content.balance;
     const s = createGame(content, 3);
+    // The board's first offer comes on its day.
+    expect(s.shopOffer).toEqual([]);
+    while (s.turn < b.shopFirstTurn) playTurn(s, content, { publish: [] });
     expect(s.shopOffer.length).toBe(b.shopOfferSize);
     for (const id of s.shopOffer) {
       const u = content.upgrades.find((x) => x.id === id)!;
@@ -1284,6 +1294,7 @@ describe('tasks and stars (CONCEPT.md §4.8)', () => {
     expect(s.vouchers).toBe(1);
     s.money = 0;
     s.shopOffer = ['photographer'];
+    s.shopPicks = 1;
     expect(listPurchases(s, content).find((p) => p.id === 'photographer')).toMatchObject({ cost: 0, affordable: true });
     purchase(s, content, 'photographer');
     expect(s.vouchers).toBe(0);
@@ -1644,14 +1655,20 @@ describe('tutorial quarrel tip (CONCEPT.md §7.3 «Обучение»)', () => {
 });
 
 describe('the collection: draft, levels, sets (CONCEPT.md §3.5б)', () => {
-  it('the draft offers only cards of the collection, and taking one closes the offer', () => {
+  it('the draft offers only cards of the collection: the first pick is free, the second paid, then the offer closes', () => {
     const collection = { photographer: 1, cartoonist: 1, gossip_column: 1, tabloid_king: 2 };
     const s = createGame(realContent, 3, 'destroy', 'normal', { collection });
     s.money = 10_000;
     dealShop(s, realContent, s.rng);
     expect(s.shopOffer.length).toBe(3);
     for (const id of s.shopOffer) expect(Object.keys(collection)).toContain(id);
+    const money = s.money;
     purchase(s, realContent, s.shopOffer[0]);
+    expect(s.money).toBe(money);
+    expect(s.shopOffer.length).toBe(2);
+    const second = realContent.upgrades.find((u) => u.id === s.shopOffer[0])!;
+    purchase(s, realContent, second.id);
+    expect(s.money).toBe(money - second.cost);
     expect(s.shopOffer).toEqual([]);
   });
 
@@ -1690,5 +1707,40 @@ describe('the collection: draft, levels, sets (CONCEPT.md §3.5б)', () => {
     s.upgrades.push('media_baron');
     playTurn(s, realContent, { publish: [] });
     expect(s.money).toBeGreaterThan(money - totalUpkeep(s, realContent) + 60);
+  });
+});
+
+describe('the black cash (CONCEPT.md §3.5в)', () => {
+  it('a move costs money, waits its cooldown and acts on its day', () => {
+    const s = createGame(content, 5);
+    s.money = 10_000;
+    const bribe = content.cash.find((x) => x.id === 'bribe')!;
+    expect(cashBlock(s, content, 'bribe')).toBeNull();
+    useCash(s, content, 'bribe');
+    expect(s.money).toBe(10_000 - bribe.cost);
+    expect(cashActive(s, 'bribe')).toBe(true);
+    expect(bribeMul(s, content)).toBe(bribe.checkerMul);
+    expect(cashBlock(s, content, 'bribe')).toMatch(/через/);
+    expect(() => useCash(s, content, 'bribe')).toThrow();
+    // Provocateurs act tomorrow, paparazzi need a hunt.
+    useCash(s, content, 'provoke');
+    expect(cashActive(s, 'provoke')).toBe(false);
+    expect(cashActive(s, 'provoke', s.turn + 1)).toBe(true);
+    expect(cashBlock(s, content, 'paparazzi')).toBe('нет травли');
+    s.money = 0;
+    expect(cashBlock(s, content, 'ads')).toBe('не хватает денег');
+  });
+
+  it('a leak puts a loud rumor into today\'s hand; ads bring readers', () => {
+    const s = createGame(content, 6);
+    s.money = 10_000;
+    const hand = s.hand.length;
+    const card = useCash(s, content, 'leak')!;
+    expect(s.hand.length).toBe(hand + 1);
+    expect(card.tier).toBeGreaterThanOrEqual(2);
+    expect(content.cards.find((t) => t.id === card.templateId)!.source).toBe('rumor');
+    const readers = readerCount(s);
+    useCash(s, content, 'ads');
+    expect(readerCount(s)).toBeGreaterThan(readers);
   });
 });

@@ -1,7 +1,7 @@
 export * from './types';
 export { createRng, type RngState } from './rng';
 export { createGame, playTurn, checkOutcome } from './game';
-export { fireReporter, listPurchases, purchase, adRateOf, incomePerReader, salesOf, setPrice, totalUpkeep, upkeepItems, type PurchaseOption } from './economy';
+export { boardPrice, fireReporter, listPurchases, purchase, adRateOf, incomePerReader, salesOf, setPrice, totalUpkeep, upkeepItems, type PurchaseOption } from './economy';
 export { agencyCost, callAgency, cancelInvestigation, hireFromAgency, investigationTurns, onSpecialty, RIVAL_DIG, reporterLuck, reporterOf, searchLuck, setReporterTopics, startInvestigation, tierWeights } from './reporters';
 export { buyWillingness, expectedJoins, followersOf, readerCount } from './readers';
 export { cityStateOf, wealthOf } from './city';
@@ -24,3 +24,4 @@ export { electionLeader, runningTwist, twistOf } from './twists';
 export { isRoadTile, mapSizeFor } from './map';
 export { abilitiesOf, abilityBlock, advanceShop, dealShop, deckCards, forkChoice, onSale, openForks, refreshShop, useAbility } from './shop';
 export { crimePressure, policeLost } from './crime';
+export { bribeMul, cashActive, cashBlock, cashOf, isLeak, useCash } from './cash';

@@ -3,6 +3,7 @@ import { clamp, conflictsStarted, groupOf } from './lookup';
 import { isRecent } from './reporters';
 import { twistMods } from './twists';
 import { getModifiers } from './modifiers';
+import { cashActive } from './cash';
 import type { CardInstance, CardTemplate, Content, GameState, GroupId, Incident, NewsTier } from './types';
 
 /**
@@ -133,12 +134,15 @@ export function advanceRelations(state: GameState, c: Content, rng: RngState): {
     const j = int(rng, i + 1);
     [keys[i], keys[j]] = [keys[j], keys[i]];
   }
-  for (const key of conflictsStarted(state, c) ? keys : []) {
+  // «Нанять провокаторов» (CONCEPT.md §3.5в): today the tensest pair surely clashes.
+  const provoked = cashActive(state, 'provoke') ? [...keys].sort((x, y) => state.tension[y] - state.tension[x])[0] : null;
+  if (provoked) keys.unshift(...keys.splice(keys.indexOf(provoked), 1));
+  for (const key of provoked || conflictsStarted(state, c) ? keys : []) {
     if (incidents.length >= b.incidentsMax) break;
     const t = state.tension[key];
-    if (t < friction) continue;
+    if (key !== provoked && t < friction) continue;
     const odds = b.incidentChance * mayor.incidentMul * mods.incidentMul * (0.25 + (0.75 * (t - friction)) / (100 - friction));
-    if (!chance(rng, odds)) continue;
+    if (key !== provoked && !chance(rng, odds)) continue;
     const pair: [GroupId, GroupId] = chance(rng, 0.5) ? pairOf(key) : [pairOf(key)[1], pairOf(key)[0]];
     const all = c.cards.filter((x) => x.source === 'event' && fits(x, pair));
     const fresh = all.filter((x) => !isRecent(state, c, x.id) && !incidents.some((i) => i.templateId === x.id));

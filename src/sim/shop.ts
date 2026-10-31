@@ -47,6 +47,7 @@ export function dealShop(state: GameState, c: Content, rng: RngState): void {
     offer.push(pick.u.id);
   }
   state.shopOffer = offer;
+  state.shopPicks = 0;
   state.shopRefreshTurn = state.turn + b.shopRefreshDays;
 }
 

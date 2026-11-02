@@ -144,7 +144,7 @@ import { currentStep, grantFor, issueFlags, skipStep, tipFor, stepTargets, tutor
 import { recordOf, starLine, submitRecord } from './records';
 import { collectable, levelCost, levelUp, loadCollection, MAX_LEVEL, openPack, packs, rarityNames, rewardFor, saveCollection, tagNames, type Collection, type PackResult } from './collection';
 import { campaignStars, loadCampaign, newCampaign, PASSES, passNames, passState, saveCampaign, townStars, townState, winTown, type Campaign } from './campaign';
-import { drawRegion, drawTownArt, MAP_H, MAP_W, townIcon } from './campaignMap';
+import { MAP_H, MAP_W, REGION_ART, townArt } from './campaignMap';
 import { aboutLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillTiers, type RepStatus } from './reporterBar';
 import {
   priceLabels,
@@ -4646,8 +4646,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     );
     const menuButton = h('button', { class: 'icon-btn camp-burger', title: 'Меню', 'aria-label': 'Меню' }, '☰');
     menuButton.onclick = () => menu.classList.toggle('open');
-    const canvas = h('canvas', { class: 'camp-canvas' });
-    drawRegion(canvas, base.towns);
     const pins = base.towns.map((t, i) => {
       const st = townState(base, camp, i);
       const won = townStars(camp, t.id);
@@ -4662,13 +4660,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
             render();
           },
         },
-        h('span', { class: 'pin' }),
+        h('span', { class: 'pin' }, h('img', { src: `${assetBase}${townArt(t)}`, alt: '', width: 48, height: 48 })),
         h('span', { class: 'lbl' }, `${i + 1}. ${t.name}`),
         won > 0 ? h('span', { class: 'pin-stars' }, `★ ${won}`) : null,
       );
     });
-    // The pin icons are tiny inline SVGs.
-    pins.forEach((p, i) => (p.querySelector('.pin')!.innerHTML = townIcon(townState(base, camp, i), !!base.towns[i].starsToEnter)));
     campaignLayer.replaceChildren(
       h(
         'header',
@@ -4683,7 +4679,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('button', { class: 'camp-office', onclick: () => openModal('office') }, 'Кабинет редактора'),
         h('span', { class: 'camp-menu-wrap' }, menuButton, menu),
       ),
-      h('div', { class: 'camp-wrap' }, h('div', { class: 'camp-map' }, canvas, ...pins), townCard(campaignSel)),
+      h('div', { class: 'camp-wrap' }, h('div', { class: 'camp-map' }, h('div', { class: 'camp-backdrop', style: `background-image: url(${assetBase}${REGION_ART})` }), h('div', { class: 'camp-board' }, h('img', { class: 'camp-region', src: `${assetBase}${REGION_ART}`, alt: '', width: MAP_W, height: MAP_H }), ...pins)), townCard(campaignSel)),
     );
   }
 
@@ -4696,8 +4692,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const camp = campaign!;
     const t = base.towns[i];
     const st = townState(base, camp, i);
-    const art = h('canvas', { class: 'town-art' });
-    drawTownArt(art, t);
+    // The town's icon on its own corner of the region map.
+    const art = h(
+      'div',
+      { class: 'town-art', style: `background-image: url(${assetBase}${REGION_ART}); background-position: ${(t.map.x / MAP_W) * 100}% ${(t.map.y / MAP_H) * 100}%` },
+      h('img', { src: `${assetBase}${townArt(t)}`, alt: '', width: 48, height: 48 }),
+    );
     const pop = t.balance?.population ?? base.balance.population;
     const rival = rivalNames.guardian.name;
     const who = camp.carry ?? { id: base.balance.startReporters[0], xp: 0 };

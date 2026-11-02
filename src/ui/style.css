@@ -5200,11 +5200,31 @@ button.publish.level-3.bump-up {
 .camp-map {
   position: relative;
   flex: 1;
+  display: grid;
+  place-items: center;
   overflow: hidden;
-  background: var(--city-1);
+  background: #3e2731;
+  container-type: size;
 }
 
-.camp-canvas {
+/* The space around the picture: the same region, blurred and dimmed. */
+.camp-backdrop {
+  position: absolute;
+  inset: -20px;
+  background-position: center;
+  background-size: cover;
+  filter: blur(8px) brightness(0.45);
+}
+
+/* The region picture keeps its proportions and fits the space; pins sit on it in its own percent. */
+.camp-board {
+  position: relative;
+  width: min(100cqw, calc(100cqh * 688 / 384));
+  aspect-ratio: 688 / 384;
+  container-type: inline-size;
+}
+
+.camp-region {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -5223,28 +5243,75 @@ button.publish.level-3.bump-up {
   background: none;
   border: 0;
   box-shadow: none;
-  transform: translate(-50%, -100%);
+  transform: translate(-50%, -50%);
   cursor: pointer;
 }
 
 /* The global pressed-button nudge would replace the anchor transform and move the pin away mid-click. */
 .town-pin:active:not(:disabled) {
-  transform: translate(-50%, calc(-100% + 1px));
+  transform: translate(-50%, calc(-50% + 1px));
 }
 
+/* The town's icon is centred on its clearing; the name hangs below, the stars above. */
 .town-pin .pin {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  background: rgba(24, 20, 37, 0.75);
-  border: 2px solid var(--ink);
-  border-radius: 50%;
+  position: relative;
+  display: block;
+  width: 10cqw;
+}
+
+.town-pin .pin img {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 0 rgba(24, 20, 37, 0.45));
 }
 
 .town-pin.final .pin {
-  width: 54px;
-  height: 54px;
+  width: 12cqw;
+}
+
+.town-pin .lbl {
+  position: absolute;
+  top: 92%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.town-pin .pin-stars {
+  position: absolute;
+  bottom: 96%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* A town passed: its icon darkened and smoking (CONCEPT.md §9.4). */
+.town-pin.done .pin img {
+  filter: sepia(0.5) brightness(0.72) drop-shadow(0 3px 0 rgba(24, 20, 37, 0.45));
+}
+
+.town-pin.done .pin::after {
+  content: '';
+  position: absolute;
+  left: 46%;
+  top: 0;
+  width: 14%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(139, 155, 180, 0.8);
+  animation: town-smoke 2.4s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes town-smoke {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(40%, -180%) scale(1.6);
+    opacity: 0;
+  }
 }
 
 .town-pin .lbl {
@@ -5275,8 +5342,7 @@ button.publish.level-3.bump-up {
   filter: grayscale(1) brightness(0.8);
 }
 
-.town-pin.now .pin {
-  border-color: var(--accent);
+.town-pin.now .pin img {
   animation: town-pulse 1.4s ease-in-out infinite;
 }
 
@@ -5288,14 +5354,10 @@ button.publish.level-3.bump-up {
 @keyframes town-pulse {
   0%,
   100% {
-    box-shadow:
-      0 0 0 4px rgba(254, 174, 52, 0.35),
-      0 0 18px var(--accent);
+    filter: drop-shadow(0 0 2px var(--accent)) drop-shadow(0 0 6px var(--accent));
   }
   50% {
-    box-shadow:
-      0 0 0 8px rgba(254, 174, 52, 0.15),
-      0 0 26px var(--accent);
+    filter: drop-shadow(0 0 4px var(--accent)) drop-shadow(0 0 14px var(--accent));
   }
 }
 
@@ -5312,10 +5374,20 @@ button.publish.level-3.bump-up {
 }
 
 .town-art {
+  display: grid;
+  place-items: center;
   width: 100%;
   aspect-ratio: 16 / 9;
   border: 2px solid var(--ink);
+  background-size: 400% auto;
   image-rendering: pixelated;
+}
+
+.town-art img {
+  width: 40%;
+  height: auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 0 rgba(24, 20, 37, 0.5));
 }
 
 .town-card h2 {
@@ -5443,8 +5515,12 @@ button.publish.level-3.bump-up {
 
   .camp-map {
     flex: none;
-    height: 60vw;
-    min-height: 260px;
+    height: 57vw;
+    min-height: 220px;
+  }
+
+  .town-art {
+    aspect-ratio: 5 / 2;
   }
 
   .town-card {
@@ -5454,13 +5530,7 @@ button.publish.level-3.bump-up {
   }
 
   .town-pin .pin {
-    width: 30px;
-    height: 30px;
-  }
-
-  .town-pin svg {
-    width: 22px;
-    height: 22px;
+    width: 11cqw;
   }
 
   .town-pin .lbl {

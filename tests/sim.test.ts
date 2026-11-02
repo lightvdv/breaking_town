@@ -19,6 +19,11 @@ import { crimeEvents, crimePressure, gangDue } from '../src/sim/crime';
 import {
   averageTrust,
   bribeMul,
+  loanBlock,
+  loanPayoff,
+  loanPerDay,
+  repayLoan,
+  takeLoan,
   cashActive,
   cashBlock,
   cashCost,
@@ -1829,5 +1834,29 @@ describe('town goals and the town generator (CONCEPT.md §9.2, §9.5)', () => {
       for (let i = 0; i < 3 && !s.outcome; i++) playTurn(s, c, { publish: [] });
     }
     expect(kinds.size).toBeGreaterThan(4);
+  });
+});
+
+describe('the bank and debt (CONCEPT.md §5.4а)', () => {
+  it('a free board card is taken in debt; a loan pays at once, is paid back day by day and can be paid off early', () => {
+    const s = createGame(content, 8);
+    s.money = -12;
+    dealShop(s, content, s.rng);
+    expect(listPurchases(s, content).find((p) => p.id === s.shopOffer[0])).toMatchObject({ cost: 0, affordable: true });
+    purchase(s, content, s.shopOffer[0]);
+    const b = content.balance;
+    expect(loanBlock(s, content)).toBeNull();
+    takeLoan(s, content, 300);
+    expect(s.money).toBe(288);
+    expect(loanBlock(s, content)).not.toBeNull();
+    expect(totalUpkeep(s, content)).toBeGreaterThanOrEqual(loanPerDay(content, 300));
+    playTurn(s, content, { publish: [] });
+    expect(s.loan?.daysLeft).toBe(b.loanDays - 1);
+    const payoff = loanPayoff(s, content);
+    expect(payoff).toBe(Math.ceil((300 * (b.loanDays - 1)) / b.loanDays));
+    s.money = 1000;
+    repayLoan(s, content);
+    expect(s.loan).toBeNull();
+    expect(s.money).toBe(1000 - payoff);
   });
 });

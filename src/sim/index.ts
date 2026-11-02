@@ -1,7 +1,7 @@
 export * from './types';
 export { createRng, type RngState } from './rng';
 export { createGame, playTurn, checkOutcome } from './game';
-export { boardPrice, fireReporter, listPurchases, purchase, adRateOf, incomePerReader, salesOf, setPrice, totalUpkeep, upkeepItems, type PurchaseOption } from './economy';
+export { boardPrice, loanBlock, loanPayoff, loanPerDay, repayLoan, takeLoan, fireReporter, listPurchases, purchase, adRateOf, incomePerReader, salesOf, setPrice, totalUpkeep, upkeepItems, type PurchaseOption } from './economy';
 export { agencyCost, callAgency, cancelInvestigation, hireFromAgency, investigationTurns, onSpecialty, RIVAL_DIG, reporterLuck, reporterOf, searchLuck, setReporterTopics, startInvestigation, tierWeights } from './reporters';
 export { buyWillingness, expectedJoins, followersOf, readerCount } from './readers';
 export { cityStateOf, wealthOf } from './city';

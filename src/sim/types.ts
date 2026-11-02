@@ -830,6 +830,13 @@ export interface Balance {
   scandalAdMul: number;
   scandalRecovery: number;
   brokeTurnsLimit: number;
+  /** The bank (CONCEPT.md §5.4а): loans offered while the cash is below `loanBelow`. */
+  loanAmounts: number[];
+  /** Interest over the whole loan (0.25 = a quarter on top). */
+  loanRate: number;
+  /** Days of payments. */
+  loanDays: number;
+  loanBelow: number;
   /** The game is lost when the average reputation falls below this. */
   trustCollapse: number;
 
@@ -1352,6 +1359,8 @@ export interface GameState {
   /** Price level of the paper (index in `Balance.prices`), chosen by the player. */
   price: number;
   brokeTurns: number;
+  /** A bank loan being paid off day by day (CONCEPT.md §5.4а). */
+  loan: { amount: number; perDay: number; daysLeft: number } | null;
   residents: Resident[];
   buildings: Building[];
   /** The map is mapSize × mapSize tiles; see map.ts for roads. */
@@ -1458,7 +1467,7 @@ export interface PublicationReport {
 
 /** One line of the per-turn expenses: a channel, a reporter's salary or a running investigation. */
 export interface UpkeepItem {
-  kind: 'channel' | 'salary' | 'investigation' | 'budget';
+  kind: 'channel' | 'salary' | 'investigation' | 'budget' | 'loan';
   /** Channel id or reporter id. */
   id: string;
   amount: number;

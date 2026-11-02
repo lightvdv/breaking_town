@@ -95,6 +95,7 @@ export function createGame(
     money: c.balance.startMoney,
     price: c.balance.startPrice,
     brokeTurns: 0,
+    loan: null,
     residents,
     buildings,
     mapSize,
@@ -369,6 +370,8 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   // Deals with a catch (CONCEPT.md §3.5а): a bad story about what we promised to keep quiet about costs us.
   const deals = settleDeals(state, c, d.publish);
   const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
+  // One more payment to the bank (CONCEPT.md §5.4а).
+  if (state.loan) state.loan = state.loan.daysLeft > 1 ? { ...state.loan, daysLeft: state.loan.daysLeft - 1 } : null;
   state.lastProfit = Object.values(income).reduce((s, x) => s + x, 0) - upkeep;
   const moleCaught = checkMole(state, c, moleRng);
   state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;

@@ -7229,3 +7229,31 @@ span.hunt-chip {
     padding: 0 3px;
   }
 }
+
+/* The bank (CONCEPT.md §5.4а): loan sizes side by side; the red button above the paper in debt. */
+.loan-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.loan-options button {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+
+.ability.bank-open.ready {
+  background: var(--danger);
+}
+
+.team-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.back-team {
+  justify-self: start;
+  margin-bottom: 6px;
+}

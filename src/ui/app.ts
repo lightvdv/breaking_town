@@ -107,6 +107,11 @@ import {
   lureRivalAuthor,
   templateOf,
   totalUpkeep,
+  loanBlock,
+  loanPayoff,
+  loanPerDay,
+  repayLoan,
+  takeLoan,
   rivalReaders,
   rivalTrust,
   cityStateOf,
@@ -182,6 +187,7 @@ interface Draft {
 /** «Сводка»'s tabs, in order: the windows behind the top bar's tiles and the cards. */
 const SUMMARY_TABS = [
   { id: 'shop', name: 'Карты', icon: 'cards' },
+  { id: 'team', name: 'Редакция', icon: 'newsroom' },
   { id: 'money', name: 'Деньги', icon: 'money' },
   { id: 'readers', name: 'Читатели', icon: 'readers' },
   { id: 'reputation', name: 'Репутация', icon: 'reputation' },
@@ -3101,8 +3107,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
         row(
           id,
           `зарплата ${reporterOf(c, id).salary} в день`,
-          // The last reporter cannot be fired: no button at all.
-          state.reporters.length > 1 ? h('button', { class: 'ghost', disabled: !!state.outcome, onclick: () => fire(id) }, 'Уволить') : null,
+          // The reporter's own window: topics, digging, watching the rival; the last one cannot be fired.
+          h(
+            'span',
+            { class: 'team-actions' },
+            h('button', { class: 'primary', onclick: () => ((investigator = id), (error = ''), openModal('investigate')) }, 'Задания ▸'),
+            state.reporters.length > 1 ? h('button', { class: 'ghost', disabled: !!state.outcome, onclick: () => fire(id) }, 'Уволить') : null,
+          ),
         ),
       ),
       ...agencySection(row),
@@ -3635,7 +3646,49 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (x.kind === 'channel') return `Содержание: ${channelOf(c, x.id).name}`;
     if (x.kind === 'salary') return `Зарплата: ${reporterOf(c, x.id).name}`;
     if (x.kind === 'budget') return 'Урезанный бюджет (проверка провалена)';
+    if (x.kind === 'loan') return `Кредит банка${state.loan ? ` (ещё ${state.loan.daysLeft} ${daysWord(state.loan.daysLeft)})` : ''}`;
     return `Расследование: ${reporterOf(c, x.id).name}`;
+  }
+
+  /**
+   * The bank (CONCEPT.md §5.4а): while the cash is low, a loan of one of a few sizes paid back day by
+   * day with interest; one at a time, and it can be paid off early without the interest left.
+   */
+  function bankSection(): HTMLElement[] {
+    const b = c.balance;
+    const act = (f: () => void) => () => {
+      try {
+        f();
+        error = '';
+      } catch (e) {
+        error = e instanceof Error ? e.message : String(e);
+      }
+      render();
+    };
+    if (state.loan) {
+      const payoff = loanPayoff(state, c);
+      return [
+        h('h3', { class: 'section', id: 'bank' }, 'Банк'),
+        h('p', {}, `Кредит ${state.loan.amount} ₽: ещё ${state.loan.daysLeft} ${daysWord(state.loan.daysLeft)} по ${state.loan.perDay} ₽ — платёж уже в расходах.`),
+        h('button', { disabled: state.money < payoff || !!state.outcome, onclick: act(() => repayLoan(state, c)) }, `Погасить досрочно · ${payoff} ₽`),
+      ];
+    }
+    const block = loanBlock(state, c);
+    return [
+      h('h3', { class: 'section', id: 'bank' }, 'Банк'),
+      h('p', { class: 'hint' }, block ?? `Деньги сразу, потом ${b.loanDays} ${daysWord(b.loanDays)} платежей: переплата ${Math.round(b.loanRate * 100)}%. Кредит один за раз, погасить можно досрочно — без оставшихся процентов.`),
+      ...(block
+        ? []
+        : [
+            h(
+              'div',
+              { class: 'loan-options' },
+              ...b.loanAmounts.map((amount) =>
+                h('button', { class: state.money < 0 ? 'primary' : '', onclick: act(() => takeLoan(state, c, amount)) }, h('b', {}, `Взять ${amount} ₽`), h('small', {}, `по ${loanPerDay(c, amount)} ₽ × ${b.loanDays} дн.`)),
+              ),
+            ),
+          ]),
+    ];
   }
 
   /** Money window: last turn's income and expenses line by line, and what to expect this turn. */
@@ -3650,12 +3703,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const out: (HTMLElement | null)[] = [
       h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/money.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${state.money}`), h('span', {}, 'денег в кассе'))),
       state.brokeTurns > 0 ? h('p', { class: 'bad' }, `Касса в минусе ${state.brokeTurns} ход(а) из ${b.brokeTurnsLimit} допустимых — потом банкротство.`) : null,
+      // In debt the bank comes first; otherwise it waits under the day's ledger.
+      ...(state.money < 0 ? bankSection() : []),
       h('h3', { class: 'section' }, 'Ожидается в этом ходу'),
       ...forecastIncome.map((x) => ledgerRow(`Продажи: ${channelOf(c, x.ch).name}`, x.sum, `${x.buyers} чит. × ${incomePerReader(state, c, x.ch)} (цена «${priceLabels[state.price]}» ${c.balance.prices[state.price]} + реклама ${adRateOf(state, c, x.ch)})`)),
       scandalNext < 1 ? h('p', { class: 'hint' }, `После скандала реклама приносит ×${scandalNext.toFixed(1)}, восстанавливается на ${b.scandalRecovery} в день.`) : null,
       ...subsidies.map((x) => ledgerRow(x.title, x.amount ?? 0, `до дня ${x.until}`)),
       ...items.map((x) => ledgerRow(upkeepLabel(x), -x.amount)),
       ledgerTotal('Итого за день', net),
+      ...(state.money < 0 ? [] : bankSection()),
       ...(state.deals.length
         ? [
             h('h3', { class: 'section' }, 'Сделки'),
@@ -4041,7 +4097,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     };
     const ready = cashMoves(state, c).filter((x) => !cashBlock(state, c, x.id)).length;
     const active = activeCash();
+    // In debt without a loan: the bank is one press away (CONCEPT.md §5.4а).
+    const bank =
+      state.money < 0 && !loanBlock(state, c)
+        ? h('button', { class: 'ability bank-open ready', onclick: () => openModal('money', 'bank') }, h('span', { class: 'ability-icon', 'aria-hidden': 'true' }, '🏦'), h('span', { class: 'ability-text' }, h('b', {}, 'Касса в минусе'), h('small', {}, 'взять кредит в банке')))
+        : null;
     abilityBar.replaceChildren(
+      ...(bank ? [bank] : []),
       h(
         'button',
         { class: `ability cash-open${ready ? ' ready' : ' wait'}`, disabled: busy, title: `Чёрная касса: ${ready ? `доступно ходов — ${ready}` : 'пока ничего'}. Деньги газеты на разовые ходы.`, 'aria-label': 'Чёрная касса', onclick: () => openModal('cash') },
@@ -4349,6 +4411,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const sensation = Math.min(1, b.investigationSensationBase + b.investigationSensationPerNose * r.skills.nose);
     const truth = Math.min(1, b.investigationTruthBase + b.investigationTruthPerNose * r.skills.nose);
     return [
+      // Back to the whole newsroom in «Сводка».
+      h('button', { class: 'ghost back-team', onclick: () => openModal('team') }, '← Вся редакция'),
       head,
       ...errorLine,
       ...topicSection,
@@ -4412,7 +4476,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       reputation: 'Сводка',
       shop: 'Сводка',
       cash: 'Чёрная касса',
-      team: 'Редакция',
+      team: 'Сводка',
       investigate: 'Репортёр',
       dig: digTarget ? `Компромат на ${groupOf(c, digTarget).forms.manyGen}` : 'Компромат',
       pause: 'Меню',

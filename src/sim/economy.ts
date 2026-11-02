@@ -51,7 +51,8 @@ export function listPurchases(state: GameState, c: Content): PurchaseOption[] {
       description: u.description,
       cost: boardPrice(state, u),
       unlocked,
-      affordable: unlocked && state.money >= boardPrice(state, u),
+      // A free card is taken even in debt (CONCEPT.md §3.5).
+      affordable: unlocked && (boardPrice(state, u) <= 0 || state.money >= boardPrice(state, u)),
     });
   }
   return out;
@@ -107,7 +108,44 @@ export function upkeepItems(state: GameState, c: Content): UpkeepItem[] {
     ...state.investigations.map((x) => ({ kind: 'investigation' as const, id: x.reporterId, amount: Math.round(c.balance.investigationCost * mods.investigationCostMul) })),
     // A failed audit cut the budget for the rest of the game (CONCEPT.md §4.9).
     ...(state.budgetCut > 0 ? [{ kind: 'budget' as const, id: 'audit', amount: state.budgetCut }] : []),
+    // The bank's daily payment (CONCEPT.md §5.4а).
+    ...(state.loan ? [{ kind: 'loan' as const, id: 'bank', amount: state.loan.perDay }] : []),
   ];
+}
+
+/** Why a loan cannot be taken now, or null (CONCEPT.md §5.4а): one at a time, only when the cash runs low. */
+export function loanBlock(state: GameState, c: Content): string | null {
+  if (state.outcome) return 'Партия окончена';
+  if (state.loan) return 'Сначала погасите прошлый кредит';
+  if (state.money >= c.balance.loanBelow) return `Банк даёт в долг, когда в кассе меньше ${c.balance.loanBelow} ₽`;
+  return null;
+}
+
+/** What a loan of this size costs every day. */
+export function loanPerDay(c: Content, amount: number): number {
+  return Math.ceil((amount * (1 + c.balance.loanRate)) / c.balance.loanDays);
+}
+
+/** Takes a loan: the money at once, then `loanPerDay` in the upkeep for `loanDays` days. */
+export function takeLoan(state: GameState, c: Content, amount: number): void {
+  const block = loanBlock(state, c);
+  if (block) throw new Error(block);
+  if (!c.balance.loanAmounts.includes(amount)) throw new Error(`No loan of ${amount}`);
+  state.money += amount;
+  state.loan = { amount, perDay: loanPerDay(c, amount), daysLeft: c.balance.loanDays };
+}
+
+/** Paying the rest at once: the principal still owed, without the interest of the days left. */
+export function loanPayoff(state: GameState, c: Content): number {
+  return state.loan ? Math.ceil((state.loan.amount * state.loan.daysLeft) / c.balance.loanDays) : 0;
+}
+
+export function repayLoan(state: GameState, c: Content): void {
+  if (!state.loan) throw new Error('No loan');
+  const sum = loanPayoff(state, c);
+  if (state.money < sum) throw new Error('Не хватает денег');
+  state.money -= sum;
+  state.loan = null;
 }
 
 export function totalUpkeep(state: GameState, c: Content): number {

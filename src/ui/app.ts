@@ -922,7 +922,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       }
       // Every finished game brings «связи» for the office (CONCEPT.md §3.5б).
       if (state.outcome) {
-        lastReward = rewardFor({ win: state.outcome.result === 'win', stars: scoreOf(state, c).stars, difficulty: state.difficulty, length: state.length, tutorial: !!tutorial });
+        lastReward = rewardFor({ win: state.outcome.result === 'win', stars: scoreOf(state, c).stars, difficulty: state.difficulty, length: state.length, tutorial: !!tutorial, campaign: !!state.town && !isGeneratedTown(state.town) });
         collection = loadCollection(base);
         collection.currency += lastReward;
         saveCollection(collection);
@@ -3326,10 +3326,20 @@ export function mountApp(root: HTMLElement, base: Content): void {
       render();
     };
     const result = packResult;
+    // What the pack gave: every new card face up, the best rarity in the title, «связи» back for the rest.
+    const best = result?.cards.find((x) => x.rarity === 'legendary') ?? result?.cards.find((x) => x.rarity === 'rare') ?? result?.cards[0];
     const reveal = result
-      ? 'card' in result
-        ? h('div', { class: `pack-reveal rarity-${result.rarity}` }, h('p', { class: 'pack-reveal-title' }, result.rarity === 'legendary' ? 'Легендарная карта!' : result.rarity === 'rare' ? 'Редкая карта!' : 'Новая карта'), cardFace(result.card, { level: 1 }))
-        : h('div', { class: 'pack-reveal' }, h('p', { class: 'pack-reveal-title' }, `Все карты уже у вас — вернули ${result.refund} ✦`))
+      ? h(
+          'div',
+          { class: `pack-reveal${best ? ` rarity-${best.rarity}` : ''}` },
+          h(
+            'p',
+            { class: 'pack-reveal-title' },
+            !best ? `Все карты уже у вас — вернули ${result.refund} ✦` : best.rarity === 'legendary' ? 'Легендарная карта!' : best.rarity === 'rare' ? 'Редкая карта!' : 'Новая карта',
+            best && result.refund ? ` · вернули ${result.refund} ✦` : '',
+          ),
+          ...(result.cards.length ? [h('div', { class: 'pack-reveal-cards' }, ...result.cards.map((x) => cardFace(x.card, { level: 1 })))] : []),
+        )
       : null;
     const kinds = ['legendary', 'rare', 'common'] as const;
     const rarityTabs = { legendary: 'Легендарные', rare: 'Редкие', common: 'Обычные' };

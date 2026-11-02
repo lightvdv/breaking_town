@@ -49,14 +49,16 @@ export function saveCollection(col: Collection): void {
 
 /**
  * «Связи» for a finished game (CONCEPT.md §3.5б): more for a win and each star, a little even for a
- * loss; harder and longer games pay more. The tutorial pays a fixed sum once it is over.
+ * loss; harder and longer games pay more. The tutorial pays a fixed sum once it is over. A campaign
+ * town pays half as much again: one run of the campaign with two stars a town on average buys the
+ * whole deck; the free games then pay for the levels.
  */
-export function rewardFor(result: { win: boolean; stars: number; difficulty: Difficulty; length: GameLength; tutorial: boolean }): number {
+export function rewardFor(result: { win: boolean; stars: number; difficulty: Difficulty; length: GameLength; tutorial: boolean; campaign: boolean }): number {
   if (result.tutorial) return 60;
   const base = result.win ? 40 + 15 * result.stars : 15;
   const level = { easy: 0.8, normal: 1, hard: 1.4 }[result.difficulty];
   const length = result.length === 'short' ? 0.6 : 1;
-  return Math.round(base * level * length);
+  return Math.round(base * level * length * (result.campaign ? 1.5 : 1));
 }
 
 /** A pack of the office: what it costs and the odds of each rarity. */
@@ -65,48 +67,56 @@ export interface PackDef {
   name: string;
   text: string;
   cost: number;
+  /** New cards in one pack. */
+  count: number;
   odds: Record<Rarity, number>;
 }
 
 export const packs: PackDef[] = [
-  { id: 'envelope', name: 'Конверт с досье', text: 'Одна случайная карта: чаще обычная, иногда редкая, изредка легендарная.', cost: 60, odds: { common: 0.7, rare: 0.25, legendary: 0.05 } },
-  { id: 'safe', name: 'Сейф из мэрии', text: 'Одна случайная карта: редкая или легендарная.', cost: 200, odds: { common: 0, rare: 0.75, legendary: 0.25 } },
+  { id: 'envelope', name: 'Конверт с досье', text: 'Одна новая карта: чаще обычная, иногда редкая, изредка легендарная.', cost: 60, count: 1, odds: { common: 0.7, rare: 0.25, legendary: 0.05 } },
+  // Three cards for the price of less than three envelopes: the bulk buy for a collector.
+  { id: 'safe', name: 'Сейф из мэрии', text: 'Три новые карты: редкие или легендарные.', cost: 160, count: 3, odds: { common: 0, rare: 0.75, legendary: 0.25 } },
 ];
 
-/** What a pack gave: a new card, or — when there is nothing left to find — «связи» back. */
-export type PackResult = { card: UpgradeDef; rarity: Rarity } | { refund: number };
+/** What a pack gave: its new cards, and «связи» back for each card there was nothing left to find. */
+export type PackResult = { cards: { card: UpgradeDef; rarity: Rarity }[]; refund: number };
 
 const RARITY_ORDER: Rarity[] = ['legendary', 'rare', 'common'];
 
 /**
- * Opens a pack: draws a rarity by its odds, then a card of that rarity the player does not have yet;
- * if they have them all, the next rarity down (then up). With the whole collection, half the price back.
+ * Opens a pack: for each of its cards draws a rarity by its odds, then a card of that rarity the player
+ * does not have yet; if they have them all, the next rarity down (then up). A card there is nothing
+ * left to find for gives half its share of the price back.
  */
 export function openPack(col: Collection, c: Content, pack: PackDef, random: () => number = Math.random): PackResult {
   if (col.currency < pack.cost) throw new Error('Не хватает связей');
   col.currency -= pack.cost;
-  let roll = random();
-  let rarity: Rarity = 'common';
-  for (const r of RARITY_ORDER) {
-    if (roll < pack.odds[r]) {
-      rarity = r;
-      break;
-    }
-    roll -= pack.odds[r];
-  }
+  const result: PackResult = { cards: [], refund: 0 };
   const missing = (r: Rarity) => collectable(c).filter((u) => u.rarity === r && !col.cards[u.id]);
-  const order = [rarity, ...RARITY_ORDER.slice(RARITY_ORDER.indexOf(rarity) + 1), ...RARITY_ORDER.slice(0, RARITY_ORDER.indexOf(rarity)).reverse()];
-  for (const r of order) {
+  for (let i = 0; i < pack.count; i++) {
+    let roll = random();
+    let rarity: Rarity = 'common';
+    for (const r of RARITY_ORDER) {
+      if (roll < pack.odds[r]) {
+        rarity = r;
+        break;
+      }
+      roll -= pack.odds[r];
+    }
+    const order = [rarity, ...RARITY_ORDER.slice(RARITY_ORDER.indexOf(rarity) + 1), ...RARITY_ORDER.slice(0, RARITY_ORDER.indexOf(rarity)).reverse()];
+    const r = order.find((x) => missing(x).length > 0);
+    if (!r) {
+      result.refund += Math.round(pack.cost / pack.count / 2);
+      continue;
+    }
     const pool = missing(r);
-    if (!pool.length) continue;
     const card = pool[Math.floor(random() * pool.length)];
     col.cards[card.id] = 1;
     col.fresh = [...col.fresh, card.id];
-    return { card, rarity: r };
+    result.cards.push({ card, rarity: r });
   }
-  const refund = Math.round(pack.cost / 2);
-  col.currency += refund;
-  return { refund };
+  col.currency += result.refund;
+  return result;
 }
 
 /** The price of the next level of a card, or null at the top. */

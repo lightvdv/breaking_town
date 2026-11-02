@@ -6494,8 +6494,9 @@ span.hunt-chip {
 }
 
 .pack-reveal {
+  width: 100%;
   margin: 8px auto;
-  max-width: 280px;
+  max-width: 860px;
   text-align: center;
   animation: pack-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
 }
@@ -6505,6 +6506,14 @@ span.hunt-chip {
   font-size: 18px;
   font-weight: 700;
   color: var(--accent);
+}
+
+/* One card or the safe's three, side by side while they fit. */
+.pack-reveal-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 260px));
+  justify-content: center;
+  gap: 10px;
 }
 
 .pack-reveal.rarity-rare .pack-reveal-title {

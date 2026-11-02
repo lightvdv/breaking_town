@@ -434,19 +434,6 @@ function folder(): Raster {
   return outline(r);
 }
 
-/** The cards tab of «Сводка»: two cards fanned out, the front one with a star. */
-function cards(): Raster {
-  const r = new Raster(16, 16);
-  r.rect(2, 3, 8, 11, 'silver');
-  r.rect(3, 4, 6, 4, 'blue');
-  r.rect(6, 2, 8, 12, 'sand');
-  r.rect(7, 3, 6, 5, 'amber');
-  r.art(8, 4, ['.y..', 'yyyy', '.yy.', 'y..y'], { y: 'yellow' });
-  r.rect(7, 10, 6, 1, 'grey');
-  r.rect(7, 12, 4, 1, 'grey');
-  return outline(r);
-}
-
 /** A task: a clipboard with a tick (CONCEPT.md §4.8). */
 function task(): Raster {
   const r = new Raster(16, 16);
@@ -504,7 +491,6 @@ export const uiIcons: Record<string, () => Raster> = {
   offer,
   cart,
   folder,
-  cards,
   guardian,
   money,
   readers,

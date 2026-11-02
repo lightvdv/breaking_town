@@ -3267,7 +3267,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       { class: `coll-card rarity-${rarity}${u.ability ? ' ability' : ''}` },
       h('span', { class: 'coll-rarity' }, rarityNames[rarity]),
       opts.fresh ? h('span', { class: 'coll-new' }, 'Новая') : null,
-      h('span', { class: 'coll-icon', 'aria-hidden': 'true' }, u.icon ?? '★'),
+      cardArt(u),
       h('b', {}, u.name),
       h('span', { class: 'coll-level', title: `Уровень ${level} из ${MAX_LEVEL}${power > 1 ? `: польза ×${power}` : ''}` }, '★'.repeat(level) + '☆'.repeat(MAX_LEVEL - level), power > 1 ? h('small', {}, ` польза ×${power}`) : null),
       u.tags?.length ? h('span', { class: 'coll-tags' }, ...u.tags.map((t) => h('span', { class: `tag-chip tag-${t}` }, tagNames[t] ?? t))) : null,

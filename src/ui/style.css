@@ -5123,15 +5123,80 @@ button.publish.level-3.bump-up {
   font-size: 13px;
 }
 
-.camp-stars {
+/* The campaign's stars: a bar towards all of them with a notch where the final opens; a tip on hover or tap. */
+.camp-progress {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-left: auto;
+  padding: 4px 10px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
   color: var(--accent);
-  font-weight: 700;
+  cursor: help;
 }
 
-.camp-stars small {
+.camp-progress b {
+  white-space: nowrap;
+}
+
+.camp-progress small {
   color: var(--muted);
+  font-size: 12px;
+}
+
+.camp-bar {
+  position: relative;
+  width: 160px;
+  height: 10px;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+}
+
+.camp-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent);
+}
+
+/* Where the final opens: a white notch, golden once it is reached. */
+.camp-gate {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 3px;
+  margin-left: -1px;
+  background: #fff;
+}
+
+.camp-gate.open {
+  background: var(--accent);
+}
+
+.camp-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: none;
+  width: 260px;
+  padding: 8px 10px;
+  background: var(--panel);
+  color: var(--text);
+  border: 2px solid var(--ink);
+  font-size: 13px;
   font-weight: 400;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+}
+
+.camp-progress:hover .camp-tip,
+.camp-progress:focus-visible .camp-tip,
+.camp-progress.open .camp-tip {
+  display: block;
 }
 
 .camp-wrap {
@@ -5384,8 +5449,17 @@ button.publish.level-3.bump-up {
     font-size: 10px;
   }
 
-  .camp-stars {
+  .camp-progress {
     margin-left: 0;
+  }
+
+  .camp-bar {
+    width: 110px;
+  }
+
+  .camp-tip {
+    right: auto;
+    left: 0;
   }
 }
 

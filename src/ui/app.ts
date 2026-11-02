@@ -4630,6 +4630,34 @@ export function mountApp(root: HTMLElement, base: Content): void {
     campaignKey = key;
     const stars = campaignStars(camp);
     const need = base.towns.reduce((m, t) => Math.max(m, t.starsToEnter ?? 0), 0);
+    /**
+     * The campaign's stars as a bar towards all of them, with a notch where the final opens; the
+     * explanation shows on hover, or on a tap (the map is not re-rendered, so the class is toggled).
+     */
+    const campaignProgress = (got: number, gate: number, max: number, finished: boolean) => {
+      const finalTown = base.towns.find((t) => t.starsToEnter);
+      const tip = h(
+        'span',
+        { class: 'camp-tip', role: 'tooltip' },
+        `Звёзды дают проходы городов: до 3 за проход, по 3 прохода в городе — всего ${max}. `,
+        finished ? 'Кампания пройдена.' : got < gate ? `Финал${finalTown ? ` (${finalTown.name})` : ''} откроется с ${gate} ★ — осталось ${gate - got}.` : 'Финал открыт.',
+      );
+      const el = h(
+        'button',
+        { class: 'camp-progress', 'aria-label': `Звёзды кампании: ${got} из ${max}` },
+        h('b', {}, `★ ${got}`),
+        h(
+          'span',
+          { class: 'camp-bar' },
+          h('i', { style: `width: ${Math.round((Math.min(got, max) / max) * 100)}%` }),
+          gate ? h('span', { class: `camp-gate${got >= gate ? ' open' : ''}`, style: `left: ${Math.round((gate / max) * 100)}%`, title: `Финал: ${gate} ★` }) : null,
+        ),
+        h('small', {}, `${max}`),
+        tip,
+      );
+      el.onclick = () => el.classList.toggle('open');
+      return el;
+    };
     const canvas = h('canvas', { class: 'camp-canvas' });
     drawRegion(canvas, base.towns);
     const pins = base.towns.map((t, i) => {
@@ -4659,7 +4687,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         { class: 'camp-top' },
         h('b', {}, 'Кампания'),
         h('span', { class: `camp-side ${camp.side}` }, sideNames[camp.side]),
-        h('span', { class: 'camp-stars' }, `★ ${stars}`, h('small', {}, camp.finished ? ' · кампания пройдена' : stars < need ? ` · для финала нужно ${need}` : ' · финал открыт')),
+        campaignProgress(stars, need, base.towns.length * 9, camp.finished),
         h('button', { onclick: () => openModal('office') }, 'Кабинет редактора'),
         h('button', { class: 'ghost', onclick: () => openModal('campaignNew') }, 'Новая кампания'),
         h(

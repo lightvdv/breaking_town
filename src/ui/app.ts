@@ -140,13 +140,12 @@ import { h, pct, svg } from './dom';
 import { loadSave, writeSave } from './save';
 import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
-import { pendingNotes } from './guide';
 import { currentStep, grantFor, issueFlags, skipStep, tipFor, stepTargets, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
 import { recordOf, starLine, submitRecord } from './records';
 import { collectable, levelCost, levelUp, loadCollection, MAX_LEVEL, openPack, packs, rarityNames, rewardFor, saveCollection, tagNames, type Collection, type PackResult } from './collection';
 import { campaignStars, loadCampaign, newCampaign, PASSES, passNames, passState, saveCampaign, townStars, townState, winTown, type Campaign } from './campaign';
 import { drawRegion, drawTownArt, MAP_H, MAP_W, townIcon } from './campaignMap';
-import { aboutLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillTiers, topicLine, type RepStatus } from './reporterBar';
+import { aboutLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillTiers, type RepStatus } from './reporterBar';
 import {
   priceLabels,
   rivalNames,
@@ -182,11 +181,12 @@ interface Draft {
 
 /** «Сводка»'s tabs, in order: the windows behind the top bar's tiles and the cards. */
 const SUMMARY_TABS = [
-  { id: 'shop', name: 'Карты' },
-  { id: 'money', name: 'Деньги' },
-  { id: 'readers', name: 'Читатели' },
-  { id: 'reputation', name: 'Репутация' },
-  { id: 'city', name: 'Город' },
+  { id: 'shop', name: 'Карты', icon: 'cards' },
+  { id: 'money', name: 'Деньги', icon: 'money' },
+  { id: 'readers', name: 'Читатели', icon: 'readers' },
+  { id: 'reputation', name: 'Репутация', icon: 'reputation' },
+  { id: 'city', name: 'Город', icon: 'city' },
+  { id: 'population', name: 'Жители', icon: 'residents' },
 ] as const;
 
 type Modal =
@@ -1278,7 +1278,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
                 'span',
                 { class: 'opt' },
                 h('span', { class: 'opt-title' }, storyTitle(c, x, draftOf(x).distortion)),
-                h('span', { class: 'opt-head' }, tierMeter(x.tier, tierLabels[x.tier]), h('small', {}, placeName(whereOf(x)))),
+                h('span', { class: 'opt-head' }, tierMeter(x.tier), h('small', {}, placeName(whereOf(x)))),
               ),
             ),
           )
@@ -1341,10 +1341,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   /** A story's level as a meter (CONCEPT.md §7.3): three bars, the lit ones by tier, and the word. */
-  function tierMeter(tier: number, title: string, raised = false): HTMLElement {
+  /** The story's level after its headline: a plain mark, no tooltip. */
+  function tierMeter(tier: number, raised = false): HTMLElement {
     return h(
       'span',
-      { class: `tier-meter t${tier}`, title },
+      { class: `tier-meter t${tier}` },
       h('span', { class: 'tier-bars', 'aria-hidden': 'true' }, ...[1, 2, 3].map((i) => h('i', { class: i <= tier ? 'on' : '' }))),
       h('b', {}, raised ? `${tierLabels[tier]} ↑` : tierLabels[tier]),
     );
@@ -1805,62 +1806,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
     spotFrame = requestAnimationFrame(drawShade);
   }
 
-  /** First-encounter notes, one at a time: what is on screen for the first time (CONCEPT.md §7.3 «Подсказки»). */
+  /** The sticker over the paper: the tutorial's step; an ordinary game shows no notes (CONCEPT.md §7.3). */
   function renderGuide(): void {
     if (tutorial) return renderTutorial();
     guideNote.classList.remove('tutorial-note');
-    const show = settings.hints && issueOpen && !searching && !busy && !state.outcome;
-    const notes = show ? pendingNotes({ state, c, report, rivalShown: !rivalNotice.hidden }, settings.notesSeen) : [];
-    guideNote.hidden = !notes.length;
-    if (!notes.length) return;
-    const n = notes[0];
-    const fold = (open: boolean) => (e: Event) => {
-      e.stopPropagation();
-      settings.guideOpen = open;
-      saveSettings(settings);
-      render();
-    };
-    // «Подсказка: подача» — no day numbers, the note says what it is about.
-    const head = () => h('b', { class: 'guide-title' }, `Подсказка: ${n.title.charAt(0).toLowerCase()}${n.title.slice(1)}`);
-    guideNote.classList.toggle('folded', !settings.guideOpen);
-    // Folded (the default): one line with the title; a press unfolds it, and it stays open on later days.
-    if (!settings.guideOpen) {
-      guideNote.replaceChildren(
-        h(
-          'button',
-          { class: 'guide-toggle', title: 'Показать подсказку', 'aria-expanded': 'false', onclick: fold(true) },
-          head(),
-          h('span', { class: 'guide-arrow' }, '▾'),
-        ),
-      );
-      return;
-    }
-    // Some notes lead straight to what they talk about (CONCEPT.md §7.3).
-    const act = n.action;
-    const go = () => {
-      settings.notesSeen = [...settings.notesSeen, n.id];
-      if (act?.open === 'rival') settings.rivalOpen = true;
-      saveSettings(settings);
-      if (act?.open === 'shop' || act?.open === 'team') openModal(act.open);
-      else render();
-    };
-    guideNote.replaceChildren(
-      h('div', { class: 'guide-text' }, head(), n.text),
-      h('button', { class: 'guide-hide', title: 'Свернуть подсказки', 'aria-expanded': 'true', onclick: fold(false) }, '▴'),
-      ...(act ? [h('button', { class: 'guide-go', onclick: go }, act.label)] : []),
-      h(
-        'button',
-        {
-          class: 'guide-ok',
-          onclick: () => {
-            settings.notesSeen = [...settings.notesSeen, n.id];
-            saveSettings(settings);
-            render();
-          },
-        },
-        notes.length > 1 ? 'Дальше ▸' : 'Понятно',
-      ),
-    );
+    guideNote.hidden = true;
   }
 
   /** The mayor's reconciliation notice, next to the exposure notice (CONCEPT.md §5.5). */
@@ -2510,7 +2460,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       : null;
     // The better the story, the louder its label looks (CONCEPT.md §7.3).
     // The level is not a control: three bars and a word right after the headline.
-    const tierLabel = tierMeter(tier, raised ? `Было: ${tierLabels[card.tier].toLowerCase()} — уровень поднят искажением` : `${tierLabels[tier]} новость`, raised);
+    const tierLabel = tierMeter(tier, raised);
     const info = open
       ? h(
           'div',
@@ -2740,7 +2690,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'ghost-top' },
         h('img', { src: `${assetBase}sprites/ui/truth_${p.truth}.png`, alt: '', width: 16, height: 16 }),
-        tierMeter(p.tier, `${tierLabels[p.tier]} новость`),
+        tierMeter(p.tier),
       ),
       h('b', { class: 'ghost-title' }, p.title),
     );
@@ -3135,16 +3085,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function teamContent(): HTMLElement[] {
     const max = c.balance.maxReporters;
     // Every reporter here looks like the head of their own window (CONCEPT.md §7.3 «Редакция»).
-    const row = (id: string, price: string, action: HTMLElement | null) => {
-      const r = reporterOf(c, id);
-      const hired = state.reporters.includes(id);
-      return reporterHead(id, {
+    const row = (id: string, price: string, action: HTMLElement | null) =>
+      reporterHead(id, {
         key: `team:${id}:`,
         compact: true,
-        lines: hired ? [`${topicLine(r)} · ${price}`] : [r.bio, `${topicLine(r)} · ${price}`],
+        // Who they are and their topics sit behind the «?» by the name; the hiring price is on the button.
+        lines: [price],
         action,
       });
-    };
     return [
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
       h('h3', { class: 'section' }, `Штат (${state.reporters.length} / ${max})`),
@@ -3194,7 +3142,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         const r = reporterOf(c, id);
         return row(
           id,
-          `найм ${r.hireCost} · зарплата ${r.salary} в день`,
+          `зарплата ${r.salary} в день`,
           h(
             'button',
             { class: state.money >= r.hireCost ? 'primary' : '', 'data-tut': 'hire', disabled: full || state.money < r.hireCost || !!state.outcome, onclick: act(() => hireFromAgency(state, c, id)) },
@@ -3295,6 +3243,18 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * A card of the collection (CONCEPT.md §3.5б): its rarity frame, icon, name, level stars, directions,
    * what it gives and costs. Locked ones are a silhouette with their rarity only.
    */
+  /**
+   * A card's picture across its top (`sprites/cards/<id>.png`); until it is drawn, its glyph on a
+   * panel of the same size, so the card keeps its shape.
+   */
+  function cardArt(u: UpgradeDef): HTMLElement {
+    const art = h('div', { class: 'card-art', 'aria-hidden': 'true' }, h('span', { class: 'card-glyph' }, u.icon ?? '★'));
+    const img = h('img', { src: `${assetBase}sprites/cards/${u.id}.png`, alt: '', loading: 'lazy' }) as HTMLImageElement;
+    img.onerror = () => img.remove();
+    art.append(img);
+    return art;
+  }
+
   function cardFace(u: UpgradeDef, opts: { level?: number; locked?: boolean; fresh?: boolean; foot?: HTMLElement | null; extra?: HTMLElement | null } = {}): HTMLElement {
     const rarity = u.rarity ?? 'common';
     if (opts.locked) {
@@ -3464,15 +3424,34 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const lines = c.synergies
       .map((x) => ({ x, n: owned.filter((u) => u.tags?.includes(x.tag)).length }))
       .filter((y) => y.n > 0)
-      .map(({ x, n }) =>
-        h(
-          'p',
+      .map(({ x, n }) => {
+        // How many of its cards the paper has, as stars; what the set gives hides behind «?».
+        const key = `set:${x.tag}`;
+        const info = openInfo.has(key);
+        const got = Math.min(n, x.count);
+        return h(
+          'div',
           { class: `set-line${active.includes(x.tag) ? ' on' : ''}` },
           h('span', { class: `tag-chip tag-${x.tag}` }, tagNames[x.tag] ?? x.tag),
-          h('b', {}, ` ${x.name} ${Math.min(n, x.count)}/${x.count}`),
-          active.includes(x.tag) ? ` — действует: ${x.description}` : ` — ещё ${x.count - n}: ${x.description}`,
-        ),
-      );
+          h('b', {}, x.name),
+          h('span', { class: 'set-stars', title: `${got} из ${x.count}` }, '★'.repeat(got) + '☆'.repeat(x.count - got)),
+          h(
+            'button',
+            {
+              class: `section-info${info ? ' on' : ''}`,
+              title: info ? 'Скрыть' : 'Что даёт набор?',
+              'aria-expanded': String(info),
+              onclick: () => {
+                if (info) openInfo.delete(key);
+                else openInfo.add(key);
+                render();
+              },
+            },
+            '?',
+          ),
+          info ? h('p', { class: 'hint info-text' }, active.includes(x.tag) ? `Действует: ${x.description}` : `Ещё ${x.count - n} — и ${x.description.charAt(0).toLowerCase()}${x.description.slice(1)}`) : null,
+        );
+      });
     return lines.length ? [h('h3', { class: 'section' }, 'Наборы'), ...lines] : [];
   }
 
@@ -3517,101 +3496,117 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const taken = c.forks.map((f) => forkChoice(state, f)).filter((x): x is string => !!x).map((id) => c.upgrades.find((u) => u.id === id)!);
     const open = openForks(state, c)[0];
     const next = c.forks.find((f) => f.day > state.turn && !forkChoice(state, f));
-    const forkSide = (id: string) => {
-      const u = c.upgrades.find((x) => x.id === id)!;
-      return h(
-        'div',
-        { class: 'fork-side' },
-        h('div', { class: 'fork-title' }, icon(u), h('b', {}, u.name)),
-        h('p', { class: 'upg-plus' }, `+ ${u.description}`),
-        minus(u),
-        nowLine(u),
-        h('div', { class: 'fork-buy' }, price(u)),
-      );
-    };
     const levelOf = (u: UpgradeDef) => state.collection?.[u.id] ?? 1;
-    const card = (u: UpgradeDef) => {
+    const upgrade = (id: string) => c.upgrades.find((x) => x.id === id)!;
+    /**
+     * A card (CONCEPT.md §7.3): its picture across the top, the rarity, the name with «?» (what it gives
+     * hides there), the tags and level stars on one line, and an optional foot — «Сейчас» and «Взять».
+     */
+    const cardView = (u: UpgradeDef, foot: HTMLElement | null, cls = '') => {
       const line = series(u);
       const rarity = u.rarity ?? 'common';
       const level = levelOf(u);
+      const key = `card:${u.id}`;
+      const info = openInfo.has(key);
       return h(
         'div',
-        { class: `deck-card rarity-${rarity}${u.ability ? ' ability' : ''}` },
-        h('span', { class: `deck-tag tag-${rarity}` }, u.ability ? `приём · ${rarityNames[rarity]}` : u.cash ? `касса · ${rarityNames[rarity]}` : rarityNames[rarity]),
+        { class: `deck-card rarity-${rarity}${u.ability ? ' ability' : ''}${cls ? ` ${cls}` : ''}` },
+        cardArt(u),
+        h('span', { class: `deck-tag tag-${rarity}` }, u.fork ? 'развилка' : u.ability ? `приём · ${rarityNames[rarity]}` : u.cash ? `касса · ${rarityNames[rarity]}` : rarityNames[rarity]),
         u.id === best ? h('span', { class: 'best-mark' }, 'выгоднее всего') : null,
-        icon(u),
-        h('b', {}, line ? `${seriesNames[u.series!] ?? u.name}: ${u.name.toLowerCase()}` : u.name, line ? pips(line) : null),
-        h('span', { class: 'coll-level', title: `Уровень карты в вашей коллекции: ${level} из ${MAX_LEVEL}` }, '★'.repeat(level) + '☆'.repeat(MAX_LEVEL - level), level > 1 ? h('small', {}, ` польза ×${b.cardLevelPower[level - 1]}`) : null),
-        u.tags?.length ? h('span', { class: 'coll-tags' }, ...u.tags.map((t) => h('span', { class: `tag-chip tag-${t}` }, tagNames[t] ?? t))) : null,
-        h('p', { class: 'upg-plus' }, `+ ${u.description}`),
-        minus(u),
-        options.get(u.id) && !options.get(u.id)!.unlocked ? h('p', { class: 'req' }, requirementText(u.requires)) : null,
-        h('div', { class: 'deck-foot' }, nowLine(u, false) ?? h('span'), price(u)),
+        h(
+          'div',
+          { class: 'card-name' },
+          h('b', {}, line ? `${seriesNames[u.series!] ?? u.name}: ${u.name.toLowerCase()}` : u.name, line ? pips(line) : null),
+          h(
+            'button',
+            {
+              class: `section-info${info ? ' on' : ''}`,
+              title: info ? 'Скрыть' : 'Что даёт карта?',
+              'aria-expanded': String(info),
+              onclick: () => {
+                if (info) openInfo.delete(key);
+                else openInfo.add(key);
+                render();
+              },
+            },
+            '?',
+          ),
+        ),
+        h(
+          'div',
+          { class: 'card-meta' },
+          ...(u.tags ?? []).map((t) => h('span', { class: `tag-chip tag-${t}` }, tagNames[t] ?? t)),
+          u.fork ? null : h('span', { class: 'coll-level', title: `Уровень карты в вашей коллекции: ${level} из ${MAX_LEVEL}` }, '★'.repeat(level) + '☆'.repeat(MAX_LEVEL - level)),
+        ),
+        ...(info
+          ? [
+              h('p', { class: 'upg-plus' }, `+ ${u.description}`, level > 1 && !u.fork ? h('small', {}, ` · польза ×${b.cardLevelPower[level - 1]}`) : null),
+              minus(u),
+              options.get(u.id) && !options.get(u.id)!.unlocked ? h('p', { class: 'req' }, requirementText(u.requires)) : null,
+            ]
+          : []),
+        foot,
       );
     };
-    const owned = c.upgrades.filter((u) => state.upgrades.includes(u.id) && !(u.series && c.upgrades.filter((x) => x.series === u.series && state.upgrades.includes(x.id)).pop() !== u));
+    // On offer: «Сейчас» on the left and the button on the right, one row at the card's bottom.
+    const offerCard = (u: UpgradeDef) => cardView(u, h('div', { class: 'deck-foot' }, nowLine(u, !!u.fork) ?? h('span'), price(u)));
+    // What is coming: a bar for each event, filled as its day nears (CONCEPT.md §3.5б).
     const days = Math.max(0, state.shopRefreshTurn - state.turn);
+    const bar = (label: string, left: number, span: number) =>
+      h(
+        'div',
+        { class: 'event-bar' },
+        h('span', { class: 'event-name' }, label),
+        h('span', { class: 'event-track' }, h('i', { style: `width: ${Math.round(Math.max(0, Math.min(1, 1 - left / Math.max(1, span))) * 100)}%` })),
+        h('small', {}, left <= 1 ? 'завтра' : `через ${left} ${plural(left, 'день', 'дня', 'дней')}`),
+      );
+    const prevFork = next ? Math.max(1, ...c.forks.filter((f) => f.day < next.day).map((f) => f.day)) : 1;
+    const events = [...(next ? [bar(`Развилка «${next.title}»`, next.day - state.turn, next.day - prevFork)] : []), ...(deck.length ? [] : [bar('Предложение совета', days, b.shopRefreshDays)])];
+    const owned = c.upgrades.filter((u) => state.upgrades.includes(u.id) && !(u.series && c.upgrades.filter((x) => x.series === u.series && state.upgrades.includes(x.id)).pop() !== u));
     return [
       state.vouchers ? h('p', { class: 'good voucher-line' }, `За задания: из предложения совета можно взять ещё ${state.vouchers === 1 ? 'одну карту' : `${state.vouchers} карты`}.`) : null,
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
       taken.length ? h('div', { class: 'paper-style' }, ...taken.map((u) => h('span', { class: 'style-chip' }, icon(u, 'style-icon'), u.name))) : null,
+      events.length ? h('div', { class: 'event-bars' }, ...events) : null,
       ...(open
         ? [
-            ...infoSection('fork', `Развилка: ${open.title.toLowerCase()}`, 'Можно взять только одно из двух — навсегда. Второй вариант пропадёт. Развилки открываются по дням партии.'),
-            h('div', { class: 'fork' }, forkSide(open.options[0]), h('span', { class: 'fork-or' }, 'или'), forkSide(open.options[1])),
+            h('h3', { class: 'section' }, `Развилка: ${open.title.toLowerCase()} — одна из двух навсегда`),
+            h('div', { class: 'fork' }, offerCard(upgrade(open.options[0])), h('span', { class: 'fork-or' }, 'или'), offerCard(upgrade(open.options[1]))),
           ]
         : []),
-      next ? h('p', { class: 'fork-next' }, `Следующая развилка — «${next.title}»: ${next.options.map((id) => c.upgrades.find((u) => u.id === id)!.name.toLowerCase()).join(' или ')} (на ${next.day}-й день)`) : null,
-      ...infoSection(
-        'deck',
-        !deck.length ? 'Совет директоров' : state.shopPicks ? 'Можно взять ещё одну — за награду задания' : 'Совет директоров предлагает — возьмите одну',
-        `Каждые ${b.shopRefreshDays} дня совет присылает ${b.shopOfferSize} карты из вашей коллекции: одну берёте бесплатно, остальные уходят. Купить карты нельзя — деньги газеты идут в «Чёрную кассу». Не нравятся все три — «Другие три» за ${b.shopRefreshCost} ₽, пока карту не взяли. Редкие и легендарные выпадают реже. Звёзды — уровень карты: улучшайте её в «Кабинете редактора» между партиями. Три карты одного направления дают бонус набора. «Приём» — значок вверху экрана рядом с «Чёрной кассой», срабатывает раз в несколько дней.`,
-      ),
-      deck.length && !state.shopPicks
-        ? h(
-            'div',
-            { class: 'deck-head' },
-            h(
-              'button',
-              {
-                disabled: state.money < b.shopRefreshCost || !!state.outcome,
-                onclick: () => {
-                  try {
-                    refreshShop(state, c);
-                    error = '';
-                  } catch (e) {
-                    error = e instanceof Error ? e.message : String(e);
-                  }
-                  render();
-                },
-              },
-              `Другие три −${b.shopRefreshCost}`,
-            ),
-          )
-        : null,
-      deck.length ? h('div', { class: 'deck' }, ...deck.map(card)) : h('p', { class: 'hint' }, `${state.shopPicks ? 'Карта взята. ' : ''}Следующее предложение совета — ${days > 0 ? `через ${days} ${plural(days, 'день', 'дня', 'дней')}` : 'завтра'}.`),
-      // Sets of three cards of one direction (CONCEPT.md §3.5б): what is gathered and what it gives.
-      ...setLines(),
-      ...(owned.length
+      ...(deck.length
         ? [
-            h('h3', { class: 'section' }, 'Ваша газета'),
             h(
               'div',
-              { class: 'owned-list' },
-              ...owned.map((u) => {
-                const line = series(u);
-                return h(
-                  'span',
-                  { class: `owned-chip rarity-${u.rarity ?? 'common'}`, title: `${u.description}${u.drawback ? ` ${u.drawback}` : ''}` },
-                  icon(u, 'style-icon'),
-                  line ? seriesNames[u.series!] ?? u.name : u.name,
-                  line ? pips(line) : null,
-                  u.fork ? null : h('small', { class: 'owned-level' }, ' ' + '★'.repeat(levelOf(u))),
-                );
-              }),
+              { class: 'deck-head' },
+              h('h3', { class: 'section' }, state.shopPicks ? 'Можно взять ещё одну — за награду задания' : 'Совет директоров предлагает — возьмите одну'),
+              state.shopPicks
+                ? null
+                : h(
+                    'button',
+                    {
+                      disabled: state.money < b.shopRefreshCost || !!state.outcome,
+                      onclick: () => {
+                        try {
+                          refreshShop(state, c);
+                          error = '';
+                        } catch (e) {
+                          error = e instanceof Error ? e.message : String(e);
+                        }
+                        render();
+                      },
+                    },
+                    `Другие три −${b.shopRefreshCost}`,
+                  ),
             ),
+            h('div', { class: 'deck' }, ...deck.map(offerCard)),
           ]
         : []),
+      // Sets of three cards of one direction (CONCEPT.md §3.5б): what is gathered and what it gives.
+      ...setLines(),
+      // What the paper has: the same cards, without «Сейчас» and «Взять».
+      ...(owned.length ? [h('h3', { class: 'section' }, 'Ваша газета'), h('div', { class: 'deck owned-deck' }, ...owned.map((u) => cardView(u, null, 'owned')))] : []),
     ].filter((x): x is HTMLElement => x !== null);
   }
 
@@ -3810,7 +3805,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
       metric('Экономика', 'economy'),
       metric('Настроение', 'mood'),
       metric('Порядок и безопасность', 'order'),
-      h('button', { class: 'primary', onclick: () => openModal('population') }, 'Жители по группам →'),
     ];
   }
 
@@ -3884,7 +3878,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...peopleContent(),
       h('h3', { class: 'section' }, 'Группы'),
       ...rows,
-      h('button', { onclick: () => openModal('city') }, '← Город'),
     ];
   }
 
@@ -4130,9 +4123,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
    */
   function cashContent(): (HTMLElement | null)[] {
     const active = new Set(activeCash().map((x) => x.def.id));
-    const closed = c.cash.length - cashMoves(state, c).length;
     return [
-      h('p', { class: 'hint' }, `У вас ${state.money} ₽ · расходы ${totalUpkeep(state, c)} ₽ в день. Деньги газеты идут сюда — на разовые ходы. После хода он ждёт несколько дней.`),
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
       h(
         'div',
@@ -4176,7 +4167,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
           );
         }),
       ),
-      ...(closed ? [h('p', { class: 'hint cash-more' }, `Ещё ${closed} ${plural(closed, 'ход откроет', 'хода откроют', 'ходов откроют')} карты совета директоров — с пометкой «касса».`)] : []),
     ];
   }
 
@@ -4438,7 +4428,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       report: report ? `Итоги хода ${report.turn}` : 'Итоги хода',
       debug: 'Отладка',
       city: 'Сводка',
-      population: 'Жители',
+      population: 'Сводка',
       money: 'Сводка',
       readers: 'Сводка',
       reputation: 'Сводка',
@@ -4460,13 +4450,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const body =
       modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'investigate' ? investigateContent() : modal === 'dig' ? digContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'tutorial' ? tutorialStartContent() : modal === 'office' ? officeContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : modal === 'cash' ? cashContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
+    // «Сводка» (CONCEPT.md §7.3): one window, its tabs in a column on the left of the content.
+    const tab = SUMMARY_TABS.find((t) => t.id === modal);
     const panel = h(
       'div',
-      { class: `modal window${modal === 'office' ? ' office' : ''}` },
-      h('div', { class: 'modal-title' }, h('h2', {}, titles[modal]), h('button', { class: 'icon-btn', title: 'Закрыть', onclick: () => openModal(null) }, '×')),
-      // «Сводка» (CONCEPT.md §7.3): one window, a tab for each of its parts.
-      SUMMARY_TABS.some((t) => t.id === modal) ? summaryTabs(modal) : null,
-      h('div', { class: 'modal-body' }, ...body),
+      { class: `modal window${modal === 'office' ? ' office' : ''}${tab ? ' summary' : ''}` },
+      h('div', { class: 'modal-title' }, h('h2', {}, titles[modal], tab ? h('span', { class: 'summary-sub' }, ` · ${tab.name}`) : null), h('button', { class: 'icon-btn', title: 'Закрыть', onclick: () => openModal(null) }, '×')),
+      tab ? h('div', { class: 'summary-wrap' }, summaryTabs(modal), h('div', { class: 'modal-body' }, ...body)) : h('div', { class: 'modal-body' }, ...body),
     );
     modalLayer.replaceChildren(panel);
     modalLayer.onclick = (e) => {
@@ -4480,7 +4470,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h(
       'div',
       { class: 'summary-tabs', role: 'tablist' },
-      ...SUMMARY_TABS.map((t) => h('button', { class: `summary-tab${t.id === on ? ' on' : ''}`, role: 'tab', 'aria-selected': String(t.id === on), onclick: () => openModal(t.id) }, t.name)),
+      ...SUMMARY_TABS.map((t) =>
+        h(
+          'button',
+          { class: `summary-tab${t.id === on ? ' on' : ''}`, role: 'tab', title: t.name, 'aria-selected': String(t.id === on), onclick: () => openModal(t.id) },
+          h('img', { src: `${assetBase}sprites/ui/${t.icon}.png`, alt: '', width: 16, height: 16 }),
+          h('span', {}, t.name),
+        ),
+      ),
     );
   }
 
@@ -4702,8 +4699,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'span',
           { class: 'camp-assets' },
-          h('b', { title: `Звёзды кампании. Финал открывается с ${need} ★` }, `★ ${stars}`),
-          h('b', { class: 'camp-ties', title: 'Связи холдинга — на карты в «Кабинете редактора»' }, `✦ ${collection.currency}`),
+          h('span', { class: 'camp-asset', title: `Звёзды кампании. Финал открывается с ${need} ★` }, h('b', {}, `★ ${stars}`), h('small', {}, 'звёзды')),
+          h('span', { class: 'camp-asset camp-ties', title: 'Связи холдинга — на карты в «Кабинете редактора»' }, h('b', {}, `✦ ${collection.currency}`), h('small', {}, 'связи')),
         ),
         h('button', { class: 'camp-office', onclick: () => openModal('office') }, 'Кабинет редактора'),
         h('span', { class: 'camp-menu-wrap' }, menuButton, menu),
@@ -5030,7 +5027,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   function settingsContent(): HTMLElement[] {
-    const toggle = (label: string, hint: string, key: 'fastSearch' | 'skipCutscenes' | 'hints') =>
+    const toggle = (label: string, hint: string, key: 'fastSearch' | 'skipCutscenes') =>
       h(
         'label',
         { class: 'setting' },
@@ -5048,19 +5045,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('h3', { class: 'section' }, 'Анимации'),
       toggle('Быстрый поиск', 'находки репортёров появляются сразу, без анимации', 'fastSearch'),
       toggle('Без роликов дня', 'не показывать драки, протесты и другие яркие события перед выпуском', 'skipCutscenes'),
-      h('h3', { class: 'section' }, 'Подсказки'),
-      toggle('Подсказки над газетой', 'короткая записка, когда в игре впервые появляется что-то новое: конфликт, конкурент, разоблачение…', 'hints'),
-      h(
-        'button',
-        {
-          onclick: () => {
-            settings.notesSeen = [];
-            saveSettings(settings);
-            render();
-          },
-        },
-        'Показать прочитанные подсказки снова',
-      ),
       h('h3', { class: 'section' }, 'Вступление'),
       h('button', { onclick: () => void watchIntro() }, 'Посмотреть вступление ещё раз'),
     ];
@@ -5115,7 +5099,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('h3', { class: 'section' }, 'Что беречь'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.'),
       block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. Деньги идут на зарплаты, новых репортёров и разовые ходы «Чёрной кассы» (💰 вверху; рядом — значки приёмов от карт).'),
-      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху) — карты газеты, деньги, читатели, репутация и город; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые, а на развилках придётся взять одно из двух навсегда. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
+      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые, а на развилках придётся взять одно из двух навсегда. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
       h('h3', { class: 'section' }, 'Чем ещё бить по городу'),
       block('groups/workers', 'Ссорьте группы', 'Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.'),
       block('ui/guardian', '«Голос города»', `С ${b.rivalStartTurn.destroy}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.`),

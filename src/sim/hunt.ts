@@ -69,6 +69,7 @@ export function pressHunt(state: GameState, c: Content, published: PublishedNews
     stain = clamp(stain + huntStainOf(c, n.impact, believed, getModifiers(state, c).stainMul));
   }
   state.stains[camp.building] = stain;
+  camp.hitToday = hit;
   if (hit) {
     camp.hits++;
     camp.step = Math.min(b.huntMaxSteps, camp.step + 1);
@@ -87,7 +88,11 @@ export function quitStained(state: GameState, c: Content, rng: RngState): void {
     if (x.open && x.type !== 'shop' && x.type !== 'entertainment') {
       for (const r of state.residents) if (r.status === 'active' && r.job === x.id && chance(rng, stain * c.balance.stainQuit)) r.job = null;
     }
-    const left = stain - c.balance.stainDecay;
+    // A small target (the police, a bar…) hit today keeps most of its stain: one scandal after another
+    // sticks to it (`stainHold`); it fades in full on the days the hunt misses. Big places shake a
+    // scandal off every night.
+    const held = state.hunt?.building === Number(id) && state.hunt.hitToday && x.jobs <= c.balance.stainShutdownJobs;
+    const left = stain - c.balance.stainDecay * (held ? 1 - c.balance.stainHold : 1);
     if (left > 0.001) state.stains[Number(id)] = left;
     else delete state.stains[Number(id)];
   }

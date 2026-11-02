@@ -124,8 +124,9 @@ export function isHarmful(effect: CardEffect | null): boolean {
 function baseImpact(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, repeatsThisTurn: number, hunt: boolean): number {
   const b = c.balance;
   const streak = (state.topicStreak[tpl.topic] ?? 0) + repeatsThisTurn;
-  // A hunt story grows with every day in a row (CONCEPT.md §3.6а), and readers tire of it less.
-  const fatigue = hunt ? Math.pow(1 - b.fatiguePerRepeat * b.huntFatigueShare, streak) * huntBonus(state, c, mods) : Math.pow(1 - b.fatiguePerRepeat, streak);
+  // A hunt story grows with every day in a row (CONCEPT.md §3.6а), and readers tire of it less —
+  // and only up to `huntFatigueCap` days: a hunt keeps its topic alive however long it runs.
+  const fatigue = hunt ? Math.pow(1 - b.fatiguePerRepeat * b.huntFatigueShare, Math.min(streak, b.huntFatigueCap)) * huntBonus(state, c, mods) : Math.pow(1 - b.fatiguePerRepeat, streak);
   const scope = card.scope === 'global' ? b.globalEffectMul : 1;
   const placement = b.placementImpact[pub.placement];
   // A yellow layout makes frightening stories hit harder, a solid one softer (CONCEPT.md §3.5).

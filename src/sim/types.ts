@@ -540,6 +540,10 @@ export interface Balance {
   huntMaxSteps: number;
   /** Stain a hunt story leaves on its place per impact × share of viewers who took it in (`huntStainOf`).*/
   huntStain: number;
+  /** Share of the night's fading a small hunted place keeps off on a day it was hit (1 = none fades). */
+  stainHold: number;
+  /** Days of topic fatigue a hunt story feels at most. */
+  huntFatigueCap: number;
   /** Readers who doubted a hunt story still count for this much of a believer («дыма без огня не бывает»). */
   huntDoubtShare: number;
   /** Chance that a free reporter digs up a story about the target instead of searching at random. */
@@ -1001,6 +1005,8 @@ export interface HuntState {
   step: number;
   /** Issues that hit it in all. */
   hits: number;
+  /** Today's issue hit it: a small target's stain fades less tonight (`stainHold`). */
+  hitToday?: boolean;
 }
 
 export interface Building {

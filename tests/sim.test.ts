@@ -14,7 +14,7 @@ import { townOf, withTown } from '../src/sim/town';
 import { goalOf, goalProgress, updateGoal } from '../src/sim/goals';
 import { choiceId, composeTown, generateTown, powerMul, townPower } from '../src/sim/townGen';
 import { checkOutcome } from '../src/sim/game';
-import { settleHunt } from '../src/sim/hunt';
+import { quitStained, settleHunt } from '../src/sim/hunt';
 import { crimeEvents, crimePressure, gangDue, heatCrime, streetCrime } from '../src/sim/crime';
 import { applyCityEffect, computeMetrics } from '../src/sim/city';
 import {
@@ -51,6 +51,8 @@ import {
   tierWeights,
   totalUpkeep,
   maxDistortion,
+  isHuntStory,
+  policeLost,
   playTurn,
   purchase,
   callAgency,
@@ -1931,5 +1933,77 @@ describe('crime and order agree (CONCEPT.md §5.6)', () => {
       const cap = 1 - streetCrime(s, content) * b.crimeOrder - (s.crimeBoost > 0 ? b.gangOrderLoss : 0) - (s.buildings.some((x) => x.type === 'police') && !s.buildings.some((x) => x.type === 'police' && x.open) ? b.policeClosedOrder : 0);
       expect(m.order).toBeLessThanOrEqual(cap + 1e-9);
     }
+  });
+});
+
+describe('hunting the police (CONCEPT.md §3.6а, §5.6)', () => {
+  const crimeCard = (s: GameState, police: boolean): CardInstance => {
+    const tpl = content.cards.find((t) => t.topic === 'crime' && !t.arc && !t.conflict && (police ? t.requires === 'police' : !t.requires) && t.effects.some((e) => e && e.type !== 'moodUp'))!;
+    const card: CardInstance = { uid: s.nextUid++, templateId: tpl.id, baseTruth: tpl.baseTruth, createdTurn: s.turn, tier: 2, scope: 'local', reporterId: s.reporters[0] };
+    if (police) card.building = s.buildings.find((x) => x.type === 'police')!.id;
+    s.hand.push(card);
+    return card;
+  };
+  const loudest = (card: CardInstance) => {
+    for (let d = maxDistortion(card); d >= 0; d--) if (storyEffect(content, card, d)?.type !== 'moodUp' && storyEffect(content, card, d)) return d;
+    return 0;
+  };
+
+  it('a hunt keeps its topic alive: the fatigue of a story about the target stops growing', () => {
+    const s = createGame(content, 51);
+    const police = s.buildings.find((x) => x.type === 'police')!;
+    startHunt(s, police.id);
+    s.hunt!.step = content.balance.huntMaxSteps;
+    const own = crimeCard(s, true);
+    const other = crimeCard(s, false);
+    const mods = getModifiers(s, content);
+    const impactAt = (card: CardInstance, streak: number) => {
+      s.topicStreak.crime = streak;
+      return previewPublication(s, content, mods, { cardUid: card.uid, placement: 2, distortion: loudest(card) }).impact;
+    };
+    const cap = content.balance.huntFatigueCap;
+    expect(impactAt(own, cap + 6)).toBeCloseTo(impactAt(own, cap));
+    // An ordinary crime story tires the readers on and on.
+    expect(impactAt(other, cap + 6)).toBeLessThan(impactAt(other, cap) * 0.5);
+    // A crime story about another place does not hit the hunted station.
+    expect(isHuntStory(s, other, storyEffect(content, other, loudest(other)))).toBe(false);
+  });
+
+  it('the target keeps its stain on a day it is hit and loses some on a day it is not', () => {
+    const s = createGame(content, 52);
+    const police = s.buildings.find((x) => x.type === 'police')!;
+    startHunt(s, police.id);
+    const card = crimeCard(s, true);
+    s.hand = [card];
+    playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 2, distortion: loudest(card) }] });
+    // A small place hit today loses only part of the night's fading.
+    const b = content.balance;
+    expect(s.stains[police.id]).toBeGreaterThan(0);
+    const before = s.stains[police.id];
+    s.hunt!.hitToday = true;
+    quitStained(s, content, s.rng);
+    expect(s.stains[police.id] ?? 0).toBeCloseTo(before - b.stainDecay * (1 - b.stainHold));
+    s.hunt!.hitToday = false;
+    const missed = s.stains[police.id];
+    quitStained(s, content, s.rng);
+    expect(s.stains[police.id] ?? 0).toBeCloseTo(Math.max(0, missed - b.stainDecay));
+  });
+
+  it('a loud story a day about the station closes the police within three weeks', () => {
+    const s = createGame(content, 53);
+    const police = s.buildings.find((x) => x.type === 'police')!;
+    startHunt(s, police.id);
+    let days = 0;
+    // Different stories about the station day by day, as reporters bring them.
+    const tpls = content.cards.filter((t) => t.requires === 'police');
+    while (police.open && days < 21 && !s.outcome) {
+      const tpl = tpls[days % tpls.length];
+      const card: CardInstance = { uid: s.nextUid++, templateId: tpl.id, baseTruth: tpl.baseTruth, createdTurn: s.turn, tier: 2, scope: 'local', reporterId: s.reporters[0], building: police.id };
+      s.hand = [card];
+      playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 2, distortion: loudest(card) }] });
+      days++;
+    }
+    expect(police.open).toBe(false);
+    expect(policeLost(s)).toBe(true);
   });
 });

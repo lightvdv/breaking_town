@@ -26,6 +26,14 @@ export function crimePressure(state: GameState, c: Content): number {
 }
 
 /**
+ * Crime on the streets, 0..1: the heat of our crime stories and the gang, held back by the police.
+ * Unlike `crimePressure` it leaves the jobless out — order already counts them on their own.
+ */
+export function streetCrime(state: GameState, c: Content): number {
+  return Math.min(1, (state.crimeHeat + state.crimeBoost) * (policeHolds(state) ? c.balance.policeCrimeMul : 1));
+}
+
+/**
  * After our issue: crime stories that were believed heat the town up — people talk of nothing else,
  * the bold get bolder; the heat cools down by `crimeHeatDecay` a day. Returns the heat.
  */

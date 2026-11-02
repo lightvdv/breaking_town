@@ -1,4 +1,4 @@
-import { crimePressure } from './crime';
+import { crimePressure, streetCrime } from './crime';
 import { quitStained, stainedChoice } from './hunt';
 import { chance, int, next, pick, weightedPick, type RngState } from './rng';
 import { clamp, closedLine, groupOf } from './lookup';
@@ -111,7 +111,10 @@ export function computeMetrics(state: GameState, c: Content): CityMetrics {
   // A town that lost its police station loses order on top (CONCEPT.md §5.6).
   const police = state.buildings.filter((x) => x.type === 'police');
   const lawless = police.length && !police.some((x) => x.open) ? b.policeClosedOrder : 0;
-  const order = n ? clamp(1 - (unrest + jobless * b.joblessCrime) / n - lawless) : 0;
+  // Crime itself takes order too, not only the people it frightens today: the heat of our crime
+  // stories, the jobless, and a gang that holds the streets for good (CONCEPT.md §5.6).
+  const crime = streetCrime(state, c) * b.crimeOrder + (state.crimeBoost > 0 ? b.gangOrderLoss : 0);
+  const order = n ? clamp(1 - (unrest + jobless * b.joblessCrime) / n - lawless - crime) : 0;
   const w = b.cityIndexWeights;
   const cityIndex =
     100 *

@@ -7,7 +7,8 @@
  *   npx tsx tools/calibrate.ts --combos # then correct every whole town (about an hour, in the background)
  *   npx tsx tools/calibrate.ts --check  # only compare sample towns with the default one
  */
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import { buildSync } from 'esbuild';
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -19,7 +20,8 @@ const PARALLEL = 8;
 // The bots as one prebuilt file: a process per job through tsx ran the machine out of memory.
 const BUNDLE = join(tmpdir(), 'breaking-town-bots.mjs');
 const PROGRESS = join(tmpdir(), 'breaking-town-calibration.json');
-execFileSync(process.execPath, ['node_modules/esbuild/bin/esbuild', 'tools/bots.ts', '--bundle', '--platform=node', '--format=esm', `--outfile=${BUNDLE}`, '--log-level=error'], { stdio: 'inherit' });
+// Through esbuild's own API: its bin is a JS shim on Windows but a native binary on Linux.
+buildSync({ entryPoints: ['tools/bots.ts'], bundle: true, platform: 'node', format: 'esm', outfile: BUNDLE, logLevel: 'error' });
 const g = content.townGen;
 const base = g.defaults;
 const parts = {

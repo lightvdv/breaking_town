@@ -568,6 +568,10 @@ export interface Balance {
   policeClosedOrder: number;
   /** Below this order a gang comes: the gang arc starts by itself. */
   gangOrder: number;
+  /** Order lost per unit of crime pressure (CONCEPT.md §5.6). */
+  crimeOrder: number;
+  /** Order a gang that took the streets keeps off for good. */
+  gangOrderLoss: number;
   /** Heat a believed crime story adds per impact × believed share; it cools by this share a day. The jobless count this much. */
   crimeHeatGain: number;
   crimeHeatDecay: number;

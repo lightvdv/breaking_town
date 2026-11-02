@@ -23,7 +23,7 @@ export { huntBonus, huntTargets, endHunt, isHuntStory, startHunt } from './hunt'
 export { electionLeader, runningTwist, twistOf } from './twists';
 export { isRoadTile, mapSizeFor } from './map';
 export { abilitiesOf, abilityBlock, advanceShop, dealShop, deckCards, forkChoice, onSale, openForks, refreshShop, useAbility } from './shop';
-export { crimePressure, policeLost } from './crime';
+export { crimePressure, policeLost, streetCrime } from './crime';
 export { bribeMul, cashActive, cashBlock, cashCost, cashMoves, cashOf, cashOpen, isLeak, useCash } from './cash';
 export { goalOf, goalProgress, type GoalProgress } from './goals';
 export { choiceId, composeTown, generateTown, isGeneratedTown, parseChoice, powerMul, randomChoice, townPower, GEN_PREFIX } from './townGen';

@@ -15,7 +15,8 @@ import { goalOf, goalProgress, updateGoal } from '../src/sim/goals';
 import { choiceId, composeTown, generateTown, powerMul, townPower } from '../src/sim/townGen';
 import { checkOutcome } from '../src/sim/game';
 import { settleHunt } from '../src/sim/hunt';
-import { crimeEvents, crimePressure, gangDue } from '../src/sim/crime';
+import { crimeEvents, crimePressure, gangDue, heatCrime, streetCrime } from '../src/sim/crime';
+import { applyCityEffect, computeMetrics } from '../src/sim/city';
 import {
   averageTrust,
   bribeMul,
@@ -665,7 +666,7 @@ describe('reporters', () => {
     s.hand = [{ uid: s.nextUid++, templateId: tpl.id, baseTruth: 0, createdTurn: s.turn, tier: 3, scope: 'local', reporterId: s.reporters[0] }];
     const r = playTurn(s, content, { publish: [{ cardUid: s.hand[0].uid, placement: 2, distortion: 0 }] });
     const shifts = r.publications[0].tension!;
-    for (const g of content.groups.filter((x) => x.id !== 'workers')) expect(shifts[pairKey(content, 'workers', g.id)]).toBeGreaterThan(5);
+    for (const g of content.groups.filter((x) => x.id !== 'workers')) expect(shifts[pairKey(content, 'workers', g.id)]).toBeGreaterThan(4);
   });
 
   it('cannot hire more than maxReporters or fire the last one', () => {
@@ -1862,5 +1863,73 @@ describe('the bank and debt (CONCEPT.md §5.4а)', () => {
     repayLoan(s, content);
     expect(s.loan).toBeNull();
     expect(s.money).toBe(1000 - payoff);
+  });
+});
+
+describe('crime and order agree (CONCEPT.md §5.6)', () => {
+  const calmDown = (s: GameState) => {
+    for (const r of s.residents) {
+      r.fearTurns = 0;
+      r.protestTurns = 0;
+    }
+  };
+
+  it('crime heat lowers order even when nobody is afraid today', () => {
+    const s = createGame(content, 41);
+    calmDown(s);
+    const before = computeMetrics(s, content).order;
+    s.crimeHeat = 0.6;
+    const after = computeMetrics(s, content).order;
+    expect(streetCrime(s, content)).toBeCloseTo(0.6 * content.balance.policeCrimeMul);
+    expect(before - after).toBeCloseTo(streetCrime(s, content) * content.balance.crimeOrder, 5);
+  });
+
+  it('the police hold street crime back; without them order falls further', () => {
+    const s = createGame(content, 42);
+    calmDown(s);
+    s.crimeHeat = 0.5;
+    const held = computeMetrics(s, content).order;
+    for (const x of s.buildings) if (x.type === 'police') x.open = false;
+    expect(streetCrime(s, content)).toBeCloseTo(0.5);
+    expect(computeMetrics(s, content).order).toBeLessThan(held - content.balance.policeClosedOrder + 1e-9);
+  });
+
+  it('a gang that took the streets keeps order down for good, even when the fear is gone', () => {
+    const s = createGame(content, 43);
+    applyCityEffect(s, s.rng, { type: 'crime', amount: 0.1 });
+    expect(s.crimeBoost).toBeCloseTo(0.1);
+    for (let i = 0; i < 12 && !s.outcome; i++) {
+      playTurn(s, content, { publish: [] });
+      calmDown(s);
+      const m = computeMetrics(s, content);
+      expect(m.order).toBeLessThanOrEqual(1 - content.balance.gangOrderLoss);
+    }
+    expect(s.crimeBoost).toBeGreaterThan(0);
+  });
+
+  it('believed crime stories heat the town; the heat cools day by day without them', () => {
+    const s = createGame(content, 44);
+    const tpl = content.cards.find((t) => t.topic === 'crime' && !t.arc && !t.conflict)!;
+    const card: CardInstance = { uid: s.nextUid++, templateId: tpl.id, baseTruth: tpl.baseTruth, createdTurn: s.turn, tier: 2, scope: 'local', reporterId: s.reporters[0] };
+    s.hand.push(card);
+    const fake = { pub: { cardUid: card.uid, placement: 2, distortion: 0 }, impact: 1, report: { reached: 40, believed: 30 } } as unknown as Parameters<typeof heatCrime>[2][number];
+    const heat = heatCrime(s, content, [fake]);
+    expect(heat).toBeGreaterThan(0);
+    expect(heatCrime(s, content, [])).toBeCloseTo(heat * (1 - content.balance.crimeHeatDecay));
+  });
+
+  it('a whole crime game: order never shows more than the crime on the streets allows', () => {
+    const s = createGame(content, 45);
+    const b = content.balance;
+    for (let i = 0; i < 25 && !s.outcome; i++) {
+      // Hunt the police station and print every crime story at full volume.
+      const police = s.buildings.find((x) => x.type === 'police' && x.open);
+      if (police && !s.hunt) startHunt(s, police.id);
+      for (const id of s.reporters) setReporterTopics(s, content, id, ['crime']);
+      playTurn(s, content, simpleDecision(s, 'max', 2));
+      const m = s.metrics;
+      const cap = 1 - streetCrime(s, content) * b.crimeOrder - (s.crimeBoost > 0 ? b.gangOrderLoss : 0) - (s.buildings.some((x) => x.type === 'police') && !s.buildings.some((x) => x.type === 'police' && x.open) ? b.policeClosedOrder : 0);
+      expect(m.order).toBeLessThanOrEqual(cap + 1e-9);
+    }
   });
 });

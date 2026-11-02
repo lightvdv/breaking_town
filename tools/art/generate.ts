@@ -4,7 +4,7 @@
  *
  *   npm run art
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { illustration, introScenes, scenes } from './illustrations';
 import { portrait, type PortraitSpec } from './portraits';
 import { dirname, join } from 'node:path';
@@ -17,8 +17,11 @@ import { landmarkDecor, lookTiles } from './landmarks';
 import { bench, bush, flowers, fountain, fxIcon, fxIcons, grass, lamp, road, tree } from './tiles';
 
 const OUT = join(process.cwd(), 'public', 'assets');
+// Pictures drawn in PixelLab (`pixellab.json`, paths under public/assets): the generator never overwrites them.
+const KEEP = new Set<string>(existsSync(join(OUT, 'pixellab.json')) ? JSON.parse(readFileSync(join(OUT, 'pixellab.json'), 'utf8')) : []);
 
 function write(path: string, data: string | Buffer): void {
+  if (KEEP.has(path)) return;
   const full = join(OUT, path);
   mkdirSync(dirname(full), { recursive: true });
   writeFileSync(full, data);

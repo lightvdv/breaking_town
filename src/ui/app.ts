@@ -3500,53 +3500,30 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const levelOf = (u: UpgradeDef) => state.collection?.[u.id] ?? 1;
     const upgrade = (id: string) => c.upgrades.find((x) => x.id === id)!;
     /**
-     * A card (CONCEPT.md §7.3): its picture across the top, the rarity, the name with «?» (what it gives
-     * hides there), the tags and level stars on one line, and an optional foot — «Сейчас» and «Взять».
+     * A card (CONCEPT.md §7.3): its picture across the top, the rarity, the name, the tags and level
+     * stars on one line, what it gives and costs, and an optional foot — «Сейчас» and «Взять».
      */
     const cardView = (u: UpgradeDef, foot: HTMLElement | null, cls = '') => {
       const line = series(u);
       const rarity = u.rarity ?? 'common';
       const level = levelOf(u);
-      const key = `card:${u.id}`;
-      const info = openInfo.has(key);
       return h(
         'div',
         { class: `deck-card rarity-${rarity}${u.ability ? ' is-ability' : ''}${cls ? ` ${cls}` : ''}` },
         cardArt(u),
         h('span', { class: `deck-tag tag-${rarity}` }, u.fork ? 'развилка' : u.ability ? `приём · ${rarityNames[rarity]}` : u.cash ? `касса · ${rarityNames[rarity]}` : rarityNames[rarity]),
         u.id === best ? h('span', { class: 'best-mark' }, 'выгоднее всего') : null,
-        h(
-          'div',
-          { class: 'card-name' },
-          h('b', {}, line ? `${seriesNames[u.series!] ?? u.name}: ${u.name.toLowerCase()}` : u.name, line ? pips(line) : null),
-          h(
-            'button',
-            {
-              class: `section-info${info ? ' on' : ''}`,
-              title: info ? 'Скрыть' : 'Что даёт карта?',
-              'aria-expanded': String(info),
-              onclick: () => {
-                if (info) openInfo.delete(key);
-                else openInfo.add(key);
-                render();
-              },
-            },
-            '?',
-          ),
-        ),
+        h('div', { class: 'card-name' }, h('b', {}, line ? `${seriesNames[u.series!] ?? u.name}: ${u.name.toLowerCase()}` : u.name, line ? pips(line) : null)),
         h(
           'div',
           { class: 'card-meta' },
           ...(u.tags ?? []).map((t) => h('span', { class: `tag-chip tag-${t}` }, tagNames[t] ?? t)),
           u.fork ? null : h('span', { class: 'coll-level', title: `Уровень карты в вашей коллекции: ${level} из ${MAX_LEVEL}` }, '★'.repeat(level) + '☆'.repeat(MAX_LEVEL - level)),
         ),
-        ...(info
-          ? [
-              h('p', { class: 'upg-plus' }, `+ ${u.description}`, level > 1 && !u.fork ? h('small', {}, ` · польза ×${b.cardLevelPower[level - 1]}`) : null),
-              minus(u),
-              options.get(u.id) && !options.get(u.id)!.unlocked ? h('p', { class: 'req' }, requirementText(u.requires)) : null,
-            ]
-          : []),
+        // What the card gives, its minus and what it needs: always in sight.
+        h('p', { class: 'upg-plus' }, `+ ${u.description}`, level > 1 && !u.fork ? h('small', {}, ` · польза ×${b.cardLevelPower[level - 1]}`) : null),
+        minus(u),
+        options.get(u.id) && !options.get(u.id)!.unlocked ? h('p', { class: 'req' }, requirementText(u.requires)) : null,
         foot,
       );
     };

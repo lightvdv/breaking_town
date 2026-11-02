@@ -5,6 +5,8 @@ export interface ArtManifest {
   residents: Record<string, number>;
   buildings: Record<string, { states: string[]; variants: number; size: number }>;
   grass: number;
+  /** Extra ground tiles (the looks of the ways of life). */
+  tiles?: string[];
   decor: string[];
   fx: string[];
 }
@@ -32,7 +34,7 @@ export async function loadArt(base: string): Promise<ArtAssets> {
   for (const [type, b] of Object.entries(manifest.buildings)) {
     for (const s of b.states) urls.push(url(`buildings/${type}_${s}.json`));
   }
-  const tileNames = [...Array.from({ length: manifest.grass }, (_, i) => `grass_${i + 1}`), 'road_x', 'road_y', 'road_cross'];
+  const tileNames = [...Array.from({ length: manifest.grass }, (_, i) => `grass_${i + 1}`), 'road_x', 'road_y', 'road_cross', ...(manifest.tiles ?? [])];
   for (const t of tileNames) urls.push(url(`tiles/${t}.png`));
   for (const d of manifest.decor) urls.push(url(`decor/${d}.json`));
   for (const f of manifest.fx) urls.push(url(`fx/${f}.png`));

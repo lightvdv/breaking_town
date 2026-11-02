@@ -28,7 +28,7 @@ const KEY = `breaking-town-campaign${STORAGE_SUFFIX}`;
 export function loadCampaign(c: Content): Campaign | null {
   try {
     const data = JSON.parse(localStorage.getItem(KEY) ?? 'null') as (Campaign & { difficulty?: Difficulty }) | null;
-    if (!data || (data.side !== 'destroy' && data.side !== 'save')) return null;
+    if (!data || data.side !== 'destroy') return null;
     data.results ??= {};
     // An old campaign kept one result per town, won at the campaign's difficulty: it becomes that pass.
     for (const [id, r] of Object.entries(data.results) as [string, unknown][]) {

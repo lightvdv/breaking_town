@@ -88,7 +88,7 @@ export function findNews(
     return list.filter((t) => (state.lastSeen[t.id] ?? -Infinity) === oldest);
   };
 
-  // Save mode: the rival's recent lies wait for a debunk (CONCEPT.md §8).
+  // The rival's recent lies wait for a debunk (CONCEPT.md §8).
   const targets = debunkTargets(state);
 
   const make = (r: ReporterDef, forcedTier: NewsTier | null): CardInstance | null => {

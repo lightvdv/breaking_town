@@ -2,7 +2,7 @@ import type { Difficulty, GameLength, GameMode } from '../sim';
 import { STORAGE_SUFFIX } from '../assets';
 
 /**
- * Best results by mode, difficulty and length (CONCEPT.md §4.8): the most stars, and with them the fewest
+ * Best results by town, difficulty and length (CONCEPT.md §4.8): the most stars, and with them the fewest
  * days. Kept in the browser apart from the save; reads and writes never throw.
  */
 export interface GameRecord {
@@ -12,7 +12,7 @@ export interface GameRecord {
 
 const KEY = `breaking-town-records${STORAGE_SUFFIX}`;
 // The full game keeps the old key, so records made before short games existed stay.
-const keyOf = (mode: GameMode, difficulty: Difficulty, length: GameLength) => `${mode}|${difficulty}${length === 'full' ? '' : `|${length}`}`;
+const keyOf = (mode: GameMode, difficulty: Difficulty, length: GameLength, town: string | null) => `${town ?? mode}|${difficulty}${length === 'full' ? '' : `|${length}`}`;
 
 function load(): Record<string, GameRecord> {
   try {
@@ -22,16 +22,16 @@ function load(): Record<string, GameRecord> {
   }
 }
 
-export function recordOf(mode: GameMode, difficulty: Difficulty, length: GameLength): GameRecord | null {
-  return load()[keyOf(mode, difficulty, length)] ?? null;
+export function recordOf(mode: GameMode, difficulty: Difficulty, length: GameLength, town: string | null): GameRecord | null {
+  return load()[keyOf(mode, difficulty, length, town)] ?? null;
 }
 
 /** Keeps a won game's result if it beats the record; returns whether it did. */
-export function submitRecord(mode: GameMode, difficulty: Difficulty, length: GameLength, result: GameRecord): boolean {
+export function submitRecord(mode: GameMode, difficulty: Difficulty, length: GameLength, town: string | null, result: GameRecord): boolean {
   const all = load();
-  const old = all[keyOf(mode, difficulty, length)];
+  const old = all[keyOf(mode, difficulty, length, town)];
   if (old && (old.stars > result.stars || (old.stars === result.stars && old.days <= result.days))) return false;
-  all[keyOf(mode, difficulty, length)] = result;
+  all[keyOf(mode, difficulty, length, town)] = result;
   try {
     localStorage.setItem(KEY, JSON.stringify(all));
   } catch {

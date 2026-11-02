@@ -26,4 +26,4 @@ export { abilitiesOf, abilityBlock, advanceShop, dealShop, deckCards, forkChoice
 export { crimePressure, policeLost } from './crime';
 export { bribeMul, cashActive, cashBlock, cashCost, cashMoves, cashOf, cashOpen, isLeak, useCash } from './cash';
 export { goalOf, goalProgress, type GoalProgress } from './goals';
-export { generateTown, isGeneratedTown, GEN_PREFIX } from './townGen';
+export { choiceId, composeTown, generateTown, isGeneratedTown, parseChoice, powerMul, randomChoice, townPower, GEN_PREFIX } from './townGen';

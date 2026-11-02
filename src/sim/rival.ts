@@ -1,30 +1,23 @@
 import { chance, int, next, weightedPick, type RngState } from './rng';
 import { clamp, conflictsStarted, rivalStarted, templateOf } from './lookup';
 import { getModifiers, modifiersOf } from './modifiers';
-import { effectiveTier, isSoothed, limitSensations, maxDistortion, minDistortion, publish, storyTitle, type PublishedNews } from './news';
+import { effectiveTier, isSoothed, limitSensations, minDistortion, publish, storyTitle, type PublishedNews } from './news';
 import { pickPair } from './relations';
 import { isRecent, scopeOf } from './reporters';
-import type { CardInstance, CardTemplate, Content, GameMode, GameState, GroupId, IssueLevel, NewsTier, Placement, PrintedStory, RivalKind, TruthLevel } from './types';
+import type { CardInstance, CardTemplate, Content, GameState, GroupId, IssueLevel, NewsTier, Placement, PrintedStory, RivalKind, TruthLevel } from './types';
 
 /**
- * The rival paper (CONCEPT.md §8): in the save mode the holding's tabloid «Вечерний Набат» scares the
- * town, in the destroy mode the honest «Голос города» defends it. Either prints every day by the same
- * rules as ours, to its own readers and with its own trust, and debunks our recent lies. Its issue
- * comes out with ours; for a few days after, our reporters can find debunks of its own lies — by
+ * The rival paper (CONCEPT.md §8): the honest «Голос города» defends the town. It prints every day by
+ * the same rules as ours, to its own readers and with its own trust, and debunks our recent lies. Its
+ * issue comes out with ours; for a few days after, our reporters can find debunks of its own lies — by
  * chance, or on purpose when sent to watch it.
  */
 
-/** Debunk templates: ours against each rival's lies, and each rival's against ours. */
+/** Debunk templates: ours against its lies, and its against ours. */
 export const RIVAL_TEMPLATES: Record<RivalKind, { ours: string; theirs: string }> = {
-  tabloid: { ours: 'debunk', theirs: 'tabloid_debunk' },
   guardian: { ours: 'debunk_guardian', theirs: 'guardian_debunk' },
 };
-export const DEBUNK_TEMPLATE = RIVAL_TEMPLATES.tabloid.ours;
-
-/** The rival of a mode. */
-export function rivalKindOf(mode: GameMode): RivalKind {
-  return mode === 'save' ? 'tabloid' : 'guardian';
-}
+export const DEBUNK_TEMPLATE = RIVAL_TEMPLATES.guardian.ours;
 
 export function rivalReaders(state: GameState): number {
   return state.residents.filter((r) => r.status === 'active' && r.rivalReader).length;
@@ -52,19 +45,10 @@ function reassuring(t: CardTemplate): boolean {
   return !!t.softTitles || (!!told && told.type === 'moodUp');
 }
 
-/** Our recent lies the rival answers: the tabloid our soothing ones, the guardian our scary ones. */
+/** Our recent scary lies the rival answers. */
 function counterTargets(state: GameState, c: Content): PrintedStory[] {
-  const kind = state.rival?.kind;
   // The lies of the forgiven first days are forgiven by the rival too.
-  return state.ourPrinted.filter(
-    (p) => p.truth > 0 && !p.debunked && !p.exposed && p.turn >= c.balance.factCheckStartTurn && (kind === 'tabloid' ? !!p.soothed : !p.soothed),
-  );
-}
-
-/** Something people could be scared with: the story's worst version does harm. */
-function frightening(t: CardTemplate): boolean {
-  const worst = t.effects[2];
-  return !!worst && worst.type !== 'moodUp' && worst.type !== 'debunk';
+  return state.ourPrinted.filter((p) => p.truth > 0 && !p.debunked && !p.exposed && p.turn >= c.balance.factCheckStartTurn && !p.soothed);
 }
 
 function available(state: GameState, t: CardTemplate): boolean {
@@ -72,9 +56,9 @@ function available(state: GameState, t: CardTemplate): boolean {
 }
 
 /**
- * The rival's issue of the day, written at the start of the turn and printed with ours: today's bad
- * events first, then frightening rumors and stories. It lies when its readers trust it and is more
- * careful when they do not. Nobody sees it before it comes out.
+ * The rival's issue of the day, written at the start of the turn and printed with ours: today's events
+ * it can reassure with first, then other true stories. It soothes with a lie while its readers trust
+ * it and is more careful when they do not. Nobody sees it before it comes out.
  */
 export function planRival(state: GameState, c: Content, rng: RngState, events: CardTemplate[], eventPairs: Map<string, [GroupId, GroupId]>): void {
   const rival = state.rival;
@@ -82,23 +66,19 @@ export function planRival(state: GameState, c: Content, rng: RngState, events: C
   rival.plan = [];
   if (!rivalStarted(state, c)) return;
   const b = c.balance;
-  const guardian = rival.kind === 'guardian';
   // Every author we lured away is a story less a day (CONCEPT.md §8.4).
-  const count = 1 + int(rng, Math.max(1, (guardian ? b.guardianStoriesMax : b.rivalStoriesMax) - (rival.lured ?? 0)));
+  const count = 1 + int(rng, Math.max(1, b.guardianStoriesMax - (rival.lured ?? 0)));
   // It answers our freshest lies that work against it, on top of its own stories.
   for (const story of counterTargets(state, c).slice(0, Math.min(count, c.balance.rivalCountersMax))) {
     rival.plan.push({ card: { ...makeDebunk(state, story, ''), templateId: RIVAL_TEMPLATES[rival.kind].theirs }, placement: 0, distortion: 0 });
   }
-  // The tabloid looks for what frightens, the guardian for what reassures.
-  const fits = (t: CardTemplate) => (guardian ? reassuring(t) : frightening(t));
-  const chosen: CardTemplate[] = events.filter((t) => !t.arc && fits(t)).slice(0, count);
-  // It follows the running story arcs too, on top (CONCEPT.md §3.1а): the tabloid fans every stage, the guardian soothes what it can.
-  chosen.push(...events.filter((t) => typeof t.arcStage === 'number' && (guardian ? !!t.softTitles : true) && chance(rng, b.rivalArcChance)));
+  const chosen: CardTemplate[] = events.filter((t) => !t.arc && reassuring(t)).slice(0, count);
+  // It follows the running story arcs too, on top (CONCEPT.md §3.1а), soothing what it can.
+  chosen.push(...events.filter((t) => typeof t.arcStage === 'number' && !!t.softTitles && chance(rng, b.rivalArcChance)));
   const pool = c.cards.filter(
     (t) =>
-      (t.source === 'rumor' || t.source === 'event' || t.source === 'fact') &&
-      !(guardian && t.source === 'rumor') &&
-      fits(t) &&
+      (t.source === 'event' || t.source === 'fact') &&
+      reassuring(t) &&
       !t.arc &&
       (!t.conflict || conflictsStarted(state, c)) &&
       available(state, t) &&
@@ -140,9 +120,8 @@ export function planRival(state: GameState, c: Content, rng: RngState, events: C
     const places = tpl.requires ? state.buildings.filter((x) => x.type === tpl.requires && x.open) : [];
     if (places.length) card.building = places[int(rng, places.length)].id;
     if (tpl.softTitles) card.soft = true;
-    const max = maxDistortion(card);
-    // The guardian calms conflicts and soothes bad news, with a lie only while it is trusted.
-    const distortion = guardian ? (card.conflict ? -1 : card.soft ? (careful ? -1 : minDistortion(card)) : 0) : careful ? Math.min(1, max) : max;
+    // It calms conflicts and soothes bad news, with a lie only while it is trusted.
+    const distortion = card.conflict ? -1 : card.soft ? (careful ? -1 : minDistortion(card)) : 0;
     rival.plan.push({ card, placement: 0, distortion });
   }
   // Its loudest story takes the front page, the next the article, the rest are briefs.
@@ -193,7 +172,7 @@ export function debunkTargets(state: GameState): PrintedStory[] {
 export function makeDebunk(state: GameState, story: PrintedStory, reporterId: string): CardInstance {
   return {
     uid: state.nextUid++,
-    templateId: RIVAL_TEMPLATES[state.rival?.kind ?? 'tabloid'].ours,
+    templateId: RIVAL_TEMPLATES.guardian.ours,
     baseTruth: (2 - story.truth) as TruthLevel,
     createdTurn: state.turn,
     tier: Math.max(0, Math.min(2, story.placement)) as NewsTier,

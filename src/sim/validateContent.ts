@@ -29,7 +29,7 @@ export function validateContent(c: Content): string[] {
   if (c.balance.smallPerLot < 1 || c.balance.smallPerLot > 4) errors.push('smallPerLot must be 1..4');
   const stages = c.balance.cityStates.map((s) => s.min);
   if (!stages.length || stages[stages.length - 1] !== 0 || stages.some((m, i) => i > 0 && m >= stages[i - 1])) errors.push('cityStates: min must go down to 0');
-  for (const key of ['winCityIndex', 'saveLoseIndex'] as const) if (!stages.includes(c.balance[key])) errors.push(`${key} must be a cityStates bound`);
+  if (!stages.includes(c.balance.winCityIndex)) errors.push('winCityIndex must be a cityStates bound');
 
   const formKeys = ['one', 'oneAcc', 'oneDat', 'oneIns', 'many', 'manyGen', 'manyDat', 'manyIns'];
   for (const g of c.groups) {
@@ -133,7 +133,7 @@ export function validateContent(c: Content): string[] {
   for (const [kind, affinity] of Object.entries(b.rivalAffinity)) {
     for (const id of Object.keys(affinity)) if (!c.groups.some((g) => g.id === id)) errors.push(`rivalAffinity.${kind}: unknown group ${id}`);
   }
-  for (const id of ['debunk', 'debunk_guardian', 'tabloid_debunk', 'guardian_debunk']) {
+  for (const id of ['debunk_guardian', 'guardian_debunk']) {
     if (!c.cards.some((t) => t.id === id && t.source === 'debunk')) errors.push(`missing debunk template ${id}`);
   }
   // Story arcs (CONCEPT.md §3.1а): each stage and ending is a template of that arc.
@@ -152,7 +152,7 @@ export function validateContent(c: Content): string[] {
   // Difficulty levels (CONCEPT.md §4.6): the three levels, overriding only known balance numbers.
   for (const id of ['easy', 'normal', 'hard']) if (!c.difficulties.some((d) => d.id === id)) errors.push(`missing difficulty ${id}`);
   for (const d of c.difficulties) {
-    for (const [k, v] of Object.entries({ ...d.balance, ...d.modes.destroy, ...d.modes.save })) if (typeof (c.balance as unknown as Record<string, unknown>)[k] !== typeof v) errors.push(`difficulty ${d.id}: bad balance key ${k}`);
+    for (const [k, v] of Object.entries({ ...d.balance, ...d.modes.destroy })) if (typeof (c.balance as unknown as Record<string, unknown>)[k] !== typeof v) errors.push(`difficulty ${d.id}: bad balance key ${k}`);
   }
   // Game lengths (CONCEPT.md §4.6а): the full and the short game, patching only known balance numbers.
   for (const id of ['full', 'short']) if (!c.lengths.some((x) => x.id === id)) errors.push(`missing length ${id}`);
@@ -214,12 +214,13 @@ export function validateContent(c: Content): string[] {
     if (u.cash && !c.cash.some((x) => x.id === u.cash)) errors.push(`upgrade ${u.id}: unknown cash move ${u.cash}`);
   }
   for (const x of c.cash) if (!x.base && !c.upgrades.some((u) => u.cash === x.id)) errors.push(`cash ${x.id}: no card opens it`);
-  for (const mode of ['destroy', 'save'] as const) {
+  for (const mode of ['destroy'] as const) {
     const deck = c.upgrades.filter((u) => !u.fork && (!u.mode || u.mode === mode));
     if (deck.length < c.balance.shopOfferSize * 2) errors.push(`the ${mode} deck needs at least ${c.balance.shopOfferSize * 2} cards`);
   }
   // Campaign towns (CONCEPT.md §9): group shares add up, known groups and buildings, the map fits.
   for (const t of c.towns) {
+    if (t.look && !c.townGen.archetypes.some((a) => a.id === t.look)) errors.push(`town ${t.id}: unknown look ${t.look}`);
     if (t.groups) {
       const sum = c.groups.reduce((s, g) => s + (t.groups![g.id] ?? g.share), 0);
       if (Math.abs(sum - 1) > 0.001) errors.push(`town ${t.id}: group shares sum to ${sum}`);
@@ -229,21 +230,23 @@ export function validateContent(c: Content): string[] {
     for (const key of [...Object.keys(t.balance ?? {}), ...Object.keys(t.balanceMul ?? {}), ...Object.values(t.modes ?? {}).flatMap((m) => Object.keys(m?.balance ?? {}))]) if (!(key in c.balance)) errors.push(`town ${t.id}: unknown balance key ${key}`);
     for (const goal of Object.values(t.goals ?? {})) errors.push(...goalErrors(c, `town ${t.id}`, goal!));
   }
-  // The town generator (CONCEPT.md §9.5): shares add up, known keys, a goal on every pass.
+  // The town generator (CONCEPT.md §9.5): shares add up, known keys, known goals.
   for (const a of c.townGen.archetypes) {
     const sum = Object.values(a.groups ?? {}).reduce<number>((x, y) => x + (y ?? 0), 0);
     if (a.groups && Math.abs(sum - 1) > 0.001) errors.push(`archetype ${a.id}: group shares sum to ${sum}`);
-    for (const level of ['easy', 'normal', 'hard'] as const) {
-      if (!a.goals[level]?.length) errors.push(`archetype ${a.id}: no goal for ${level}`);
-      for (const g of a.goals[level] ?? []) errors.push(...goalErrors(c, `archetype ${a.id}`, g));
-    }
+  }
+  for (const g of c.townGen.goals) errors.push(...goalErrors(c, `town generator goal ${g.id}`, g.goal));
+  const genParts = { size: c.townGen.sizes, way: c.townGen.archetypes, rule: c.townGen.rules, goal: c.townGen.goals };
+  for (const [part, list] of Object.entries(genParts) as [keyof typeof genParts, { id: string }[]][]) {
+    if (!list.some((x) => x.id === c.townGen.defaults[part])) errors.push(`town generator: unknown default ${part}`);
+    for (const id of Object.keys(c.townCalibration[part])) if (!list.some((x) => x.id === id)) errors.push(`town calibration: unknown ${part} ${id}`);
   }
   for (const x of [...c.townGen.archetypes, ...c.townGen.rules]) {
     for (const key of [...Object.keys(x.balance ?? {}), ...Object.keys(x.balanceMul ?? {})]) if (!(key in c.balance)) errors.push(`town generator: unknown balance key ${key}`);
     for (const type of Object.keys(x.buildings ?? {})) if (!c.buildings.some((b) => b.type === type)) errors.push(`town generator: unknown building ${type}`);
   }
   // Tasks and twists (CONCEPT.md §4.8, §4.9).
-  for (const mode of ['destroy', 'save'] as const) {
+  for (const mode of ['destroy'] as const) {
     if (c.tasks.filter((t) => !t.twist && (!t.mode || t.mode === mode)).length < c.balance.taskCount + 2) errors.push(`too few tasks for ${mode}`);
     if (!c.twists.some((t) => !t.mode || t.mode === mode)) errors.push(`no twist for ${mode}`);
   }

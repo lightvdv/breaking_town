@@ -1,4 +1,4 @@
-import type { Difficulty, GameLength } from '../sim';
+import type { Difficulty, TownChoice } from '../sim';
 import { STORAGE_SUFFIX } from '../assets';
 /**
  * Player settings (CONCEPT.md §7.3 «Настройки»): kept in the browser apart from the save, so a new
@@ -11,13 +11,11 @@ export interface Settings {
   skipCutscenes: boolean;
   /** The opening story was shown (it plays only before the first game of each mode). */
   introSeen: boolean;
-  introSeenSave: boolean;
   /** The difficulty of new games (CONCEPT.md §4.6). */
   difficulty: Difficulty;
   /** The rival paper's stories are unfolded above the issue; once opened they stay open on the next days. */
   rivalOpen: boolean;
   /** Short or full game (CONCEPT.md §4.6а): chosen in the new game window and remembered. */
-  length: GameLength;
   /** First-encounter notes above the paper (CONCEPT.md §7.3 «Подсказки»); off in the settings. */
   hints: boolean;
   /** The tutorial mission was played to the end (the title screen stops offering it first). */
@@ -30,14 +28,12 @@ export interface Settings {
   tasksOpen: boolean;
   /** The «Редакция» plaque (promotions, quits) is unfolded; folded (the default) it is one line. */
   staffOpen: boolean;
-  /** A single game in an ordinary town or a generated one (CONCEPT.md §9.5). */
-  townKind: 'usual' | 'random';
-  /** The seed of the generated town shown in the new game window; a new one after each start. */
-  genSeed: number;
+  /** The town the player composed for a free game (CONCEPT.md §9.5); none yet = the default one. */
+  town: TownChoice | null;
 }
 
 const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
-const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, introSeenSave: false, difficulty: 'normal', rivalOpen: false, length: 'short', hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: true, staffOpen: false, townKind: 'usual', genSeed: 1 };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, difficulty: 'normal', rivalOpen: false, hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: true, staffOpen: false, town: null };
 
 export function loadSettings(): Settings {
   try {

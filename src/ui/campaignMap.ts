@@ -100,9 +100,9 @@ export function drawRegion(canvas: HTMLCanvasElement, towns: TownDef[]): void {
   }
 }
 
-/** A town's pin on the map: houses; ruins with smoke or a flag and lights once passed, by side. */
-export function townIcon(state: 'done' | 'now' | 'gated' | 'locked', side: 'destroy' | 'save', final: boolean): string {
-  const ruined = state === 'done' && side === 'destroy';
+/** A town's pin on the map: houses; ruins with smoke once passed. */
+export function townIcon(state: 'done' | 'now' | 'gated' | 'locked', final: boolean): string {
+  const ruined = state === 'done';
   const col = state === 'done' ? (ruined ? '#5a6988' : '#fee761') : state === 'now' ? '#ead4aa' : '#8b9bb4';
   let r = '';
   const rect = (x: number, y: number, w: number, hh: number, c: string) => (r += `<rect x="${x}" y="${y}" width="${w}" height="${hh}" fill="${c}"/>`);
@@ -115,12 +115,6 @@ export function townIcon(state: 'done' | 'now' | 'gated' | 'locked', side: 'dest
     rect(10, 0, 2, 1, '#8b9bb4');
     rect(4, 6, 1, 1, '#f77622');
     rect(5, 5, 1, 1, '#feae34');
-  }
-  if (state === 'done' && side === 'save') {
-    rect(13, 0, 1, 5, '#ead4aa');
-    rect(14, 0, 2, 2, '#63c74d');
-    rect(4, 10, 1, 1, '#fee761');
-    rect(10, 7, 1, 1, '#fee761');
   }
   if (final) {
     rect(6, 1, 4, 13, col);

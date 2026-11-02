@@ -425,7 +425,7 @@ export function publish(
   const soothed = isSoothed(card, pub.distortion);
   const effect = calm ? null : soothed ? tpl.softEffects?.[-pub.distortion - 1] ?? null : tpl.effects[truth];
   // The rival's stories have their own strength (`rivalImpactMul`).
-  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn, !rival && isHuntStory(state, card, effect), !rival) * (rival ? b.rivalImpactMul[state.rival?.kind ?? 'tabloid'] : 1);
+  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn, !rival && isHuntStory(state, card, effect), !rival) * (rival ? b.rivalImpactMul[state.rival?.kind ?? 'guardian'] : 1);
   // Interesting stories are retold more, and viral channels spread them further.
   const retell = clamp(
     b.wordOfMouthChance * (0.5 + tpl.engagement * b.tierEngagement[effectiveTier(card, pub.distortion)]) * (1 + outletVirality(state, c)) * mods.wordOfMouthMul,
@@ -457,8 +457,8 @@ export function publish(
   // Reactions to the rival's issue are kept apart: they neither hide ours nor make our readers leave.
   const reactions = rival ? state.rivalReactions : state.lastReactions;
   // A debunk brings relief from a scary story, and the fear back when it takes away a false comfort:
-  // everything «Голос города» prints comforts and everything «Набат» prints scares (RIVAL_TEMPLATES).
-  const takesComfort = card.templateId === 'debunk_guardian' || card.templateId === 'tabloid_debunk' || card.templateId === 'kompromat_guardian';
+  // everything «Голос города» prints comforts, and its own debunks answer our scary lies.
+  const takesComfort = card.templateId === 'debunk_guardian' || card.templateId === 'kompromat_guardian';
   // A story that changes nothing (a plain fact) neither scares nor cheers: its believers just take note.
   const mood = effect?.type === 'debunk' ? (takesComfort ? 'scared' : 'happy') : good || calm ? 'happy' : effect ? 'scared' : 'calm';
   report.mood = mood;

@@ -20,9 +20,9 @@ const KEY = `breaking-town-collection${STORAGE_SUFFIX}`;
 /** Highest level of a card. */
 export const MAX_LEVEL = 3;
 
-/** Cards that can be collected: the draft's cards (forks are taken in a game), not of a hidden mode. */
-export function collectable(c: Content, hiddenModes: string[] = ['save']): UpgradeDef[] {
-  return c.upgrades.filter((u) => !u.fork && !!u.rarity && !(u.mode && hiddenModes.includes(u.mode)));
+/** Cards that can be collected: the draft's cards (forks are taken in a game). */
+export function collectable(c: Content): UpgradeDef[] {
+  return c.upgrades.filter((u) => !u.fork && !!u.rarity);
 }
 
 export function loadCollection(c: Content): Collection {

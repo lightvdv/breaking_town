@@ -1006,7 +1006,7 @@ export const scenes: Record<string, Scene> = {
   },
 
   // ---------- Save mode ----------
-  debunk: {
+  debunk_guardian: {
     sky: 'day',
     ground: 'plaza',
     building: { type: 'cityHall', x: 2 },
@@ -1313,14 +1313,11 @@ export const scenes: Record<string, Scene> = {
 };
 
 /** Scenes of the opening story (CONCEPT.md §1.1), same size and style as the news. */
-// The other debunks look like ours.
-scenes.debunk_guardian = scenes.debunk;
-scenes.tabloid_debunk = scenes.debunk;
-scenes.guardian_debunk = scenes.debunk;
+// Its debunks look like ours.
+scenes.guardian_debunk = scenes.debunk_guardian;
 scenes.kompromat_mayor = scenes.mayor_affair;
 scenes.kompromat_factory = scenes.factory_waste;
-scenes.kompromat_rival = scenes.debunk;
-scenes.kompromat_guardian = scenes.debunk;
+scenes.kompromat_guardian = scenes.debunk_guardian;
 // Crime (CONCEPT.md §5.6): real crime and the police.
 scenes.street_robbery = scenes.crime_wave;
 scenes.kiosk_burglary = scenes.shop_robbery;
@@ -1418,37 +1415,6 @@ export const introScenes: Record<string, Scene> = {
     building: { type: 'factory', state: 'closed', x: 4 },
     people: [p('workers', 'walk_suitcase_front', 76), p('pensioners', 'walk_suitcase_front', 92), p('youth', 'walk_suitcase_front', 108, { variant: 1 })],
     icons: [{ name: 'down', x: 84, y: 10 }],
-  },
-  // Save mode: the holding's tabloid «Вечерний Набат» scares the town.
-  rival: {
-    sky: 'alarm',
-    ground: 'plaza',
-    building: { type: 'shop', x: 6 },
-    people: [p('pensioners', 'react_scared', 78, { frame: 2 }), p('workers', 'react_scared', 94, { frame: 1 }), p('youth', 'react_outraged', 110, { frame: 1 })],
-    icons: [
-      { name: 'megaphone', x: 78, y: 8 },
-      { name: 'skull', x: 98, y: 12 },
-    ],
-  },
-  // Save mode: the honest paper answers with facts and good news.
-  defend: {
-    sky: 'day',
-    ground: 'plaza',
-    building: { type: 'cityHall', x: 2 },
-    fountain: 70,
-    people: [p('intelligentsia', 'react_talk', 88, { frame: 1 }), p('pensioners', 'react_happy', 104, { frame: 2 }), p('workers', 'react_happy', 118, { variant: 1 })],
-    icons: [
-      { name: 'document', x: 86, y: 8 },
-      { name: 'heart', x: 106, y: 12 },
-    ],
-  },
-  // Save mode goal: the town works and lives on.
-  saved: {
-    sky: 'day',
-    ground: 'road',
-    building: { type: 'factory', x: 4 },
-    people: [p('workers', 'work', 78), p('workers', 'react_happy', 94, { variant: 1, frame: 2 }), p('youth', 'react_happy', 110, { frame: 1 })],
-    icons: [{ name: 'trophy', x: 90, y: 10 }],
   },
   // The reward: the next town.
   reward: {

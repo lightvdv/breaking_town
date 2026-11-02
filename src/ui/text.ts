@@ -4,7 +4,6 @@ import {
   type CardInstance,
   type Content,
   type EffectType,
-  type GameMode,
   type RivalKind,
   type NewsScope,
   type Outcome,
@@ -49,8 +48,7 @@ export const tierLabels = ['Скучная', 'Обычная', 'Интересн
 export const scopeLabels: Record<NewsScope | 'any', string> = { local: 'Город', global: 'Мир', any: 'Город и мир' };
 export const placementLabels = ['Заметка', 'Статья', 'Первая полоса'];
 export const issueLevelLabels = ['Скучный', 'Обычный', 'Интересный', 'Сенсационный'];
-/** Game modes as the title screen names them (CONCEPT.md §8). */
-export const modeLabels: Record<GameMode, string> = { destroy: 'Разрушить город', save: 'Спасти город' };
+/** The game mode as the title screen names it. */
 /** Cover price levels of the paper (CONCEPT.md §3.4), from free to dear. */
 export const priceLabels = ['Бесплатно', 'Дёшево', 'Как у всех', 'Дорого'];
 /** Framing of a conflict story between two groups (CONCEPT.md §5.5): calm, as is, heat, inflate. */
@@ -192,9 +190,8 @@ export function framingScale(options: FramingOption[]): Map<number, { step: 0 | 
   return out;
 }
 
-/** The rival paper of each mode in the forms the interface needs (CONCEPT.md §8). */
+/** The rival paper in the forms the interface needs (CONCEPT.md §8). */
 export const rivalNames: Record<RivalKind, { name: string; short: string; gen: string; ins: string }> = {
-  tabloid: { name: 'Вечерний Набат', short: 'Набат', gen: 'Набата', ins: 'Набатом' },
   guardian: { name: 'Голос города', short: 'Голос', gen: 'Голоса', ins: 'Голосом' },
 };
 
@@ -254,7 +251,7 @@ export function goalLine(p: GoalProgress): string {
   }
 }
 
-export function outcomeText(o: Outcome, mode: GameMode = 'destroy', goal = ''): string {
+export function outcomeText(o: Outcome, goal = ''): string {
   switch (o.reason) {
     case 'goalDone':
       return `Победа! ${goal ? `${goal} — сделано. ` : ''}Совет директоров «Медиа-Плюс» доволен и отдаёт вам следующий город.`;
@@ -266,14 +263,8 @@ export function outcomeText(o: Outcome, mode: GameMode = 'destroy', goal = ''): 
       return 'Поражение: репутация упала до нуля — вам больше никто не верит. Холдинг отрекается от провалившегося редактора.';
     case 'turnLimit':
       return 'Поражение: время вышло, а город выстоял. Совет директоров разочарован: теорию придётся проверять с другим редактором.';
-    case 'citySaved':
-      return 'Победа! Город выстоял: «Набат» пугал, а люди остались, работали и ходили в бары. Опыт «Медиа-Плюс» провалился.';
     case 'rivalClosed':
-      return mode === 'save'
-        ? 'Победа! «Вечерний Набат» закрылся: ему больше никто не верит и его никто не покупает. Холдинг ищет другой город.'
-        : 'Победа! «Голос города» закрылся: защищать город больше некому. Совет директоров доволен и отдаёт вам следующий город.';
-    case 'cityFallen':
-      return 'Поражение: город не выдержал страха, ссор и безработицы. «Медиа-Плюс» празднует, «Вестник» остался без читателей.';
+      return 'Победа! «Голос города» закрылся: защищать город больше некому. Совет директоров доволен и отдаёт вам следующий город.';
   }
 }
 

@@ -309,17 +309,6 @@ function price(level: 0 | 1 | 2 | 3): Raster {
   return r;
 }
 
-/** The rival paper «Вечерний Набат»: a newspaper with a red masthead and a skull on the front page. */
-function rival(): Raster {
-  const r = new Raster(16, 16);
-  r.rect(2, 2, 12, 12, 'sand');
-  r.rect(3, 3, 10, 2, 'red');
-  r.art(4, 6, ['.www.', 'wkwkw', 'wwwww', '.w.w.'], { w: 'white', k: 'ink' });
-  for (const y of [6, 8, 10, 12]) r.rect(10, y, 3, 1, 'grey');
-  r.rect(3, 12, 6, 1, 'grey');
-  return outline(r);
-}
-
 /** The guardian paper «Голос города»: a newspaper with a blue masthead and a heart. */
 function guardian(): Raster {
   const r = new Raster(16, 16);
@@ -486,7 +475,6 @@ export const uiIcons: Record<string, () => Raster> = {
   ballot,
   audit,
   governor,
-  rival,
   offer,
   cart,
   guardian,

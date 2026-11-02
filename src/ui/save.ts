@@ -26,6 +26,8 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     const data = JSON.parse(raw) as SaveData<D>;
     const s = data?.state;
     if (!s || s.version !== 1 || !Array.isArray(s.residents) || !Array.isArray(s.hand)) return null;
+    // A game of the removed save mode cannot go on.
+    if ((s.mode as string) === 'save') return null;
     // A save from before a content change may name stories or reporters that no longer exist.
     const cards = new Set(c.cards.map((t) => t.id));
     const reporters = new Set(c.reporters.map((r) => r.id));
@@ -44,7 +46,7 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.mode ??= 'destroy';
     s.rival ??= null;
     if (s.rival) s.rival.printed ??= [];
-    if (s.rival) s.rival.kind ??= 'tabloid';
+    if (s.rival) s.rival.kind ??= 'guardian';
     s.ourPrinted ??= [];
     s.arcs ??= [];
     s.arcsDone ??= [];

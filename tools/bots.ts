@@ -39,6 +39,7 @@ import {
   withDifficulty,
   withLength,
   withTown,
+  powerMul,
   type Difficulty,
   type GameLength,
   answerOffer,
@@ -64,7 +65,7 @@ import { next } from '../src/sim/rng';
 const difficultyIndex = process.argv.indexOf('--difficulty');
 const difficulty = (difficultyIndex >= 0 ? process.argv[difficultyIndex + 1] : 'normal') as Difficulty;
 if (!baseContent.difficulties.some((d) => d.id === difficulty)) throw new Error(`Unknown difficulty ${difficulty}`);
-const content = withDifficulty(baseContent, difficulty, process.argv.includes('save') && process.argv.includes('--mode') ? 'save' : 'destroy');
+const content = withDifficulty(baseContent, difficulty, 'destroy');
 // --town id: every game is played in this campaign town (CONCEPT.md §9).
 const townIndex = process.argv.indexOf('--town');
 const town = townIndex >= 0 ? process.argv[townIndex + 1] : null;
@@ -76,8 +77,15 @@ Object.assign(content, withLength(content, length, difficulty));
 // --town random: every game in its own generated town `gen-<seed>` (CONCEPT.md §9.5); a town's pass is the difficulty.
 // The content before the town is taken at the first game, after --set.
 let passContent: typeof content | null = null;
-const sideMode = process.argv.includes('save') && process.argv.includes('--mode') ? 'save' : 'destroy';
+const sideMode = 'destroy';
+// --raw: a generated town without its calibration; --power x: its news stronger or weaker (tools/calibrate.ts).
+if (process.argv.includes('--raw')) content.townCalibration = { size: {}, way: {}, rule: {}, goal: {}, combos: {} };
 if (town && town !== 'random') Object.assign(content, withTown(content, town, sideMode, difficulty));
+const powerIndex = process.argv.indexOf('--power');
+if (powerIndex >= 0) {
+  const b = content.balance as unknown as Record<string, number>;
+  for (const [key, mul] of Object.entries(powerMul(Number(process.argv[powerIndex + 1])))) b[key] *= mul!;
+}
 // --twist id: every game gets only this mid-game twist (to see what one twist does to the balance).
 const twistIndex = process.argv.indexOf('--twist');
 if (twistIndex >= 0) content.twists = content.twists.filter((t) => t.id === process.argv[twistIndex + 1]);
@@ -181,76 +189,6 @@ function agitator(s: GameState): Decision {
   }
   return d;
 }
-
-// ---------- Save mode (CONCEPT.md §8): defend the town from the rival paper ----------
-
-/**
- * Lays out a defending issue: debunks of the rival first (the loudest rival story's on the front
- * page), then harmless true stories; conflict stories are calmed, frightening ones left out.
- */
-function defend(s: GameState, debunkDistortion: (c: CardInstance) => number): Decision {
-  const mods = getModifiers(s, content);
-  const impact = (c: CardInstance, distortion: number) => previewPublication(s, content, mods, { cardUid: c.uid, placement: 2, distortion }).impact;
-  const out: { p: Publication; score: number }[] = [];
-  for (const c of s.hand) {
-    if (c.debunk) {
-      const d = debunkDistortion(c);
-      out.push({ p: { cardUid: c.uid, placement: 0, distortion: d }, score: 10 + impact(c, d) });
-    } else if (c.conflict) out.push({ p: { cardUid: c.uid, placement: 0, distortion: -1 }, score: impact(c, -1) });
-    // A running story arc is calmed down «Без паники» to steer it to the good ending (CONCEPT.md §3.1а).
-    else if (c.soft && templateOf(content, c.templateId).arc && averageTrust(s, content) >= 35) {
-      out.push({ p: { cardUid: c.uid, placement: 0, distortion: -1 }, score: 6 + impact(c, -1) });
-    }
-    else if (c.baseTruth === 0) {
-      const p = previewPublication(s, content, mods, { cardUid: c.uid, placement: 0, distortion: 0 });
-      if (!isHarmful(p.effect)) out.push({ p: { cardUid: c.uid, placement: 0, distortion: 0 }, score: p.effect ? 5 + p.impact : p.impact });
-    }
-  }
-  out.sort((a, b) => b.score - a.score);
-  const places = rankedPlacements(out.length, mods);
-  out.forEach((x, i) => (x.p.placement = places[i]));
-  return { publish: out.map((x) => x.p) };
-}
-
-/** One reporter watches the rival (two once the newsroom has four) and brings debunks of its lies. */
-function watchRival(s: GameState): void {
-  const watchers = s.reporters.length >= 4 ? 2 : 1;
-  s.reporters.forEach((id, i) => setRivalWatch(s, id, i < watchers));
-}
-
-/** Debunks the rival's lies with the plain truth. */
-const defender: Strategy = (s) => {
-  watchRival(s);
-  return defend(s, () => 0);
-};
-/** The same, but blows the debunks up («„…“ — «Набат» врёт по заказу») while it is trusted. */
-const liarDefender: Strategy = (s) => {
-  watchRival(s);
-  return defend(s, (c) => (averageTrust(s, content) >= 40 ? maxDistortion(c) : 0));
-};
-/**
- * The defender that also soothes bad true news («Без паники», a half-truth) while it is trusted,
- * and goes all the way («Всё хорошо!») only when very trusted.
- */
-const soother: Strategy = (s) => {
-  watchRival(s);
-  const d = defend(s, () => 0);
-  const trust = averageTrust(s, content);
-  for (const c of s.hand) {
-    if (!c.soft || c.baseTruth !== 0 || trust < 40 || d.publish.some((p) => p.cardUid === c.uid)) continue;
-    d.publish.push({ cardUid: c.uid, placement: 0, distortion: trust >= 55 ? -2 : -1 });
-  }
-  return d;
-};
-
-/** Prints only harmless truth and never answers the rival. */
-const bystander: Strategy = (s) => {
-  const d = defend(s, () => 0);
-  d.publish = d.publish.filter((p) => !s.hand.find((x) => x.uid === p.cardUid)!.debunk);
-  return d;
-};
-
-const saveStrategies: Record<string, Strategy> = { defender, liarDefender, soother, bystander, destroyer: mixed };
 
 const pairKeyOf = (c: CardInstance) => pairKey(content, c.conflict![0], c.conflict![1]);
 
@@ -364,16 +302,15 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
 const buyOrder: (string | number)[] = [2, 'kiosk_1', 'sports_page', 'newspaper_quality_1', 3, 'kiosk_2', 'editorial_1', 'youth_insert', 4, 'kiosk_3', 'subscription', 5, 'lawyers', 'kiosk_4'];
 // Upgrades come from a deck and forks (CONCEPT.md §3.5): the bot takes the fork option of its side
 // first and never buys what works against it; abilities it would not use.
-const forkPicks: Record<GameState['mode'], string[]> = { destroy: ['yellow_layout', 'trolls', 'insider'], save: ['solid_style', 'hotline', 'lawyers'] };
+const forkPicks: Record<GameState['mode'], string[]> = { destroy: ['yellow_layout', 'trolls', 'insider'] };
 const avoid: Record<GameState['mode'], string[]> = {
   destroy: ['solid_style', 'cheap_paper', 'lawyers', 'paid_subscription', 'mole'],
-  save: ['yellow_layout', 'cheap_paper', 'insider', 'paid_subscription', 'mole'],
 };
 // --avoid id,id: the bots never buy these (to measure what an upgrade adds).
 // --no-cash: the thoughtful bots leave the black cash alone.
 const noCash = process.argv.includes('--no-cash');
 const avoidIndex = process.argv.indexOf('--avoid');
-if (avoidIndex >= 0) for (const id of process.argv[avoidIndex + 1].split(',')) avoid.destroy.push(id), avoid.save.push(id);
+if (avoidIndex >= 0) for (const id of process.argv[avoidIndex + 1].split(',')) avoid.destroy.push(id);
 // The fork option is taken only if it is not avoided.
 
 function shop(s: GameState): void {
@@ -421,18 +358,16 @@ interface Result {
 }
 
 /**
- * Offers with a catch (CONCEPT.md §3.5а): the thoughtful bots take the kompromat while trusted, the
- * defenders take the mayor's subsidy (they print no bad news about power anyway); the rest say no.
+ * Offers with a catch (CONCEPT.md §3.5а): the thoughtful bots take the kompromat while trusted; the rest say no.
  */
 function answerOffers(s: GameState, strategy: Strategy): void {
   if (!s.offer) return;
   const kind = offerOf(content, s.offer.id).kind;
   const trust = averageTrust(s, content);
   const thoughtful = strategy === mixed || strategy === agitator;
-  const defending = strategy === defender || strategy === liarDefender || strategy === soother;
   // A lured reporter is kept when the money allows.
-  if (kind === 'poach') return void answerOffer(s, content, (thoughtful || defending) && s.money >= 2 * retainCost(content, s.offer.reporterId!));
-  answerOffer(s, content, (thoughtful && kind === 'kompromat' && trust >= 45) || (defending && ((kind === 'subsidy' && trust >= 45) || kind === 'kompromat')));
+  if (kind === 'poach') return void answerOffer(s, content, thoughtful && s.money >= 2 * retainCost(content, s.offer.reporterId!));
+  answerOffer(s, content, thoughtful && kind === 'kompromat' && trust >= 45);
 }
 
 // --collection starter|all|max (CONCEPT.md §3.5б): the player's cards — a newcomer's starter set (the
@@ -450,7 +385,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
     passContent ??= { ...content };
     Object.assign(content, withTown(passContent, townId!, sideMode, difficulty));
   }
-  const s = createGame(content, seed, saveMode ? 'save' : 'destroy', difficulty, { ...(townId ? { town: townId } : {}), length, collection: botCollection });
+  const s = createGame(content, seed, 'destroy', difficulty, { ...(townId ? { town: townId } : {}), length, collection: botCollection });
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
     if ((strategy === mixed || strategy === agitator) && !noInvestigations) manageInvestigations(s);
@@ -461,7 +396,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
     }
     answerOffers(s, strategy);
     // The hunt and the strikes at the guardian are the agitator's: `mixed` plays the original concept.
-    if (strategy === agitator && !saveMode && !noAttack) attack(s);
+    if (strategy === agitator && !noAttack) attack(s);
     if ((strategy === mixed || strategy === agitator) && !noCash) spendCash(s);
     const d = decide(s, strategy, rng);
     limitSensations(s, content, d.publish);
@@ -498,8 +433,6 @@ function arg(name: string, fallback: number): number {
 }
 
 const games = arg('games', 200);
-// --mode save: the save mode and its strategies (CONCEPT.md §8).
-const saveMode = process.argv.includes('save') && process.argv.includes('--mode');
 // --no-investigations: measure how much investigations add to the thoughtful bot.
 const noInvestigations = process.argv.includes('--no-investigations');
 const noAttack = process.argv.includes('--no-attack');
@@ -509,8 +442,8 @@ const baseSeed = arg('seed', 1);
 const traceIndex = process.argv.indexOf('--trace');
 if (traceIndex >= 0) {
   const name = process.argv[traceIndex + 1];
-  const strategy = (saveMode ? saveStrategies : strategies)[name];
-  if (!strategy) throw new Error(`Unknown strategy ${name}; use one of ${Object.keys(saveMode ? saveStrategies : strategies).join(', ')}`);
+  const strategy = strategies[name];
+  if (!strategy) throw new Error(`Unknown strategy ${name}; use one of ${Object.keys(strategies).join(', ')}`);
   playGame(baseSeed, strategy, true);
   process.exit(0);
 }
@@ -518,7 +451,11 @@ if (traceIndex >= 0) {
 const rows = [];
 let flagged = false;
 
-for (const [name, strategy] of Object.entries(saveMode ? saveStrategies : strategies)) {
+// --only name: one strategy; --json: its wins as one JSON line (tools/calibrate.ts).
+const onlyIndex = process.argv.indexOf('--only');
+const only = onlyIndex >= 0 ? process.argv[onlyIndex + 1] : null;
+for (const [name, strategy] of Object.entries(strategies)) {
+  if (only && name !== only) continue;
   const results = Array.from({ length: games }, (_, i) => playGame(baseSeed + i, strategy));
   const wins = results.filter((r) => r.outcome.result === 'win').length;
   const reasons: Record<string, number> = {};
@@ -546,7 +483,8 @@ for (const [name, strategy] of Object.entries(saveMode ? saveStrategies : strate
   });
 }
 
-console.table(rows);
+if (process.argv.includes('--json')) console.log(JSON.stringify(rows.map((r) => ({ strategy: r.strategy, win: Number(r['win %']) }))));
+else console.table(rows);
 if (flagged) {
   console.log('\nWARNING: a strategy wins more than 60% of games — balance bug (CONCEPT.md §4.1).');
   process.exitCode = 1;

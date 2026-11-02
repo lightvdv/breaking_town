@@ -278,7 +278,7 @@ export interface CardTemplate {
    * fact = true everyday story that needs no event, rumor = made-up or exaggerated story,
    * investigation = dirt on a social group, only from assigned reporters (CONCEPT.md §3.3а).
    */
-  /** debunk = our answer to a story of the rival paper (save mode, CONCEPT.md §8); never found by search. */
+  /** debunk = our answer to a story of the rival paper (CONCEPT.md §8); never found by search. */
   /** offer = the dirt an anonymous source sends with an offer (CONCEPT.md §3.5а); never found by search. */
   source: 'event' | 'fact' | 'rumor' | 'investigation' | 'debunk' | 'offer';
   /** Investigations: the social group the dirt is about. */
@@ -476,11 +476,9 @@ export interface Balance {
   fearMood: number;
   /** Chance a scared resident skips the shop that day (bars are skipped always). */
   fearShopSkip: number;
-  /** Save mode (CONCEPT.md §8): the city falls when its index drops below this. */
-  saveLoseIndex: number;
   /**
    * What the player sees instead of the city index (CONCEPT.md §2.3): stages from the best down,
-   * each from its `min` index; `winCityIndex` and `saveLoseIndex` must be one of these bounds.
+   * each from its `min` index; `winCityIndex` must be one of these bounds.
    */
   cityStates: { name: string; min: number }[];
   /** Rival paper: share of the city reading it at the start, its readers' starting trust, per-group appeal. */
@@ -491,8 +489,6 @@ export interface Balance {
   rivalJoin: number;
   rivalChurn: number;
   rivalChurnDoubt: number;
-  /** It prints 1..rivalStoriesMax stories a day. */
-  rivalStoriesMax: number;
   /** Multiplies the impact of the rival paper's stories by its kind (ours are set by `impactNorm`). */
   rivalImpactMul: Record<RivalKind, number>;
   /** The upgrades deck (CONCEPT.md §3.5): cards on offer, days between deals, the price of dealing early, a rare card's weight. */
@@ -511,7 +507,7 @@ export interface Balance {
   molePenalty: number;
   /** Days after which a story is as likely to come again as a new one: events and the rival's picks are weighted by how long ago they last appeared. */
   repeatFadeDays: number;
-  /** The same for the guardian of the destroy mode. */
+  /** It prints 1..guardianStoriesMax stories a day. */
   guardianStoriesMax: number;
   /** At most this many of its daily stories are debunks of ours. */
   rivalCountersMax: number;
@@ -772,8 +768,7 @@ export interface Balance {
   /** Share of the gap to the start value tension closes each turn. */
   tensionDecay: number;
   /**
-   * Tension shift of a conflict story by framing: calm, as is (true), heat (half-true), inflate (lie),
-   * by mode (in the save mode it is mostly the tabloid that heats).
+   * Tension shift of a conflict story by framing: calm, as is (true), heat (half-true), inflate (lie).
    */
   tensionNews: Record<GameMode, Quad<number>>;
   /** Shift × impact × (tensionReachBase + share of the pair that believed × tensionShareMul). */
@@ -944,6 +939,7 @@ export interface Content {
   twists: TwistDef[];
   towns: TownDef[];
   townGen: TownGenDef;
+  townCalibration: TownCalibration;
   lengths: LengthDef[];
   synergies: SynergyDef[];
   cash: CashDef[];
@@ -978,7 +974,7 @@ export interface Resident {
   protestTurns: number;
   /** Days the resident is still afraid of crime and stays at home. */
   fearTurns: number;
-  /** Save mode: buys the rival paper, and how much they trust it (0..100). */
+  /** Buys the rival paper, and how much they trust it (0..100). */
   rivalReader: boolean;
   rivalTrust: number;
   /** Building types the resident avoids, with turns remaining. */
@@ -1063,10 +1059,10 @@ export interface PrintedStory {
   soothed?: boolean;
 }
 
-/** tabloid = «Вечерний Набат», scares the town (save mode); guardian = «Голос города», defends it (destroy mode). */
-export type RivalKind = 'tabloid' | 'guardian';
+/** guardian = «Голос города», the honest paper that defends the town. */
+export type RivalKind = 'guardian';
 
-/** The rival paper of either mode (CONCEPT.md §8). */
+/** The rival paper (CONCEPT.md §8). */
 export interface RivalState {
   kind: RivalKind;
   /** Its issue being written; it comes out with ours and nobody sees it before. */
@@ -1186,8 +1182,8 @@ export interface CityMetrics {
  */
 export type Reaction = 'scared' | 'happy' | 'calm' | 'doubted' | 'talk' | 'outraged';
 
-/** destroy = ruin the town for the holding; save = defend it from the holding's rival paper (CONCEPT.md §8). */
-export type GameMode = 'destroy' | 'save';
+/** The one way to play: bring the town down. The name stays so content can still be filtered by a mode. */
+export type GameMode = 'destroy';
 
 /** Difficulty levels (CONCEPT.md §4.6): each overrides some balance numbers. */
 export type Difficulty = 'easy' | 'normal' | 'hard';
@@ -1222,17 +1218,41 @@ export interface TownGenDef {
     buildings?: Partial<Record<BuildingType, { count?: number; jobs?: number }>>;
     balance?: Partial<Balance>;
     balanceMul?: Partial<Record<keyof Balance, number>>;
-    /** Goals each pass may get; one is picked. */
-    goals: Record<Difficulty, TownGoal[]>;
   }[];
-  rules: { title: string; text: string; buildings?: Partial<Record<BuildingType, { count?: number; jobs?: number }>>; balance?: Partial<Balance>; balanceMul?: Partial<Record<keyof Balance, number>> }[];
+  rules: { id: string; title: string; text: string; buildings?: Partial<Record<BuildingType, { count?: number; jobs?: number }>>; balance?: Partial<Balance>; balanceMul?: Partial<Record<keyof Balance, number>> }[];
+  /** The main goals to choose from. */
+  goals: { id: string; name: string; goal: TownGoal }[];
+  /** The town a player starts from. */
+  defaults: TownChoice;
+  /** How far the calibration may change the strength of the news. */
+  powerRange: [number, number];
+  /** Past that range the length of the game moves instead: its share per ln of strength left over, and its bounds. */
+  daysPerLn: number;
+  daysRange: [number, number];
 }
+
+/** What a player chooses for a town (CONCEPT.md §9.5): ids from `townGen.json`. */
+export interface TownChoice {
+  size: string;
+  way: string;
+  rule: string;
+  goal: string;
+}
+
+/**
+ * Measured by `tools/calibrate.ts` (CONCEPT.md §9.5): for each choice the ln of the strength of the
+ * news that brings it back to the default town's chances. The ln's of a town's four choices add up,
+ * and `combos` corrects what they miss for each whole town (`size.way.rule.goal`).
+ */
+export type TownCalibration = Record<keyof TownChoice, Record<string, number>> & { combos: Record<string, number> };
 
 export interface TownDef {
   id: string;
   name: string;
   /** «моногород», «курорт»… */
   type: string;
+  /** How the town looks on the map: a way of life's id from `townGen.json` (sleepy, port…). */
+  look?: string;
   /** Its special rule, shown on the town card. */
   rule: { title: string; text: string };
   /** The game's length (turn limit). */
@@ -1245,7 +1265,7 @@ export interface TownDef {
   balance?: Partial<Balance>;
   /** Balance numbers multiplied (e.g. checkerBase × 1.1). */
   balanceMul?: Partial<Record<keyof Balance, number>>;
-  /** Per mode: its own length and balance (more days help the destroyer and hurt the defender). */
+  /** Per mode: its own length and balance. */
   modes?: Partial<Record<GameMode, { days?: number; balance?: Partial<Balance> }>>;
   /** Where it stands on the region map, in map pixels (200 × 120). */
   map: { x: number; y: number };
@@ -1280,14 +1300,13 @@ export interface DifficultyDef {
   name: string;
   text: string;
   balance: Partial<Balance>;
-  /** Overrides for one mode only, e.g. the turn limit (more days help the defender, hurt the destroyer). */
+  /** Overrides for one mode only, e.g. the turn limit. */
   modes: Partial<Record<GameMode, Partial<Balance>>>;
 }
 
 export interface Outcome {
   result: 'win' | 'lose';
-  /** citySaved / rivalClosed / cityFallen belong to the save mode. */
-  reason: 'cityDestroyed' | 'bankrupt' | 'trustCollapse' | 'turnLimit' | 'citySaved' | 'rivalClosed' | 'cityFallen' | 'goalDone';
+  reason: 'cityDestroyed' | 'bankrupt' | 'trustCollapse' | 'turnLimit' | 'rivalClosed' | 'goalDone';
 }
 
 export interface GameState {
@@ -1296,7 +1315,7 @@ export interface GameState {
   rng: RngState;
   turn: number;
   mode: GameMode;
-  /** Save mode only: the rival paper. */
+  /** The rival paper. */
   rival: RivalState | null;
   /** Reporters sent to watch the rival paper; they mostly bring debunks of its lies. */
   rivalWatch: string[];
@@ -1506,7 +1525,7 @@ export interface TurnReport {
   hunt?: { building: number; hit: boolean; step: number; stain: number; won: string | null };
   /** The twist began or ended this turn. */
   twist?: { started: boolean; ended: boolean };
-  /** Save mode: what the rival printed this turn and how it stands now. */
+  /** What the rival printed this turn and how it stands now. */
   rival?: RivalReport;
 }
 

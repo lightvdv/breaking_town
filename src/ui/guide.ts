@@ -1,15 +1,11 @@
 import guide from '../content/guide.json';
-import { crimePressure, rivalStarted, templateOf, type Content, type GameMode, type GameState, type TurnReport } from '../sim';
+import { crimePressure, rivalStarted, templateOf, type Content, type GameState, type TurnReport } from '../sim';
 
 /**
  * First-encounter notes (CONCEPT.md §7.3 «Подсказки»): the first time something new happens, a note
  * above the paper explains it, once ever. Off in the settings; the tutorial mission has its own steps
  * instead (`tutorial.ts`). The texts live in `content/guide.json`.
  */
-
-type ByMode<T> = T | Record<GameMode, T>;
-const byMode = <T>(x: ByMode<T>, mode: GameMode): T =>
-  typeof x === 'object' && x !== null && 'destroy' in x ? (x as Record<GameMode, T>)[mode] : (x as T);
 
 /** What a note's button opens: the upgrades, the newsroom, the rival's plaque. */
 export type GuideAction = 'shop' | 'team' | 'rival';
@@ -21,7 +17,7 @@ export interface GuideNote {
   action?: { label: string; open: GuideAction };
 }
 
-const firsts = guide.firsts as { id: string; mode?: GameMode; title: ByMode<string>; text: ByMode<string>; action?: { label: string; open: GuideAction } }[];
+const firsts = guide.firsts as { id: string; title: string; text: string; action?: { label: string; open: GuideAction } }[];
 
 /** What the player sees now: the first issue, the rival's plaque, the latest turn's report. */
 export interface GuideView {
@@ -58,11 +54,10 @@ const firstSeen: Record<string, (v: GuideView) => boolean> = {
 
 /** Today's notes not read yet: what appears for the first time. */
 export function pendingNotes(v: GuideView, seen: string[]): GuideNote[] {
-  const mode = v.state.mode;
   const out: GuideNote[] = [];
   for (const f of firsts) {
-    if (seen.includes(f.id) || (f.mode && f.mode !== mode) || !firstSeen[f.id]?.(v)) continue;
-    out.push({ id: f.id, title: byMode(f.title, mode), text: byMode(f.text, mode), ...(f.action ? { action: f.action } : {}) });
+    if (seen.includes(f.id) || !firstSeen[f.id]?.(v)) continue;
+    out.push({ id: f.id, title: f.title, text: f.text, ...(f.action ? { action: f.action } : {}) });
   }
   return out;
 }

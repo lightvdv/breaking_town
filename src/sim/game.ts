@@ -25,7 +25,7 @@ import { advanceRelations, createTension, fillTitle, pairKeys, pairOf, tensionLe
 import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
 import { advanceInvestigations, findNews, isRecent, scopeOf } from './reporters';
 import { advanceShop, checkMole } from './shop';
-import { markDebunked, planRival, pruneRival, publishRival, recordOurIssue, rivalKindOf, rivalReaders, rivalTrust, seedRival, updateRivalReaders, verifyRival } from './rival';
+import { markDebunked, planRival, pruneRival, publishRival, recordOurIssue, rivalReaders, rivalTrust, seedRival, updateRivalReaders, verifyRival } from './rival';
 import type {
   CardTemplate,
   ChannelId,
@@ -60,6 +60,17 @@ export function createGame(
   const residents = createResidents(c, rng, buildings);
   const workers = countWorkers(residents);
   for (const r of residents) tryAssignJob(r, groupOf(c, r.group), buildings, workers);
+  // Every workplace opens with someone in it: in a small town the first choices fill up and the
+  // police or the fact-checkers would start the game closed. Such a place takes one worker who may
+  // work there from a place with more than one; towns without a shortage stay as they were.
+  for (const x of buildings) {
+    if (x.jobs === 0 || (workers.get(x.id) ?? 0) > 0) continue;
+    const r = residents.find((p) => groupOf(c, p.group).jobs.includes(x.type) && (p.job === null || (workers.get(p.job) ?? 0) > 1));
+    if (!r) continue;
+    if (r.job !== null) workers.set(r.job, workers.get(r.job)! - 1);
+    r.job = x.id;
+    workers.set(x.id, 1);
+  }
 
   const state: GameState = {
     version: 1,
@@ -68,8 +79,8 @@ export function createGame(
     turn: 0,
     mode,
     difficulty,
-    // Either mode has a rival paper: the tabloid when we defend the town, the guardian when we ruin it.
-    rival: { kind: rivalKindOf(mode), plan: [], printed: [], closed: false, debunked: 0 },
+    // The honest paper that defends the town from us.
+    rival: { kind: 'guardian', plan: [], printed: [], closed: false, debunked: 0 },
     rivalWatch: [],
     ourPrinted: [],
     arcs: [],
@@ -213,7 +224,7 @@ function startTurn(state: GameState, c: Content): { notes: string[]; twist: { st
   state.missedEvents = missed.map((t) => incidentTitles.get(t.id) ?? t.titles.find((x) => x !== null) ?? t.id);
   state.hand = [...state.hand, ...dug.cards, ...cards];
   state.lastFinds = [...dug.finds, ...finds];
-  // Save mode: the rival writes today's issue; it comes out with ours (CONCEPT.md §8).
+  // The rival writes today's issue; it comes out with ours (CONCEPT.md §8).
   planRival(state, c, state.rng, events, pairs);
   // At most one sensation a day (CONCEPT.md §4.2а): the others come out as interesting stories.
   let sensations = 0;
@@ -277,17 +288,8 @@ export function checkOutcome(state: GameState, c: Content): Outcome | null {
   const b = c.balance;
   // A town's main goal (CONCEPT.md §9.2): only it wins; a town brought to a stage also falls with its rival.
   const goal = goalOf(c);
-  if (state.mode === 'destroy' && goal.type !== 'stage' && goalProgress(state, c).done) return { result: 'win', reason: 'goalDone' };
-  if (state.mode === 'destroy' && goal.type === 'stage' && state.rival?.closed) return { result: 'win', reason: 'rivalClosed' };
-  if (state.mode === 'save') {
-    // Save the town (CONCEPT.md §8): close the rival or hold out to the end; lose the town and it is over.
-    if (state.rival?.closed) return { result: 'win', reason: 'rivalClosed' };
-    if (state.metrics.cityIndex < b.saveLoseIndex) return { result: 'lose', reason: 'cityFallen' };
-    if (state.brokeTurns >= b.brokeTurnsLimit) return { result: 'lose', reason: 'bankrupt' };
-    if (averageTrust(state, c) < b.trustCollapse) return { result: 'lose', reason: 'trustCollapse' };
-    if (state.turn > b.turnLimit) return { result: 'win', reason: 'citySaved' };
-    return null;
-  }
+  if (goal.type !== 'stage' && goalProgress(state, c).done) return { result: 'win', reason: 'goalDone' };
+  if (goal.type === 'stage' && state.rival?.closed) return { result: 'win', reason: 'rivalClosed' };
   if (goal.type === 'stage' && state.metrics.cityIndex < goal.index) return { result: 'win', reason: 'cityDestroyed' };
   if (state.brokeTurns >= b.brokeTurnsLimit) return { result: 'lose', reason: 'bankrupt' };
   if (averageTrust(state, c) < b.trustCollapse) return { result: 'lose', reason: 'trustCollapse' };
@@ -342,7 +344,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     pushArc(state, c, card, p.placement, p.distortion);
     topicsThisTurn[topic] = (topicsThisTurn[topic] ?? 0) + 1;
   }
-  // Save mode (CONCEPT.md §8): our debunks answered its recent lies; its new issue comes out today.
+  // The rival (CONCEPT.md §8): our debunks answered its recent lies; its new issue comes out today.
   const rivalBefore = state.rival ? { readers: rivalReaders(state), trust: rivalTrust(state) } : null;
   const debunks = d.publish.map((p) => state.hand.find((x) => x.uid === p.cardUid)!).filter((x) => x.debunk);
   markDebunked(state, debunks.map((x) => x.debunk!.uid));

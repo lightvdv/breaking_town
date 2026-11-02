@@ -167,7 +167,7 @@ export class ReporterBar {
       card.root.title = [
         r.name,
         inv ? invLine : skillLine(this.c, state, r),
-        `${searchLine(state, r)} · ${r.salary}/ход`,
+        `${searchLine(state, r)} · ${r.salary} в день`,
         r.bio,
         'Щёлкните — темы поиска и расследование.',
       ].join('\n');

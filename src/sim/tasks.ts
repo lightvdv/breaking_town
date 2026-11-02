@@ -5,7 +5,7 @@ import { staffOf } from './staff';
 import type { Content, ExposedStory, GameState, TaskDef, TaskState } from './types';
 
 /**
- * Tasks (CONCEPT.md §4.8): the holding (in the save mode, the paper's board) gives a couple of side
+ * Tasks (CONCEPT.md §4.8): the holding gives a couple of side
  * goals with a deadline and a reward; the mid-game audit adds one with a penalty. All tasks done is
  * one of the game's stars.
  */

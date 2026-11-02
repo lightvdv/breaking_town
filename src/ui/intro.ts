@@ -1,4 +1,4 @@
-import { reporterOf, type Content, type GameMode } from '../sim';
+import { reporterOf, type Content } from '../sim';
 import { h } from './dom';
 
 /**
@@ -12,41 +12,11 @@ export interface IntroSlide {
   text: string;
 }
 
-export function introSlides(c: Content, mode: GameMode = 'destroy'): IntroSlide[] {
+export function introSlides(c: Content): IntroSlide[] {
   const b = c.balance;
   // The stage a city falls into below a bound: goals speak of stages, never of the index (CONCEPT.md §2.3).
   const below = (bound: number) => b.cityStates.find((s) => s.min < bound)!.name;
   const reporter = reporterOf(c, b.startReporters[0]).name;
-  // The other side of the same story (CONCEPT.md §8): the holding's tabloid against the town paper.
-  if (mode === 'save') {
-    return [
-      {
-        art: 'town',
-        kicker: 'Где-то в провинции',
-        text: `Тихий городок. ${b.population} жителей, завод, рынок и бар по пятницам. Здесь давно ничего не случалось.`,
-      },
-      {
-        art: 'rival',
-        kicker: 'Столица · «Медиа-Плюс»',
-        text: 'Медиахолдинг проверяет теорию: страх продаётся лучше всего. Он купил местный «Вечерний Набат», и тот каждый день пугает город.',
-      },
-      {
-        art: 'editor',
-        kicker: 'Редакция «Городского Вестника»',
-        text: `Вы — редактор последней честной газеты. Бюджет — ${b.startMoney} монет, в штате — один репортёр, ${reporter}.`,
-      },
-      {
-        art: 'defend',
-        kicker: 'Как это работает',
-        text: 'Отправьте репортёра следить за «Набатом»: он найдёт, где тот соврал, и вы опровергнете ложь, пока она свежая. Печатайте хорошие новости, мирите группы. Можно и соврать — но если поймают, вам перестанут верить.',
-      },
-      {
-        art: 'saved',
-        kicker: 'Задание',
-        text: `Продержитесь ${b.turnLimit} дней и не дайте городу скатиться в «${below(b.saveLoseIndex)}». Или разорите «Набат»: без читателей и доверия он закроется.`,
-      },
-    ];
-  }
   return [
     {
       art: 'town',
@@ -82,8 +52,8 @@ export function introSlides(c: Content, mode: GameMode = 'destroy'): IntroSlide[
 }
 
 /** Shows the slides one by one; resolves when the player reaches the end or skips. */
-export function playIntro(host: HTMLElement, c: Content, assetBase: string, mode: GameMode = 'destroy'): Promise<void> {
-  const slides = introSlides(c, mode);
+export function playIntro(host: HTMLElement, c: Content, assetBase: string): Promise<void> {
+  const slides = introSlides(c);
   return new Promise((resolve) => {
     let i = 0;
     const card = h('div', { class: 'intro-card' });

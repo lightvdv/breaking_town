@@ -253,10 +253,6 @@ select {
   opacity: 0.4;
 }
 
-.goal-step.dim {
-  opacity: 0.2;
-}
-
 /* The goal stage: a white frame around it and the flag above. */
 .goal-step.target {
   outline: 2px solid var(--accent);
@@ -301,14 +297,6 @@ select {
   line-height: 1;
   transform: translateX(-50%);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
-}
-
-.goal-line {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  width: 2px;
-  background: #fff;
 }
 
 .goal-names {
@@ -1001,45 +989,6 @@ button.publish.level-3.bump-up {
 }
 
 /* New game: the mode is chosen with a picture card. */
-.mode-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin: 8px 0 12px;
-}
-
-.mode-card {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  padding: 8px;
-  text-align: left;
-  background: var(--panel-2);
-  border: 2px solid var(--ink);
-}
-
-.mode-card img {
-  width: 100%;
-  height: auto;
-  image-rendering: pixelated;
-  border: 2px solid var(--ink);
-}
-
-.mode-card b {
-  font-size: 18px;
-}
-
-.mode-card span {
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--muted);
-}
-
-.mode-card:hover:not(:disabled) {
-  outline: 3px solid var(--accent);
-}
-
 /* ---------- Title screen and menus (CONCEPT.md §7.3 «Меню») ---------- */
 .title-screen {
   position: fixed;
@@ -1056,7 +1005,11 @@ button.publish.level-3.bump-up {
 }
 
 /* The game interface stays out of sight behind the title screen. */
-.at-title .hud,
+/* The title screen: the city fills the whole window, no empty band where the HUD would be. */
+.at-title .hud {
+  display: none;
+}
+
 .at-title .city-events,
 .at-title .city-tools {
   visibility: hidden;
@@ -1083,6 +1036,12 @@ button.publish.level-3.bump-up {
     -2px -2px 0 #181425,
     2px -2px 0 #181425,
     -2px 2px 0 #181425;
+}
+
+/* Two fixed lines: «УТКА» and «В НОМЕР». */
+.title-logo span {
+  display: block;
+  white-space: nowrap;
 }
 
 
@@ -1888,6 +1847,20 @@ button.publish.level-3.bump-up {
   color: #fff;
   border: 2px solid var(--ink);
   pointer-events: none;
+}
+
+/* Under the open issue the city's events and tools would show through its shade: the events move into the issue. */
+.stage:has(.issue.open) > .city-events,
+.stage:has(.issue.open) > .city-tools {
+  visibility: hidden;
+}
+
+.city-events.issue-events {
+  position: static;
+  max-width: none;
+  align-self: flex-start;
+  margin: 0;
+  pointer-events: auto;
 }
 
 .city-events .day {
@@ -5145,11 +5118,6 @@ button.publish.level-3.bump-up {
   color: var(--text);
 }
 
-.camp-side.save {
-  background: var(--ok);
-  color: var(--ink);
-}
-
 .camp-diff {
   color: var(--muted);
   font-size: 13px;
@@ -5926,9 +5894,10 @@ button.publish.level-3.bump-up {
   margin: 0;
 }
 
+/* As many cards in a row as fit: one on a phone, two or three on a tablet and a desktop. */
 .deck {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 10px;
 }
 
@@ -6061,8 +6030,15 @@ button.publish.level-3.bump-up {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .deck {
-    grid-template-columns: minmax(0, 1fr);
+  .res.city-state b {
+    font-size: 12px;
+  }
+
+  /* A phone keeps the paper short: a few lines of placeholder text, no stamp, the streak without its prize. */
+  .lorem span:nth-child(n + 4),
+  .issue-stamp,
+  .streak-prize {
+    display: none;
   }
 }
 
@@ -6479,6 +6455,44 @@ span.hunt-chip {
   font-weight: 700;
 }
 
+/* Rarity tabs of the collection. */
+.office-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.office-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 44px;
+  padding: 4px 2px;
+  background: var(--panel-2);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.office-tab b {
+  font-size: 13px;
+}
+
+.office-tab small {
+  font-size: 12px;
+}
+
+.office-tab.on {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.office-tab.on.rarity-legendary b,
+.office-tab.on.rarity-rare b {
+  color: var(--accent);
+}
+
 .pack-reveal {
   margin: 8px auto;
   max-width: 280px;
@@ -6596,10 +6610,6 @@ span.hunt-chip {
 }
 
 @media (max-width: 900px) {
-  .packs {
-    grid-template-columns: 1fr;
-  }
-
   .coll-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -6722,6 +6732,28 @@ span.hunt-chip {
   gap: 8px;
 }
 
+.town-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
 .gen-head b {
   font-size: 18px;
+}
+
+/* A tablet gets the phone's layout with room to spare: bigger resource numbers. */
+@media (min-width: 600px) and (max-width: 900px) {
+  .res b {
+    font-size: 20px;
+  }
+
+  .res-label {
+    font-size: 12px;
+  }
+
+  .res.city-state b {
+    font-size: 16px;
+  }
 }

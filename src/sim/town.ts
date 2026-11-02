@@ -1,9 +1,12 @@
-import { generateTown, isGeneratedTown, GEN_PREFIX } from './townGen';
+import { composeTown, generateTown, isGeneratedTown, parseChoice, GEN_PREFIX } from './townGen';
 import type { Balance, Content, Difficulty, GameMode, TownDef } from './types';
 
 /** The campaign's towns (CONCEPT.md §9) and generated ones (`gen-<seed>`, §9.5). */
 export function townOf(c: Content, id: string): TownDef {
-  if (isGeneratedTown(id)) return generateTown(c, Number(id.slice(GEN_PREFIX.length)));
+  if (isGeneratedTown(id)) {
+    const tail = id.slice(GEN_PREFIX.length);
+    return /^\d+$/.test(tail) ? generateTown(c, Number(tail)) : composeTown(c, parseChoice(tail));
+  }
   const t = c.towns.find((x) => x.id === id);
   if (!t) throw new Error(`Unknown town: ${id}`);
   return t;

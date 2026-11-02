@@ -12,7 +12,7 @@ import { giveTask, scoreOf, taskOf, updateTasks } from '../src/sim/tasks';
 import { twistMods } from '../src/sim/twists';
 import { townOf, withTown } from '../src/sim/town';
 import { goalOf, goalProgress, updateGoal } from '../src/sim/goals';
-import { generateTown } from '../src/sim/townGen';
+import { choiceId, composeTown, generateTown, powerMul, townPower } from '../src/sim/townGen';
 import { checkOutcome } from '../src/sim/game';
 import { settleHunt } from '../src/sim/hunt';
 import { crimeEvents, crimePressure, gangDue } from '../src/sim/crime';
@@ -972,15 +972,13 @@ describe('soothing (CONCEPT.md §3.1)', () => {
   });
 });
 
-describe('save mode (CONCEPT.md §8)', () => {
+describe('the rival paper (CONCEPT.md §8)', () => {
   it('the rival prints with us; its lies can be debunked for two days, found by a reporter who watches it', () => {
-    const s = createGame(content, 3, 'save');
-    expect(s.mode).toBe('save');
+    const s = createGame(content, 3);
     expect(rivalReaders(s)).toBeGreaterThan(0);
     // Nothing is known of its issue before it comes out.
     expect(s.hand.some((x) => x.debunk)).toBe(false);
-    expect(createGame(content, 3).rival!.kind).toBe('guardian');
-    expect(s.rival!.kind).toBe('tabloid');
+    expect(s.rival!.kind).toBe('guardian');
     setRivalWatch(s, s.reporters[0], true);
     let found = 0;
     for (let t = 0; t < 8 && !s.outcome; t++) {
@@ -1001,7 +999,7 @@ describe('save mode (CONCEPT.md §8)', () => {
     let cured = 0;
     let trustDrop = 0;
     for (const seed of [1, 2, 3, 4, 5, 6]) {
-      const s = createGame(content, seed, 'save');
+      const s = createGame(content, seed);
       for (const r of s.residents) if (r.rivalReader) r.follows = ['newspaper'];
       setRivalWatch(s, s.reporters[0], true);
       for (let t = 0; t < 4 && !s.outcome; t++) {
@@ -1016,18 +1014,12 @@ describe('save mode (CONCEPT.md §8)', () => {
     expect(trustDrop).toBeGreaterThan(0);
   });
 
-  it('wins when the rival closes or the town holds out, loses when the town falls', () => {
-    const s = createGame(content, 2, 'save');
+  it('closing it wins the game', () => {
+    const s = createGame(content, 2);
     for (const r of s.residents) r.rivalTrust = 1;
     playTurn(s, content, { publish: [] });
     expect(rivalTrust(s)).toBe(0);
     expect(s.outcome).toEqual({ result: 'win', reason: 'rivalClosed' });
-
-    const t = createGame(content, 2, 'save');
-    for (const r of t.residents) r.job = null;
-    for (const r of t.residents) r.protestTurns = 5;
-    playTurn(t, content, { publish: [] });
-    expect(t.outcome).toEqual({ result: 'lose', reason: 'cityFallen' });
   });
 });
 
@@ -1226,12 +1218,11 @@ describe('named residents and letters', () => {
 });
 
 describe('difficulty', () => {
-  it('a level overrides balance numbers, some only in one mode; normal changes nothing', () => {
+  it('a level overrides balance numbers; normal changes nothing', () => {
     expect(withDifficulty(content, 'normal', 'destroy').balance).toEqual(content.balance);
     const hard = withDifficulty(content, 'hard', 'destroy');
     expect(hard.balance.checkerBase).toBeGreaterThan(content.balance.checkerBase);
     expect(hard.balance.turnLimit).toBeLessThan(content.balance.turnLimit);
-    expect(withDifficulty(content, 'hard', 'save').balance.turnLimit).toBeGreaterThan(content.balance.turnLimit);
     const s = createGame(hard, 3, 'destroy', 'hard');
     expect(s.difficulty).toBe('hard');
     expect(s.money).toBe(hard.balance.startMoney);
@@ -1253,18 +1244,16 @@ describe('forecast', () => {
 });
 
 describe('gentle first days (CONCEPT.md §4.7)', () => {
-  it('no fact-checks, rival or conflicts before their days, for every seed and mode', () => {
+  it('no fact-checks, rival or conflicts before their days, for every seed', () => {
     const b = realContent.balance;
-    for (const mode of ['destroy', 'save'] as const) {
-      for (let seed = 1; seed <= 6; seed++) {
-        const s = createGame(realContent, seed, mode);
-        while (s.turn < Math.max(b.conflictStartTurn, b.rivalStartTurn[mode], b.factCheckStartTurn) && !s.outcome) {
-          const turn = s.turn;
-          if (turn < b.conflictStartTurn) expect(s.hand.some((x) => templateOf(realContent, x.templateId).conflict)).toBe(false);
-          const r = playTurn(s, realContent, simpleDecision(s, 'max'));
-          if (turn < b.factCheckStartTurn) expect(r.exposures).toEqual([]);
-          if (turn < b.rivalStartTurn[mode]) expect(r.rival?.publications ?? []).toEqual([]);
-        }
+    for (let seed = 1; seed <= 6; seed++) {
+      const s = createGame(realContent, seed);
+      while (s.turn < Math.max(b.conflictStartTurn, b.rivalStartTurn.destroy, b.factCheckStartTurn) && !s.outcome) {
+        const turn = s.turn;
+        if (turn < b.conflictStartTurn) expect(s.hand.some((x) => templateOf(realContent, x.templateId).conflict)).toBe(false);
+        const r = playTurn(s, realContent, simpleDecision(s, 'max'));
+        if (turn < b.factCheckStartTurn) expect(r.exposures).toEqual([]);
+        if (turn < b.rivalStartTurn.destroy) expect(r.rival?.publications ?? []).toEqual([]);
       }
     }
   });
@@ -1273,14 +1262,11 @@ describe('gentle first days (CONCEPT.md §4.7)', () => {
 describe('tasks and stars (CONCEPT.md §4.8)', () => {
   it('gives the mode its tasks on their day, pays done ones and fails broken ones', () => {
     const b = content.balance;
-    for (const mode of ['destroy', 'save'] as const) {
-      const s = createGame(content, 11, mode);
-      while (s.turn < b.taskStartTurn) playTurn(s, content, simpleDecision(s, 'none'));
-      const own = s.tasks.filter((t) => !taskOf(content, t.id).twist);
-      expect(own).toHaveLength(b.taskCount);
-      expect(new Set(own.map((t) => t.id)).size).toBe(b.taskCount);
-      for (const t of own) expect([undefined, mode]).toContain(taskOf(content, t.id).mode);
-    }
+    const first = createGame(content, 11);
+    while (first.turn < b.taskStartTurn) playTurn(first, content, simpleDecision(first, 'none'));
+    const own = first.tasks.filter((t) => !taskOf(content, t.id).twist);
+    expect(own).toHaveLength(b.taskCount);
+    expect(new Set(own.map((t) => t.id)).size).toBe(b.taskCount);
     // A reach task is done the day its check holds and pays its reward.
     const s = createGame(content, 12);
     s.tasks = [];
@@ -1467,7 +1453,7 @@ describe('campaign towns (CONCEPT.md §9)', () => {
   });
 
   it('a carried reporter starts the next town with their experience', () => {
-    const s = createGame(realContent, 6, 'save', 'normal', { reporters: [{ id: 'nikitina', xp: 200 }] });
+    const s = createGame(realContent, 6, 'destroy', 'normal', { reporters: [{ id: 'nikitina', xp: 200 }] });
     expect(s.reporters).toEqual(['nikitina']);
     expect(levelOf(realContent, staffOf(s, realContent, 'nikitina').xp)).toBe(2);
   });
@@ -1791,6 +1777,42 @@ describe('town goals and the town generator (CONCEPT.md §9.2, §9.5)', () => {
     for (const k of Object.keys(s.tension)) s.tension[k] = 0;
     updateGoal(s, c);
     expect(s.clashDays).toBe(0);
+  });
+
+  it('builds the town the player chose, the same every time, with its goal on any difficulty', () => {
+    const choice = { size: 'big', way: 'mono', rule: 'strict', goal: 'factory' };
+    const id = choiceId(choice);
+    expect(townOf(realContent, id)).toEqual(composeTown(realContent, choice));
+    for (const level of ['easy', 'normal', 'hard'] as const) {
+      const c = withTown(withDifficulty(realContent, level, 'destroy'), id, 'destroy', level);
+      expect(goalOf(c)).toEqual({ type: 'close', building: 'factory' });
+      const days = composeTown(realContent, choice).days;
+      expect(c.balance.turnLimit).toBe(days);
+      expect(days).toBeGreaterThanOrEqual(44 * realContent.townGen.daysRange[0] - 0.5);
+      expect(days).toBeLessThanOrEqual(44 * realContent.townGen.daysRange[1] + 0.5);
+      expect(validateContent(c)).toEqual([]);
+    }
+    expect(() => composeTown(realContent, { ...choice, goal: 'nope' })).toThrow();
+  });
+
+  it('the calibration sets the strength of the news within its range and says when it runs out', () => {
+    const c = { ...realContent, townCalibration: { size: { big: Math.log(0.5) }, way: {}, rule: { strict: Math.log(10) }, goal: {}, combos: { 'small.mono.none.decline': Math.log(2) } } };
+    const [lo, hi] = c.townGen.powerRange;
+    expect(townPower(c, c.townGen.defaults)).toEqual({ power: 1, days: 1, clamped: false });
+    expect(townPower(c, { ...c.townGen.defaults, size: 'big' }).power).toBeCloseTo(0.5);
+    expect(townPower(c, { size: 'small', way: 'mono', rule: 'none', goal: 'decline' }).power).toBeCloseTo(2);
+    expect(townPower(c, { ...c.townGen.defaults, rule: 'strict' })).toEqual({ power: hi, days: c.townGen.daysRange[1], clamped: true });
+    // A little past the strength's range the game gets longer instead, and nothing is clamped yet.
+    const longer = townPower({ ...c, townCalibration: { ...c.townCalibration, rule: { strict: Math.log(hi) + 0.2 } } }, { ...c.townGen.defaults, rule: 'strict' });
+    expect(longer.power).toBe(hi);
+    expect(longer.days).toBeCloseTo(1 + 0.2 * c.townGen.daysPerLn);
+    expect(longer.clamped).toBe(false);
+    expect(lo).toBeLessThan(1);
+    // Stronger news: more impact (a lower norm), and the stain and the crime heat, which do not follow it, too.
+    const mul = powerMul(2);
+    expect(mul.impactNorm).toBe(0.5);
+    expect(mul.huntStain).toBe(2);
+    expect(mul.crimeHeatGain).toBe(2);
   });
 
   it('generates the same town from the same seed, and every generated town plays', () => {

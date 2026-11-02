@@ -13,6 +13,7 @@ import { looks, residentSheet, ROWS } from './characters';
 import { gimpPalette, PALETTE, type Color } from './palette';
 import { Raster } from './raster';
 import { uiIcons } from './ui';
+import { landmarkDecor, lookTiles } from './landmarks';
 import { bench, bush, flowers, fountain, fxIcon, fxIcons, grass, lamp, road, tree } from './tiles';
 
 const OUT = join(process.cwd(), 'public', 'assets');
@@ -116,6 +117,12 @@ for (const [name, frames] of Object.entries(decor)) {
   write(`sprites/decor/${name}.png`, sheetFromFrames([frames], 64, 64).toPng());
   write(`sprites/decor/${name}.json`, atlas(`${name}.png`, 64, 64, [{ name: 'idle', frames: frames.length }], frames.length * 64));
 }
+// The looks of the ways of life (CONCEPT.md §9.5): landmarks behind the map's far edge, their tiles.
+for (const [name, { size: [w, h], frames }] of Object.entries(landmarkDecor)) {
+  write(`sprites/decor/${name}.png`, sheetFromFrames([frames], w, h).toPng());
+  write(`sprites/decor/${name}.json`, atlas(`${name}.png`, w, h, [{ name: 'idle', frames: frames.length }], frames.length * w));
+}
+for (const [name, tile] of Object.entries(lookTiles)) write(`sprites/tiles/${name}.png`, tile.toPng());
 
 // Reaction icons.
 for (const name of Object.keys(fxIcons)) write(`sprites/fx/${name}.png`, fxIcon(name).toPng());
@@ -158,7 +165,8 @@ write(
       residents: Object.fromEntries(Object.entries(looks).map(([g, v]) => [g, v.length])),
       buildings: Object.fromEntries(buildingArts.map((a) => [a.type, { states: a.states, variants: a.variants, size: a.size }])),
       grass: 3,
-      decor: Object.keys(decor),
+      decor: [...Object.keys(decor), ...Object.keys(landmarkDecor)],
+      tiles: Object.keys(lookTiles),
       fx: Object.keys(fxIcons),
       ui: Object.keys(uiIcons),
       reporters: reporters.map((r) => r.id),

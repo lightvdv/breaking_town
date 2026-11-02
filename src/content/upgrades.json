@@ -294,27 +294,6 @@
     ]
   },
   {
-    "id": "hotline",
-    "name": "Горячая линия",
-    "icon": "☎",
-    "description": "Горожане сами звонят про враньё конкурента: опровержения находятся на 20% чаще.",
-    "drawback": "Операторы — 10 ₽ в день.",
-    "cost": 220,
-    "requires": null,
-    "mode": "save",
-    "effects": {
-      "channel": "newspaper",
-      "debunkFindAdd": 0.2,
-      "upkeepAdd": 10
-    },
-    "section": "Редакция",
-    "rarity": "common",
-    "tags": [
-      "trust"
-    ],
-    "starter": true
-  },
-  {
     "id": "mole",
     "name": "Крот у конкурента",
     "icon": "🕵",

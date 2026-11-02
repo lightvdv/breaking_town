@@ -1,6 +1,7 @@
 import { ASSET_BASE } from '../assets';
 import { AnimatedSprite, Application, Container, Sprite, Texture, type Spritesheet } from 'pixi.js';
-import { isRoadTile, type Building, type Content, type GameState, type Highlight, type Reaction, type Resident } from '../sim';
+import { edgeOf, EDGE_DEPTH, lotGrass, parkDecor, worldDecor, worldGround } from './looks';
+import { isRoadTile, townOf, type Building, type Content, type GameState, type Highlight, type Reaction, type Resident } from '../sim';
 import { loadArt, type ArtAssets } from './assets';
 
 /**
@@ -10,6 +11,8 @@ import { loadArt, type ArtAssets } from './assets';
 
 const HALF_W = 32;
 const HALF_H = 16;
+/** Night falls over the land far from town: a bluish dark multiplied in, so no tile shows a seam. */
+const shadeTint = (f: number) => (Math.round(255 * f) << 16) | (Math.round(255 * f) << 8) | Math.round(255 * Math.min(1, f * 1.35));
 const screenOf = (tx: number, ty: number) => ({ x: (tx - ty) * HALF_W, y: (tx + ty) * HALF_H });
 
 type Pt = { x: number; y: number };
@@ -161,6 +164,7 @@ export class CityScene {
     this.doors.clear();
     this.state = state;
     const n = state.mapSize;
+    const look = this.lookOf(state);
     const mid = 3 * Math.floor(this.c.balance.mapBlocks / 2);
     this.exit = { x: 0, y: mid };
     this.offMap = { x: -2.5, y: mid };
@@ -178,7 +182,8 @@ export class CityScene {
           const alongY = x % 3 === 0;
           tex = this.art.tiles[alongX && alongY ? 'road_cross' : alongX ? 'road_x' : 'road_y'];
         } else {
-          tex = this.art.tiles[`grass_${1 + Math.floor(hash(x, y) * this.art.manifest.grass)}`];
+          const v = 1 + Math.floor(hash(x, y) * this.art.manifest.grass);
+          tex = this.art.tiles[lotGrass(look, v)] ?? this.art.tiles[lotGrass(null, v)];
         }
         const s = new Sprite(tex);
         s.anchor.set(0.5);
@@ -200,20 +205,17 @@ export class CityScene {
         if (lotEmpty && x === lotX + 1 && y === lotY + 1) name = 'fountain';
         else if (lotEmpty) name = h < 0.45 ? `tree_${1 + Math.floor(h * 6.6)}` : h < 0.65 ? 'bench' : h < 0.8 ? 'lamp' : 'flowers';
         else name = h < 0.55 ? `tree_${1 + Math.floor(h * 5.4)}` : h < 0.8 ? 'bush' : 'flowers';
-        const sheet = this.art.decor[name];
-        if (!sheet) continue;
-        const s = new AnimatedSprite(sheet.animations.idle);
-        s.anchor.set(0.5, 1);
-        const p = screenOf(x, y);
-        s.position.set(p.x, p.y + HALF_H);
-        s.zIndex = p.y;
-        if (s.totalFrames > 1) {
-          s.animationSpeed = 0.06;
-          s.gotoAndPlay(Math.floor(Math.random() * s.totalFrames));
-        }
-        this.objects.addChild(s);
+        this.addDecor(parkDecor(look, name, hash(x * 3 + 2, y * 5 + 1)), x, y, 1);
       }
     }
+
+    // The town's landmarks behind the far edge and the land around the town, fading into the night (CONCEPT.md §9.5).
+    const edge = edgeOf(look, n, hash);
+    if (edge) {
+      for (let y = -EDGE_DEPTH; y < 0; y++) for (let x = 0; x < n; x++) this.addTile(edge.ground(x, y), x, y, 1);
+      for (const it of edge.items) this.addDecor(it.name, it.x, it.y, it.size);
+    }
+    this.addOutskirts(look, n, edge ? EDGE_DEPTH : 0);
 
     for (const b of state.buildings) {
       this.doors.set(b.id, this.doorOf(b, n));
@@ -231,13 +233,68 @@ export class CityScene {
       this.buildingSprites.set(b.id, sprite);
     }
 
+    const back = edge ? EDGE_DEPTH : 0;
     this.bounds = {
       minX: -n * HALF_W - 8,
-      minY: -150,
-      w: n * HALF_W * 2 + 16,
-      h: 150 + (2 * n - 1) * HALF_H + 24,
+      minY: -150 - back * HALF_H,
+      w: n * HALF_W * 2 + 16 + back * HALF_W,
+      h: 150 + back * HALF_H + (2 * n - 1) * HALF_H + 24,
     };
     this.layout();
+  }
+
+  /** The land around the town by the look's rule (`worldGround`), darker the further it lies: no void around the map. */
+  private addOutskirts(look: string | null, n: number, back: number): void {
+    const R = 26;
+    for (let y = -R - back; y < n + R; y++) {
+      for (let x = -R; x < n + R; x++) {
+        if (x >= 0 && x < n && y >= -back && y < n) continue;
+        const d = Math.max(x < 0 ? -x : x - n + 1, y < -back ? -back - y : y - n + 1, 0);
+        const shade = Math.max(0.16, Math.min(1, 1.12 - d * 0.12));
+        const ground = worldGround(look, x, y, n, hash);
+        this.addTile(ground, x, y, shade);
+        if (d > 12) continue;
+        const decor = worldDecor(look, ground, d, hash(x * 13 + 7, y * 17 + 3));
+        if (decor) this.addDecor(decor, x, y, 1, shade);
+      }
+    }
+  }
+
+  private addTile(name: string, x: number, y: number, shade: number): void {
+    const tex = this.art.tiles[name] ?? this.art.tiles.grass_1;
+    const s = new Sprite(tex);
+    s.anchor.set(0.5);
+    const p = screenOf(x, y);
+    s.position.set(p.x, p.y);
+    if (shade < 1) s.tint = shadeTint(shade);
+    this.ground.addChild(s);
+  }
+
+  /** A decor sprite standing on tile (x, y), or on the 2×2 footprint from it. */
+  private addDecor(name: string, x: number, y: number, size: number, shade = 1): void {
+    const sheet = this.art.decor[name];
+    if (!sheet) return;
+    const s = new AnimatedSprite(sheet.animations.idle);
+    s.anchor.set(0.5, 1);
+    const p = screenOf(x + size - 1, y + size - 1);
+    s.position.set(p.x, p.y + HALF_H);
+    s.zIndex = screenOf(x + (size - 1) / 2, y + (size - 1) / 2).y;
+    if (shade < 1) s.tint = shadeTint(shade);
+    if (s.totalFrames > 1) {
+      s.animationSpeed = s.totalFrames > 4 ? 0.1 : 0.06;
+      s.gotoAndPlay(Math.floor(Math.random() * s.totalFrames));
+    }
+    this.objects.addChild(s);
+  }
+
+  /** How the town looks: its way of life, or the plain look for a town without one. */
+  private lookOf(state: GameState): string | null {
+    if (!state.town) return null;
+    try {
+      return townOf(this.c, state.town).look ?? null;
+    } catch {
+      return null;
+    }
   }
 
   /** The road tile in front of a building, preferring the side facing the camera. */
@@ -301,7 +358,7 @@ export class CityScene {
 
   /** Syncs the view with a new game state; with playReactions, residents react to this turn's news. */
   setState(state: GameState, playReactions: boolean): void {
-    const key = `${state.seed}:${state.buildings.length}:${state.mapSize}`;
+    const key = `${state.seed}:${state.buildings.length}:${state.mapSize}:${state.town}`;
     if (key !== this.mapKey) {
       this.mapKey = key;
       this.build(state);

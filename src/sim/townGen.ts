@@ -1,25 +1,65 @@
 import { createRng, int, pick } from './rng';
-import type { Content, Difficulty, TownDef } from './types';
+import type { Balance, Content, TownChoice, TownDef } from './types';
 
-/** Ids of generated towns: `gen-<seed>`; the same seed always gives the same town. */
+/** Ids of generated towns: `gen-<size>.<way>.<rule>.<goal>`, or `gen-<seed>` for a random choice. */
 export const GEN_PREFIX = 'gen-';
 
 export function isGeneratedTown(id: string): boolean {
   return id.startsWith(GEN_PREFIX);
 }
 
-/**
- * The town generator (CONCEPT.md §9.5): a size, a way of life (its groups, buildings and goals),
- * one special rule and a name, all from one seed. The generated town plays like a campaign town:
- * its own length and a main goal on each of the three passes.
- */
-export function generateTown(c: Content, seed: number): TownDef {
+export function choiceId(x: TownChoice): string {
+  return `${GEN_PREFIX}${x.size}.${x.way}.${x.rule}.${x.goal}`;
+}
+
+export function parseChoice(tail: string): TownChoice {
+  const [size, way, rule, goal] = tail.split('.');
+  return { size, way, rule, goal };
+}
+
+/** A random choice from a seed: the same seed always gives the same one. */
+export function randomChoice(c: Content, seed: number): TownChoice {
   const g = c.townGen;
   const rng = createRng(seed ^ 0x2c1b3c6d);
-  const size = pick(rng, g.sizes);
-  const arch = pick(rng, g.archetypes);
-  const rule = pick(rng, g.rules);
-  // A name of its own: never one of the campaign's towns.
+  return { size: pick(rng, g.sizes).id, way: pick(rng, g.archetypes).id, rule: pick(rng, g.rules).id, goal: pick(rng, g.goals).id };
+}
+
+/**
+ * How strong the news of this town are, how much longer or shorter its game is, and whether the
+ * calibration ran out of room (CONCEPT.md §9.5): the measured corrections of its four choices add up,
+ * so that any town keeps the difficulty's chances. Past the range of strength the days make up the rest.
+ */
+export function townPower(c: Content, x: TownChoice): { power: number; days: number; clamped: boolean } {
+  const m = c.townCalibration;
+  const g = c.townGen;
+  const combo = m.combos[`${x.size}.${x.way}.${x.rule}.${x.goal}`] ?? 0;
+  const wanted = (m.size[x.size] ?? 0) + (m.way[x.way] ?? 0) + (m.rule[x.rule] ?? 0) + (m.goal[x.goal] ?? 0) + combo;
+  const [lo, hi] = g.powerRange;
+  const power = Math.min(hi, Math.max(lo, Math.exp(wanted)));
+  const wantedDays = 1 + g.daysPerLn * (wanted - Math.log(power));
+  const days = Math.min(g.daysRange[1], Math.max(g.daysRange[0], wantedDays));
+  return { power, days, clamped: days !== wantedDays };
+}
+
+/** What makes the news stronger: their impact, and the stain and the crime heat that do not follow it. */
+export function powerMul(power: number): Partial<Record<keyof Balance, number>> {
+  return { impactNorm: 1 / power, huntStain: power, crimeHeatGain: power };
+}
+
+/**
+ * The town generator (CONCEPT.md §9.5): a size, a way of life (its groups and buildings), one special
+ * rule and a main goal, chosen by the player or at random. The town plays like a campaign town.
+ */
+export function composeTown(c: Content, x: TownChoice): TownDef {
+  const g = c.townGen;
+  const size = g.sizes.find((s) => s.id === x.size);
+  const arch = g.archetypes.find((a) => a.id === x.way);
+  const rule = g.rules.find((r) => r.id === x.rule);
+  const goal = g.goals.find((o) => o.id === x.goal)?.goal;
+  if (!size || !arch || !rule || !goal) throw new Error(`Unknown town choice: ${JSON.stringify(x)}`);
+  // A name of its own, the same for the same choice: never one of the campaign's towns.
+  const id = choiceId(x);
+  const rng = createRng([...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7));
   let name = '';
   do name = int(rng, 4) === 0 ? `${pick(rng, g.names.adjectives)} ${pick(rng, g.names.nouns)}` : `${pick(rng, g.names.first)}${pick(rng, g.names.second)}`;
   while (c.towns.some((t) => t.name === name));
@@ -33,22 +73,30 @@ export function generateTown(c: Content, seed: number): TownDef {
     const scaledJobs = b.type === 'factory' ? Math.round(jobs * size.buildingMul) : jobs;
     if (scaled !== b.count || scaledJobs !== b.jobs) buildings[b.type] = { count: scaled, jobs: scaledJobs };
   }
-  const goals: TownDef['goals'] = {};
-  for (const level of ['easy', 'normal', 'hard'] as Difficulty[]) goals[level] = pick(rng, arch.goals[level]);
+  const tuned = townPower(c, x);
+  const days = Math.round(size.days * tuned.days);
+  const balanceMul: Partial<Record<keyof Balance, number>> = { ...arch.balanceMul, ...rule.balanceMul };
+  for (const [key, mul] of Object.entries(powerMul(tuned.power)) as [keyof Balance, number][]) balanceMul[key] = (balanceMul[key] ?? 1) * mul;
   return {
-    id: `${GEN_PREFIX}${seed}`,
+    id,
     name,
     type: arch.type,
+    look: arch.id,
     size: size.name,
     rule: { title: rule.title, text: `${arch.text} ${rule.text}` },
-    days: size.days,
+    days,
     stars: size.stars,
     groups: arch.groups,
     buildings,
     balance: { population: size.population, maxPopulation: size.maxPopulation, ...arch.balance, ...rule.balance },
-    balanceMul: { ...arch.balanceMul, ...rule.balanceMul },
-    modes: { destroy: { days: size.days }, save: { days: size.days - 6 } },
+    balanceMul,
+    modes: { destroy: { days } },
     map: { x: 0, y: 0 },
-    goals,
+    goals: { easy: goal, normal: goal, hard: goal },
   };
+}
+
+/** A town of a random choice. */
+export function generateTown(c: Content, seed: number): TownDef {
+  return { ...composeTown(c, randomChoice(c, seed)), id: `${GEN_PREFIX}${seed}` };
 }

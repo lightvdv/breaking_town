@@ -21,6 +21,8 @@ export function startHunt(state: GameState, buildingId: number): void {
   const x = state.buildings[buildingId];
   if (!x || !x.open || x.jobs === 0) throw new Error(`Cannot start a hunt against ${buildingId}`);
   if (state.hunt?.building === buildingId) return;
+  // One target at a time (CONCEPT.md §3.6а): a running hunt must be stopped before another begins.
+  if (state.hunt) throw new Error('Травля уже идёт — сначала прекратите её');
   state.hunt = { building: buildingId, startTurn: state.turn, step: 0, hits: 0 };
 }
 

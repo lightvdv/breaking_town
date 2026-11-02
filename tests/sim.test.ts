@@ -1349,6 +1349,10 @@ describe('attacking the town (CONCEPT.md §3.5, §3.6а, §8.4)', () => {
     const pub = { cardUid: card.uid, placement: 2 as const, distortion: 0 };
     const before = previewPublication(s, content, mods, pub).impact;
     startHunt(s, factory.id);
+    // One target at a time: another place cannot be hunted until this hunt is stopped.
+    const other = s.buildings.find((x) => x.open && x.jobs > 0 && x.id !== factory.id)!;
+    expect(() => startHunt(s, other.id)).toThrow();
+    expect(s.hunt?.building).toBe(factory.id);
     s.hunt!.step = 2;
     expect(huntBonus(s, content, mods)).toBeCloseTo(1 + 2 * content.balance.huntStep);
     expect(previewPublication(s, content, mods, pub).impact).toBeGreaterThan(before);

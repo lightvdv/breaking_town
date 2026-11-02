@@ -5104,99 +5104,41 @@ button.publish.level-3.bump-up {
   font-size: 18px;
 }
 
-.camp-side {
-  padding: 3px 8px;
-  border-radius: 3px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.camp-side.destroy {
-  background: var(--danger);
-  color: var(--text);
-}
-
-.camp-diff {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-/* The campaign's stars: a bar towards all of them with a notch where the final opens; a tip on hover or tap. */
-.camp-progress {
-  position: relative;
+/* The player's assets on the left: the campaign's stars and the «связи». */
+.camp-assets {
   display: flex;
+  gap: 16px;
   align-items: center;
-  gap: 8px;
-  margin-left: auto;
-  padding: 4px 10px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  margin-right: auto;
   color: var(--accent);
-  cursor: help;
-}
-
-.camp-progress b {
   white-space: nowrap;
 }
 
-.camp-progress small {
-  color: var(--muted);
-  font-size: 12px;
+.camp-ties {
+  color: var(--text);
 }
 
-.camp-bar {
+/* ☰ with «Новая кампания» and «Главное меню» under it. */
+.camp-menu-wrap {
   position: relative;
-  width: 160px;
-  height: 10px;
-  background: var(--panel);
-  border: 2px solid var(--ink);
 }
 
-.camp-bar i {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: var(--accent);
-}
-
-/* Where the final opens: a white notch, golden once it is reached. */
-.camp-gate {
-  position: absolute;
-  top: -5px;
-  bottom: -5px;
-  width: 3px;
-  margin-left: -1px;
-  background: #fff;
-}
-
-.camp-gate.open {
-  background: var(--accent);
-}
-
-.camp-tip {
+.camp-menu {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
   z-index: 20;
   display: none;
-  width: 260px;
-  padding: 8px 10px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+  padding: 8px;
   background: var(--panel);
-  color: var(--text);
   border: 2px solid var(--ink);
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.35;
-  text-align: left;
-  white-space: normal;
 }
 
-.camp-progress:hover .camp-tip,
-.camp-progress:focus-visible .camp-tip,
-.camp-progress.open .camp-tip {
-  display: block;
+.camp-menu.open {
+  display: flex;
 }
 
 .camp-wrap {
@@ -5266,7 +5208,12 @@ button.publish.level-3.bump-up {
   white-space: nowrap;
 }
 
+/* The stars won in the town, above its icon. */
 .town-pin .pin-stars {
+  order: -1;
+  padding: 0 5px;
+  background: rgba(24, 20, 37, 0.75);
+  border-radius: 3px;
   color: var(--accent);
   font-size: 12px;
   letter-spacing: 1px;
@@ -5372,8 +5319,29 @@ button.publish.level-3.bump-up {
   border-radius: 2px;
 }
 
+/* The town's difficulty by colour: green for the easiest, red for the hardest. */
 .town-bars i.on {
   background: var(--danger);
+}
+
+.town-bars.lvl-1 i.on {
+  background: #3e8948;
+}
+
+.town-bars.lvl-2 i.on {
+  background: #63c74d;
+}
+
+.town-bars.lvl-3 i.on {
+  background: #feae34;
+}
+
+.town-bars.lvl-4 i.on {
+  background: #f77622;
+}
+
+.town-bars.lvl-5 i.on {
+  background: #e43b44;
 }
 
 .town-best {
@@ -5449,17 +5417,8 @@ button.publish.level-3.bump-up {
     font-size: 10px;
   }
 
-  .camp-progress {
-    margin-left: 0;
-  }
-
-  .camp-bar {
-    width: 110px;
-  }
-
-  .camp-tip {
-    right: auto;
-    left: 0;
+  .camp-top {
+    flex-wrap: nowrap;
   }
 }
 
@@ -6838,5 +6797,129 @@ span.hunt-chip {
 
   .res.city-state b {
     font-size: 16px;
+  }
+}
+
+/* The black cash, the cards' abilities and the moves acting today in the top bar: icons with tooltips.
+   Wide screens: after «Сводка», before «В печать»; phones: in the control row before ☰. */
+.hud-abilities {
+  order: 4;
+  flex: none;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.hud-abilities .ability {
+  position: relative;
+  padding: 3px;
+}
+
+.hud-abilities .ability-text {
+  display: none;
+}
+
+/* Wide screens keep the black cash's name next to its icon. */
+@media (min-width: 1441px) {
+  .hud-abilities .cash-open {
+    padding-right: 10px;
+  }
+
+  .hud-abilities .cash-open .ability-text {
+    display: block;
+  }
+
+  .hud-abilities .cash-open .ability-badge {
+    display: none;
+  }
+}
+
+.ability-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  padding: 0 3px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+.ability-badge.wait {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.hud-abilities .cash-chip {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 15px;
+  cursor: help;
+}
+
+@media (min-width: 901px) {
+  .hud-abilities {
+    order: 5;
+  }
+
+  .hud .hud-buttons {
+    order: 6;
+  }
+
+  .hud .hud-menu {
+    order: 7;
+  }
+}
+
+@media (max-width: 900px) {
+  .hud-abilities {
+    align-self: center;
+    padding: 0 6px;
+  }
+}
+
+/* «Сводка» (CONCEPT.md §7.3): its tabs under the window's title, one row, scrolling on a narrow phone. */
+.summary-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px 0;
+  overflow-x: auto;
+  border-bottom: 2px solid var(--panel-2);
+}
+
+.summary-tab {
+  flex: 1 0 auto;
+  padding: 6px 10px;
+  background: var(--panel-2);
+  color: var(--muted);
+  border-bottom: 0;
+  box-shadow: none;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.summary-tab.on {
+  background: var(--panel);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .summary-tabs {
+    padding: 6px 10px 0;
+  }
+
+  .summary-tab {
+    padding: 6px 8px;
+    font-size: 13px;
   }
 }

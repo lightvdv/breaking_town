@@ -421,6 +421,19 @@ function nose(tier: number): Raster {
   return r;
 }
 
+/** «Сводка»: a cardboard folder with papers sticking out (CONCEPT.md §7.3). */
+function folder(): Raster {
+  const r = new Raster(16, 16);
+  r.rect(1, 3, 6, 2, 'wood');
+  r.rect(1, 4, 14, 10, 'tan');
+  r.rect(3, 2, 9, 4, 'white');
+  r.rect(4, 3, 6, 1, 'grey');
+  r.rect(1, 6, 14, 8, 'amber');
+  r.rect(1, 6, 14, 1, 'sand');
+  r.rect(6, 9, 4, 2, 'wood');
+  return outline(r);
+}
+
 /** A task: a clipboard with a tick (CONCEPT.md §4.8). */
 function task(): Raster {
   const r = new Raster(16, 16);
@@ -477,6 +490,7 @@ export const uiIcons: Record<string, () => Raster> = {
   governor,
   offer,
   cart,
+  folder,
   guardian,
   money,
   readers,

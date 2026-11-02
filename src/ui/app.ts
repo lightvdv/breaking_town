@@ -180,6 +180,15 @@ interface Draft {
   distortion: number;
 }
 
+/** «Сводка»'s tabs, in order: the windows behind the top bar's tiles and the cards. */
+const SUMMARY_TABS = [
+  { id: 'shop', name: 'Карты' },
+  { id: 'money', name: 'Деньги' },
+  { id: 'readers', name: 'Читатели' },
+  { id: 'reputation', name: 'Репутация' },
+  { id: 'city', name: 'Город' },
+] as const;
+
 type Modal =
   | 'report'
   | 'debug'
@@ -388,18 +397,21 @@ export function mountApp(root: HTMLElement, base: Content): void {
       openModal('investigate');
     },
   );
-  // The control row: our reporters' square portraits, then «Улучшения» (a cart) and ☰ on the right.
+  // The control row: our reporters' square portraits, then «Сводка» (a folder) and ☰ on the right.
+  // «Сводка» is one window with tabs: the cards, money, readers, reputation and the city.
   const hudShop = h(
     'button',
-    { class: 'icon-btn hud-shop', title: 'Улучшения газеты', 'aria-label': 'Улучшения', onclick: () => openModal('shop') },
-    h('img', { class: 'shop-icon', src: `${assetBase}sprites/ui/cart.png`, alt: '', width: 16, height: 16 }),
-    // Wide screens only: the cart says what it is.
-    h('span', { class: 'shop-label' }, 'Улучшения'),
+    { class: 'icon-btn hud-shop', title: 'Сводка: карты, деньги, читатели, репутация, город', 'aria-label': 'Сводка', onclick: () => openModal('shop') },
+    h('img', { class: 'shop-icon', src: `${assetBase}sprites/ui/folder.png`, alt: '', width: 16, height: 16 }),
+    // Wide screens only: the folder says what it is.
+    h('span', { class: 'shop-label' }, 'Сводка'),
   );
   // Wide screens: the reporters are one block «Редакция», as wide as a full newsroom, so nothing
   // after it moves when someone is hired; on phones the wrapper melts away.
   const hudTeam = h('div', { class: 'hud-team' }, h('span', { class: 'hud-team-label' }, 'Редакция'), reporterBar.el);
-  const hudControls = h('div', { class: 'hud-controls' }, hudTeam, hudShop, hudMenu);
+  // The black cash, the cards' abilities and the moves acting today: icons in the top bar (CONCEPT.md §3.5в).
+  const abilityBar = h('div', { class: 'ability-bar hud-abilities', hidden: true });
+  const hudControls = h('div', { class: 'hud-controls' }, hudTeam, hudShop, abilityBar, hudMenu);
   const hudGoal = h('div', { class: 'hud-goal' });
   // A narrow track keeps only the names of the city's stage and the goal (CSS `.tight`).
   new ResizeObserver(() => hudGoal.classList.toggle('tight', hudGoal.offsetWidth < 400)).observe(hudGoal);
@@ -487,7 +499,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // «Расследование готово» on the day the dirt comes in (CONCEPT.md §3.3а).
   const digNotice = h('section', { class: 'notice notice-dig', hidden: true, role: 'status' });
   // The abilities bought in the upgrades window, as buttons right above the paper (CONCEPT.md §3.5).
-  const abilityBar = h('div', { class: 'ability-bar', hidden: true });
   // Save mode: what the rival paper prints today, and which of its stories we answer (CONCEPT.md §8).
   const rivalNotice = h('section', { class: 'notice notice-rival', hidden: true, role: 'status' });
   const staffNotice = h('section', { class: 'notice notice-staff', hidden: true, role: 'status' });
@@ -504,7 +515,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
     h('span', {}, 'К выпуску'),
   );
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, issueEvents, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, huntNotice, rivalNotice, abilityBar, paper));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, issueEvents, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, huntNotice, rivalNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -3554,7 +3565,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...infoSection(
         'deck',
         !deck.length ? 'Совет директоров' : state.shopPicks ? 'Можно взять ещё одну — за награду задания' : 'Совет директоров предлагает — возьмите одну',
-        `Каждые ${b.shopRefreshDays} дня совет присылает ${b.shopOfferSize} карты из вашей коллекции: одну берёте бесплатно, остальные уходят. Купить карты нельзя — деньги газеты идут в «Чёрную кассу». Не нравятся все три — «Другие три» за ${b.shopRefreshCost} ₽, пока карту не взяли. Редкие и легендарные выпадают реже. Звёзды — уровень карты: улучшайте её в «Кабинете редактора» между партиями. Три карты одного направления дают бонус набора. «Приём» — кнопка над газетой, срабатывает раз в несколько дней.`,
+        `Каждые ${b.shopRefreshDays} дня совет присылает ${b.shopOfferSize} карты из вашей коллекции: одну берёте бесплатно, остальные уходят. Купить карты нельзя — деньги газеты идут в «Чёрную кассу». Не нравятся все три — «Другие три» за ${b.shopRefreshCost} ₽, пока карту не взяли. Редкие и легендарные выпадают реже. Звёзды — уровень карты: улучшайте её в «Кабинете редактора» между партиями. Три карты одного направления дают бонус набора. «Приём» — значок вверху экрана рядом с «Чёрной кассой», срабатывает раз в несколько дней.`,
       ),
       deck.length && !state.shopPicks
         ? h(
@@ -4062,12 +4073,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     abilityBar.replaceChildren(
       h(
         'button',
-        { class: `ability cash-open${ready ? ' ready' : ' wait'}`, disabled: busy, title: 'Деньги газеты на разовые ходы', onclick: () => openModal('cash') },
+        { class: `ability cash-open${ready ? ' ready' : ' wait'}`, disabled: busy, title: `Чёрная касса: ${ready ? `доступно ходов — ${ready}` : 'пока ничего'}. Деньги газеты на разовые ходы.`, 'aria-label': 'Чёрная касса', onclick: () => openModal('cash') },
         h('span', { class: 'ability-icon', 'aria-hidden': 'true' }, '💰'),
         h('span', { class: 'ability-text' }, h('b', {}, 'Чёрная касса'), h('small', {}, ready ? `доступно: ${ready}` : 'пока ничего')),
+        ready ? h('span', { class: 'ability-badge' }, String(ready)) : null,
       ),
-      ...active.map((x) => h('span', { class: 'cash-chip', title: x.def.text }, `${x.def.icon} ${x.label}`)),
-      ...(owned.length ? [h('span', { class: 'ability-label' }, 'Приёмы')] : []),
+      // What acts today or tomorrow: an icon, its words in the tooltip.
+      ...active.map((x) => h('span', { class: 'cash-chip', title: `${upperFirst(x.label)}. ${x.def.text}`, 'aria-label': x.label }, x.def.icon)),
       ...owned.map(({ def, readyTurn }) => {
         const block = abilityBlock(state, c, def.id);
         const wait = readyTurn - state.turn;
@@ -4077,7 +4089,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
           {
             class: `ability${!block ? ' ready' : ' wait'}`,
             disabled: !!block || busy,
-            title: `${def.name}. ${def.description} ${def.drawback ?? ''}`.trim(),
+            title: `${def.name}: ${status}. ${def.description} ${def.drawback ?? ''}`.trim(),
+            'aria-label': def.name,
             onclick: () => {
               try {
                 const added = useAbility(state, c, def.id);
@@ -4094,7 +4107,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
             },
           },
           h('span', { class: 'ability-icon', 'aria-hidden': 'true' }, def.icon ?? '★'),
-          h('span', { class: 'ability-text' }, h('b', {}, def.name), h('small', {}, status)),
+          // Waiting: the days left on the icon.
+          block === 'cooling down' ? h('span', { class: 'ability-badge wait' }, String(wait)) : null,
         );
       }),
     );
@@ -4423,12 +4437,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const titles: Record<Exclude<Modal, null>, string> = {
       report: report ? `Итоги хода ${report.turn}` : 'Итоги хода',
       debug: 'Отладка',
-      city: 'Город',
+      city: 'Сводка',
       population: 'Жители',
-      money: 'Деньги',
-      readers: 'Читатели',
-      reputation: 'Репутация',
-      shop: 'Улучшения газеты',
+      money: 'Сводка',
+      readers: 'Сводка',
+      reputation: 'Сводка',
+      shop: 'Сводка',
       cash: 'Чёрная касса',
       team: 'Редакция',
       investigate: 'Репортёр',
@@ -4450,6 +4464,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       'div',
       { class: `modal window${modal === 'office' ? ' office' : ''}` },
       h('div', { class: 'modal-title' }, h('h2', {}, titles[modal]), h('button', { class: 'icon-btn', title: 'Закрыть', onclick: () => openModal(null) }, '×')),
+      // «Сводка» (CONCEPT.md §7.3): one window, a tab for each of its parts.
+      SUMMARY_TABS.some((t) => t.id === modal) ? summaryTabs(modal) : null,
       h('div', { class: 'modal-body' }, ...body),
     );
     modalLayer.replaceChildren(panel);
@@ -4457,6 +4473,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
       if (e.target === modalLayer) openModal(null);
     };
     modalLayer.querySelector('.modal-body')!.scrollTop = scroll;
+  }
+
+  /** The tabs of «Сводка»: each opens its part in the same window. */
+  function summaryTabs(on: Modal): HTMLElement {
+    return h(
+      'div',
+      { class: 'summary-tabs', role: 'tablist' },
+      ...SUMMARY_TABS.map((t) => h('button', { class: `summary-tab${t.id === on ? ' on' : ''}`, role: 'tab', 'aria-selected': String(t.id === on), onclick: () => openModal(t.id) }, t.name)),
+    );
   }
 
   /** The game's stars and what each was for (CONCEPT.md §4.8), and whether it is a new record. */
@@ -4580,8 +4605,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
   // ---------- Campaign (CONCEPT.md §9) ----------
 
-  const sideNames: Record<GameMode, string> = { destroy: '«Медиа-Плюс»' };
-
   /** The map of the campaign. Without one, a new one starts right away. */
   function openCampaign(): void {
     if (!campaign) {
@@ -4630,34 +4653,24 @@ export function mountApp(root: HTMLElement, base: Content): void {
     campaignKey = key;
     const stars = campaignStars(camp);
     const need = base.towns.reduce((m, t) => Math.max(m, t.starsToEnter ?? 0), 0);
-    /**
-     * The campaign's stars as a bar towards all of them, with a notch where the final opens; the
-     * explanation shows on hover, or on a tap (the map is not re-rendered, so the class is toggled).
-     */
-    const campaignProgress = (got: number, gate: number, max: number, finished: boolean) => {
-      const finalTown = base.towns.find((t) => t.starsToEnter);
-      const tip = h(
-        'span',
-        { class: 'camp-tip', role: 'tooltip' },
-        `Звёзды дают проходы городов: до 3 за проход, по 3 прохода в городе — всего ${max}. `,
-        finished ? 'Кампания пройдена.' : got < gate ? `Финал${finalTown ? ` (${finalTown.name})` : ''} откроется с ${gate} ★ — осталось ${gate - got}.` : 'Финал открыт.',
-      );
-      const el = h(
+    // The menu behind ☰: toggled by a class, since the map is not re-rendered for it.
+    const menu = h(
+      'div',
+      { class: 'camp-menu' },
+      h('button', { onclick: () => openModal('campaignNew') }, 'Новая кампания'),
+      h(
         'button',
-        { class: 'camp-progress', 'aria-label': `Звёзды кампании: ${got} из ${max}` },
-        h('b', {}, `★ ${got}`),
-        h(
-          'span',
-          { class: 'camp-bar' },
-          h('i', { style: `width: ${Math.round((Math.min(got, max) / max) * 100)}%` }),
-          gate ? h('span', { class: `camp-gate${got >= gate ? ' open' : ''}`, style: `left: ${Math.round((gate / max) * 100)}%`, title: `Финал: ${gate} ★` }) : null,
-        ),
-        h('small', {}, `${max}`),
-        tip,
-      );
-      el.onclick = () => el.classList.toggle('open');
-      return el;
-    };
+        {
+          onclick: () => {
+            campaignOpen = false;
+            showTitle();
+          },
+        },
+        'Главное меню',
+      ),
+    );
+    const menuButton = h('button', { class: 'icon-btn camp-burger', title: 'Меню', 'aria-label': 'Меню' }, '☰');
+    menuButton.onclick = () => menu.classList.toggle('open');
     const canvas = h('canvas', { class: 'camp-canvas' });
     drawRegion(canvas, base.towns);
     const pins = base.towns.map((t, i) => {
@@ -4676,7 +4689,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         },
         h('span', { class: 'pin' }),
         h('span', { class: 'lbl' }, `${i + 1}. ${t.name}`),
-        st === 'done' ? h('span', { class: 'pin-stars' }, `★ ${won}`) : null,
+        won > 0 ? h('span', { class: 'pin-stars' }, `★ ${won}`) : null,
       );
     });
     // The pin icons are tiny inline SVGs.
@@ -4685,21 +4698,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'header',
         { class: 'camp-top' },
-        h('b', {}, 'Кампания'),
-        h('span', { class: `camp-side ${camp.side}` }, sideNames[camp.side]),
-        campaignProgress(stars, need, base.towns.length * 9, camp.finished),
-        h('button', { onclick: () => openModal('office') }, 'Кабинет редактора'),
-        h('button', { class: 'ghost', onclick: () => openModal('campaignNew') }, 'Новая кампания'),
+        // What the player has: the campaign's stars and the «связи» for the editor's office.
         h(
-          'button',
-          {
-            onclick: () => {
-              campaignOpen = false;
-              showTitle();
-            },
-          },
-          '← Меню',
+          'span',
+          { class: 'camp-assets' },
+          h('b', { title: `Звёзды кампании. Финал открывается с ${need} ★` }, `★ ${stars}`),
+          h('b', { class: 'camp-ties', title: 'Связи холдинга — на карты в «Кабинете редактора»' }, `✦ ${collection.currency}`),
         ),
+        h('button', { class: 'camp-office', onclick: () => openModal('office') }, 'Кабинет редактора'),
+        h('span', { class: 'camp-menu-wrap' }, menuButton, menu),
       ),
       h('div', { class: 'camp-wrap' }, h('div', { class: 'camp-map' }, canvas, ...pins), townCard(campaignSel)),
     );
@@ -4746,7 +4753,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'town-facts' },
         h('span', {}, 'Сложность'),
-        h('span', { class: 'town-bars' }, ...[1, 2, 3, 4, 5].map((k) => h('i', { class: k <= t.stars ? 'on' : '' }))),
+        // The lit bars take the town's colour: green for the easiest, red for the hardest.
+        h('span', { class: `town-bars lvl-${t.stars}` }, ...[1, 2, 3, 4, 5].map((k) => h('i', { class: k <= t.stars ? 'on' : '' }))),
         h('span', {}, 'Против вас'),
         h('span', {}, `«${rival}»`),
         h('span', {}, 'Звёзды'),
@@ -5106,8 +5114,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ),
       h('h3', { class: 'section' }, 'Что беречь'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.'),
-      block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. Деньги идут на зарплаты, новых репортёров и разовые ходы «Чёрной кассы» над газетой.'),
-      block('ui/cart', 'Улучшения', `Карты «Улучшений» бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые, а на развилках придётся взять одно из двух навсегда. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
+      block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. Деньги идут на зарплаты, новых репортёров и разовые ходы «Чёрной кассы» (💰 вверху; рядом — значки приёмов от карт).'),
+      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху) — карты газеты, деньги, читатели, репутация и город; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые, а на развилках придётся взять одно из двух навсегда. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
       h('h3', { class: 'section' }, 'Чем ещё бить по городу'),
       block('groups/workers', 'Ссорьте группы', 'Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.'),
       block('ui/guardian', '«Голос города»', `С ${b.rivalStartTurn.destroy}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.`),

@@ -102,8 +102,9 @@
         "building": "factory"
       },
       "normal": {
-        "type": "close",
-        "building": "factory"
+        "type": "drive",
+        "group": "workers",
+        "share": 0.35
       },
       "hard": {
         "type": "stage",
@@ -213,19 +214,18 @@
       },
       "normal": {
         "type": "drive",
-        "group": "youth",
-        "share": 0.38
+        "group": "intelligentsia",
+        "share": 0.4
       },
       "hard": {
-        "type": "drive",
-        "group": "youth",
-        "share": 0.4
+        "type": "stage",
+        "index": 30
       }
     },
     "passDays": {
       "easy": 44,
       "normal": 44,
-      "hard": 44
+      "hard": 52
     }
   },
   {

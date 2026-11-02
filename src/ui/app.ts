@@ -1488,7 +1488,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       // A novice's first day: the button glows, it is the one thing to press (CONCEPT.md §7.3).
       { class: `publish level-${level}${levelBump ? ` ${levelBump}` : ''}`, title: hint, onclick: endTurn, disabled },
       h('img', { src: `${assetBase}sprites/ui/issue_${level}.png`, alt: '', width: 24, height: 24 }),
-      h('span', {}, 'В печать · ', h('b', {}, level === 3 ? 'СЕНСАЦИЯ!' : issueLevelLabels[level])),
+      // On a small laptop the level's word goes (its colour stays) so the top row keeps every button.
+      h('span', {}, 'В печать', h('span', { class: 'publish-level' }, ' · ', h('b', {}, level === 3 ? 'СЕНСАЦИЯ!' : issueLevelLabels[level]))),
       riskDot(),
       h('span', { 'aria-hidden': 'true' }, '▸'),
     );
@@ -3264,7 +3265,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const power = c.balance.cardLevelPower[level - 1] ?? 1;
     return h(
       'div',
-      { class: `coll-card rarity-${rarity}${u.ability ? ' ability' : ''}` },
+      { class: `coll-card rarity-${rarity}${u.ability ? ' is-ability' : ''}` },
       h('span', { class: 'coll-rarity' }, rarityNames[rarity]),
       opts.fresh ? h('span', { class: 'coll-new' }, 'Новая') : null,
       cardArt(u),
@@ -3510,7 +3511,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const info = openInfo.has(key);
       return h(
         'div',
-        { class: `deck-card rarity-${rarity}${u.ability ? ' ability' : ''}${cls ? ` ${cls}` : ''}` },
+        { class: `deck-card rarity-${rarity}${u.ability ? ' is-ability' : ''}${cls ? ` ${cls}` : ''}` },
         cardArt(u),
         h('span', { class: `deck-tag tag-${rarity}` }, u.fork ? 'развилка' : u.ability ? `приём · ${rarityNames[rarity]}` : u.cash ? `касса · ${rarityNames[rarity]}` : rarityNames[rarity]),
         u.id === best ? h('span', { class: 'best-mark' }, 'выгоднее всего') : null,

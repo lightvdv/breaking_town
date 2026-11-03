@@ -4101,6 +4101,181 @@
     }
   },
   {
+    "id": "hospital_drugs",
+    "source": "rumor",
+    "topic": "health",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "В больнице кончились лекарства",
+      "Больничные лекарства продают налево"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.06
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.08
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "hospital",
+    "requires": "hospital",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "hospital_repair",
+    "source": "fact",
+    "topic": "health",
+    "baseTruth": 0,
+    "titles": [
+      "В больнице начали ремонт",
+      "Ремонт в больнице — деньги ушли подрядчику мэра",
+      "Больницу закрывают «на ремонт» навсегда"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.06
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.09
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "intelligentsia"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "hospital",
+    "requires": "hospital",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "hospital_infection",
+    "source": "rumor",
+    "topic": "health",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "В больнице подхватывают инфекцию",
+      "В больнице гуляет опасная зараза"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.06
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.1
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "intelligentsia"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "hospital",
+    "requires": "hospital",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "hospital_night",
+    "source": "fact",
+    "topic": "health",
+    "baseTruth": 0,
+    "titles": [
+      "Ночью в больнице дежурит один врач",
+      "Скорая ночью не приезжает",
+      "Ночью больница не принимает даже умирающих"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.07
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.1
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "hospital",
+    "requires": "hospital",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "hospital_diploma",
+    "source": "rumor",
+    "topic": "health",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "У главврача купленный диплом",
+      "В больнице лечат люди без образования"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.06
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.08
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "intelligentsia"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "hospital",
+    "requires": "hospital",
+    "tiers": [
+      1,
+      3
+    ]
+  },
+  {
     "id": "arc_budget_1",
     "source": "event",
     "topic": "power",
@@ -5058,6 +5233,151 @@
     ]
   },
   {
+    "id": "factory_chief",
+    "source": "rumor",
+    "topic": "factory",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Директор завода купил виллу у моря",
+      "Директор выводит деньги завода и готовит побег"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.08
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.2
+      }
+    ],
+    "audience": [
+      "workers"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "factory",
+    "requires": "factory",
+    "tiers": [
+      1,
+      3
+    ]
+  },
+  {
+    "id": "factory_inspection",
+    "source": "fact",
+    "topic": "factory",
+    "baseTruth": 0,
+    "titles": [
+      "На завод приехала проверка",
+      "Проверка нашла на заводе десятки нарушений",
+      "Цеха завода могут обрушиться в любой день"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.1
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.22
+      }
+    ],
+    "audience": [
+      "workers",
+      "intelligentsia"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "factory",
+    "requires": "factory",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "factory_debts",
+    "source": "rumor",
+    "topic": "factory",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "У завода долги перед поставщиками",
+      "Завод вот-вот признают банкротом"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.08
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.2
+      }
+    ],
+    "audience": [
+      "workers"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "factory",
+    "requires": "factory",
+    "tiers": [
+      1,
+      3
+    ]
+  },
+  {
+    "id": "factory_canteen",
+    "source": "fact",
+    "topic": "factory",
+    "baseTruth": 0,
+    "titles": [
+      "На заводе закрыли столовую",
+      "Рабочих завода кормят просрочкой",
+      "В столовой завода отравились десятки рабочих"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.08
+      },
+      {
+        "type": "quitJob",
+        "building": "factory",
+        "strength": 0.18
+      }
+    ],
+    "audience": [
+      "workers"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "factory",
+    "requires": "factory",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
     "id": "factcheck_bias",
     "source": "rumor",
     "topic": "power",
@@ -5121,6 +5441,215 @@
       "intelligentsia"
     ],
     "interest": 0.4,
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "factcheck_grant",
+    "source": "rumor",
+    "topic": "power",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Фактчекеры живут на деньги мэрии",
+      "Фактчекеров содержат конкуренты «Вестника»"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "protest",
+        "strength": 0.12
+      }
+    ],
+    "audience": [
+      "intelligentsia",
+      "workers"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "factCheckers",
+    "requires": "factCheckers",
+    "tiers": [
+      1,
+      3
+    ]
+  },
+  {
+    "id": "factcheck_mistake",
+    "source": "fact",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Фактчекеры исправили свою ошибку",
+      "Фактчекеры месяц выдавали ложь за правду",
+      "Фактчекеры годами покрывали фейки мэрии"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "protest",
+        "strength": 0.14
+      }
+    ],
+    "audience": [
+      "intelligentsia",
+      "youth"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "factCheckers",
+    "requires": "factCheckers",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "factcheck_trolls",
+    "source": "rumor",
+    "topic": "power",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "У фактчекеров нашли фальшивые аккаунты",
+      "Фактчекеры сами ведут сеть фейковых страниц"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.07
+      }
+    ],
+    "audience": [
+      "youth",
+      "intelligentsia"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "factCheckers",
+    "requires": "factCheckers",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "factcheck_hiring",
+    "source": "fact",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Фактчекеры набирают студентов",
+      "Проверку новостей доверили первокурсникам",
+      "Фактчекеры берут на работу без образования и проверок"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.03
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.06
+      }
+    ],
+    "audience": [
+      "youth",
+      "intelligentsia"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "factCheckers",
+    "requires": "factCheckers",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "factcheck_blacklist",
+    "source": "rumor",
+    "topic": "power",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "У фактчекеров есть чёрный список газет",
+      "Фактчекеры составляют списки неугодных горожан"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "protest",
+        "strength": 0.15
+      }
+    ],
+    "audience": [
+      "intelligentsia",
+      "pensioners"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "factCheckers",
+    "requires": "factCheckers",
+    "tiers": [
+      1,
+      3
+    ]
+  },
+  {
+    "id": "factcheck_seminar",
+    "source": "fact",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Фактчекеры провели семинар для школьников",
+      "На семинаре детей учили доносить на родителей",
+      "Фактчекеры вербуют детей в осведомители"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.16
+      }
+    ],
+    "audience": [
+      "intelligentsia"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "factCheckers",
+    "requires": "factCheckers",
     "tiers": [
       0,
       2
@@ -5274,6 +5803,200 @@
     ]
   },
   {
+    "id": "bar_poison",
+    "source": "rumor",
+    "topic": "fun",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "В баре разбавляют спиртное техническим",
+      "После бара посетителей увозят в больницу"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.2,
+        "duration": 3
+      },
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.4,
+        "duration": 4
+      }
+    ],
+    "audience": [
+      "youth",
+      "workers"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "entertainment",
+    "requires": "entertainment",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "bar_noise",
+    "source": "fact",
+    "topic": "fun",
+    "baseTruth": 0,
+    "titles": [
+      "Соседи бара жалуются на шум",
+      "Бар не даёт спать всему кварталу",
+      "Из бара по ночам выносят избитых"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.02
+      },
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.15,
+        "duration": 2
+      },
+      {
+        "type": "fear",
+        "strength": 0.2,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "youth"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "entertainment",
+    "requires": "entertainment",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "bar_cards",
+    "source": "rumor",
+    "topic": "crime",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "В подсобке бара играют в карты на деньги",
+      "Бар — подпольное казино банды"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.15,
+        "duration": 2
+      },
+      {
+        "type": "fear",
+        "strength": 0.22,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "youth",
+      "workers"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "entertainment",
+    "requires": "entertainment",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "bar_inspection",
+    "source": "fact",
+    "topic": "fun",
+    "baseTruth": 0,
+    "titles": [
+      "В бар пришла санитарная проверка",
+      "Проверка нашла в баре тараканов",
+      "Бар скрывает вспышку кишечной инфекции"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.2,
+        "duration": 3
+      },
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.4,
+        "duration": 4
+      }
+    ],
+    "audience": [
+      "youth",
+      "pensioners"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "entertainment",
+    "requires": "entertainment",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "bar_minors",
+    "source": "rumor",
+    "topic": "fun",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "В баре наливают школьникам",
+      "Бар спаивает подростков всего города"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "avoid",
+        "building": "entertainment",
+        "strength": 0.15,
+        "duration": 2
+      },
+      {
+        "type": "protest",
+        "strength": 0.2
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "entertainment",
+    "requires": "entertainment",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
     "id": "kompromat_guardian",
     "source": "investigation",
     "target": "rival",
@@ -5415,6 +6138,159 @@
         "type": "moodUp",
         "strength": 0.03
       }
+    ]
+  },
+  {
+    "id": "shop_scales",
+    "source": "rumor",
+    "topic": "food",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "В магазине обвешивают покупателей",
+      "Магазин годами обкрадывает пенсионеров"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.15,
+        "duration": 2
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.35,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "shop",
+    "requires": "shop",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "shop_supplier",
+    "source": "fact",
+    "topic": "food",
+    "baseTruth": 0,
+    "titles": [
+      "Магазин сменил поставщика",
+      "Новый поставщик магазина возит товар с помойки",
+      "Магазин торгует продуктами со свалки"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.2,
+        "duration": 3
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.4,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "shop",
+    "requires": "shop",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "shop_mold",
+    "source": "rumor",
+    "topic": "food",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "В магазине продают хлеб с плесенью",
+      "Покупатели магазина травятся каждую неделю"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.15,
+        "duration": 2
+      },
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.35,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "shop",
+    "requires": "shop",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "shop_queue",
+    "source": "fact",
+    "topic": "food",
+    "baseTruth": 0,
+    "titles": [
+      "В магазине выстроилась очередь",
+      "В магазине пропадают крупа и сахар",
+      "Магазин прячет продукты, скоро будет дефицит"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "avoid",
+        "building": "shop",
+        "strength": 0.12,
+        "duration": 2
+      },
+      {
+        "type": "leaveCity",
+        "strength": 0.06
+      }
+    ],
+    "audience": [
+      "pensioners"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "shop",
+    "requires": "shop",
+    "tiers": [
+      0,
+      2
     ]
   },
   {
@@ -5665,6 +6541,224 @@
     }
   },
   {
+    "id": "police_lost_evidence",
+    "source": "rumor",
+    "topic": "crime",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Из участка пропали улики",
+      "Полиция продаёт улики бандитам"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "fear",
+        "strength": 0.12,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.28,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "intelligentsia"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "police",
+    "requires": "police",
+    "tiers": [
+      1,
+      3
+    ]
+  },
+  {
+    "id": "police_fake_stats",
+    "source": "rumor",
+    "topic": "crime",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Полиция подделывает отчёты о раскрытиях",
+      "Половина краж в городе даже не записана"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "fear",
+        "strength": 0.25,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "intelligentsia",
+      "pensioners"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "police",
+    "requires": "police",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "police_new_chief",
+    "source": "fact",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "В участке представили нового начальника",
+      "Новый начальник полиции — родственник мэра",
+      "Новый начальник полиции распустил патрули ради охраны мэрии"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "protest",
+        "strength": 0.12
+      },
+      {
+        "type": "fear",
+        "strength": 0.28,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "police",
+    "requires": "police",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "police_car_crash",
+    "source": "fact",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Полицейская машина въехала в забор",
+      "Патрульный разбил машину, катаясь пьяным",
+      "Полицейская машина сбила ребёнка — дело замяли"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "protest",
+        "strength": 0.15
+      },
+      {
+        "type": "protest",
+        "strength": 0.25
+      }
+    ],
+    "audience": [
+      "youth",
+      "workers"
+    ],
+    "interest": 0.6,
+    "engagement": 0.6,
+    "weight": 1,
+    "witness": "police",
+    "requires": "police",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "police_night_calls",
+    "source": "rumor",
+    "topic": "crime",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Ночью в участке никто не берёт трубку",
+      "Ночью город остаётся без полиции"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "fear",
+        "strength": 0.15,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.3,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "intelligentsia"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "police",
+    "requires": "police",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "police_overtime",
+    "source": "fact",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Полицейские жалуются на переработки",
+      "Полицейские массово увольняются",
+      "В участке осталось три человека на весь город"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "fear",
+        "strength": 0.12,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.28,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "workers",
+      "pensioners"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "police",
+    "requires": "police",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
     "id": "city_patrols",
     "source": "event",
     "topic": "crime",
@@ -5708,5 +6802,214 @@
       "type": "calmCrime",
       "amount": 0.5
     }
+  },
+  {
+    "id": "cityhall_relatives",
+    "source": "rumor",
+    "topic": "power",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "В мэрии работают одни родственники мэра",
+      "Мэр раздал городские должности семье"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.18
+      }
+    ],
+    "audience": [
+      "workers",
+      "intelligentsia"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "cityHall",
+    "requires": "cityHall",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "cityhall_cars",
+    "source": "fact",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Мэрия купила новую машину",
+      "Мэрия купила джипы вместо ремонта больницы",
+      "Мэр пересел на лимузин, пока городу нечем платить зарплаты"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.2
+      }
+    ],
+    "audience": [
+      "workers",
+      "pensioners"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "cityHall",
+    "requires": "cityHall",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "cityhall_land",
+    "source": "rumor",
+    "topic": "power",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "Мэрия тайно продаёт парк застройщику",
+      "Мэрия распродаёт город по кускам"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.2
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "cityHall",
+    "requires": "cityHall",
+    "tiers": [
+      1,
+      3
+    ]
+  },
+  {
+    "id": "cityhall_reception",
+    "source": "fact",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Мэр перенёс приём граждан",
+      "Мэр уже полгода не принимает горожан",
+      "Мэр сбежал из города и правит по телефону"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.04
+      },
+      {
+        "type": "protest",
+        "strength": 0.16
+      }
+    ],
+    "audience": [
+      "pensioners"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "cityHall",
+    "requires": "cityHall",
+    "tiers": [
+      0,
+      2
+    ]
+  },
+  {
+    "id": "cityhall_party",
+    "source": "rumor",
+    "topic": "power",
+    "baseTruth": 1,
+    "titles": [
+      null,
+      "В мэрии гуляли всю ночь",
+      "Чиновники пропивают бюджет на банкетах"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.18
+      }
+    ],
+    "audience": [
+      "workers",
+      "youth"
+    ],
+    "interest": 0.55,
+    "engagement": 0.55,
+    "weight": 1,
+    "witness": "cityHall",
+    "requires": "cityHall",
+    "tiers": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": "cityhall_tax",
+    "source": "fact",
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "Мэрия обсуждает новые сборы",
+      "Мэрия введёт налог на уборку дворов",
+      "Мэрия обложит данью каждую семью"
+    ],
+    "effects": [
+      null,
+      {
+        "type": "moodDown",
+        "strength": 0.05
+      },
+      {
+        "type": "protest",
+        "strength": 0.2
+      }
+    ],
+    "audience": [
+      "workers",
+      "pensioners"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 1,
+    "witness": "cityHall",
+    "requires": "cityHall",
+    "tiers": [
+      0,
+      2
+    ]
   }
 ]

@@ -1989,6 +1989,24 @@ describe('hunting the police (CONCEPT.md §3.6а, §5.6)', () => {
     expect(isHuntStory(s, other, storyEffect(content, other, loudest(other)))).toBe(false);
   });
 
+  it('stories about the target take turns instead of coming round again and again', () => {
+    const c = { ...content, balance: { ...content.balance, huntFindChance: 1, stainShutdown: 2, stainCloseMin: 2 } };
+    const s = createGame(c, 57);
+    s.reporters = ['sokolov', 'volkova', 'kim', 'lebedev', 'orlova'];
+    const police = s.buildings.find((x) => x.type === 'police')!;
+    const pool = c.cards.filter((t) => t.requires === 'police' && !t.response && !t.arc && (t.source === 'rumor' || t.source === 'fact')).map((t) => t.id);
+    expect(pool.length).toBeGreaterThanOrEqual(8);
+    startHunt(s, police.id);
+    const told: string[] = [];
+    for (let i = 0; i < 16 && !s.outcome && police.open; i++) {
+      playTurn(s, c, { publish: [] });
+      for (const card of s.hand) if (card.building === police.id && card.createdTurn === s.turn && pool.includes(card.templateId)) told.push(card.templateId);
+    }
+    expect(told.length).toBeGreaterThan(pool.length);
+    // Every story about the station comes up before any comes up a second time.
+    expect(new Set(told.slice(0, pool.length)).size).toBe(pool.length);
+  });
+
   it('fact-checkers watch a topic printed day after day; a hunt story has its own watch', () => {
     const s = createGame(content, 54);
     const b = content.balance;

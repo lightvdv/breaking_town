@@ -49,6 +49,12 @@ export function tierWeights(c: Content, r: ReporterDef): number[] {
 }
 
 /** A story template found or happened within the last `repeatCooldown` turns. */
+/** What was in the news not so long ago comes up less often (`repeatFadeDays`): a weight multiplier. */
+export function repeatFade(state: GameState, c: Content, id: string): number {
+  const last = state.lastSeen[id];
+  return last === undefined ? 1 : Math.min(1, Math.max(0.05, (state.turn - last) / c.balance.repeatFadeDays));
+}
+
 export function isRecent(state: GameState, c: Content, id: string): boolean {
   const seen = state.lastSeen[id];
   return seen !== undefined && state.turn - seen < c.balance.repeatCooldown;
@@ -131,12 +137,7 @@ export function findNews(
     }
     if (candidates.length === 0) return null;
 
-    // What was in the news not so long ago comes up less often (`repeatFadeDays`).
-    const fade = (t: CardTemplate) => {
-      const last = state.lastSeen[t.id];
-      return last === undefined ? 1 : Math.min(1, Math.max(0.05, (state.turn - last) / b.repeatFadeDays));
-    };
-    return write(r, weightedPick(rng, candidates.map((x) => ({ x, weight: x.weight * fade(x) }))).x, forcedTier);
+    return write(r, weightedPick(rng, candidates.map((x) => ({ x, weight: x.weight * repeatFade(state, c, x.id) }))).x, forcedTier);
   };
 
   let papDone = false;
@@ -148,7 +149,12 @@ export function findNews(
     if (!target?.open || !(paparazzi || chance(rng, b.huntFindChance + mods.huntFindAdd))) return null;
     const pool = huntTemplates(c, target, (t) => !t.conflict && (t.source === 'rumor' || t.source === 'fact') && !inHand.has(t.id) && !cards.some((x) => x.templateId === t.id));
     if (!pool.length) return null;
-    const card = write(r, weightedPick(rng, pool.map((x) => ({ x, weight: x.weight }))).x, null);
+    // Stories about the target take turns (CONCEPT.md §3.6а): one told within `huntRepeatCooldown` days
+    // waits while fresher ones are left, and older ones come up more often.
+    const fresh = pool.filter((t) => state.lastSeen[t.id] === undefined || state.turn - state.lastSeen[t.id] >= b.huntRepeatCooldown);
+    const oldest = Math.min(...pool.map((t) => state.lastSeen[t.id] ?? -Infinity));
+    const choice = fresh.length ? fresh : pool.filter((t) => (state.lastSeen[t.id] ?? -Infinity) === oldest);
+    const card = write(r, weightedPick(rng, choice.map((x) => ({ x, weight: x.weight * repeatFade(state, c, x.id) }))).x, null);
     card.building = target.id;
     if (paparazzi) papDone = true;
     return card;

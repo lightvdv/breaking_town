@@ -59,6 +59,7 @@
   "stainHold": 0.5,
   "huntDoubtShare": 0.5,
   "huntFindChance": 0.4,
+  "huntRepeatCooldown": 6,
   "stainQuit": 0.03,
   "stainDecay": 0.03,
   "stainCloseMin": 0.3,

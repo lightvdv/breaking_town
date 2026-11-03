@@ -550,6 +550,8 @@ export interface Balance {
   huntDoubtShare: number;
   /** Chance that a free reporter digs up a story about the target instead of searching at random. */
   huntFindChance: number;
+  /** Days a story about the hunt's target waits before it comes up again, while fresher ones are left. */
+  huntRepeatCooldown: number;
   /** A worker of a stained place quits with chance stain × this a day; the stain fades by `stainDecay` a day. */
   stainQuit: number;
   stainDecay: number;

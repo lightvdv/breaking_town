@@ -15,7 +15,8 @@ import { goalOf, goalProgress, updateGoal } from '../src/sim/goals';
 import { choiceId, composeTown, generateTown, powerMul, townPower } from '../src/sim/townGen';
 import { checkOutcome } from '../src/sim/game';
 import { quitStained, settleHunt } from '../src/sim/hunt';
-import { crimeEvents, crimePressure, gangDue, heatCrime, streetCrime } from '../src/sim/crime';
+import { crimeEvents, crimePressure, crimeResponse, gangDue, heatCrime, streetCrime } from '../src/sim/crime';
+import { topicWatchOf } from '../src/sim/news';
 import { applyCityEffect, computeMetrics } from '../src/sim/city';
 import {
   averageTrust,
@@ -1359,9 +1360,10 @@ describe('attacking the town (CONCEPT.md §3.5, §3.6а, §8.4)', () => {
     s.hunt!.step = 2;
     expect(huntBonus(s, content, mods)).toBeCloseTo(1 + 2 * content.balance.huntStep);
     expect(previewPublication(s, content, mods, pub).impact).toBeGreaterThan(before);
-    playTurn(s, content, { publish: [pub] });
+    const r = playTurn(s, content, { publish: [pub] });
     expect(s.hunt?.step).toBe(3);
-    expect(s.stains[factory.id] ?? 0).toBeGreaterThan(0);
+    // The story stained the factory (before the night's fading).
+    expect(r.hunt?.stain ?? 0).toBeGreaterThan(0);
     // A day without a hit cools it down a step.
     playTurn(s, content, { publish: [] });
     expect(s.hunt?.step).toBe(2);
@@ -1949,24 +1951,79 @@ describe('hunting the police (CONCEPT.md §3.6а, §5.6)', () => {
     return 0;
   };
 
-  it('a hunt keeps its topic alive: the fatigue of a story about the target stops growing', () => {
+  it('a story about the target grows with every step of the hunt, however long it runs', () => {
     const s = createGame(content, 51);
     const police = s.buildings.find((x) => x.type === 'police')!;
     startHunt(s, police.id);
-    s.hunt!.step = content.balance.huntMaxSteps;
     const own = crimeCard(s, true);
     const other = crimeCard(s, false);
     const mods = getModifiers(s, content);
-    const impactAt = (card: CardInstance, streak: number) => {
-      s.topicStreak.crime = streak;
+    const impactAt = (card: CardInstance, step: number, days: number) => {
+      s.hunt!.step = step;
+      s.topicStreak.crime = days;
       return previewPublication(s, content, mods, { cardUid: card.uid, placement: 2, distortion: loudest(card) }).impact;
     };
-    const cap = content.balance.huntFatigueCap;
-    expect(impactAt(own, cap + 6)).toBeCloseTo(impactAt(own, cap));
-    // An ordinary crime story tires the readers on and on.
-    expect(impactAt(other, cap + 6)).toBeLessThan(impactAt(other, cap) * 0.5);
+    expect(impactAt(own, 4, 20)).toBeGreaterThan(impactAt(own, 1, 1));
+    // No topic fatigue: a story printed after twenty crime days hits as hard as the first one.
+    expect(impactAt(other, 0, 20)).toBeCloseTo(impactAt(other, 0, 0));
     // A crime story about another place does not hit the hunted station.
     expect(isHuntStory(s, other, storyEffect(content, other, loudest(other)))).toBe(false);
+  });
+
+  it('fact-checkers watch a topic printed day after day; a hunt story has its own watch', () => {
+    const s = createGame(content, 54);
+    const b = content.balance;
+    const other = crimeCard(s, false);
+    const effect = storyEffect(content, other, loudest(other));
+    s.topicStreak = {};
+    expect(topicWatchOf(s, content, other, effect)).toBe(1);
+    s.topicStreak.crime = 3;
+    expect(topicWatchOf(s, content, other, effect)).toBeCloseTo(1 + 3 * b.topicWatch);
+    s.topicStreak.crime = 40;
+    expect(topicWatchOf(s, content, other, effect)).toBeCloseTo(1 + b.topicWatchMax * b.topicWatch);
+    // The risk in the preview grows with the watch.
+    const mods = getModifiers(s, content);
+    const riskAt = (days: number) => {
+      s.topicStreak.crime = days;
+      return previewPublication(s, content, mods, { cardUid: other.uid, placement: 2, distortion: maxDistortion(other) }).exposureRisk;
+    };
+    expect(riskAt(3)).toBeGreaterThan(riskAt(0));
+    // Days in a row: a day without the topic forgets it.
+    s.topicStreak = { crime: 2 };
+    s.hand = [];
+    playTurn(s, content, { publish: [] });
+    expect(s.topicStreak.crime).toBeUndefined();
+    const police = s.buildings.find((x) => x.type === 'police')!;
+    startHunt(s, police.id);
+    const own = crimeCard(s, true);
+    s.topicStreak.crime = 5;
+    expect(topicWatchOf(s, content, own, storyEffect(content, own, loudest(own)))).toBe(1);
+  });
+
+  it('the town answers hot crime: a raid or patrols cool the streets and are true reassuring news', () => {
+    const s = createGame(content, 55);
+    const b = content.balance;
+    expect(crimeResponse(s, content, s.rng)).toEqual([]);
+    s.crimeHeat = 0.8;
+    let answer: ReturnType<typeof crimeResponse> = [];
+    for (let i = 0; i < 40 && !answer.length; i++) {
+      s.crimeHeat = 0.8;
+      s.lastSeen = {};
+      answer = crimeResponse(s, content, s.rng);
+    }
+    expect(answer.length).toBe(1);
+    expect(answer[0].response).toBe(true);
+    expect(answer[0].baseTruth).toBe(0);
+    expect(s.crimeHeat).toBeCloseTo(0.8 * (1 - answer[0].cityEffect!.amount));
+    expect(b.crimeResponseHeat).toBeGreaterThan(0);
+    // Never found by ordinary search or by the source of leaks.
+    for (let i = 0; i < 30; i++) {
+      const g = createGame(content, 100 + i);
+      for (let t = 0; t < 3 && !g.outcome; t++) {
+        expect(g.hand.some((x) => templateOf(content, x.templateId).response)).toBe(false);
+        playTurn(g, content, { publish: [] });
+      }
+    }
   });
 
   it('the target keeps its stain on a day it is hit and loses some on a day it is not', () => {

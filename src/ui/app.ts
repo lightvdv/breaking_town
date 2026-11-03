@@ -7,6 +7,7 @@ import {
   huntBonus,
   endHunt,
   isHuntStory,
+  topicWatchOf,
   startHunt,
   crimePressure,
   policeLost,
@@ -2537,6 +2538,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           huntChip(card, p.effect),
           where !== 'out' ? helpChip(p.effect) : null,
           pencil !== null ? h('span', { class: 'pencil-note', title: `Риск разоблачения ${Math.round(p.exposureRisk * 100)}%` }, riskNotes[pencil]) : null,
+          watchChip(card, tpl, p.effect),
           outButton,
         ),
         h('h3', { class: 'headline' }, p.title, ' ', tierLabel),
@@ -2590,6 +2592,21 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function placeKicker(card: CardInstance): HTMLElement | null {
     if (card.building === undefined || !state.buildings[card.building]) return null;
     return buildingDefOf(c, state.buildings[card.building].type).names ? h('div', { class: 'kicker place-kicker' }, buildingName(state, c, card.building)) : null;
+  }
+
+  /**
+   * Fact-checkers watch a topic printed day after day (CONCEPT.md §5.3): «👁 Под надзором +45%» next
+   * to «Подача» while the topic's streak lasts; a day without it lifts the watch.
+   */
+  function watchChip(card: CardInstance, tpl: CardTemplate, effect: CardEffect | null): HTMLElement | null {
+    const watch = topicWatchOf(state, c, card, effect);
+    if (watch <= 1) return null;
+    const days = state.topicStreak[tpl.topic] ?? 0;
+    return h(
+      'span',
+      { class: 'watch-chip', title: `Фактчекеры следят за темой «${topicLabels[tpl.topic]}»: ${days} ${daysWord(days)} подряд в газете. Неправду этой темы ловят на ${Math.round((watch - 1) * 100)}% чаще. День без этой темы — и надзор снимется.` },
+      `👁 Под надзором +${Math.round((watch - 1) * 100)}%`,
+    );
   }
 
   /**
@@ -5149,7 +5166,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       list(
         '🎯 Травля: кнопка «Травить» у новости о заводе, магазине или другом месте работы. Новости об этом месте бьют всё сильнее, люди уходят, и оно закрывается. Цель одна: пока идёт травля, другое место не выбрать — сначала «Прекратить» на её плашке над газетой.',
         'Компромат: нажмите на портрет и выберите «Копать». Репортёр несколько дней не пишет новостей, зато приносит эксклюзив, который настраивает город против группы.',
-        'Криминал: новости о преступности пугают людей и разжигают настоящую преступность. Преступность на улицах сама снижает «Порядок и безопасность», а банда, если она взяла улицы, держит его ниже до конца партии; полиция всё это сдерживает.',
+        'Криминал: новости о преступности пугают людей и разжигают настоящую преступность. Преступность на улицах сама снижает «Порядок и безопасность», а банда, если она взяла улицы, держит его ниже до конца партии; полиция всё это сдерживает. Пока город раскалён, полиция и мэр отвечают рейдами и патрулями: они остужают улицы и успокаивают напуганных — закрытая полиция рейдов уже не устроит.',
+        '👁 Надзор за темой: если печатать одну тему день за днём, фактчекеры начинают за ней следить — неправду этой темы ловят на 25% чаще за каждый день подряд. Метка «Под надзором» у новости; день без этой темы снимает надзор. Правду надзор не трогает.',
       ),
       h('h3', { class: 'section' }, 'Первые советы'),
       list(

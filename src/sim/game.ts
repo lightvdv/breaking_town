@@ -1,5 +1,5 @@
 import { goalOf, goalProgress, updateGoal } from './goals';
-import { crimeEvents, heatCrime } from './crime';
+import { crimeEvents, crimeResponse, heatCrime } from './crime';
 import { pressHunt, settleHunt } from './hunt';
 import { createRng, int, weightedPick, type RngState } from './rng';
 import {
@@ -164,7 +164,7 @@ function cardAvailable(state: GameState, tpl: CardTemplate): boolean {
 function generateEvents(state: GameState, c: Content, rng: RngState): CardTemplate[] {
   const b = c.balance;
   // Conflict events (incidents) come only from tense relations (relations.ts).
-  const all = c.cards.filter((t) => t.source === 'event' && !t.conflict && !t.arc && scopeOf(t) === 'local' && cardAvailable(state, t));
+  const all = c.cards.filter((t) => t.source === 'event' && !t.conflict && !t.arc && !t.response && scopeOf(t) === 'local' && cardAvailable(state, t));
   // The same thing does not happen again soon (CONCEPT.md §3.3).
   const fresh = all.filter((t) => !isRecent(state, c, t.id));
   const pool = fresh.length ? fresh : all;
@@ -188,6 +188,7 @@ function generateEvents(state: GameState, c: Content, rng: RngState): CardTempla
   }
   // Fear makes itself come true: real crime on top (CONCEPT.md §5.6).
   out.push(...crimeEvents(state, c, rng, out));
+  out.push(...crimeResponse(state, c, rng));
   return out;
 }
 
@@ -341,7 +342,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   for (const p of d.publish) {
     const card = state.hand.find((x) => x.uid === p.cardUid)!;
     const topic = templateOf(c, card.templateId).topic;
-    published.push(publish(state, c, storyRng(p.cardUid), mods, p, topicsThisTurn[topic] ?? 0));
+    published.push(publish(state, c, storyRng(p.cardUid), mods, p));
     pushArc(state, c, card, p.placement, p.distortion);
     topicsThisTurn[topic] = (topicsThisTurn[topic] ?? 0) + 1;
   }
@@ -384,7 +385,8 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
 
   const streak: Partial<Record<Topic, number>> = {};
   for (const [topic, n] of Object.entries(topicsThisTurn) as [Topic, number][]) {
-    streak[topic] = (state.topicStreak[topic] ?? 0) + n;
+    // Days in a row the topic was printed (the fact-checkers' watch, CONCEPT.md §5.3).
+    if (n > 0) streak[topic] = (state.topicStreak[topic] ?? 0) + 1;
   }
   state.topicStreak = streak;
 

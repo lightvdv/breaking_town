@@ -80,6 +80,7 @@ export function planRival(state: GameState, c: Content, rng: RngState, events: C
       (t.source === 'event' || t.source === 'fact') &&
       reassuring(t) &&
       !t.arc &&
+      !t.response &&
       (!t.conflict || conflictsStarted(state, c)) &&
       available(state, t) &&
       !isRecent(state, c, t.id) &&
@@ -206,7 +207,7 @@ export function publishRival(state: GameState, c: Content, rng: RngState): Publi
   const rival = state.rival;
   if (!rival || rival.closed) return [];
   const mods = modifiersOf(c, []);
-  const news = rival.plan.map((s) => publish(state, c, rng, mods, { cardUid: s.card.uid, placement: s.placement, distortion: s.distortion }, 0, { rival: { card: s.card } }));
+  const news = rival.plan.map((s) => publish(state, c, rng, mods, { cardUid: s.card.uid, placement: s.placement, distortion: s.distortion }, { rival: { card: s.card } }));
   // Its debunks of our stories: nobody brings those again.
   const answered = rival.plan.filter((s) => s.card.debunk).map((s) => s.card.debunk!.uid);
   for (const p of state.ourPrinted) if (answered.includes(p.uid)) p.debunked = true;

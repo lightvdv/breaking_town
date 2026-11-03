@@ -48,7 +48,7 @@ export function huntWatch(state: GameState, c: Content, card: CardInstance, effe
 
 /** A template a reporter can dig up about the target: about its kind of place, frightening at some truth. */
 export function huntTemplates(c: Content, target: Building, ok: (t: CardTemplate) => boolean): CardTemplate[] {
-  return c.cards.filter((t) => t.requires === target.type && !t.arc && t.effects.some((e) => isHarmful(e)) && ok(t));
+  return c.cards.filter((t) => t.requires === target.type && !t.arc && !t.response && t.effects.some((e) => isHarmful(e)) && ok(t));
 }
 
 /**

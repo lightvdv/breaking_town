@@ -125,7 +125,7 @@ export function validateContent(c: Content): string[] {
   for (const scope of ['local', 'global'] as const) {
     for (const kind of ['true', 'rumor'] as const) {
       const n = c.cards.filter(
-        (t) => !t.arc && (t.scope ?? 'local') === scope && (kind === 'rumor' ? t.source === 'rumor' : t.source === 'fact' || t.source === 'event'),
+        (t) => !t.arc && !t.response && (t.scope ?? 'local') === scope && (kind === 'rumor' ? t.source === 'rumor' : t.source === 'fact' || t.source === 'event'),
       ).length;
       if (n < 8) errors.push(`only ${n} ${scope} ${kind} stories, need at least 8`);
     }

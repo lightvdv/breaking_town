@@ -25,6 +25,6 @@
       "offerStartTurn": 3,
       "poachStartTurn": 99
     },
-    "balanceMul": { "impactNorm": 1.1, "huntStain": 1.35 }
+    "balanceMul": { "impactNorm": 1, "huntStain": 1.15, "crimeHeatGain": 0.75 }
   }
 ]

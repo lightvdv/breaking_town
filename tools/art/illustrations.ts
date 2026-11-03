@@ -1354,6 +1354,9 @@ scenes.arc_gang_2 = scenes.crime_wave;
 scenes.arc_gang_3 = scenes.rumor_gangs;
 scenes.arc_gang_bad = scenes.teen_gang;
 scenes.arc_gang_good = scenes.police_patrol;
+// The town's answers to hot crime (CONCEPT.md §5.6).
+scenes.police_raid = scenes.police_patrol;
+scenes.city_patrols = scenes.police_patrol;
 scenes.arc_mall_1 = scenes.factory_hiring;
 scenes.arc_mall_2 = scenes.shop_layoff;
 scenes.arc_mall_3 = scenes.conflict_hall_meeting;

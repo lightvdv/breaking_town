@@ -139,7 +139,7 @@ function layOffOne(state: GameState, rng: RngState, building: Building): boolean
   return true;
 }
 
-export function applyCityEffect(state: GameState, rng: RngState, e: CityEffect): void {
+export function applyCityEffect(state: GameState, rng: RngState, e: CityEffect, c?: Content): void {
   const active = state.residents.filter((r) => r.status === 'active');
   switch (e.type) {
     case 'mood':
@@ -153,12 +153,17 @@ export function applyCityEffect(state: GameState, rng: RngState, e: CityEffect):
       break;
     case 'fear': {
       // Real crime frightens more in a town already afraid (CONCEPT.md §5.6).
-      const share = e.amount * (1 + (state.crimeHeat + state.crimeBoost) * 4);
+      const share = e.amount * (1 + (state.crimeHeat + state.crimeBoost) * (c?.balance.crimeFearMul ?? 4));
       for (const r of active) if (chance(rng, share)) r.fearTurns = Math.max(r.fearTurns, 2);
       break;
     }
     case 'crime':
       state.crimeBoost += e.amount;
+      break;
+    case 'calmCrime':
+      // The town answers fear: raids and patrols cool the streets and calm the frightened (CONCEPT.md §5.6).
+      state.crimeHeat *= 1 - e.amount;
+      for (const r of active) if (r.fearTurns > 0 && chance(rng, e.amount)) r.fearTurns = 0;
       break;
     case 'layoff': {
       const targets = state.buildings.filter((x) => x.type === e.building && x.open);

@@ -5618,5 +5618,95 @@
       0,
       2
     ]
+  },
+  {
+    "id": "police_raid",
+    "source": "event",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Полиция провела рейд и задержала банду грабителей",
+      "Рейд полиции: задержали не тех",
+      "Полиция устроила показуху, а грабители на свободе"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.05
+      },
+      {
+        "type": "fear",
+        "strength": 0.12,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.25,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "intelligentsia"
+    ],
+    "interest": 0.55,
+    "engagement": 0.5,
+    "weight": 0,
+    "tiers": [
+      1,
+      2
+    ],
+    "response": true,
+    "requires": "police",
+    "witness": "police",
+    "cityEffect": {
+      "type": "calmCrime",
+      "amount": 0.6
+    }
+  },
+  {
+    "id": "city_patrols",
+    "source": "event",
+    "topic": "crime",
+    "baseTruth": 0,
+    "titles": [
+      "Мэр вывел на улицы вечерние патрули",
+      "Патрули мэра ходят только по центру",
+      "Патрули мэра — для отчёта, окраины брошены"
+    ],
+    "effects": [
+      {
+        "type": "moodUp",
+        "strength": 0.04
+      },
+      {
+        "type": "fear",
+        "strength": 0.1,
+        "duration": 3
+      },
+      {
+        "type": "fear",
+        "strength": 0.2,
+        "duration": 3
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers"
+    ],
+    "interest": 0.5,
+    "engagement": 0.5,
+    "weight": 0,
+    "tiers": [
+      1,
+      2
+    ],
+    "response": true,
+    "requires": "cityHall",
+    "witness": "cityHall",
+    "cityEffect": {
+      "type": "calmCrime",
+      "amount": 0.5
+    }
   }
 ]

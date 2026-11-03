@@ -20,10 +20,11 @@
             44
           ]
         },
-        "impactNorm": 1.72,
-        "huntStain": 0.036,
-        "crimeHeatGain": 0.09,
-        "stainShutdown": 0.25,
+        "impactNorm": 2.05,
+        "huntStain": 0.03,
+        "huntStep": 0.05,
+        "crimeHeatGain": 0.055,
+        "stainShutdown": 0.3,
         "rivalSteal": [
           0,
           0.01,
@@ -64,8 +65,9 @@
         },
         "guardianStoriesMax": 3,
         "turnLimit": 39,
-        "impactNorm": 1.84,
-        "huntStain": 0.064,
+        "impactNorm": 2.1,
+        "huntStain": 0.033,
+        "crimeHeatGain": 0.06,
         "stainShutdown": 0.4
       }
     }

@@ -360,6 +360,8 @@
     "police_bribes",
     "police_understaffed",
     "police_drunk",
-    "police_cuts"
+    "police_cuts",
+    "police_raid",
+    "city_patrols"
   ]
 }

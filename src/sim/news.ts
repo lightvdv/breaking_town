@@ -118,15 +118,24 @@ export function isHarmful(effect: CardEffect | null): boolean {
 }
 
 /**
+ * Fact-checkers watch a topic the paper prints day after day (CONCEPT.md §5.3): the risk to every
+ * story of it grows by `topicWatch` a day in a row, up to `topicWatchMax` days. A hunt story has
+ * its own watch (`huntWatch`).
+ */
+export function topicWatchOf(state: GameState, c: Content, card: CardInstance, effect: CardEffect | null): number {
+  if (isHuntStory(state, card, effect)) return 1;
+  const days = state.topicStreak[templateOf(c, card.templateId).topic] ?? 0;
+  return 1 + c.balance.topicWatch * Math.min(days, c.balance.topicWatchMax);
+}
+
+/**
  * Impact of a story — how strongly viewers react (CONCEPT.md §5.2а). It never changes reach.
  * 1 means a normal story; divided by impactNorm so content `interest` values stay readable.
  */
-function baseImpact(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, repeatsThisTurn: number, hunt: boolean): number {
+function baseImpact(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, hunt: boolean): number {
   const b = c.balance;
-  const streak = (state.topicStreak[tpl.topic] ?? 0) + repeatsThisTurn;
-  // A hunt story grows with every day in a row (CONCEPT.md §3.6а), and readers tire of it less —
-  // and only up to `huntFatigueCap` days: a hunt keeps its topic alive however long it runs.
-  const fatigue = hunt ? Math.pow(1 - b.fatiguePerRepeat * b.huntFatigueShare, Math.min(streak, b.huntFatigueCap)) * huntBonus(state, c, mods) : Math.pow(1 - b.fatiguePerRepeat, streak);
+  // A hunt story grows with every day in a row (CONCEPT.md §3.6а).
+  const fatigue = hunt ? huntBonus(state, c, mods) : 1;
   const scope = card.scope === 'global' ? b.globalEffectMul : 1;
   const placement = b.placementImpact[pub.placement];
   // A yellow layout makes frightening stories hit harder, a solid one softer (CONCEPT.md §3.5).
@@ -141,15 +150,15 @@ function baseImpact(state: GameState, c: Content, mods: Modifiers, card: CardIns
  * the level is already a sensation and fewer people believe a lie. The rival's stories keep their
  * plain strength.
  */
-function impactOf(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, repeatsThisTurn: number, hunt = false, louder = true): number {
-  const impact = baseImpact(state, c, mods, card, tpl, pub, repeatsThisTurn, hunt);
+function impactOf(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, hunt = false, louder = true): number {
+  const impact = baseImpact(state, c, mods, card, tpl, pub, hunt);
   if (!louder || pub.distortion <= 0) return impact;
   const effect = storyEffect(c, card, pub.distortion);
   if (!effect) return impact;
   const prevPub = { ...pub, distortion: pub.distortion - 1 };
   const prevEffect = storyEffect(c, card, prevPub.distortion);
   if (!prevEffect) return impact;
-  const prev = impactOf(state, c, mods, card, tpl, prevPub, repeatsThisTurn, isHuntStory(state, card, prevEffect), louder);
+  const prev = impactOf(state, c, mods, card, tpl, prevPub, isHuntStory(state, card, prevEffect), louder);
   const now = expectedBelievers(state, c, mods, tpl, cardTruth(card, pub.distortion), pub.placement);
   const before = expectedBelievers(state, c, mods, tpl, cardTruth(card, prevPub.distortion), pub.placement);
   if (now.believers <= 0 || effect.strength <= 0) return impact;
@@ -242,14 +251,13 @@ export function previewPublication(
   c: Content,
   mods: Modifiers,
   pub: Publication,
-  repeatsThisTurn = 0,
 ): PublicationPreview {
   const card = state.hand.find((x) => x.uid === pub.cardUid);
   if (!card) throw new Error(`Card ${pub.cardUid} is not in hand`);
   const tpl = templateOf(c, card.templateId);
   const truth = cardTruth(card, pub.distortion);
   const hunted = isHuntStory(state, card, storyEffect(c, card, pub.distortion));
-  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn, hunted);
+  const impact = impactOf(state, c, mods, card, tpl, pub, hunted);
   const audience = expectedBelievers(state, c, mods, tpl, truth, pub.placement);
   return {
     title: storyTitle(c, card, pub.distortion),
@@ -258,7 +266,7 @@ export function previewPublication(
     impact,
     tier: effectiveTier(card, pub.distortion),
     reachChance: outletReach(state, c, pub.placement),
-    exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25) * reporterCheckMul(state, c, card) * huntWatch(state, c, card, storyEffect(c, card, pub.distortion)),
+    exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25) * reporterCheckMul(state, c, card) * huntWatch(state, c, card, storyEffect(c, card, pub.distortion)) * topicWatchOf(state, c, card, storyEffect(c, card, pub.distortion)),
     tension: card.conflict ? { pair: pairKey(c, ...card.conflict), delta: tensionShift(state, c, card, pub.distortion, impact, 0.1, mods) } : null,
     believers: audience.believers,
     huntHit: hunted ? huntStainOf(c, impact, audience.readers ? audience.believers / audience.readers : 0, mods.stainMul) : null,
@@ -412,7 +420,6 @@ export function publish(
   rng: RngState,
   mods: Modifiers,
   pub: Publication,
-  repeatsThisTurn: number,
   opts: PublishOptions = {},
 ): PublishedNews {
   const b = c.balance;
@@ -426,7 +433,7 @@ export function publish(
   const soothed = isSoothed(card, pub.distortion);
   const effect = calm ? null : soothed ? tpl.softEffects?.[-pub.distortion - 1] ?? null : tpl.effects[truth];
   // The rival's stories have their own strength (`rivalImpactMul`).
-  const impact = impactOf(state, c, mods, card, tpl, pub, repeatsThisTurn, !rival && isHuntStory(state, card, effect), !rival) * (rival ? b.rivalImpactMul[state.rival?.kind ?? 'guardian'] : 1);
+  const impact = impactOf(state, c, mods, card, tpl, pub, !rival && isHuntStory(state, card, effect), !rival) * (rival ? b.rivalImpactMul[state.rival?.kind ?? 'guardian'] : 1);
   // Interesting stories are retold more, and viral channels spread them further.
   const retell = clamp(
     b.wordOfMouthChance * (0.5 + tpl.engagement * b.tierEngagement[effectiveTier(card, pub.distortion)]) * (1 + outletVirality(state, c)) * mods.wordOfMouthMul,
@@ -629,7 +636,7 @@ export function verifyNews(state: GameState, c: Content, rng: RngState, mods: Mo
       ...(fake ? { setup: true } : {}),
       ...(card.reporterId ? { reporterId: card.reporterId } : {}),
     };
-    const risk = exposureRiskOf(state, c, mods, story.truth, n.pub.placement, n.viewers.length / active) * reporterCheckMul(state, c, card) * huntWatch(state, c, card, storyEffect(c, card, n.pub.distortion));
+    const risk = exposureRiskOf(state, c, mods, story.truth, n.pub.placement, n.viewers.length / active) * reporterCheckMul(state, c, card) * huntWatch(state, c, card, storyEffect(c, card, n.pub.distortion)) * topicWatchOf(state, c, card, storyEffect(c, card, n.pub.distortion));
     if (chance(rng, risk)) {
       n.report.exposed = true;
       exposed.push(exposeNews(state, c, mods, story, n.viewers));

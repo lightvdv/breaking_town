@@ -266,7 +266,7 @@ export interface CardEffect {
 
 export interface CityEffect {
   /** fear: this share of residents is afraid for a few days; crime: the town's crime pressure grows for good (a gang, CONCEPT.md §5.6). */
-  type: 'mood' | 'money' | 'layoff' | 'fear' | 'crime';
+  type: 'mood' | 'money' | 'layoff' | 'fear' | 'crime' | 'calmCrime';
   building?: BuildingType;
   amount: number;
 }
@@ -326,6 +326,8 @@ export interface CardTemplate {
   place?: BuildingType;
   /** Story arcs (CONCEPT.md §3.1а): the arc this template is a stage of; never found by ordinary search. */
   arc?: string;
+  /** The town's answer to crime (police raid, patrols): only when crime runs hot, never in ordinary search. */
+  response?: boolean;
   arcStage?: 1 | 2 | 3 | 'bad' | 'good';
 }
 
@@ -542,8 +544,6 @@ export interface Balance {
   huntStain: number;
   /** Share of the night's fading a small hunted place keeps off on a day it was hit (1 = none fades). */
   stainHold: number;
-  /** Days of topic fatigue a hunt story feels at most. */
-  huntFatigueCap: number;
   /** Readers who doubted a hunt story still count for this much of a believer («дыма без огня не бывает»). */
   huntDoubtShare: number;
   /** Chance that a free reporter digs up a story about the target instead of searching at random. */
@@ -587,8 +587,6 @@ export interface Balance {
   huntWinMood: number;
   /** Each day of the hunt in a row raises the fact-check risk of stories about its target by this share. */
   huntCheckerStep: number;
-  /** Share of the usual topic fatigue that hunt stories suffer. */
-  huntFatigueShare: number;
   /** The mid-game twist (CONCEPT.md §4.9): its day; the election's mood line (at or above it the peacemaker wins). */
   twistTurn: number;
   electionPivot: number;
@@ -814,7 +812,15 @@ export interface Balance {
   /** Impact multiplier for the story's audience and for everyone else. */
   audienceBoost: number;
   audienceOthers: number;
-  fatiguePerRepeat: number;
+  /** Fact-checkers watch a topic printed day after day (CONCEPT.md §5.3): risk × (1 + this × days in a row). */
+  topicWatch: number;
+  /** Days in a row the watch grows at most. */
+  topicWatchMax: number;
+  /** The town answers fear (CONCEPT.md §5.6): from this crime heat a response may come, with this chance a day. */
+  crimeResponseHeat: number;
+  crimeResponseChance: number;
+  /** Real crime frightens more in a hot town: its fear share × (1 + heat × this). */
+  crimeFearMul: number;
 
   trustGain: number;
   /** Trust from true news by placement (brief, article, front page), like `placementExposurePenalty`. */

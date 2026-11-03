@@ -6,7 +6,7 @@ export { agencyCost, callAgency, cancelInvestigation, hireFromAgency, investigat
 export { buyWillingness, expectedJoins, followersOf, readerCount } from './readers';
 export { cityStateOf, wealthOf } from './city';
 export { getModifiers, levelEffects, modifiersOf, placementSlots, rankedPlacements, type Modifiers } from './modifiers';
-export { previewPublication, storyEffect, cardTruth, effectiveTier, framingOf, isHarmful, issueLevel, limitSensations, issueScore, isSoothed, maxDistortion, minDistortion, outletReach, storyTitle, type IssueStory, type PublicationPreview } from './news';
+export { topicWatchOf, previewPublication, storyEffect, cardTruth, effectiveTier, framingOf, isHarmful, issueLevel, limitSensations, issueScore, isSoothed, maxDistortion, minDistortion, outletReach, storyTitle, type IssueStory, type PublicationPreview } from './news';
 export { createTension, fillTitle, pairKey, pairKeys, pairOf, startTension, tensionLevel, tipConflict } from './relations';
 export { averageTrust, closedLine, rivalStarted, buildingDefOf, buildingName, channelOf, groupOf, templateOf } from './lookup';
 export { validateContent } from './validateContent';

@@ -7257,3 +7257,13 @@ span.hunt-chip {
   justify-self: start;
   margin-bottom: 6px;
 }
+
+/* Fact-checkers watching a topic printed day after day (CONCEPT.md §5.3). */
+.watch-chip {
+  padding: 1px 6px;
+  border: 1px dashed var(--danger);
+  border-radius: 3px;
+  color: var(--danger);
+  font-size: 12px;
+  white-space: nowrap;
+}

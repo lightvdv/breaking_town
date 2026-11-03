@@ -57,7 +57,7 @@ export function cashBlock(state: GameState, c: Content, id: string): string | nu
 /** Rumors that can be a sensation, about the town: what a source sells. */
 function leakPool(state: GameState, c: Content) {
   const inHand = new Set(state.hand.map((x) => x.templateId));
-  return c.cards.filter((t) => t.source === 'rumor' && !t.arc && !t.conflict && !inHand.has(t.id) && (t.tiers?.[1] ?? 3) >= 3 && (!t.requires || state.buildings.some((b) => b.type === t.requires && b.open)));
+  return c.cards.filter((t) => t.source === 'rumor' && !t.arc && !t.response && !t.conflict && !inHand.has(t.id) && (t.tiers?.[1] ?? 3) >= 3 && (!t.requires || state.buildings.some((b) => b.type === t.requires && b.open)));
 }
 
 /** Buys a move; a leak returns the card it put into today's hand. */

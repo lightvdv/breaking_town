@@ -170,7 +170,7 @@ export function tipConflict(state: GameState, c: Content): CardInstance | null {
   const keys = [...pairKeys(c)].sort((a, b) => (state.tension[b] ?? 0) - (state.tension[a] ?? 0));
   for (const key of keys) {
     const pair = pairOf(key);
-    const pool = c.cards.filter((t) => t.source === 'event' && t.baseTruth === 0 && !t.arc && fits(t, pair));
+    const pool = c.cards.filter((t) => t.source === 'event' && t.baseTruth === 0 && !t.arc && !t.response && fits(t, pair));
     if (!pool.length) continue;
     const fresh = pool.filter((t) => !isRecent(state, c, t.id));
     const tpl = weightedPick(rng, (fresh.length ? fresh : pool).map((x) => ({ x, weight: x.weight }))).x;

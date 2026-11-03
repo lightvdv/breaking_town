@@ -3,7 +3,7 @@ import { getModifiers } from './modifiers';
 import { groupOf, templateOf } from './lookup';
 import type { PublishedNews } from './news';
 import { isRecent, scopeOf } from './reporters';
-import { chance, weightedPick, type RngState } from './rng';
+import { chance, pick, weightedPick, type RngState } from './rng';
 import type { CardTemplate, Content, GameState } from './types';
 
 /**
@@ -71,6 +71,7 @@ export function crimeEvents(state: GameState, c: Content, rng: RngState, taken: 
       t.source === 'event' &&
       t.topic === 'crime' &&
       !t.arc &&
+      !t.response &&
       !t.conflict &&
       scopeOf(t) === 'local' &&
       !taken.includes(t) &&
@@ -82,11 +83,28 @@ export function crimeEvents(state: GameState, c: Content, rng: RngState, taken: 
     const tpl = weightedPick(rng, pool.map((x) => ({ x, weight: x.weight }))).x;
     pool.splice(pool.indexOf(tpl), 1);
     state.lastSeen[tpl.id] = state.turn;
-    if (tpl.cityEffect) applyCityEffect(state, rng, tpl.cityEffect);
+    if (tpl.cityEffect) applyCityEffect(state, rng, tpl.cityEffect, c);
     state.todayEvents.push(tpl.titles[0] ?? tpl.id);
     out.push(tpl);
   }
   return out;
+}
+
+/**
+ * The town answers fear (CONCEPT.md §5.6): while crime runs hot (`crimeResponseHeat`) the police or
+ * the mayor may act — a raid, patrols — with chance `crimeResponseChance` a day. The answer cools the
+ * heat at once and is a true reassuring event: the rival prints it gladly.
+ */
+export function crimeResponse(state: GameState, c: Content, rng: RngState): CardTemplate[] {
+  const b = c.balance;
+  if (state.crimeHeat < b.crimeResponseHeat || !chance(rng, b.crimeResponseChance)) return [];
+  const pool = c.cards.filter((t) => t.response && (!t.requires || state.buildings.some((x) => x.type === t.requires && x.open)) && !isRecent(state, c, t.id));
+  if (!pool.length) return [];
+  const tpl = pick(rng, pool);
+  state.lastSeen[tpl.id] = state.turn;
+  if (tpl.cityEffect) applyCityEffect(state, rng, tpl.cityEffect, c);
+  state.todayEvents.push(tpl.titles[0] ?? tpl.id);
+  return [tpl];
 }
 
 /** A gang comes when order breaks down: the gang arc starts by itself (CONCEPT.md §3.1а). */

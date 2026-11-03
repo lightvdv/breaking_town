@@ -3109,8 +3109,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...state.reporters.map((id) =>
         row(
           id,
-          `зарплата ${reporterOf(c, id).salary} в день`,
-          // Topics, watching the rival and digging are right on the card; the last one cannot be fired.
+          `зарплата ${reporterOf(c, id).salary} в день${state.rivalWatch.includes(id) && state.rival && !state.rival.closed ? ` · 👁 следит за «${rivalNames[state.rival.kind].ins}»` : ''}`,
+          // Topics and the «Компромат» list (digging, watching the rival) are right on the card; the last one cannot be fired.
           h(
             'span',
             { class: 'team-actions' },
@@ -3164,7 +3164,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const b = c.balance;
     const assigned = state.reporterTopics[id] ?? [];
     const topics = Object.keys(topicLabels) as Topic[];
-    const rival = state.rival && !state.rival.closed ? state.rival : null;
     const chip = (label: string, on: boolean, pick: () => void, title = '') =>
       h('button', { class: `chip${on ? ' on' : ''}`, 'aria-pressed': String(on), title, disabled: !!state.outcome, onclick: teamAct(pick) }, label);
     const topicKey = `team:${id}:topics`;
@@ -3181,7 +3180,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
           el.dataset.tut = `topic-${t}`;
           return el;
         }),
-        rival ? chip(`👁 Следить за «${rivalNames[rival.kind].ins}»`, state.rivalWatch.includes(id), () => setRivalWatch(state, id, !state.rivalWatch.includes(id)), 'Чаще приносит опровержения его свежей лжи') : null,
       ),
     ];
     if (openInfo.has(topicKey))
@@ -3190,8 +3188,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'p',
           { class: 'hint info-text' },
           `С шансом ${pct(b.assignFocus)} репортёр приносит новость на выбранные темы. ★ — его специальность: если все выбранные темы из них, удача +${pct(b.specialtyLuck)}.` +
-            (onSpecialty(state, r) ? ' Сейчас он работает по специальности.' : '') +
-            (rival ? ` Следящий за «${rivalNames[rival.kind].ins}» с тем же шансом приносит опровержение его свежей лжи; остальные находят его случайно, с шансом ${pct(b.debunkFindChance)}.` : ''),
+            (onSpecialty(state, r) ? ' Сейчас он работает по специальности.' : ''),
         ),
       );
     if (digMenuFor === id && !state.investigations.some((x) => x.reporterId === id)) out.push(digMenu(id));
@@ -3225,7 +3222,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     );
   }
 
-  /** Whom to dig into: every group and the rival paper; a press sets the reporter digging. */
+  /**
+   * Whom to dig into: every group and the rival paper; a press sets the reporter digging. Under them,
+   * watching the rival: the reporter keeps searching but brings debunks of its fresh lies more often.
+   */
   function digMenu(id: string): HTMLElement {
     const turns = investigationTurns(c, skilledReporter(state, c, reporterOf(c, id)));
     const option = (target: string, name: string, promise: () => HTMLElement) => {
@@ -3258,6 +3258,32 @@ export function mountApp(root: HTMLElement, base: Content): void {
       // One reporter at a time digs into the rival paper.
       state.rival && !state.rival.closed && !state.investigations.some((x) => x.target === RIVAL_DIG)
         ? option(RIVAL_DIG, '«Голос города»', () => h('div', { class: 'dig-promise' }, h('p', { class: 'dig-effect' }, 'Документы о том, кто платит «Голосу». Поверившие перестают ему доверять.')))
+        : null,
+      state.rival && !state.rival.closed ? watchRow(id) : null,
+    );
+  }
+
+  /** «Следить за «Голосом»» in the «Компромат» list: on or off, how it works behind «?». */
+  function watchRow(id: string): HTMLElement {
+    const rival = state.rival!;
+    const on = state.rivalWatch.includes(id);
+    const key = `watch:${id}`;
+    const b = c.balance;
+    return h(
+      'div',
+      { class: 'dig-option dig-watch' },
+      h(
+        'button',
+        { class: `dig-pick${on ? ' on' : ''}`, 'aria-pressed': String(on), disabled: !!state.outcome, onclick: teamAct(() => setRivalWatch(state, id, !on)) },
+        on ? `👁 Следит за «${rivalNames[rival.kind].ins}» — перестать` : `👁 Не копать, а следить за «${rivalNames[rival.kind].ins}»`,
+      ),
+      infoButton(key, 'Что это даст?'),
+      openInfo.has(key)
+        ? h(
+            'div',
+            { class: 'dig-promise' },
+            h('p', { class: 'dig-effect' }, `Репортёр по-прежнему ищет новости, но с шансом ${pct(b.assignFocus)} приносит опровержение свежей лжи «${rivalNames[rival.kind].gen}» вместо обычной новости; остальные находят его случайно, с шансом ${pct(b.debunkFindChance)}.`),
+          )
         : null,
     );
   }

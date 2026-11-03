@@ -7402,6 +7402,18 @@ span.hunt-chip {
   text-align: left;
 }
 
+/* Watching the rival: under the digging targets, apart from them. */
+.dig-menu .dig-watch {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+
+.dig-menu .dig-pick.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .dig-menu .dig-promise {
   flex: 1 1 100%;
   padding: 6px 10px;

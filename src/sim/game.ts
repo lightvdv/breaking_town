@@ -146,6 +146,7 @@ export function createGame(
     cashReady: {},
     cashEffects: {},
     shopPicks: 0,
+    shopExtras: 0,
     outcome: null,
   };
   state.metrics = computeMetrics(state, c);

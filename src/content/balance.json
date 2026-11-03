@@ -29,6 +29,7 @@
   "shopRefreshDays": 4,
   "shopFirstTurn": 2,
   "shopRefreshCost": 80,
+  "shopRequestStep": 60,
   "shopRareWeight": 0.35,
   "cardLevelPower": [1, 1.5, 2],
   "rarityWeight": { "common": 1, "rare": 0.45, "legendary": 0.18 },

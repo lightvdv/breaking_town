@@ -48,20 +48,32 @@ export function dealShop(state: GameState, c: Content, rng: RngState): void {
   }
   state.shopOffer = offer;
   state.shopPicks = 0;
-  state.shopRefreshTurn = state.turn + b.shopRefreshDays;
 }
 
 /** At the start of a turn: the deck is dealt again when its day comes. */
 export function advanceShop(state: GameState, c: Content, rng: RngState): void {
-  if (state.turn >= state.shopRefreshTurn) dealShop(state, c, rng);
+  if (state.turn < state.shopRefreshTurn) return;
+  dealShop(state, c, rng);
+  state.shopRefreshTurn = state.turn + c.balance.shopRefreshDays;
+  state.shopExtras = 0;
 }
 
-/** Deals the deck before its day, for `shopRefreshCost`. */
+/** What the next request for three more cards costs: dearer with every request until the board's next offer. */
+export function shopRequestCost(state: GameState, c: Content): number {
+  return c.balance.shopRefreshCost + c.balance.shopRequestStep * (state.shopExtras ?? 0);
+}
+
+/**
+ * Three more cards out of turn (CONCEPT.md §3.5б): before or after a pick, for `shopRequestCost`;
+ * one of them is again taken for free. The board's own schedule does not move.
+ */
 export function refreshShop(state: GameState, c: Content): void {
   if (state.outcome) throw new Error('Game is over');
-  if (state.shopPicks) throw new Error('A card of this offer is already taken');
-  if (state.money < c.balance.shopRefreshCost) throw new Error('Not enough money to refresh the shop');
-  state.money -= c.balance.shopRefreshCost;
+  const cost = shopRequestCost(state, c);
+  if (state.money < cost) throw new Error('Не хватает денег');
+  if (!deckCards(state, c).length) throw new Error('В колоде не осталось карт');
+  state.money -= cost;
+  state.shopExtras = (state.shopExtras ?? 0) + 1;
   dealShop(state, c, state.rng);
 }
 

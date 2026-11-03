@@ -496,6 +496,8 @@ export interface Balance {
   /** The upgrades deck (CONCEPT.md §3.5): cards on offer, days between deals, the price of dealing early, a rare card's weight. */
   shopOfferSize: number;
   shopRefreshDays: number;
+  /** Each further request for three more cards before the next offer costs this much more. */
+  shopRequestStep: number;
   shopRefreshCost: number;
   shopRareWeight: number;
   /** The day the board's first offer comes (then every `shopRefreshDays`). */
@@ -1364,6 +1366,8 @@ export interface GameState {
   cashEffects: Record<string, number>;
   /** Cards taken from the board's current offer: the first is free, a second costs its price. */
   shopPicks: number;
+  /** Requests for three more cards since the board's last offer (each dearer, `shopRequestStep`). */
+  shopExtras: number;
   /** Named residents (CONCEPT.md §2.2а): person id → resident id; today's letters; what happened to them. */
   people: Record<string, number>;
   letters: Letter[];

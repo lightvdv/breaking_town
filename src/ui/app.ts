@@ -69,6 +69,8 @@ import {
   forkChoice,
   openForks,
   refreshShop,
+  deckCards,
+  shopRequestCost,
   abilitiesOf,
   cashActive,
   cashBlock,
@@ -3724,11 +3726,33 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const prevFork = next ? Math.max(1, ...c.forks.filter((f) => f.day < next.day).map((f) => f.day)) : 1;
     const events = [...(next ? [bar(`Решение редакции: ${next.title}`, next.day - state.turn, next.day - prevFork)] : []), ...(deck.length ? [] : [bar('Предложение совета', days, b.shopRefreshDays)])];
     const owned = c.upgrades.filter((u) => state.upgrades.includes(u.id) && !(u.series && c.upgrades.filter((x) => x.series === u.series && state.upgrades.includes(x.id)).pop() !== u));
+    // Three more cards out of turn (CONCEPT.md §3.5б): any time, dearer with every request until the next offer.
+    const requestCost = shopRequestCost(state, c);
+    const requestButton = (label: string) =>
+      h(
+        'button',
+        {
+          class: 'shop-request',
+          disabled: state.money < requestCost || !deckCards(state, c).length || !!state.outcome,
+          title: 'Совет пришлёт ещё три карты из вашей коллекции; одну из них можно взять бесплатно. Каждый следующий запрос до очередного предложения дороже.',
+          onclick: () => {
+            try {
+              refreshShop(state, c);
+              error = '';
+            } catch (e) {
+              error = e instanceof Error ? e.message : String(e);
+            }
+            render();
+          },
+        },
+        `${label} · ${requestCost} ₽`,
+      );
     return [
       state.vouchers ? h('p', { class: 'good voucher-line' }, `За задания: из предложения совета можно взять ещё ${state.vouchers === 1 ? 'одну карту' : `${state.vouchers} карты`}.`) : null,
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
       taken.length ? h('div', { class: 'paper-style' }, ...taken.map((u) => h('span', { class: 'style-chip' }, icon(u, 'style-icon'), u.name))) : null,
       events.length ? h('div', { class: 'event-bars' }, ...events) : null,
+      ...(deck.length || state.outcome ? [] : [h('div', { class: 'deck-head' }, h('span', { class: 'hint' }, 'Не хотите ждать совета?'), requestButton('Запросить ещё три карты'))]),
       ...(open
         ? [
             h('h3', { class: 'section' }, `Решение редакции: ${open.title} — одно из двух навсегда`),
@@ -3741,24 +3765,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
               'div',
               { class: 'deck-head' },
               h('h3', { class: 'section' }, state.shopPicks ? 'Можно взять ещё одну — за награду задания' : 'Совет директоров предлагает — возьмите одну'),
-              state.shopPicks
-                ? null
-                : h(
-                    'button',
-                    {
-                      disabled: state.money < b.shopRefreshCost || !!state.outcome,
-                      onclick: () => {
-                        try {
-                          refreshShop(state, c);
-                          error = '';
-                        } catch (e) {
-                          error = e instanceof Error ? e.message : String(e);
-                        }
-                        render();
-                      },
-                    },
-                    `Другие три −${b.shopRefreshCost}`,
-                  ),
+              requestButton(state.shopPicks ? 'Запросить ещё три' : 'Другие три'),
             ),
             h('div', { class: 'deck' }, ...deck.map(offerCard)),
           ]
@@ -5299,7 +5306,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('h3', { class: 'section' }, 'Что беречь'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.'),
       block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. Деньги идут на зарплаты, новых репортёров и разовые ходы «Чёрной кассы» (💰 вверху; рядом — значки приёмов от карт).'),
-      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые, а на развилках придётся взять одно из двух навсегда. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
+      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги (${b.shopRefreshCost} ₽, каждый следующий запрос до очередного предложения дороже на ${b.shopRequestStep} ₽), а на развилках придётся взять одно из двух навсегда. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
       h('h3', { class: 'section' }, 'Чем ещё бить по городу'),
       block('groups/workers', 'Ссорьте группы', 'Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.'),
       block('ui/guardian', '«Голос города»', `С ${b.rivalStartTurn.destroy}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.`),

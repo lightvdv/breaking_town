@@ -20,10 +20,12 @@
             44
           ]
         },
-        "impactNorm": 2.05,
+        "impactNorm": 1.95,
         "huntStain": 0.03,
-        "huntStep": 0.05,
-        "crimeHeatGain": 0.055,
+        "huntStep": 0.07,
+        "crimeHeatGain": 0.06,
+        "crimeResponseChance": 0.6,
+        "topicWatch": 0.15,
         "stainShutdown": 0.3,
         "rivalSteal": [
           0,

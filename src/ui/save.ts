@@ -63,6 +63,7 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.cashReady ??= {};
     s.cashEffects ??= {};
     s.shopPicks ??= 0;
+    s.shopExtras ??= 0;
     s.clashDays ??= 0;
     s.loan ??= null;
     s.rivalWatch ??= [];

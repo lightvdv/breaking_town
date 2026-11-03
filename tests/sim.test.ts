@@ -87,6 +87,8 @@ import {
   levelEffects,
   dealShop,
   refreshShop,
+  shopRequestCost,
+  advanceShop,
   lureCost,
   tipConflict,
   huntBonus,
@@ -1676,9 +1678,26 @@ describe('the collection: draft, levels, sets (CONCEPT.md §3.5б)', () => {
     purchase(s, realContent, first);
     expect(s.money).toBe(money);
     expect(s.shopOffer).toEqual([]);
-    // Nothing more to buy from it, and no reroll for a second free card.
+    // Nothing more to take from it for free.
     expect(() => purchase(s, realContent, second)).toThrow();
-    expect(() => refreshShop(s, realContent)).toThrow();
+    // Three more cards out of turn, for money: each request dearer until the board's next offer.
+    const b = realContent.balance;
+    const schedule = s.shopRefreshTurn;
+    const before = s.money;
+    expect(shopRequestCost(s, realContent)).toBe(b.shopRefreshCost);
+    refreshShop(s, realContent);
+    expect(s.money).toBe(before - b.shopRefreshCost);
+    expect(s.shopOffer.length).toBeGreaterThan(0);
+    expect(s.shopRefreshTurn).toBe(schedule);
+    expect(shopRequestCost(s, realContent)).toBe(b.shopRefreshCost + b.shopRequestStep);
+    // One of them is again free.
+    const third = s.shopOffer[0];
+    purchase(s, realContent, third);
+    expect(s.money).toBe(before - b.shopRefreshCost);
+    // The board's own offer resets the price.
+    s.turn = s.shopRefreshTurn;
+    advanceShop(s, realContent, s.rng);
+    expect(shopRequestCost(s, realContent)).toBe(b.shopRefreshCost);
   });
 
   it('a level grows a card\'s benefits and leaves its drawbacks', () => {

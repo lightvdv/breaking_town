@@ -253,6 +253,21 @@ select {
   opacity: 0.4;
 }
 
+/* The stage the city is in: coloured as far as the city has gone through it (`--passed`), the rest
+   greyed like a stage ahead. */
+.goal-step.part {
+  position: relative;
+}
+
+.goal-step.part::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 var(--passed, 0%);
+  border-radius: 0 2px 2px 0;
+  background: color-mix(in srgb, var(--bg-deep) 60%, transparent);
+  backdrop-filter: grayscale(0.85);
+}
+
 /* The goal stage: a white frame around it and the flag above. */
 .goal-step.target {
   outline: 2px solid var(--accent);
@@ -4740,19 +4755,24 @@ button.publish.level-3.bump-up {
   font-size: 13px;
 }
 
-/* «Редакция»: the same head for every reporter, a size smaller, with a line and a button. */
-/* In «Редакция» the portrait takes the card's whole height and stays square. */
-.rep-head.compact {
-  align-items: stretch;
+/* «Редакция»: the same head for every reporter, a size smaller, with a line and a button. Every card
+   is the same size (one portrait size, the body as tall as the portrait), staff and candidates alike. */
+.rep-head {
+  flex-wrap: wrap;
 }
 
 .rep-head.compact .rep-head-portrait {
-  width: auto;
-  min-width: 96px;
-  height: auto;
-  min-height: 96px;
-  aspect-ratio: 1;
-  object-fit: cover;
+  width: 156px;
+  height: 156px;
+}
+
+.rep-head.compact .rep-head-body {
+  min-height: 156px;
+}
+
+/* The button row sits at the bottom of the body, under the portrait's lower edge. */
+.rep-head.compact .rep-head-action {
+  margin-top: auto;
 }
 
 .rep-head.compact .rep-head-name {
@@ -4876,9 +4896,14 @@ button.publish.level-3.bump-up {
     padding: 60px 12px 12px;
   }
 
-  .rep-head-portrait {
+  .rep-head-portrait,
+  .rep-head.compact .rep-head-portrait {
     width: 88px;
     height: 88px;
+  }
+
+  .rep-head.compact .rep-head-body {
+    min-height: 88px;
   }
 
   .rep-head-name {
@@ -6150,8 +6175,15 @@ button.publish.level-3.bump-up {
 }
 
 .deck-foot .gain-line {
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
   font-size: 12px;
+}
+
+/* The button keeps its size; «Сейчас» wraps beside it, never under it. */
+.deck-foot > button {
+  flex: none;
 }
 
 .fork-side .gain-line {
@@ -7292,11 +7324,88 @@ span.hunt-chip {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
 }
 
-.back-team {
-  justify-self: start;
-  margin-bottom: 6px;
+/* «Редакция»: what a reporter searches, watching the rival and the digging list, under the head. */
+.rep-head-tools {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.team-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.team-topics .chip {
+  padding: 3px 9px;
+  font-size: 13px;
+}
+
+.team-label {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.team-dig {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dig-progress {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dig-toggle.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dig-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: var(--panel);
+  border: 2px solid var(--accent);
+}
+
+.dig-menu-head {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dig-menu .dig-option {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.dig-menu .dig-pick {
+  flex: 1;
+  text-align: left;
+}
+
+.dig-menu .dig-promise {
+  flex: 1 1 100%;
+  padding: 6px 10px;
+  background: var(--panel-2);
 }
 
 /* Fact-checkers watching a topic printed day after day (CONCEPT.md §5.3). */

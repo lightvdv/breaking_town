@@ -26,7 +26,8 @@
         "crimeHeatGain": 0.06,
         "crimeResponseChance": 0.6,
         "topicWatch": 0.15,
-        "stainShutdown": 0.3,
+        "stainShutdown": 0.18,
+        "stainHold": 0.85,
         "rivalSteal": [
           0,
           0.01,

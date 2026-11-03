@@ -654,8 +654,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     }
     searching = false;
     busy = false;
-    // The board's new offer opens by itself the day it comes.
-    if (state.shopOffer.length && !state.shopPicks && shopAutoTurn !== state.turn && !modal && !state.outcome) {
+    // The board's new offer and the editor's decision (a fork) open by themselves the day they come.
+    const offerNew = state.shopOffer.length && !state.shopPicks;
+    const forkNew = openForks(state, c).some((f) => f.day === state.turn);
+    if ((offerNew || forkNew) && shopAutoTurn !== state.turn && !modal && !state.outcome) {
       shopAutoTurn = state.turn;
       openModal('shop');
     }
@@ -3752,13 +3754,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
       taken.length ? h('div', { class: 'paper-style' }, ...taken.map((u) => h('span', { class: 'style-chip' }, icon(u, 'style-icon'), u.name))) : null,
       events.length ? h('div', { class: 'event-bars' }, ...events) : null,
-      ...(deck.length || state.outcome ? [] : [h('div', { class: 'deck-head' }, h('span', { class: 'hint' }, 'Не хотите ждать совета?'), requestButton('Запросить ещё три карты'))]),
       ...(open
         ? [
             h('h3', { class: 'section' }, `Решение редакции: ${open.title} — одно из двух навсегда`),
             h('div', { class: 'fork' }, offerCard(upgrade(open.options[0])), h('span', { class: 'fork-or' }, 'или'), offerCard(upgrade(open.options[1]))),
           ]
         : []),
+      ...(deck.length || state.outcome ? [] : [h('div', { class: 'deck-head' }, h('span', { class: 'hint' }, 'Не хотите ждать совета?'), requestButton('Запросить ещё три карты'))]),
       ...(deck.length
         ? [
             h(
@@ -4622,7 +4624,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
 
   function renderOutcome(): void {
     // The main menu, the campaign map and the opening story cover the finished game: its result is not shown over them.
-    if (!state.outcome || busy || titleOpen || campaignOpen || introPlaying) {
+    // A window opened from it (the office, who goes on, a new game) takes its place until it is closed.
+    if (!state.outcome || busy || titleOpen || campaignOpen || introPlaying || modal) {
       outcomeLayer.replaceChildren();
       return;
     }
@@ -5306,7 +5309,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('h3', { class: 'section' }, 'Что беречь'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.'),
       block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. Деньги идут на зарплаты, новых репортёров и разовые ходы «Чёрной кассы» (💰 вверху; рядом — значки приёмов от карт).'),
-      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги (${b.shopRefreshCost} ₽, каждый следующий запрос до очередного предложения дороже на ${b.shopRequestStep} ₽), а на развилках придётся взять одно из двух навсегда. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
+      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги (${b.shopRefreshCost} ₽, каждый следующий запрос до очередного предложения дороже на ${b.shopRequestStep} ₽), а на развилках («Решение редакции») придётся взять одно из двух навсегда. В день нового предложения или развилки окно открывается само. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
       h('h3', { class: 'section' }, 'Чем ещё бить по городу'),
       block('groups/workers', 'Ссорьте группы', 'Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.'),
       block('ui/guardian', '«Голос города»', `С ${b.rivalStartTurn.destroy}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.`),

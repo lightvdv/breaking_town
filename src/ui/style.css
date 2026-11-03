@@ -6623,7 +6623,16 @@ span.hunt-chip {
 }
 
 .reward-line {
-  margin: 10px 0 0;
+  margin: 10px 0 14px;
+}
+
+/* On the result's light paper the office button reads as ink, on its own line under the reward. */
+.reward-line .ghost {
+  display: block;
+  margin: 8px auto 0;
+  color: var(--paper-ink);
+  border: 2px solid var(--paper-ink);
+  background: transparent;
 }
 
 .reward-line b {

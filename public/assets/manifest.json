@@ -71,6 +71,71 @@
       "size": 2
     }
   },
+  "buildingLooks": {
+    "center": {
+      "home": {
+        "states": [
+          "abandoned",
+          "active"
+        ],
+        "variants": 3
+      }
+    },
+    "mono": {
+      "home": {
+        "states": [
+          "abandoned",
+          "active"
+        ],
+        "variants": 3
+      }
+    },
+    "old": {
+      "home": {
+        "states": [
+          "abandoned",
+          "active"
+        ],
+        "variants": 3
+      }
+    },
+    "port": {
+      "home": {
+        "states": [
+          "abandoned",
+          "active"
+        ],
+        "variants": 3
+      }
+    },
+    "resort": {
+      "home": {
+        "states": [
+          "abandoned",
+          "active"
+        ],
+        "variants": 3
+      }
+    },
+    "sleepy": {
+      "home": {
+        "states": [
+          "abandoned",
+          "active"
+        ],
+        "variants": 3
+      }
+    },
+    "student": {
+      "home": {
+        "states": [
+          "abandoned",
+          "active"
+        ],
+        "variants": 3
+      }
+    }
+  },
   "grass": 3,
   "decor": [
     "tree_1",

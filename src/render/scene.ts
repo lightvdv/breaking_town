@@ -405,14 +405,17 @@ export class CityScene {
 
   private syncBuildings(): void {
     const occupiedHomes = new Set(this.state.residents.filter((r) => r.status === 'active').map((r) => r.home));
+    // A town's way of life may have its own buildings, drawn in PixelLab (CONCEPT.md §9.5).
+    const look = this.lookOf(this.state);
     for (const b of this.state.buildings) {
-      const sheets = this.art.buildings[b.type];
+      const own = look ? this.art.lookBuildings[look]?.[b.type] : undefined;
+      const sheets = own ?? this.art.buildings[b.type];
       if (!sheets) continue;
       let s = b.open ? 'active' : 'closed';
       if (b.type === 'home') s = occupiedHomes.has(b.id) ? 'active' : 'abandoned';
       const sheet = sheets[s] ?? sheets.active;
-      const variant = b.id % this.art.manifest.buildings[b.type].variants;
-      const key = `${s}:${variant}`;
+      const variant = b.id % (own ? this.art.manifest.buildingLooks![look!][b.type].variants : this.art.manifest.buildings[b.type].variants);
+      const key = `${look ?? ''}:${s}:${variant}`;
       if (this.buildingKeys.get(b.id) === key) continue;
       this.buildingKeys.set(b.id, key);
       const sprite = this.buildingSprites.get(b.id)!;

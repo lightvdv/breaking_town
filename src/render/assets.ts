@@ -4,6 +4,8 @@ import { Assets, Spritesheet, Texture, TextureStyle } from 'pixi.js';
 export interface ArtManifest {
   residents: Record<string, number>;
   buildings: Record<string, { states: string[]; variants: number; size: number }>;
+  /** Buildings drawn for one way of life: look → type → its states and variants. */
+  buildingLooks?: Record<string, Record<string, { states: string[]; variants: number }>>;
   grass: number;
   /** Extra ground tiles (the looks of the ways of life). */
   tiles?: string[];
@@ -17,6 +19,8 @@ export interface ArtAssets {
   residents: Record<string, Spritesheet[]>;
   /** Sheets per building type and state. */
   buildings: Record<string, Record<string, Spritesheet>>;
+  /** Sheets per look, building type and state (`ArtManifest.buildingLooks`). */
+  lookBuildings: Record<string, Record<string, Record<string, Spritesheet>>>;
   tiles: Record<string, Texture>;
   decor: Record<string, Spritesheet>;
   fx: Record<string, Texture>;
@@ -34,6 +38,8 @@ export async function loadArt(base: string): Promise<ArtAssets> {
   for (const [type, b] of Object.entries(manifest.buildings)) {
     for (const s of b.states) urls.push(url(`buildings/${type}_${s}.json`));
   }
+  const looks = Object.entries(manifest.buildingLooks ?? {});
+  for (const [look, types] of looks) for (const [type, b] of Object.entries(types)) for (const s of b.states) urls.push(url(`buildings/${type}_${look}_${s}.json`));
   const tileNames = [...Array.from({ length: manifest.grass }, (_, i) => `grass_${i + 1}`), 'road_x', 'road_y', 'road_cross', ...(manifest.tiles ?? [])];
   for (const t of tileNames) urls.push(url(`tiles/${t}.png`));
   for (const d of manifest.decor) urls.push(url(`decor/${d}.json`));
@@ -52,6 +58,12 @@ export async function loadArt(base: string): Promise<ArtAssets> {
       Object.entries(manifest.buildings).map(([type, b]) => [
         type,
         Object.fromEntries(b.states.map((s) => [s, sheet(`buildings/${type}_${s}.json`)])),
+      ]),
+    ),
+    lookBuildings: Object.fromEntries(
+      looks.map(([look, types]) => [
+        look,
+        Object.fromEntries(Object.entries(types).map(([type, b]) => [type, Object.fromEntries(b.states.map((s) => [s, sheet(`buildings/${type}_${look}_${s}.json`)]))])),
       ]),
     ),
     tiles: Object.fromEntries(tileNames.map((t) => [t, texture(`tiles/${t}.png`)])),

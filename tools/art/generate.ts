@@ -160,6 +160,18 @@ for (const c of cards) {
 // The opening story (CONCEPT.md §1.1).
 for (const [name, scene] of Object.entries(introScenes)) write(`sprites/intro/${name}.png`, illustration(scene).toPng());
 
+// Buildings drawn in PixelLab for one way of life (CONCEPT.md §9.5): "<type>_<look>_<state>.json" in
+// pixellab.json; the renderer uses them in that look's towns instead of the generated ones.
+const buildingLooks: Record<string, Record<string, { states: string[]; variants: number }>> = {};
+for (const path of KEEP) {
+  const m = /^sprites\/buildings\/([A-Za-z]+)_([a-z]+)_([a-z]+)\.json$/.exec(path);
+  if (!m) continue;
+  const [, type, look, state] = m;
+  const sheet = JSON.parse(readFileSync(join(OUT, path), 'utf8')) as { animations: Record<string, string[]> };
+  const entry = ((buildingLooks[look] ??= {})[type] ??= { states: [], variants: Object.keys(sheet.animations).length });
+  entry.states.push(state);
+}
+
 // What exists, so the game does not hard-code variant counts.
 write(
   'manifest.json',
@@ -167,6 +179,7 @@ write(
     {
       residents: Object.fromEntries(Object.entries(looks).map(([g, v]) => [g, v.length])),
       buildings: Object.fromEntries(buildingArts.map((a) => [a.type, { states: a.states, variants: a.variants, size: a.size }])),
+      buildingLooks,
       grass: 3,
       decor: [...Object.keys(decor), ...Object.keys(landmarkDecor)],
       tiles: Object.keys(lookTiles),

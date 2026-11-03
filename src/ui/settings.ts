@@ -33,7 +33,7 @@ export interface Settings {
 }
 
 const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
-const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, difficulty: 'normal', rivalOpen: false, hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: true, staffOpen: false, town: null };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, difficulty: 'normal', rivalOpen: false, hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: false, staffOpen: false, town: null };
 
 export function loadSettings(): Settings {
   try {

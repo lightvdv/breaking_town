@@ -1,7 +1,7 @@
 [
   {
     "id": "style",
-    "title": "Как вас читают",
+    "title": "стиль газеты",
     "day": 5,
     "options": [
       "yellow_layout",
@@ -10,7 +10,7 @@
   },
   {
     "id": "money",
-    "title": "Деньги",
+    "title": "бумага",
     "day": 12,
     "options": [
       "cheap_paper",
@@ -19,7 +19,7 @@
   },
   {
     "id": "defense",
-    "title": "Защита",
+    "title": "защита",
     "day": 20,
     "options": [
       "lawyers",

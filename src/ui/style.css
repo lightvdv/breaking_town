@@ -2834,11 +2834,11 @@ button.publish.level-3.bump-up {
 }
 
 /* The front page story gets a big picture and text in two columns under it. */
+/* The front page picture fills its column: no empty margins beside it. */
 .at-2 .news-art {
   width: 100%;
-  max-width: 640px;
   height: auto;
-  margin: 2px auto 10px;
+  margin: 2px 0 10px;
 }
 
 .at-2 .lorem {
@@ -4996,13 +4996,18 @@ button.publish.level-3.bump-up {
     padding: 12px;
   }
 
+  /* The paper and the plaques over it share one width, capped so a wide screen shows the city around it. */
   .issue-panel {
     gap: 10px;
-    max-width: none;
+    max-width: 1200px;
   }
 
   .paper {
     flex: 1;
+    max-width: none;
+  }
+
+  .issue-panel > .notice {
     max-width: none;
   }
 }
@@ -5200,29 +5205,65 @@ button.publish.level-3.bump-up {
 .camp-map {
   position: relative;
   flex: 1;
-  display: grid;
-  place-items: center;
   overflow: hidden;
   background: #3e2731;
   container-type: size;
+  cursor: grab;
+  touch-action: none;
 }
 
-/* The space around the picture: the same region, blurred and dimmed. */
-.camp-backdrop {
-  position: absolute;
-  inset: -20px;
-  background-position: center;
-  background-size: cover;
-  filter: blur(8px) brightness(0.45);
+.camp-map:active {
+  cursor: grabbing;
 }
 
-/* The region picture keeps its proportions and fits the space; pins sit on it in its own percent. */
+/* The region picture covers the whole area, keeping its proportions; what does not fit is reached by
+   dragging (`panMap`). Pins sit on it in its own percent. */
 .camp-board {
-  position: relative;
-  width: min(100cqw, calc(100cqh * 688 / 384));
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max(100cqw, calc(100cqh * 688 / 384));
   aspect-ratio: 688 / 384;
   container-type: inline-size;
 }
+
+.camp-board.gliding {
+  transition: transform 0.45s ease-in-out;
+}
+
+/* Arrows at the edges where part of the map is hidden (`panMap`). */
+.camp-arrow {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  color: var(--accent);
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
+  transition: opacity 0.2s;
+}
+
+.camp-arrow:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.camp-arrow.off {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.camp-arrow.left { left: 10px; top: 50%; translate: 0 -50%; }
+.camp-arrow.right { right: 10px; top: 50%; translate: 0 -50%; }
+.camp-arrow.up { top: 10px; left: 50%; translate: -50% 0; }
+.camp-arrow.down { bottom: 10px; left: 50%; translate: -50% 0; }
 
 .camp-region {
   position: absolute;
@@ -7266,4 +7307,87 @@ span.hunt-chip {
   color: var(--danger);
   font-size: 12px;
   white-space: nowrap;
+}
+
+/* A folded plaque over the paper: only its head line, a press unfolds it (CONCEPT.md §7.3). */
+.notice.plaque-folded > :not(.notice-head) {
+  display: none;
+}
+
+.notice-head.plaque-head {
+  cursor: pointer;
+}
+
+.plaque-arrow {
+  margin-left: auto;
+  padding-left: 8px;
+  color: var(--paper-muted);
+}
+
+/* «Места для травли» in the city tab: name, people, stain, how it holds, the button (CONCEPT.md §3.6а). */
+.place-list {
+  display: grid;
+  gap: 4px;
+}
+
+.place-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--ink);
+  font-size: 13px;
+}
+
+.place-row.target {
+  border-color: var(--danger);
+}
+
+.place-row.closed {
+  opacity: 0.5;
+}
+
+.place-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.place-staff,
+.place-status {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.place-status.hot {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.place-stain {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.place-stain .meter {
+  flex: 1;
+}
+
+.place-stain em {
+  font-style: normal;
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .place-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .place-staff,
+  .place-stain {
+    grid-column: 1;
+  }
 }

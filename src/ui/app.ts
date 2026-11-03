@@ -2,7 +2,6 @@ import { ASSET_BASE } from '../assets';
 import { CityScene, REACTION_ICON, type HoverTarget } from '../render/scene';
 import {
   averageTrust,
-  isHarmful,
   closedLine,
   huntBonus,
   endHunt,
@@ -54,6 +53,7 @@ import {
   townPower,
   townOf,
   type TownChoice,
+  type TownDef,
   levelOf,
   staffOf,
   taskOf,
@@ -385,6 +385,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   let selected: number | null = null;
   /** The tray of stories left out is unfolded. */
   let trayOpen = false;
+  /** Plaques over the paper unfolded in this session (`foldPlaques`). */
+  const openPlaques = new Set<string>();
   /** Issue level on the publish button at the last render, and its bump animation for this render. */
   let shownLevel: IssueLevel | null = null;
   let levelBump = '';
@@ -1240,13 +1242,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const bar = (label: string, v: number, cls = 'ok') =>
     h('div', { class: 'card-stat' }, h('span', {}, label), meter(v, cls), h('em', {}, pct(v)));
 
-  /** Green arrow up / red arrow down next to a resource after a turn; nothing when it did not change. */
-  /** A trend arrow; `unit` null hides the number (the city index is never shown). */
-  function trend(delta: number | null, unit: string | null = ''): HTMLElement | null {
+  /**
+   * A trend arrow; `unit` null hides the number (the city index is never shown). The colour follows the
+   * player's goal: for the town's own numbers (`town`) a fall is green and a rise red.
+   */
+  function trend(delta: number | null, unit: string | null = '', town = false): HTMLElement | null {
     if (delta === null || delta === 0) return null;
     const up = delta > 0;
+    const good = town ? !up : up;
     const title = unit === null ? (up ? 'Городу стало лучше за день' : 'Городу стало хуже за день') : `${up ? '+' : ''}${delta}${unit} за день`;
-    return h('span', { class: `trend ${up ? 'up' : 'down'}`, title }, up ? '▲' : '▼');
+    return h('span', { class: `trend ${good ? 'up' : 'down'}`, title }, up ? '▲' : '▼');
   }
 
   /** Where the laid-out issue takes the city: «→ кризис» when the stage changes, an arrow otherwise. */
@@ -1259,7 +1264,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     // Stage numbers grow towards ruin: a bigger one is worse for the city.
     const worse = next !== here ? next > here : diff < 0;
     const text = next !== here ? `≈→ ${c.balance.cityStates[next].name.toLowerCase()}` : `город ≈${worse ? '▼' : '▲'}`;
-    return h('small', { class: `res-forecast ${worse ? 'down' : 'up'}`, title: 'Ожидается, если выпустить газету так и никакую ложь не поймают' }, text);
+    // What is worse for the town is good for us: green.
+    return h('small', { class: `res-forecast ${worse ? 'up' : 'down'}`, title: 'Ожидается, если выпустить газету так и никакую ложь не поймают' }, text);
   }
 
   /** The list of stories that can fill an empty place: every other story of today, best first. */
@@ -1363,7 +1369,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (delta === null || delta === 0) return null;
     const up = delta > 0;
     const text = unit === null ? (up ? '▲' : '▼') : `${up ? '+' : '−'}${Math.abs(delta)}`;
-    return h('small', { class: `res-delta ${up ? 'up' : 'down'}`, title: unit === null ? (up ? 'Городу стало лучше за день' : 'Городу стало хуже за день') : `${up ? '+' : '−'}${Math.abs(delta)}${unit} за день` }, text);
+    // The city (unit null) is coloured by the player's goal: a fall is green.
+    const good = unit === null ? !up : up;
+    return h('small', { class: `res-delta ${good ? 'up' : 'down'}`, title: unit === null ? (up ? 'Городу стало лучше за день' : 'Городу стало хуже за день') : `${up ? '+' : '−'}${Math.abs(delta)}${unit} за день` }, text);
   }
 
   /** The city's stage: what the player sees instead of the city index (CONCEPT.md §2.3). */
@@ -1583,26 +1591,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return `${now}${days} · ${prizeText(def)}`;
   }
 
-  /** The task whose helpful stories are lit up in the issue (CONCEPT.md §4.8). */
-  let taskLight: string | null = null;
-
-  /** Does this story help the lit task: its topic, its effects, its audience? */
-  function helpsTask(card: CardInstance): boolean {
-    const task = taskLight ? state.tasks.find((t) => t.id === taskLight && t.status === 'active') : null;
-    const m = task ? taskOf(c, task.id).match : undefined;
-    if (!m) return false;
-    const tpl = templateOf(c, card.templateId);
-    const effects = [...tpl.effects, ...(tpl.softEffects ?? [])].filter((e): e is CardEffect => !!e);
-    return (
-      !!m.topics?.includes(tpl.topic) ||
-      effects.some((e) => m.effects?.includes(e.type)) ||
-      !!(m.audience && (tpl.audience ?? []).some((g) => m.audience!.includes(g))) ||
-      (!!m.conflict && !!card.conflict) ||
-      (!!m.harmful && effects.some((e) => isHarmful(e))) ||
-      (m.minTier !== undefined && card.tier >= m.minTier)
-    );
-  }
-
   /** The game's tasks: folded to one line by default, like the rival's plaque (CONCEPT.md §4.8). */
   function renderTasks(): void {
     const list = state.tasks.filter((t) => t.status === 'active' || t.endTurn === state.turn - 1);
@@ -1637,31 +1625,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
             h('span', { class: 'task-mark' }, t.status === 'done' ? '✓' : t.status === 'failed' ? '✗' : '○'),
             h('span', { class: 'task-title' }, taskOf(c, t.id).title),
             h('span', { class: 'task-line' }, taskLine(t)),
-            // How to do it, and which of today's stories help (CONCEPT.md §4.8).
-            ...(t.status === 'active' && taskOf(c, t.id).hint
-              ? [
-                  h(
-                    'span',
-                    { class: 'task-hint' },
-                    taskOf(c, t.id).hint!,
-                    taskOf(c, t.id).match
-                      ? h(
-                          'button',
-                          {
-                            class: `task-find${taskLight === t.id ? ' on' : ''}`,
-                            title: 'Подсветить в выпуске новости, которые помогут',
-                            onclick: (e: Event) => {
-                              e.stopPropagation();
-                              taskLight = taskLight === t.id ? null : t.id;
-                              render();
-                            },
-                          },
-                          taskLight === t.id ? 'Скрыть' : 'Какие новости?',
-                        )
-                      : null,
-                  ),
-                ]
-              : []),
           ),
         ),
       ),
@@ -2508,7 +2471,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const withImage = where === 2 || where === 1;
     // The editor's red pencil in the margin of an untrue story that may be caught (CONCEPT.md §7.3 «Риск выпуска»).
     const pencil = where !== 'out' && p.truth > 0 && p.exposureRisk > 0 ? riskStep(p.exposureRisk) : null;
-    const cls = ['news', `at-${where}`, `truth-${p.truth}`, `tier-${tier}`, investigation ? 'investigation' : '', selected === card.uid ? 'selected' : '', pencil !== null ? `pencil pencil-${pencil}` : '', helpsTask(card) ? 'task-match' : '']
+    const cls = ['news', `at-${where}`, `truth-${p.truth}`, `tier-${tier}`, investigation ? 'investigation' : '', selected === card.uid ? 'selected' : '', pencil !== null ? `pencil pencil-${pencil}` : '']
       .filter(Boolean)
       .join(' ');
     const children: (HTMLElement | null)[] = [
@@ -3569,7 +3532,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('small', {}, left <= 1 ? 'завтра' : `через ${left} ${plural(left, 'день', 'дня', 'дней')}`),
       );
     const prevFork = next ? Math.max(1, ...c.forks.filter((f) => f.day < next.day).map((f) => f.day)) : 1;
-    const events = [...(next ? [bar(`Развилка «${next.title}»`, next.day - state.turn, next.day - prevFork)] : []), ...(deck.length ? [] : [bar('Предложение совета', days, b.shopRefreshDays)])];
+    const events = [...(next ? [bar(`Решение редакции: ${next.title}`, next.day - state.turn, next.day - prevFork)] : []), ...(deck.length ? [] : [bar('Предложение совета', days, b.shopRefreshDays)])];
     const owned = c.upgrades.filter((u) => state.upgrades.includes(u.id) && !(u.series && c.upgrades.filter((x) => x.series === u.series && state.upgrades.includes(x.id)).pop() !== u));
     return [
       state.vouchers ? h('p', { class: 'good voucher-line' }, `За задания: из предложения совета можно взять ещё ${state.vouchers === 1 ? 'одну карту' : `${state.vouchers} карты`}.`) : null,
@@ -3578,7 +3541,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       events.length ? h('div', { class: 'event-bars' }, ...events) : null,
       ...(open
         ? [
-            h('h3', { class: 'section' }, `Развилка: ${open.title.toLowerCase()} — одна из двух навсегда`),
+            h('h3', { class: 'section' }, `Решение редакции: ${open.title} — одно из двух навсегда`),
             h('div', { class: 'fork' }, offerCard(upgrade(open.options[0])), h('span', { class: 'fork-or' }, 'или'), offerCard(upgrade(open.options[1]))),
           ]
         : []),
@@ -3829,7 +3792,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const m = state.metrics;
     const r = report;
     const stage = cityStateOf(c, m.cityIndex);
-    const delta = (after: number, before: number) => trend(Math.round((after - before) * 100), '%');
+    const delta = (after: number, before: number) => trend(Math.round((after - before) * 100), '%', true);
     const metric = (label: string, key: 'population' | 'employment' | 'economy' | 'mood' | 'order') =>
       h('div', { class: 'city-metric' }, bar(label, m[key]), r ? delta(r.metricsAfter[key], r.metricsBefore[key]) : null);
     return [
@@ -3849,7 +3812,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           h('b', {}, `${m.activeResidents}`),
           h('span', {}, `жителей из ${state.initialPopulation}`),
         ),
-        r ? trend(r.metricsAfter.activeResidents - r.metricsBefore.activeResidents) : null,
+        r ? trend(r.metricsAfter.activeResidents - r.metricsBefore.activeResidents, '', true) : null,
       ),
       h('h3', { class: 'section' }, 'Подробности'),
       metric('Население', 'population'),
@@ -3857,7 +3820,42 @@ export function mountApp(root: HTMLElement, base: Content): void {
       metric('Экономика', 'economy'),
       metric('Настроение', 'mood'),
       metric('Порядок и безопасность', 'order'),
+      ...placesSection(),
     ];
+  }
+
+  /**
+   * Every workplace the hunt can go after (CONCEPT.md §3.6а): its people, the stain and how it holds;
+   * the target first with «Прекратить», the others with «🎯 Травить» while no hunt runs, closed ones last.
+   */
+  function placesSection(): HTMLElement[] {
+    const target = state.hunt?.building;
+    const places = state.buildings
+      .filter((x) => x.jobs > 0)
+      .sort((a, z) => Number(z.id === target) - Number(a.id === target) || Number(z.open) - Number(a.open) || a.id - z.id);
+    const row = (x: (typeof places)[number]) => {
+      const stain = state.stains[x.id] ?? 0;
+      const staff = state.residents.filter((r) => r.status === 'active' && r.job === x.id).length;
+      const status = !x.open ? 'закрыто' : stain >= 0.4 ? 'на грани' : stain >= 0.15 ? 'теряет людей' : 'работает';
+      const action =
+        state.outcome || !x.open
+          ? null
+          : x.id === target
+            ? h('button', { class: 'ghost', onclick: actNow(() => endHunt(state)) }, 'Прекратить')
+            : target === undefined
+              ? h('button', { class: 'hunt-chip', title: 'Бить по этому месту день за днём: люди его обходят, работники уходят, и оно закрывается', onclick: actNow(() => startHunt(state, x.id)) }, '🎯 Травить')
+              : null;
+      return h(
+        'div',
+        { class: `place-row${x.id === target ? ' target' : ''}${x.open ? '' : ' closed'}` },
+        h('b', { class: 'place-name' }, x.id === target ? '🎯 ' : '', buildingName(state, c, x.id)),
+        h('span', { class: 'place-staff' }, x.open ? `работают ${staff} из ${x.jobs}` : '—'),
+        h('span', { class: 'place-stain', title: 'Пятно травли: чем больше, тем быстрее уходят люди' }, meter(Math.min(1, stain), stain >= 0.4 ? 'danger' : 'warn'), h('em', {}, `${Math.round(stain * 100)}%`)),
+        h('span', { class: `place-status${x.id === target ? ' hot' : ''}` }, x.id === target && x.open ? 'травля' : status),
+        action ?? h('span'),
+      );
+    };
+    return [h('h3', { class: 'section' }, 'Места для травли'), h('div', { class: 'place-list' }, ...places.map(row))];
   }
 
   /** Who lives in the city and how (CONCEPT.md §7.3): every group's size, work, mood, protests, readers. */
@@ -4652,6 +4650,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderTwist();
     renderTasks();
     renderHunt();
+    foldPlaques();
     renderGuide();
     renderModal();
     renderOutcome();
@@ -4660,6 +4659,36 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderTutorialTargets();
     saveSoon();
   }
+  /**
+   * The plaques over the paper start folded to their head line (CONCEPT.md §7.3); a press on the head
+   * unfolds one for this session. The tasks, the rival and the newsroom fold by their own settings.
+   */
+  function foldPlaques(): void {
+    const plaques: [HTMLElement, string][] = [
+      [exposureNotice, 'exposed'],
+      [reconcileNotice, 'peace'],
+      [digNotice, 'dig'],
+      [offerNotice, 'offer'],
+      [twistNotice, 'twist'],
+      [huntNotice, 'hunt'],
+    ];
+    for (const [el, key] of plaques) {
+      const head = el.querySelector<HTMLElement>(':scope > .notice-head');
+      if (el.hidden || !head) continue;
+      const open = openPlaques.has(key);
+      el.classList.toggle('plaque-folded', !open);
+      head.classList.add('plaque-head');
+      head.querySelector(':scope > .plaque-arrow')?.remove();
+      head.append(h('span', { class: 'plaque-arrow', 'aria-hidden': 'true' }, open ? '▴' : '▾'));
+      head.onclick = (e) => {
+        if ((e.target as Element).closest('button')) return;
+        if (open) openPlaques.delete(key);
+        else openPlaques.add(key);
+        render();
+      };
+    }
+  }
+
   // ---------- Campaign (CONCEPT.md §9) ----------
 
   /** The map of the campaign. Without one, a new one starts right away. */
@@ -4747,6 +4776,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
         won > 0 ? h('span', { class: 'pin-stars' }, `★ ${won}`) : null,
       );
     });
+    const board = h('div', { class: 'camp-board' }, h('img', { class: 'camp-region', src: `${assetBase}${REGION_ART}`, alt: '', width: MAP_W, height: MAP_H, draggable: 'false' }), ...pins);
+    const mapEl = h('div', { class: 'camp-map' }, board);
     campaignLayer.replaceChildren(
       h(
         'header',
@@ -4761,8 +4792,79 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('button', { class: 'camp-office', onclick: () => openModal('office') }, 'Кабинет редактора'),
         h('span', { class: 'camp-menu-wrap' }, menuButton, menu),
       ),
-      h('div', { class: 'camp-wrap' }, h('div', { class: 'camp-map' }, h('div', { class: 'camp-backdrop', style: `background-image: url(${assetBase}${REGION_ART})` }), h('div', { class: 'camp-board' }, h('img', { class: 'camp-region', src: `${assetBase}${REGION_ART}`, alt: '', width: MAP_W, height: MAP_H }), ...pins)), townCard(campaignSel)),
+      h('div', { class: 'camp-wrap' }, mapEl, townCard(campaignSel)),
     );
+    panMap(mapEl, board, base.towns[campaignSel]);
+  }
+
+  /** Where the campaign map was dragged to: kept while the player picks towns. */
+  let mapPan: { x: number; y: number } | null = null;
+
+  /**
+   * The region picture covers its whole area (no bands around it); what does not fit is reached by
+   * dragging or by the arrows at the edges where something is hidden. On the first look the chosen town
+   * is in the middle; a drag that moved does not press a pin.
+   */
+  function panMap(mapEl: HTMLElement, board: HTMLElement, town: TownDef): void {
+    const clamp = (p: { x: number; y: number }) => ({
+      x: Math.min(0, Math.max(mapEl.clientWidth - board.offsetWidth, p.x)),
+      y: Math.min(0, Math.max(mapEl.clientHeight - board.offsetHeight, p.y)),
+    });
+    const apply = () => {
+      if (!board.offsetWidth) return;
+      mapPan = clamp(
+        mapPan ?? {
+          x: mapEl.clientWidth / 2 - (town.map.x / MAP_W) * board.offsetWidth,
+          y: mapEl.clientHeight / 2 - (town.map.y / MAP_H) * board.offsetHeight,
+        },
+      );
+      board.style.transform = `translate(${Math.round(mapPan.x)}px, ${Math.round(mapPan.y)}px)`;
+      const room = clamp({ x: -Infinity, y: -Infinity });
+      for (const a of arrows) {
+        const hidden = { left: mapPan.x < -1, right: mapPan.x > room.x + 1, up: mapPan.y < -1, down: mapPan.y > room.y + 1 }[a.dataset.dir!];
+        a.classList.toggle('off', !hidden);
+      }
+    };
+    // One arrow per side: a press glides the map to that edge.
+    const arrows = (['left', 'right', 'up', 'down'] as const).map((dir) =>
+      h('button', {
+        class: `camp-arrow ${dir}`,
+        'data-dir': dir,
+        title: 'Показать другую часть карты',
+        onpointerdown: (e: Event) => e.stopPropagation(),
+        onclick: () => {
+          if (!mapPan) return;
+          const far = clamp({ x: -Infinity, y: -Infinity });
+          const to = { left: { x: 0, y: mapPan.y }, right: { x: far.x, y: mapPan.y }, up: { x: mapPan.x, y: 0 }, down: { x: mapPan.x, y: far.y } }[dir];
+          board.classList.add('gliding');
+          setTimeout(() => board.classList.remove('gliding'), 500);
+          mapPan = to;
+          apply();
+        },
+      }, { left: '◀', right: '▶', up: '▲', down: '▼' }[dir]),
+    );
+    mapEl.append(...arrows);
+    requestAnimationFrame(apply);
+    new ResizeObserver(apply).observe(mapEl);
+    let drag: { x: number; y: number; from: { x: number; y: number }; moved: boolean } | null = null;
+    mapEl.onpointerdown = (e) => {
+      drag = { x: e.clientX, y: e.clientY, from: mapPan ?? { x: 0, y: 0 }, moved: false };
+      mapEl.setPointerCapture(e.pointerId);
+    };
+    mapEl.onpointermove = (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 5) drag.moved = true;
+      if (!drag.moved) return;
+      mapPan = { x: drag.from.x + dx, y: drag.from.y + dy };
+      apply();
+    };
+    mapEl.onpointerup = () => {
+      // A drag swallows the click that follows it, so it never picks a town by accident.
+      if (drag?.moved) mapEl.addEventListener('click', (ev) => ev.stopPropagation(), { capture: true, once: true });
+      drag = null;
+    };
   }
 
   /**
@@ -4802,7 +4904,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h(
       'aside',
       { class: 'town-card' },
-      art,
       h('h2', {}, t.name),
       h('div', { class: 'town-type' }, `${t.type} · жителей ~${pop}`),
       h('div', { class: 'town-rule' }, h('b', {}, t.rule.title), t.rule.text),
@@ -4826,6 +4927,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
           )
         : null,
       h('div', { class: 'town-passes' }, ...PASSES.map(pass)),
+      // The picture last: on a narrow screen what matters comes first.
+      art,
     );
   }
 
@@ -5164,7 +5267,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       block('groups/workers', 'Ссорьте группы', 'Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.'),
       block('ui/guardian', '«Голос города»', `С ${b.rivalStartTurn.destroy}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.`),
       list(
-        '🎯 Травля: кнопка «Травить» у новости о заводе, магазине или другом месте работы. Новости об этом месте бьют всё сильнее, люди уходят, и оно закрывается. Цель одна: пока идёт травля, другое место не выбрать — сначала «Прекратить» на её плашке над газетой.',
+        '🎯 Травля: кнопка «Травить» у новости о заводе, магазине или другом месте работы — или в «Сводке», вкладка «Город», где видны все такие места. Новости об этом месте бьют всё сильнее, люди уходят, и оно закрывается. Цель одна: пока идёт травля, другое место не выбрать — сначала «Прекратить» на её плашке над газетой.',
         'Компромат: нажмите на портрет и выберите «Копать». Репортёр несколько дней не пишет новостей, зато приносит эксклюзив, который настраивает город против группы.',
         'Криминал: новости о преступности пугают людей и разжигают настоящую преступность. Преступность на улицах сама снижает «Порядок и безопасность», а банда, если она взяла улицы, держит его ниже до конца партии; полиция всё это сдерживает. Пока город раскалён, полиция и мэр отвечают рейдами и патрулями: они остужают улицы и успокаивают напуганных — закрытая полиция рейдов уже не устроит.',
         '👁 Надзор за темой: если печатать одну тему день за днём, фактчекеры начинают за ней следить — неправду этой темы ловят на 25% чаще за каждый день подряд. Метка «Под надзором» у новости; день без этой темы снимает надзор. Правду надзор не трогает.',

@@ -73,66 +73,409 @@
   },
   "buildingLooks": {
     "center": {
+      "cityHall": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "entertainment": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factCheckers": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factory": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
       "home": {
         "states": [
           "abandoned",
           "active"
         ],
         "variants": 3
+      },
+      "hospital": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "police": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "shop": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
       }
     },
     "mono": {
+      "cityHall": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "entertainment": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factCheckers": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factory": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
       "home": {
         "states": [
           "abandoned",
           "active"
         ],
         "variants": 3
+      },
+      "hospital": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "police": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "shop": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
       }
     },
     "old": {
+      "cityHall": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "entertainment": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factCheckers": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factory": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
       "home": {
         "states": [
           "abandoned",
           "active"
         ],
         "variants": 3
+      },
+      "hospital": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "police": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "shop": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
       }
     },
     "port": {
+      "cityHall": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "entertainment": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factCheckers": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factory": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
       "home": {
         "states": [
           "abandoned",
           "active"
         ],
         "variants": 3
+      },
+      "hospital": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "police": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "shop": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
       }
     },
     "resort": {
+      "cityHall": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "entertainment": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factCheckers": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factory": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
       "home": {
         "states": [
           "abandoned",
           "active"
         ],
         "variants": 3
+      },
+      "hospital": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "police": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "shop": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
       }
     },
     "sleepy": {
+      "cityHall": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "entertainment": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factCheckers": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factory": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
       "home": {
         "states": [
           "abandoned",
           "active"
         ],
         "variants": 3
+      },
+      "hospital": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "police": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "shop": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
       }
     },
     "student": {
+      "cityHall": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "entertainment": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factCheckers": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "factory": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
       "home": {
         "states": [
           "abandoned",
           "active"
         ],
         "variants": 3
+      },
+      "hospital": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "police": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
+      },
+      "shop": {
+        "states": [
+          "active",
+          "closed"
+        ],
+        "variants": 1
       }
     }
   },

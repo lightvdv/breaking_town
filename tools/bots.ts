@@ -58,6 +58,8 @@ import {
   cashMoves,
   useCash,
   goalOf,
+  refreshShop,
+  shopRequestCost,
 } from '../src/sim';
 import { next } from '../src/sim/rng';
 
@@ -313,13 +315,23 @@ const avoidIndex = process.argv.indexOf('--avoid');
 if (avoidIndex >= 0) for (const id of process.argv[avoidIndex + 1].split(',')) avoid.destroy.push(id);
 // The fork option is taken only if it is not avoided.
 
-function shop(s: GameState): void {
+// Directions a strategy plays for: their cards are taken first.
+const onPath = (strategy: Strategy): string[] => (strategy === mixed ? ['money', 'trust', 'yellow', 'staff'] : strategy === agitator ? ['money', 'yellow', 'hunt', 'split', 'rival'] : strategy === criminal ? ['crime', 'hunt', 'money'] : []);
+// Directions a strategy has no use for: a thoughtful player would not take their cards for free either.
+const offPath = (strategy: Strategy): string[] => (strategy === mixed ? ['hunt', 'split', 'crime'] : strategy === agitator ? ['crime'] : strategy === criminal ? ['split'] : []);
+
+function shop(s: GameState, strategy: Strategy): void {
+  const skip = offPath(strategy);
+  const useful = (id: string) => {
+    const tags = content.upgrades.find((u) => u.id === id)?.tags ?? [];
+    return !tags.length || tags.some((t) => !skip.includes(t));
+  };
   // The fork option comes once the newsroom has three reporters (it is not worth starving the staff for).
   const at = buyOrder.indexOf(3) + 1;
   const order = [...buyOrder.slice(0, at), ...forkPicks[s.mode].filter((id) => !avoid[s.mode].includes(id)), ...buyOrder.slice(at)];
   for (;;) {
     const reserve = totalUpkeep(s, content) * 3;
-    const options = listPurchases(s, content).filter((p) => p.unlocked && !avoid[s.mode].includes(p.id) && !content.upgrades.find((u) => u.id === p.id)?.ability && !content.upgrades.find((u) => u.id === p.id)?.cash);
+    const options = listPurchases(s, content).filter((p) => p.unlocked && !avoid[s.mode].includes(p.id) && !content.upgrades.find((u) => u.id === p.id)?.ability && !content.upgrades.find((u) => u.id === p.id)?.cash && useful(p.id));
     const step = order.find((x) => (typeof x === 'number' ? s.reporters.length < x : options.some((p) => p.id === x)));
     if (typeof step === 'number') {
       // Enough for the fee and a typical hire on top of the reserve.
@@ -329,9 +341,18 @@ function shop(s: GameState): void {
       if (best) hireFromAgency(s, content, best);
       continue;
     }
+    // Nothing of its plan among the board's three: with money to spare it asks for three more, at most
+    // twice before the board's next offer (CONCEPT.md §3.5б «Запрос вне срока»).
+    const wanted = order.some((x) => typeof x === 'string' && !s.upgrades.includes(x));
+    if (step === undefined && wanted && s.shopOffer.length && !s.shopPicks && (s.shopExtras ?? 0) < 2 && s.money - shopRequestCost(s, content) >= reserve + 400) {
+      refreshShop(s, content);
+      continue;
+    }
     // One card of the board's three is taken (CONCEPT.md §3.5б): the rarest, then the dearest — they are the strongest.
     const rank = (id: string) => ['common', 'rare', 'legendary'].indexOf(content.upgrades.find((u) => u.id === id)?.rarity ?? 'common');
-    const option = step !== undefined ? options.find((p) => p.id === step) : [...options].filter((p) => p.affordable).sort((a, b) => rank(b.id) - rank(a.id) || b.cost - a.cost)[0];
+    // Without a planned card the bot takes one of its own path first, then the rarest, then the dearest.
+    const mine = (id: string) => ((content.upgrades.find((u) => u.id === id)?.tags ?? []).some((t) => onPath(strategy).includes(t)) ? 1 : 0);
+    const option = step !== undefined ? options.find((p) => p.id === step) : [...options].filter((p) => p.affordable).sort((a, b) => mine(b.id) - mine(a.id) || rank(b.id) - rank(a.id) || b.cost - a.cost)[0];
     if (!option || !option.affordable || s.money - option.cost < reserve) return;
     purchase(s, content, option.id);
   }
@@ -401,7 +422,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
     const d = decide(s, strategy, rng);
     limitSensations(s, content, d.publish);
     const r = playTurn(s, content, d);
-    if (!s.outcome) shop(s);
+    if (!s.outcome) shop(s, strategy);
     if (trace) {
       const m = r.metricsAfter;
       const rivalInfo = s.rival ? ` | rival readers ${rivalReaders(s)} trust ${rivalTrust(s).toFixed(0)}${s.rival.closed ? ' CLOSED' : ''}` : '';

@@ -3613,6 +3613,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
         const key = `set:${x.tag}`;
         const info = openInfo.has(key);
         const got = Math.min(n, x.count);
+        // Can the set still be gathered in this game? Cards of its direction left in the collection, and
+        // one card of each fork still to come; when they are too few, say so and where to find more.
+        const inDeck = c.upgrades.filter((u) => u.tags?.includes(x.tag) && !u.fork && !state.upgrades.includes(u.id) && (!state.collection || state.collection[u.id])).length;
+        const inForks = c.forks.filter((f) => !forkChoice(state, f) && f.options.some((id) => c.upgrades.find((u) => u.id === id)?.tags?.includes(x.tag))).length;
+        const short = !active.includes(x.tag) && n + inDeck + inForks < x.count;
         return h(
           'div',
           { class: `set-line${active.includes(x.tag) ? ' on' : ''}` },
@@ -3633,6 +3638,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             },
             '?',
           ),
+          short ? h('p', { class: 'hint set-short' }, `В вашей коллекции не хватает карт «${tagNames[x.tag] ?? x.tag}», чтобы собрать набор в этой партии. Новые карты — в «Кабинете редактора» между партиями.`) : null,
           info ? h('p', { class: 'hint info-text' }, active.includes(x.tag) ? `Действует: ${x.description}` : `Ещё ${x.count - n} — и ${x.description.charAt(0).toLowerCase()}${x.description.slice(1)}`) : null,
         );
       });
@@ -4853,10 +4859,32 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * is in the middle; a drag that moved does not press a pin.
    */
   function panMap(mapEl: HTMLElement, board: HTMLElement, town: TownDef): void {
-    const clamp = (p: { x: number; y: number }) => ({
-      x: Math.min(0, Math.max(mapEl.clientWidth - board.offsetWidth, p.x)),
-      y: Math.min(0, Math.max(mapEl.clientHeight - board.offsetHeight, p.y)),
-    });
+    // What has to be reachable: the picture and every town with its name, even a label that hangs over
+    // the picture's edge (in the board's own pixels, a small margin around).
+    // A pin with its name and stars, which hang outside its own box.
+    const pinRect = (pin: HTMLElement) => {
+      const rs = [pin, ...pin.children].map((x) => x.getBoundingClientRect());
+      return { left: Math.min(...rs.map((r) => r.left)), top: Math.min(...rs.map((r) => r.top)), right: Math.max(...rs.map((r) => r.right)), bottom: Math.max(...rs.map((r) => r.bottom)) };
+    };
+    const extent = () => {
+      const b = board.getBoundingClientRect();
+      const e = { left: 0, top: 0, right: board.offsetWidth, bottom: board.offsetHeight };
+      for (const pin of board.querySelectorAll<HTMLElement>('.town-pin')) {
+        const r = pinRect(pin);
+        e.left = Math.min(e.left, r.left - b.left - 6);
+        e.top = Math.min(e.top, r.top - b.top - 6);
+        e.right = Math.max(e.right, r.right - b.left + 6);
+        e.bottom = Math.max(e.bottom, r.bottom - b.top + 6);
+      }
+      return e;
+    };
+    const clamp = (p: { x: number; y: number }) => {
+      const e = extent();
+      return {
+        x: Math.min(-e.left, Math.max(mapEl.clientWidth - e.right, p.x)),
+        y: Math.min(-e.top, Math.max(mapEl.clientHeight - e.bottom, p.y)),
+      };
+    };
     const apply = () => {
       if (!board.offsetWidth) return;
       mapPan = clamp(
@@ -4866,10 +4894,27 @@ export function mountApp(root: HTMLElement, base: Content): void {
         },
       );
       board.style.transform = `translate(${Math.round(mapPan.x)}px, ${Math.round(mapPan.y)}px)`;
-      const room = clamp({ x: -Infinity, y: -Infinity });
+      const near = clamp({ x: Infinity, y: Infinity });
+      const far = clamp({ x: -Infinity, y: -Infinity });
+      // A town or its name cut by the edge makes that side's arrow stand out.
+      const m = mapEl.getBoundingClientRect();
+      const cut = { left: false, right: false, up: false, down: false };
+      // The arrows sit over the edges, so a name under an arrow counts as cut too.
+      const edge = 50;
+      for (const pin of board.querySelectorAll<HTMLElement>('.town-pin')) {
+        const r = pinRect(pin);
+        const midX = r.top < m.top + m.height / 2 + edge && r.bottom > m.top + m.height / 2 - edge;
+        const midY = r.left < m.left + m.width / 2 + edge && r.right > m.left + m.width / 2 - edge;
+        if (r.left < m.left + 2 || (midX && r.left < m.left + edge)) cut.left = true;
+        if (r.right > m.right - 2 || (midX && r.right > m.right - edge)) cut.right = true;
+        if (r.top < m.top + 2 || (midY && r.top < m.top + edge)) cut.up = true;
+        if (r.bottom > m.bottom - 2 || (midY && r.bottom > m.bottom - edge)) cut.down = true;
+      }
       for (const a of arrows) {
-        const hidden = { left: mapPan.x < -1, right: mapPan.x > room.x + 1, up: mapPan.y < -1, down: mapPan.y > room.y + 1 }[a.dataset.dir!];
+        const dir = a.dataset.dir as keyof typeof cut;
+        const hidden = { left: mapPan.x < near.x - 12, right: mapPan.x > far.x + 12, up: mapPan.y < near.y - 12, down: mapPan.y > far.y + 12 }[dir];
         a.classList.toggle('off', !hidden);
+        a.classList.toggle('town-hidden', hidden && cut[dir]);
       }
     };
     // One arrow per side: a press glides the map to that edge.
@@ -4881,8 +4926,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
         onpointerdown: (e: Event) => e.stopPropagation(),
         onclick: () => {
           if (!mapPan) return;
+          const near = clamp({ x: Infinity, y: Infinity });
           const far = clamp({ x: -Infinity, y: -Infinity });
-          const to = { left: { x: 0, y: mapPan.y }, right: { x: far.x, y: mapPan.y }, up: { x: mapPan.x, y: 0 }, down: { x: mapPan.x, y: far.y } }[dir];
+          const to = { left: { x: near.x, y: mapPan.y }, right: { x: far.x, y: mapPan.y }, up: { x: mapPan.x, y: near.y }, down: { x: mapPan.x, y: far.y } }[dir];
           board.classList.add('gliding');
           setTimeout(() => board.classList.remove('gliding'), 500);
           mapPan = to;

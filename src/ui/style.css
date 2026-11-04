@@ -5285,6 +5285,17 @@ button.publish.level-3.bump-up {
   pointer-events: none;
 }
 
+/* A town or its name is cut by that edge: the arrow calls for a look. */
+.camp-arrow.town-hidden {
+  background: var(--accent);
+  color: var(--accent-ink);
+  animation: arrow-call 1.4s ease-in-out infinite;
+}
+
+@keyframes arrow-call {
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent); }
+}
+
 .camp-arrow.left { left: 10px; top: 50%; translate: 0 -50%; }
 .camp-arrow.right { right: 10px; top: 50%; translate: 0 -50%; }
 .camp-arrow.up { top: 10px; left: 50%; translate: -50% 0; }
@@ -7293,6 +7304,13 @@ span.hunt-chip {
 .set-line .info-text {
   flex-basis: 100%;
   margin: 0;
+}
+
+/* The collection lacks the cards to finish this set in this game. */
+.set-line .set-short {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--warn);
 }
 
 /* A small laptop: «В печать» without the level's word and tighter gaps, so a full newsroom and the

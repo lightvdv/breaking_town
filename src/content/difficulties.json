@@ -4,7 +4,7 @@
     "name": "Легко",
     "text": "Фактчекеры ленивы, соперник слабее, денег больше, а спасать город нужно меньше дней.",
     "balance": {
-      "startMoney": 350,
+      "startMoney": 450,
       "checkerBase": 0.17,
       "rivalCloseShare": 0.026,
       "rivalTrustCollapse": 12,
@@ -50,7 +50,7 @@
     "name": "Сложно",
     "text": "Фактчекеры не спят, соперник цепкий, касса почти пуста, а время работает против вас.",
     "balance": {
-      "startMoney": 270,
+      "startMoney": 430,
       "checkerBase": 0.22,
       "rivalCloseShare": 0.015,
       "rivalTrustCollapse": 8,

@@ -318,7 +318,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** What the last pack gave, shown in the office until the next action. */
   let packResult: PackResult | null = null;
   /** The rarity tab open in «Кабинет редактора». */
-  let officeTab: 'legendary' | 'rare' | 'common' = 'legendary';
+  let officeTab: 'all' | 'legendary' | 'rare' | 'common' = 'all';
   let campaignOpen = false;
   let campaignSel = 0;
   /** The pass of the campaign town being played (CONCEPT.md §9.1): it is the game's difficulty. */
@@ -3510,6 +3510,18 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * «Кабинет редактора» (CONCEPT.md §3.5б): the «связи» earned in games buy packs with a random new
    * card and level the cards up; the whole collection is laid out by rarity, with the sets it can make.
    */
+  /** Is there enough «связи» for the cheapest pack? Then the cards' buttons call with «!». */
+  function packAffordable(): boolean {
+    return collection.currency >= Math.min(...packs.map((p) => p.cost));
+  }
+  function collectionCount(): string {
+    const all = collectable(base);
+    return `${all.filter((u) => collection.cards[u.id]).length} из ${all.length}`;
+  }
+  function cardsIcon(): HTMLElement {
+    return h('img', { class: 'office-icon', src: `${assetBase}sprites/ui/cards.png`, alt: '', width: 16, height: 16 });
+  }
+
   function officeContent(): HTMLElement[] {
     collection = loadCollection(base);
     const all = collectable(base).sort((a, z) => ['legendary', 'rare', 'common'].indexOf(a.rarity!) - ['legendary', 'rare', 'common'].indexOf(z.rarity!) || a.name.localeCompare(z.name));
@@ -3543,32 +3555,57 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const kinds = ['legendary', 'rare', 'common'] as const;
     const rarityTabs = { legendary: 'Легендарные', rare: 'Редкие', common: 'Обычные' };
     return [
-      h('p', { class: 'office-wallet' }, h('b', {}, `✦ ${collection.currency} связей`), ` · собрано ${owned} из ${all.length} карт`),
+      h(
+        'div',
+        { class: 'office-head' },
+        h('p', { class: 'office-wallet' }, cardsIcon(), h('b', {}, `Ваши карты: ${owned} из ${all.length}`), h('span', { class: 'office-ties' }, `✦ ${collection.currency} связей`)),
+        h('p', { class: 'hint office-earn' }, 'Связи даются за каждую партию: поражение +15, победа +40 и +15 за каждую звезду, город кампании ×1.5. На них здесь покупают новые карты и улучшают свои.'),
+      ),
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
+      h('h3', { class: 'section' }, 'Ларёк «Медиа-Плюс» — новые карты'),
       h(
         'div',
         { class: 'packs' },
-        ...packs.map((p) =>
-          h(
-            'button',
-            {
-              class: `pack pack-${p.id}`,
-              disabled: collection.currency < p.cost,
-              onclick: act(() => {
-                packResult = openPack(collection, base, p);
-              }),
-            },
-            h('span', { class: 'pack-art', 'aria-hidden': 'true' }, p.id === 'safe' ? '🗄' : '✉'),
-            h('b', {}, p.name),
-            h('small', {}, p.text),
-            h('span', { class: 'pack-cost' }, `✦ ${p.cost}`),
-          ),
-        ),
+        ...packs.map((p) => {
+          const short = p.cost - collection.currency;
+          return h(
+            'div',
+            { class: `pack pack-${p.id}${short <= 0 ? ' can' : ''}` },
+            h('img', { class: 'pack-art', src: `${assetBase}sprites/ui/pack_${p.id}.png`, alt: '', width: 64, height: 64 }),
+            h('div', { class: 'pack-body' }, h('b', {}, p.name, h('span', { class: 'pack-price' }, ` · ✦ ${p.cost}`)), h('small', {}, p.text)),
+            h(
+              'button',
+              {
+                class: short <= 0 ? 'primary pack-buy' : 'pack-buy',
+                disabled: short > 0,
+                onclick: act(() => {
+                  packResult = openPack(collection, base, p);
+                }),
+              },
+              short <= 0 ? `Открыть за ✦ ${p.cost}` : `Нужно ещё ✦ ${short}`,
+            ),
+          );
+        }),
       ),
       ...(reveal ? [reveal] : []),
+      h('h3', { class: 'section' }, 'Коллекция'),
       h(
         'div',
         { class: 'office-tabs', role: 'tablist' },
+        h(
+          'button',
+          {
+            class: `office-tab${officeTab === 'all' ? ' on' : ''}`,
+            role: 'tab',
+            'aria-selected': String(officeTab === 'all'),
+            onclick: () => {
+              officeTab = 'all';
+              render();
+            },
+          },
+          h('b', {}, 'Все'),
+          h('small', {}, `${owned} из ${all.length}`),
+        ),
         ...kinds.map((r) => {
           const list = all.filter((u) => u.rarity === r);
           return h(
@@ -3591,7 +3628,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'coll-grid' },
         ...all
-          .filter((u) => u.rarity === officeTab)
+          .filter((u) => officeTab === 'all' || u.rarity === officeTab)
+          // Yours first, then what is still to find.
+          .sort((a, z) => Number(!!collection.cards[z.id]) - Number(!!collection.cards[a.id]))
           .map((u) => {
             const level = collection.cards[u.id];
             if (!level) return cardFace(u, { locked: true });
@@ -3602,13 +3641,21 @@ export function mountApp(root: HTMLElement, base: Content): void {
               foot:
                 cost === null
                   ? h('span', { class: 'coll-max' }, 'Высший уровень')
-                  : h('button', { class: collection.currency >= cost ? 'primary' : '', disabled: collection.currency < cost, onclick: act(() => levelUp(collection, u)) }, `Улучшить · ✦ ${cost}`),
+                  : h('button', { class: collection.currency >= cost ? 'primary' : '', disabled: collection.currency < cost, onclick: act(() => levelUp(collection, u)) }, `↑ Улучшить · ✦ ${cost}`),
             });
           }),
       ),
       h('h3', { class: 'section' }, 'Наборы'),
       h('p', { class: 'hint' }, 'Три карты одного направления в одной партии дают бонус набора.'),
-      h('div', { class: 'sets' }, ...base.synergies.map((x) => h('p', { class: 'set-line' }, h('span', { class: `tag-chip tag-${x.tag}` }, tagNames[x.tag] ?? x.tag), h('b', {}, ` ${x.name}`), ` — ${x.description}`))),
+      h(
+        'div',
+        { class: 'sets' },
+        ...base.synergies.map((x) => {
+          const cards = all.filter((u) => u.tags?.includes(x.tag));
+          const have = cards.filter((u) => collection.cards[u.id]).length;
+          return h('p', { class: 'set-line' }, h('span', { class: `tag-chip tag-${x.tag}` }, tagNames[x.tag] ?? x.tag), h('b', {}, ` ${x.name}`), h('span', { class: 'set-have' }, ` · в коллекции ${have} из ${cards.length}`), ` — ${x.description}`);
+        }),
+      ),
       h(
         'button',
         {
@@ -3682,7 +3729,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             },
             '?',
           ),
-          short ? h('p', { class: 'hint set-short' }, `В вашей коллекции не хватает карт «${tagNames[x.tag] ?? x.tag}», чтобы собрать набор в этой партии. Новые карты — в «Кабинете редактора» между партиями.`) : null,
+          short ? h('p', { class: 'hint set-short' }, `В вашей коллекции не хватает карт «${tagNames[x.tag] ?? x.tag}», чтобы собрать набор в этой партии. Новые карты покупают между партиями — кнопка «Карты» на главном экране и на карте кампании.`) : null,
           info ? h('p', { class: 'hint info-text' }, active.includes(x.tag) ? `Действует: ${x.description}` : `Ещё ${x.count - n} — и ${x.description.charAt(0).toLowerCase()}${x.description.slice(1)}`) : null,
         );
       });
@@ -4597,7 +4644,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       about: 'Об игре',
       newgame: 'Свободная игра',
       tutorial: 'Обучение',
-      office: 'Кабинет редактора',
+      office: 'Карты · Кабинет редактора',
       campaignNew: 'Новая кампания',
       carry: 'Кто поедет дальше',
     };
@@ -4697,7 +4744,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
               { class: 'reward-line' },
               h('b', {}, `+${lastReward} ✦ связей`),
               ' — на новые карты и их улучшение. ',
-              h('button', { class: 'ghost', onclick: () => openModal('office') }, 'Кабинет редактора'),
+              packAffordable() ? h('b', { class: 'reward-enough' }, ' Хватит на конверт с новой картой!') : null,
+              h('button', { class: 'ghost', onclick: () => openModal('office') }, cardsIcon(), 'Карты: купить и улучшить'),
             )
           : null,
         h(
@@ -4831,7 +4879,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     }
     const camp = campaign;
     // Rebuilt only when something on it changes: the map canvas is drawn pixel by pixel.
-    const key = JSON.stringify([camp, campaignSel]);
+    const key = JSON.stringify([camp, campaignSel, collection.currency, collectionCount()]);
     if (key === campaignKey) return;
     campaignKey = key;
     const stars = campaignStars(camp);
@@ -4884,9 +4932,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'span',
           { class: 'camp-assets' },
           h('span', { class: 'camp-asset', title: `Звёзды кампании. Финал открывается с ${need} ★` }, h('b', {}, `★ ${stars}`), h('small', {}, 'звёзды')),
-          h('span', { class: 'camp-asset camp-ties', title: 'Связи холдинга — на карты в «Кабинете редактора»' }, h('b', {}, `✦ ${collection.currency}`), h('small', {}, 'связи')),
+          // The «связи» lead where they are spent: the cards.
+          h('button', { class: 'camp-asset camp-ties', title: 'Связи холдинга — на новые карты и их улучшение', onclick: () => openModal('office') }, h('b', {}, `✦ ${collection.currency}`), h('small', {}, 'связи')),
         ),
-        h('button', { class: 'camp-office', onclick: () => openModal('office') }, h('img', { class: 'office-icon', src: `${assetBase}sprites/ui/cards.png`, alt: '', width: 16, height: 16 }), 'Кабинет редактора'),
+        h(
+          'button',
+          { class: `camp-office${packAffordable() ? ' can-buy' : ''}`, title: 'Карты: купить новые за связи и улучшить свои', onclick: () => openModal('office') },
+          cardsIcon(),
+          h('span', { class: 'camp-office-text' }, h('b', {}, 'Карты'), h('small', {}, `купить · ${collectionCount()}`)),
+          packAffordable() ? h('span', { class: 'buy-badge' }, '!') : null,
+        ),
         h('span', { class: 'camp-menu-wrap' }, menuButton, menu),
       ),
       h('div', { class: 'camp-wrap' }, mapEl, townCard(campaignSel)),
@@ -5157,9 +5212,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
           // The collection between games (CONCEPT.md §3.5б).
           h(
             'button',
-            { class: 'title-item office-item', onclick: () => openModal('office') },
-            h('span', {}, h('img', { class: 'office-icon', src: `${assetBase}sprites/ui/cards.png`, alt: '', width: 16, height: 16 }), 'Кабинет редактора'),
-            h('small', {}, `карты: ${collectable(base).filter((u) => collection.cards[u.id]).length} из ${collectable(base).length} · ✦ ${collection.currency} связей`),
+            { class: `title-item office-item${packAffordable() ? ' can-buy' : ''}`, onclick: () => openModal('office') },
+            h('span', {}, cardsIcon(), 'Карты — купить и улучшить'),
+            h('small', {}, `${collectionCount()} · ✦ ${collection.currency}${packAffordable() ? ' · хватит на конверт!' : ''}`),
           ),
           item('Как играть', () => openModal('howto')),
           item('Настройки', () => openModal('settings')),
@@ -5399,7 +5454,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('h3', { class: 'section' }, 'Что беречь'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.'),
       block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. Деньги идут на зарплаты, новых репортёров и разовые ходы «Чёрной кассы» (💰 вверху; рядом — значки приёмов от карт).'),
-      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху; на телефоне — вкладки «Карты», «Редакция», «Сводка» и «Касса» внизу экрана, а «В печать» — кнопка над ними справа) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги (${b.shopRefreshCost} ₽, каждый следующий запрос до очередного предложения дороже на ${b.shopRequestStep} ₽), а на развилках («Решение редакции») придётся взять одно из двух навсегда. В день нового предложения или развилки окно открывается само. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
+      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху; на телефоне — вкладки «Карты», «Редакция», «Сводка» и «Касса» внизу экрана, а «В печать» — кнопка над ними справа) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги (${b.shopRefreshCost} ₽, каждый следующий запрос до очередного предложения дороже на ${b.shopRequestStep} ₽), а на развилках («Решение редакции») придётся взять одно из двух навсегда. В день нового предложения или развилки окно открывается само. Новые карты в коллекцию покупают между партиями: кнопка «Карты — купить и улучшить» на главном экране и «Карты» на карте кампании, за связи (✦), которые даёт каждая партия.`),
       h('h3', { class: 'section' }, 'Чем ещё бить по городу'),
       block('groups/workers', 'Ссорьте группы', 'Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.'),
       block('ui/guardian', '«Голос города»', `С ${b.rivalStartTurn.destroy}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.`),

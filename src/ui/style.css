@@ -6656,8 +6656,25 @@ span.hunt-chip {
 }
 
 .office-wallet {
-  margin: 0 0 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin: 0 0 4px;
   font-size: 16px;
+}
+
+.office-ties {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.office-earn {
+  margin: 0 0 6px;
+}
+
+.set-have {
+  color: var(--muted);
 }
 
 .office-wallet b {
@@ -6673,17 +6690,33 @@ span.hunt-chip {
 }
 
 .pack {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-areas:
+    'art body'
+    'art buy';
+  gap: 6px 12px;
   align-items: center;
-  gap: 4px;
-  padding: 12px 10px;
-  text-align: center;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  background: var(--bg);
+}
+
+.pack.can {
+  border-color: var(--accent);
 }
 
 .pack-art {
-  font-size: 34px;
-  line-height: 1;
+  grid-area: art;
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+
+.pack-body {
+  grid-area: body;
+  display: grid;
+  gap: 2px;
 }
 
 .pack small {
@@ -6691,20 +6724,21 @@ span.hunt-chip {
   font-size: 12px;
 }
 
-.pack-safe {
-  border-color: var(--rarity-legendary);
+.pack-buy {
+  grid-area: buy;
+  justify-self: start;
 }
 
-.pack-cost {
-  margin-top: 4px;
-  color: var(--accent);
-  font-weight: 700;
+@media (max-width: 900px) {
+  .packs {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* Rarity tabs of the collection. */
 .office-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
   margin-top: 8px;
 }
@@ -7778,4 +7812,64 @@ span.hunt-chip {
   margin-right: 8px;
   vertical-align: -5px;
   image-rendering: pixelated;
+}
+
+/* The cards' buttons outside the game: on the campaign map «Карты» over «купить · N из M», and a «!»
+   when the «связи» are enough for an envelope. */
+.camp-office {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.camp-office-text {
+  display: grid;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.camp-office-text small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.buy-badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--danger);
+  color: #fff;
+  font: 700 12px/18px var(--font);
+  text-align: center;
+}
+
+.camp-office.can-buy,
+.title-item.can-buy {
+  border-color: var(--accent);
+}
+
+.title-item.can-buy small {
+  color: var(--accent);
+}
+
+button.camp-ties {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.reward-enough {
+  color: var(--ok);
+}
+
+.pack-price {
+  color: var(--accent);
 }

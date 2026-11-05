@@ -7661,6 +7661,16 @@ span.hunt-chip {
     text-align: center;
   }
 
+  .tab-emoji {
+    font-size: 24px;
+    line-height: 26px;
+  }
+
+  /* The black cash is a tab on a phone: its button leaves the top bar, the moves acting today stay. */
+  .hud-abilities .cash-open {
+    display: none;
+  }
+
   .tab-team .tab-badge {
     background: var(--panel);
     color: var(--text);

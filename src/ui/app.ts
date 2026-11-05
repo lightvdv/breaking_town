@@ -426,14 +426,20 @@ export function mountApp(root: HTMLElement, base: Content): void {
     h(
       'button',
       { class: `tab ${cls}`, onclick: open },
-      h('span', { class: 'tab-icon' }, h('img', { src: `${assetBase}sprites/ui/${icon}.png`, alt: '', width: 16, height: 16 }), h('span', { class: 'tab-badge', hidden: true })),
+      h(
+        'span',
+        { class: 'tab-icon' },
+        // A sprite name, or an emoji like the black cash's 💰 in the top bar.
+        /^[a-z_]+$/.test(icon) ? h('img', { src: `${assetBase}sprites/ui/${icon}.png`, alt: '', width: 16, height: 16 }) : h('span', { class: 'tab-emoji', 'aria-hidden': 'true' }, icon),
+        h('span', { class: 'tab-badge', hidden: true }),
+      ),
       h('span', { class: 'tab-label' }, label),
     );
   const tabCards = tab('tab-cards', 'cards', 'Карты', () => openModal('shop'));
   const tabTeam = tab('tab-team', 'newsroom', 'Редакция', () => openModal('team'));
   const tabSummary = tab('tab-summary', 'folder', 'Сводка', () => openModal('money'));
-  const tabCity = tab('tab-city', 'city', 'Город', () => openModal('city'));
-  const tabBar = h('nav', { class: 'tab-bar', 'aria-label': 'Действия' }, tabCards, tabTeam, tabSummary, tabCity);
+  const tabCash = tab('tab-cash', '💰', 'Касса', () => openModal('cash'));
+  const tabBar = h('nav', { class: 'tab-bar', 'aria-label': 'Действия' }, tabCards, tabTeam, tabSummary, tabCash);
   const hudGoal = h('div', { class: 'hud-goal' });
   // A narrow track keeps only the names of the city's stage and the goal (CSS `.tight`).
   new ResizeObserver(() => hudGoal.classList.toggle('tight', hudGoal.offsetWidth < 400)).observe(hudGoal);
@@ -1516,11 +1522,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     badge(tabCards, waiting && !state.outcome ? '!' : null);
     badge(tabTeam, `${state.reporters.length}`);
     tabTeam.classList.toggle('busy', searching);
+    const cashReady = cashMoves(state, c).filter((x) => !cashBlock(state, c, x.id)).length;
+    badge(tabCash, cashReady && !state.outcome ? String(cashReady) : null);
     for (const [t, ids] of [
       [tabCards, ['shop']],
       [tabTeam, ['team']],
-      [tabSummary, ['money', 'readers', 'reputation']],
-      [tabCity, ['city', 'population']],
+      [tabSummary, ['money', 'readers', 'reputation', 'city', 'population']],
+      [tabCash, ['cash']],
     ] as const)
       t.classList.toggle('on', (ids as readonly string[]).includes(modal ?? ''));
   }
@@ -5391,7 +5399,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('h3', { class: 'section' }, 'Что беречь'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.'),
       block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. Деньги идут на зарплаты, новых репортёров и разовые ходы «Чёрной кассы» (💰 вверху; рядом — значки приёмов от карт).'),
-      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху; на телефоне — вкладки «Карты», «Редакция», «Сводка» и «Город» внизу экрана, а «В печать» — кнопка над ними справа) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги (${b.shopRefreshCost} ₽, каждый следующий запрос до очередного предложения дороже на ${b.shopRequestStep} ₽), а на развилках («Решение редакции») придётся взять одно из двух навсегда. В день нового предложения или развилки окно открывается само. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
+      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху; на телефоне — вкладки «Карты», «Редакция», «Сводка» и «Касса» внизу экрана, а «В печать» — кнопка над ними справа) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги (${b.shopRefreshCost} ₽, каждый следующий запрос до очередного предложения дороже на ${b.shopRequestStep} ₽), а на развилках («Решение редакции») придётся взять одно из двух навсегда. В день нового предложения или развилки окно открывается само. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
       h('h3', { class: 'section' }, 'Чем ещё бить по городу'),
       block('groups/workers', 'Ссорьте группы', 'Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.'),
       block('ui/guardian', '«Голос города»', `С ${b.rivalStartTurn.destroy}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.`),

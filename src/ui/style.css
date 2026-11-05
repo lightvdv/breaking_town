@@ -4406,9 +4406,8 @@ button.publish.level-3.bump-up {
 }
 
 .tutorial-bar {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
+  display: grid;
+  gap: 6px;
   margin: 8px 12px 0;
   padding: 6px 12px;
   background: #fff6c8;
@@ -7872,4 +7871,81 @@ button.camp-ties {
 
 .pack-price {
   color: var(--accent);
+}
+
+/* Leafing through the tutorial's steps: ◀ «шаг N из M» ▶, «К текущему» when reading another one. */
+.tut-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.tut-nav .tut-count {
+  margin: 0;
+}
+
+.tut-nav-btn {
+  min-width: 30px;
+  min-height: 26px;
+  padding: 0 6px;
+  background: none;
+  color: #b5531a;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.tut-nav-btn:disabled {
+  opacity: 0.35;
+}
+
+.tut-nav-now {
+  padding: 2px 8px;
+  background: none;
+  color: var(--paper-ink);
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.tut-state {
+  display: block;
+  color: #b5531a;
+  font-style: italic;
+}
+
+.tut-bar-line {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.tut-bar-hint {
+  flex: 1;
+}
+
+.tut-bar-toggle {
+  flex: none;
+  padding: 2px 8px;
+  background: none;
+  color: var(--paper-muted);
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.tut-bar-full {
+  display: grid;
+  gap: 2px;
+  font-weight: 400;
+}
+
+.tut-bar-full .guide-title {
+  font-weight: 700;
 }

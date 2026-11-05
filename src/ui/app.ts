@@ -1737,29 +1737,57 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * The tutorial's note above the paper (CONCEPT.md §7.3 «Обучение»): one task at a time, with its
    * number; it cannot be folded, any step can be skipped.
    */
+  /** The step the player is reading in the sticker («◀ ▶»): null = the current one. Only reading — progress stays. */
+  let tutorialPeek: number | null = null;
+  /** Steps whose full text is folded in a window's bar. */
+  const tutorialBarFolded = new Set<number>();
+
+  /** «◀ шаг N из M ▶»: leafing through the steps to read an old hint again. */
+  function tutorialNav(step: { index: number }, viewed: number): HTMLElement {
+    const go = (i: number | null) => () => {
+      tutorialPeek = i === step.index ? null : i;
+      render();
+    };
+    return h(
+      'span',
+      { class: 'tut-nav' },
+      h('button', { class: 'tut-nav-btn', title: 'Предыдущий шаг', 'aria-label': 'Предыдущий шаг', disabled: viewed <= 0, onclick: go(viewed - 1) }, '◀'),
+      h('span', { class: 'tut-count' }, `Обучение · шаг ${viewed + 1} из ${tutorialSteps.length}`),
+      h('button', { class: 'tut-nav-btn', title: 'Следующий шаг', 'aria-label': 'Следующий шаг', disabled: viewed >= tutorialSteps.length - 1, onclick: go(viewed + 1) }, '▶'),
+      viewed !== step.index ? h('button', { class: 'tut-nav-now ghost', onclick: go(null) }, 'К текущему') : null,
+    );
+  }
+
+  /** A step's title and text; an earlier one says it is done, a later one that it comes later. */
+  function tutorialText(step: { def: (typeof tutorialSteps)[number]; index: number; ready: boolean }, viewed: number): (HTMLElement | string)[] {
+    if (viewed !== step.index) {
+      const def = tutorialSteps[viewed];
+      const done = (tutorial!.done ?? []).includes(def.id);
+      return [h('b', { class: 'guide-title' }, def.title), h('span', { class: 'tut-state' }, done ? 'Шаг пройден.' : 'Этот шаг — позже.'), def.text];
+    }
+    return [
+      h('b', { class: 'guide-title' }, step.def.title),
+      step.ready ? step.def.text : (step.def.ready ?? step.def.text),
+      // The money for this step, once it can be done (CONCEPT.md §7.3 «Обучение»).
+      step.ready && step.def.grant && (tutorial!.granted ?? []).includes(step.def.id) ? h('span', { class: 'tut-grant' }, `«Медиа-Плюс» прислал ${step.def.grant} ₽ — ${step.def.grantNote ?? ''}`) : null,
+    ].filter((x): x is HTMLElement | string => x !== null);
+  }
+
   function renderTutorial(): void {
     const step = tutorialStep();
     guideNote.hidden = !step || !issueOpen;
     guideNote.classList.add('tutorial-note');
     guideNote.classList.remove('folded');
     if (!step) return;
+    const viewed = tutorialPeek ?? step.index;
     const skip = () => {
       skipStep(tutorial!, step.def.id);
+      tutorialPeek = null;
       render();
     };
     guideNote.replaceChildren(
-      h(
-        'div',
-        { class: 'guide-text' },
-        h('span', { class: 'tut-count' }, `Обучение · шаг ${step.index + 1} из ${tutorialSteps.length}`),
-        h('b', { class: 'guide-title' }, step.def.title),
-        step.ready ? step.def.text : (step.def.ready ?? step.def.text),
-        // The money for this step, once it can be done (CONCEPT.md §7.3 «Обучение»).
-        step.ready && step.def.grant && (tutorial!.granted ?? []).includes(step.def.id)
-          ? h('span', { class: 'tut-grant' }, `«Медиа-Плюс» прислал ${step.def.grant} ₽ — ${step.def.grantNote ?? ''}`)
-          : null,
-      ),
-      ...(step.def.id === 'goal' ? [] : [h('button', { class: 'guide-skip ghost', title: 'Пропустить этот шаг', onclick: skip }, 'Пропустить')]),
+      h('div', { class: 'guide-text' }, tutorialNav(step, viewed), ...tutorialText(step, viewed)),
+      ...(step.def.id === 'goal' || viewed !== step.index ? [] : [h('button', { class: 'guide-skip ghost', title: 'Пропустить этот шаг', onclick: skip }, 'Пропустить')]),
     );
   }
 
@@ -1774,7 +1802,32 @@ export function mountApp(root: HTMLElement, base: Content): void {
     tutorialBar.hidden = !step || modal === null || titleOpen;
     if (!step || titleOpen || busy || searching) return;
     if (!tutorialBar.hidden) {
-      tutorialBar.replaceChildren(h('span', { class: 'tut-count' }, `Шаг ${step.index + 1}`), step.def.hint);
+      // The step in one line; its whole text unfolds under it — over a window the sticker is hidden,
+      // and on a phone the window covers the whole issue.
+      const folded = tutorialBarFolded.has(step.index);
+      const viewed = tutorialPeek ?? step.index;
+      tutorialBar.replaceChildren(
+        h(
+          'div',
+          { class: 'tut-bar-line' },
+          h('span', { class: 'tut-count' }, `Шаг ${step.index + 1}`),
+          h('span', { class: 'tut-bar-hint' }, step.def.hint),
+          h(
+            'button',
+            {
+              class: 'tut-bar-toggle ghost',
+              'aria-expanded': String(!folded),
+              onclick: () => {
+                if (folded) tutorialBarFolded.delete(step.index);
+                else tutorialBarFolded.add(step.index);
+                render();
+              },
+            },
+            folded ? 'Подробнее ▾' : 'Свернуть ▴',
+          ),
+        ),
+        ...(folded ? [] : [h('div', { class: 'tut-bar-full' }, tutorialNav(step, viewed), ...tutorialText(step, viewed))]),
+      );
       // Under the window's title, so it never covers the button to press.
       modalLayer.querySelector('.modal-title')?.after(tutorialBar);
     }

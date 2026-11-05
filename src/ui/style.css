@@ -7770,3 +7770,12 @@ span.hunt-chip {
     max-height: calc(100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px) - 24px);
   }
 }
+
+/* The editor's office holds the cards: their icon on its buttons. */
+.office-icon {
+  width: 22px;
+  height: 22px;
+  margin-right: 8px;
+  vertical-align: -5px;
+  image-rendering: pixelated;
+}

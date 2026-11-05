@@ -4886,7 +4886,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           h('span', { class: 'camp-asset', title: `Звёзды кампании. Финал открывается с ${need} ★` }, h('b', {}, `★ ${stars}`), h('small', {}, 'звёзды')),
           h('span', { class: 'camp-asset camp-ties', title: 'Связи холдинга — на карты в «Кабинете редактора»' }, h('b', {}, `✦ ${collection.currency}`), h('small', {}, 'связи')),
         ),
-        h('button', { class: 'camp-office', onclick: () => openModal('office') }, 'Кабинет редактора'),
+        h('button', { class: 'camp-office', onclick: () => openModal('office') }, h('img', { class: 'office-icon', src: `${assetBase}sprites/ui/cards.png`, alt: '', width: 16, height: 16 }), 'Кабинет редактора'),
         h('span', { class: 'camp-menu-wrap' }, menuButton, menu),
       ),
       h('div', { class: 'camp-wrap' }, mapEl, townCard(campaignSel)),
@@ -5157,9 +5157,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
           // The collection between games (CONCEPT.md §3.5б).
           h(
             'button',
-            { class: 'title-item', onclick: () => openModal('office') },
-            h('span', {}, 'Кабинет редактора'),
-            h('small', {}, `✦ ${collection.currency} · карт ${collectable(base).filter((u) => collection.cards[u.id]).length} из ${collectable(base).length}`),
+            { class: 'title-item office-item', onclick: () => openModal('office') },
+            h('span', {}, h('img', { class: 'office-icon', src: `${assetBase}sprites/ui/cards.png`, alt: '', width: 16, height: 16 }), 'Кабинет редактора'),
+            h('small', {}, `карты: ${collectable(base).filter((u) => collection.cards[u.id]).length} из ${collectable(base).length} · ✦ ${collection.currency} связей`),
           ),
           item('Как играть', () => openModal('howto')),
           item('Настройки', () => openModal('settings')),

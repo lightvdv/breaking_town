@@ -5200,6 +5200,8 @@ button.publish.level-3.bump-up {
 /* ☰ with «Новая кампания» and «Главное меню» under it. */
 .camp-menu-wrap {
   position: relative;
+  display: flex;
+  flex: none;
 }
 
 .camp-menu {
@@ -7813,24 +7815,29 @@ span.hunt-chip {
   image-rendering: pixelated;
 }
 
-/* The cards' buttons outside the game: on the campaign map «Карты» over «купить · N из M», and a «!»
-   when the «связи» are enough for an envelope. */
+/* The cards' buttons outside the game: on the campaign map «Карты», as tall as ☰ beside it and of a
+   fixed size (nothing in it changes with the collection), and a «!» when the «связи» are enough for an
+   envelope (absolute, so it moves nothing). */
 .camp-office {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 12px 0 8px;
+  white-space: nowrap;
+  flex: none;
 }
 
 .camp-office-text {
-  display: grid;
-  line-height: 1.1;
-  text-align: left;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
 }
 
-.camp-office-text small {
-  color: var(--muted);
-  font-size: 11px;
+.camp-top .camp-burger {
+  flex: none;
 }
 
 .buy-badge {

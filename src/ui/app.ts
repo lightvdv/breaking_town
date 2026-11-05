@@ -1753,17 +1753,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
       { class: 'tut-nav' },
       h('button', { class: 'tut-nav-btn', title: 'Предыдущий шаг', 'aria-label': 'Предыдущий шаг', disabled: viewed <= 0, onclick: go(viewed - 1) }, '◀'),
       h('span', { class: 'tut-count' }, `Обучение · шаг ${viewed + 1} из ${tutorialSteps.length}`),
-      h('button', { class: 'tut-nav-btn', title: 'Следующий шаг', 'aria-label': 'Следующий шаг', disabled: viewed >= tutorialSteps.length - 1, onclick: go(viewed + 1) }, '▶'),
+      h('button', { class: 'tut-nav-btn', title: 'Следующий шаг', 'aria-label': 'Следующий шаг', disabled: viewed >= step.index, onclick: go(viewed + 1) }, '▶'),
       viewed !== step.index ? h('button', { class: 'tut-nav-now ghost', onclick: go(null) }, 'К текущему') : null,
     );
   }
 
-  /** A step's title and text; an earlier one says it is done, a later one that it comes later. */
+  /** A step's title and text; an earlier one says whether it is done (the steps ahead are never shown). */
   function tutorialText(step: { def: (typeof tutorialSteps)[number]; index: number; ready: boolean }, viewed: number): (HTMLElement | string)[] {
     if (viewed !== step.index) {
       const def = tutorialSteps[viewed];
       const done = (tutorial!.done ?? []).includes(def.id);
-      return [h('b', { class: 'guide-title' }, def.title), h('span', { class: 'tut-state' }, done ? 'Шаг пройден.' : 'Этот шаг — позже.'), def.text];
+      return [h('b', { class: 'guide-title' }, def.title), h('span', { class: 'tut-state' }, done ? 'Шаг пройден.' : 'Шаг ещё не пройден.'), def.text];
     }
     return [
       h('b', { class: 'guide-title' }, step.def.title),
@@ -1779,6 +1779,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     guideNote.classList.add('tutorial-note');
     guideNote.classList.remove('folded');
     if (!step) return;
+    if (tutorialPeek !== null && tutorialPeek >= step.index) tutorialPeek = null;
     const viewed = tutorialPeek ?? step.index;
     const skip = () => {
       skipStep(tutorial!, step.def.id);
@@ -1805,7 +1806,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       // The step in one line; its whole text unfolds under it — over a window the sticker is hidden,
       // and on a phone the window covers the whole issue.
       const folded = tutorialBarFolded.has(step.index);
-      const viewed = tutorialPeek ?? step.index;
+      const viewed = tutorialPeek !== null && tutorialPeek < step.index ? tutorialPeek : step.index;
       tutorialBar.replaceChildren(
         h(
           'div',
@@ -4988,9 +4989,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
         ),
         h(
           'button',
-          { class: `camp-office${packAffordable() ? ' can-buy' : ''}`, title: 'Карты: купить новые за связи и улучшить свои', onclick: () => openModal('office') },
+          { class: `camp-office${packAffordable() ? ' can-buy' : ''}`, title: `Карты: купить новые за связи и улучшить свои (в коллекции ${collectionCount()})`, onclick: () => openModal('office') },
           cardsIcon(),
-          h('span', { class: 'camp-office-text' }, h('b', {}, 'Карты'), h('small', {}, `купить · ${collectionCount()}`)),
+          h('span', { class: 'camp-office-text' }, 'Карты'),
           packAffordable() ? h('span', { class: 'buy-badge' }, '!') : null,
         ),
         h('span', { class: 'camp-menu-wrap' }, menuButton, menu),

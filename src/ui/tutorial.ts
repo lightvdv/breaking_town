@@ -86,9 +86,9 @@ const logic: Record<string, StepLogic> = {
         v.laidOut.some((x) => x.distortion > 0),
       ).concat(v.laidOut.some((x) => x.placement === 2) ? [] : ['.publish']),
   },
-  hire: { done: (v) => v.state.reporters.length >= 3, targets: () => ['[data-tut=hire]:not([disabled])', '[data-tut=agency]:not([disabled])', '.rep-slot'] },
-  topic: { done: (v) => Object.values(v.state.reporterTopics).some((x) => x.length > 0), targets: () => ['[data-tut=topic-crime]', '.rep-card'] },
-  shop: { done: (v) => v.state.upgrades.length > 0, targets: () => ['[data-tut=buy]:not([disabled])', '.hud-shop'] },
+  hire: { done: (v) => v.state.reporters.length >= 3, targets: () => ['[data-tut=hire]:not([disabled])', '[data-tut=agency]:not([disabled])', '.rep-slot', '.tab-team'] },
+  topic: { done: (v) => Object.values(v.state.reporterTopics).some((x) => x.length > 0), targets: () => ['[data-tut=topic-crime]', '.rep-card', '.tab-team'] },
+  shop: { done: (v) => v.state.upgrades.length > 0, targets: () => ['[data-tut=buy]:not([disabled])', '.hud-shop', '.tab-cards'] },
   // Rumors and lies break the run: their «✕» glows until the issue is all truth.
   streak: {
     done: (_, f) => f.includes('streak'),
@@ -96,7 +96,7 @@ const logic: Record<string, StepLogic> = {
   },
   dig: {
     done: (v, f) => v.state.investigations.length > 0 || f.includes('stigma') || v.state.hand.some((x) => isStigma(v, x)),
-    targets: () => ['[data-tut=dig]', '.rep-card'],
+    targets: () => ['[data-tut=dig]', '.rep-card', '.tab-team'],
   },
   stigma: {
     done: (_, f) => f.includes('stigma'),

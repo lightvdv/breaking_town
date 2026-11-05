@@ -420,6 +420,20 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // The black cash, the cards' abilities and the moves acting today: icons in the top bar (CONCEPT.md §3.5в).
   const abilityBar = h('div', { class: 'ability-bar hud-abilities', hidden: true });
   const hudControls = h('div', { class: 'hud-controls' }, hudTeam, hudShop, abilityBar, hudMenu);
+  // Phones (CONCEPT.md §7.3): the actions live in a tab bar along the bottom edge, as in mobile games —
+  // the cards, the newsroom, the summary and the city; «В печать» floats above it as a button of its own.
+  const tab = (cls: string, icon: string, label: string, open: () => void) =>
+    h(
+      'button',
+      { class: `tab ${cls}`, onclick: open },
+      h('span', { class: 'tab-icon' }, h('img', { src: `${assetBase}sprites/ui/${icon}.png`, alt: '', width: 16, height: 16 }), h('span', { class: 'tab-badge', hidden: true })),
+      h('span', { class: 'tab-label' }, label),
+    );
+  const tabCards = tab('tab-cards', 'cards', 'Карты', () => openModal('shop'));
+  const tabTeam = tab('tab-team', 'newsroom', 'Редакция', () => openModal('team'));
+  const tabSummary = tab('tab-summary', 'folder', 'Сводка', () => openModal('money'));
+  const tabCity = tab('tab-city', 'city', 'Город', () => openModal('city'));
+  const tabBar = h('nav', { class: 'tab-bar', 'aria-label': 'Действия' }, tabCards, tabTeam, tabSummary, tabCity);
   const hudGoal = h('div', { class: 'hud-goal' });
   // A narrow track keeps only the names of the city's stage and the goal (CSS `.tight`).
   new ResizeObserver(() => hudGoal.classList.toggle('tight', hudGoal.offsetWidth < 400)).observe(hudGoal);
@@ -574,6 +588,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   root.replaceChildren(
     hud,
     h('main', { class: 'stage' }, cityHost, cityEvents, tools, loading, cutscene, daySummary, issue, issueFab),
+    tabBar,
     tooltip,
     titleLayer,
     campaignLayer,
@@ -1483,12 +1498,31 @@ export function mountApp(root: HTMLElement, base: Content): void {
     hudRes.replaceChildren(...items.filter((x): x is HTMLElement => x !== null));
     hudTeam.style.setProperty('--team-slots', String(c.balance.maxReporters));
     // While the issue is open: its level and «В печать»; folded: «Выпуск» brings it back.
-    const publishing = issueOpen && !state.outcome;
+    // On a phone the floating «В печать» steps aside while a window is open over the issue.
+    const publishing = issueOpen && !state.outcome && !(modal && isPhone());
     hudActions.replaceChildren(
       ...(publishing ? [publishButton()] : []),
     );
     // A folded issue waits as a newspaper icon over the city.
     issueFab.hidden = issueOpen || folding || titleOpen || busy || !!state.outcome;
+    // The tab bar's marks: a new offer or decision waits among the cards; the newsroom shows its
+    // staff and pulses while the reporters search.
+    const badge = (t: HTMLElement, text: string | null) => {
+      const el = t.querySelector<HTMLElement>('.tab-badge')!;
+      el.hidden = text === null;
+      el.textContent = text ?? '';
+    };
+    const waiting = (state.shopOffer.length > 0 && !state.shopPicks) || openForks(state, c).length > 0;
+    badge(tabCards, waiting && !state.outcome ? '!' : null);
+    badge(tabTeam, `${state.reporters.length}`);
+    tabTeam.classList.toggle('busy', searching);
+    for (const [t, ids] of [
+      [tabCards, ['shop']],
+      [tabTeam, ['team']],
+      [tabSummary, ['money', 'readers', 'reputation']],
+      [tabCity, ['city', 'population']],
+    ] as const)
+      t.classList.toggle('on', (ids as readonly string[]).includes(modal ?? ''));
   }
 
   /**
@@ -1520,7 +1554,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       { class: `publish level-${level}${levelBump ? ` ${levelBump}` : ''}`, title: hint, onclick: endTurn, disabled },
       h('img', { src: `${assetBase}sprites/ui/issue_${level}.png`, alt: '', width: 24, height: 24 }),
       // On a small laptop the level's word goes (its colour stays) so the top row keeps every button.
-      h('span', {}, 'В печать', h('span', { class: 'publish-level' }, ' · ', h('b', {}, level === 3 ? 'СЕНСАЦИЯ!' : issueLevelLabels[level]))),
+      h('span', {}, 'В печать', h('span', { class: 'publish-level' }, h('span', { class: 'publish-dot' }, ' · '), h('b', {}, level === 3 ? 'СЕНСАЦИЯ!' : issueLevelLabels[level]))),
       riskDot(),
       h('span', { 'aria-hidden': 'true' }, '▸'),
     );
@@ -2819,9 +2853,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   function fly(el: HTMLElement, card: CardInstance): void {
-    const from = reporterBar.rectOf(card.reporterId);
+    // On a phone the portraits are not on screen: the story flies out of the «Редакция» tab.
+    const own = reporterBar.rectOf(card.reporterId);
+    const from = own && own.width > 0 ? own : tabTeam.getBoundingClientRect();
     const to = el.getBoundingClientRect();
-    if (!from) return;
+    if (!from.width) return;
     const dx = from.left + from.width / 2 - (to.left + to.width / 2);
     const dy = from.top + from.height / 2 - (to.top + to.height / 2);
     const { frames, options } = flightFrames(card.tier, dx, dy);
@@ -5339,7 +5375,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ),
       h('p', { class: 'hint-line' }, 'Где сейчас город, видно на шкале «Цель» вверху: пять стадий от «Процветает» до «Руин», 🏁 — куда нужно дойти. Метка стоит точно там, где город, и внутри стадии: цветом закрашено, сколько её город уже прошёл. Бледная метка показывает, куда сдвинет город разложенный выпуск.'),
       h('h3', { class: 'section' }, 'Один день'),
-      step(1, 'Репортёры приносят новости', 'Один репортёр — одна новость в день. Сначала они пишут о событиях дня; на что не хватило людей, то выйдет с пометкой «никто не написал». Остальные ищут сами: как повезёт. Нанимайте кнопкой «Нанять» у портретов, а нажав на портрет, в «Редакции» выбирайте прямо в его карточке, что он ищет.'),
+      step(1, 'Репортёры приносят новости', 'Один репортёр — одна новость в день. Сначала они пишут о событиях дня; на что не хватило людей, то выйдет с пометкой «никто не написал». Остальные ищут сами: как повезёт. Нанимайте кнопкой «Нанять» у портретов, а нажав на портрет, в «Редакции» выбирайте прямо в его карточке, что он ищет. На телефоне портретов наверху нет: «Редакция» — вкладка внизу экрана.'),
       step(2, 'Разложите выпуск', 'Первая полоса — главная новость: её прочитают все и сильнее всего ей поверят. Статья — вторая по силе. Остальное выходит заметками. Что не нужно — «Не печатать». Нажмите на новость, чтобы переложить её.'),
       step(3, 'Выберите подачу', 'Кнопка «Подача» над заголовком: «Это неспроста» и «Всё пропало!» делают новость громче, «Без паники» и «Всё хорошо!» — тише, «Как есть» — правда. Чем дальше от правды, тем вероятнее, что вас поймают на лжи. В меню виден риск и что сделают поверившие.'),
       step(4, 'В печать', 'Кнопка «В печать» показывает, каким выйдет номер: скучным, обычным, интересным или сенсационным. Пока выпуск открыт, «≈» у показателей наверху — прогноз. После печати город отреагирует: над жителями появятся значки, а в итогах дня будет видно, как приняли каждую новость.'),
@@ -5355,13 +5391,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('h3', { class: 'section' }, 'Что беречь'),
       block('ui/reputation', 'Репутация', 'Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.'),
       block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. Деньги идут на зарплаты, новых репортёров и разовые ходы «Чёрной кассы» (💰 вверху; рядом — значки приёмов от карт).'),
-      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги (${b.shopRefreshCost} ₽, каждый следующий запрос до очередного предложения дороже на ${b.shopRequestStep} ₽), а на развилках («Решение редакции») придётся взять одно из двух навсегда. В день нового предложения или развилки окно открывается само. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
+      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху; на телефоне — вкладки «Карты», «Редакция», «Сводка» и «Город» внизу экрана, а «В печать» — кнопка над ними справа) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги (${b.shopRefreshCost} ₽, каждый следующий запрос до очередного предложения дороже на ${b.shopRequestStep} ₽), а на развилках («Решение редакции») придётся взять одно из двух навсегда. В день нового предложения или развилки окно открывается само. Новые карты в коллекцию открываются между партиями, в «Кабинете редактора».`),
       h('h3', { class: 'section' }, 'Чем ещё бить по городу'),
       block('groups/workers', 'Ссорьте группы', 'Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.'),
       block('ui/guardian', '«Голос города»', `С ${b.rivalStartTurn.destroy}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.`),
       list(
         '🎯 Травля: кнопка «Травить» у новости о заводе, магазине или другом месте работы — или в «Сводке», вкладка «Город», где видны все такие места. Репортёры приносят о нём разные истории, по очереди; новости об этом месте бьют всё сильнее, если бить каждый день, люди уходят, и оно закрывается. Цель одна: пока идёт травля, другое место не выбрать — сначала «Прекратить» на её плашке над газетой.',
-        'Компромат: нажмите на портрет, в карточке репортёра — «Компромат» и выберите, на кого копать. Репортёр несколько дней не пишет новостей, зато приносит эксклюзив, который настраивает город против группы.',
+        'Компромат: нажмите на портрет (на телефоне — вкладка «Редакция»), в карточке репортёра — «Компромат» и выберите, на кого копать. Репортёр несколько дней не пишет новостей, зато приносит эксклюзив, который настраивает город против группы.',
         'Криминал: новости о преступности пугают людей и разжигают настоящую преступность. Преступность на улицах сама снижает «Порядок и безопасность», а банда, если она взяла улицы, держит его ниже до конца партии; полиция всё это сдерживает. Пока город раскалён, полиция и мэр отвечают рейдами и патрулями: они остужают улицы и успокаивают напуганных — закрытая полиция рейдов уже не устроит.',
         '👁 Надзор за темой: если печатать одну тему день за днём, фактчекеры начинают за ней следить — неправду этой темы ловят на 25% чаще за каждый день подряд. Метка «Под надзором» у новости; день без этой темы снимает надзор. Правду надзор не трогает.',
       ),

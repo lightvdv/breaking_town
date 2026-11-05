@@ -7539,3 +7539,224 @@ span.hunt-chip {
     grid-column: 1;
   }
 }
+
+/* ---------- Phones: a tab bar along the bottom and «В печать» as a floating button (CONCEPT.md §7.3) ---------- */
+.tab-bar {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --tabbar-h: 60px;
+  }
+
+  /* The top: the goal track with the black cash and ☰ beside it, the four resources under them. The
+     reporters live in «Редакция» below; «Сводка» is a tab too. */
+  .hud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    padding: 0 0 6px;
+  }
+
+  .hud-controls {
+    display: contents;
+  }
+
+  .hud-team,
+  .hud .hud-shop {
+    display: none;
+  }
+
+  .hud-goal {
+    order: 0;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 16px 6px 0 10px;
+  }
+
+  .hud-abilities {
+    order: 1;
+    align-self: stretch;
+    padding: 4px 4px 0;
+  }
+
+  .hud .hud-menu {
+    order: 2;
+    align-self: stretch;
+    width: 48px;
+    min-height: 52px;
+    border-left: 1px solid var(--panel);
+  }
+
+  .hud .resources {
+    order: 3;
+    flex: 1 1 100%;
+    border-top: 1px solid var(--panel);
+    margin-top: 4px;
+  }
+
+  /* The tab bar: four equal tabs, an icon over its word, the open window's tab lit. */
+  .at-title .tab-bar {
+    display: none;
+  }
+
+  .tab-bar {
+    position: relative;
+    z-index: 21;
+    display: grid;
+    flex: none;
+    grid-template-columns: repeat(4, 1fr);
+    height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg-deep);
+    border-top: 2px solid var(--panel);
+  }
+
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    padding: 4px 2px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .tab.on {
+    color: var(--accent);
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
+  }
+
+  .tab-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+
+  .tab-icon img {
+    width: 26px;
+    height: 26px;
+    image-rendering: pixelated;
+  }
+
+  .tab-badge {
+    position: absolute;
+    top: -6px;
+    right: -12px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font: 700 11px/16px var(--font);
+    text-align: center;
+  }
+
+  .tab-team .tab-badge {
+    background: var(--panel);
+    color: var(--text);
+  }
+
+  .tab-cards .tab-badge {
+    background: var(--danger);
+    color: #fff;
+  }
+
+  /* The reporters search: the newsroom tab breathes. */
+  .tab-team.busy .tab-icon img {
+    animation: tab-busy 0.7s ease-in-out infinite alternate;
+  }
+
+  @keyframes tab-busy {
+    to {
+      transform: translateY(-3px) scale(1.12);
+    }
+  }
+
+  /* «В печать»: a floating rectangle over the right corner above the tab bar, no wider than it needs. */
+  .hud .hud-buttons {
+    position: fixed;
+    z-index: 20;
+    left: auto;
+    right: 12px;
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 12px);
+    margin: 0;
+    padding: 0;
+    background: none;
+  }
+
+  .hud .publish {
+    flex: none;
+    max-width: 200px;
+    min-height: 54px;
+    padding: 6px 14px 6px 8px;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .hud .publish img {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* The level's word under «В печать», small. */
+  .hud .publish-level {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  .hud .publish-level b {
+    font-weight: 700;
+  }
+
+  .hud .publish-dot {
+    display: none;
+  }
+
+  .hud .publish > span[aria-hidden] {
+    display: none;
+  }
+
+  /* The folded issue waits in the same corner. */
+  .issue-fab {
+    left: auto;
+    right: 12px;
+    bottom: 12px;
+    height: 54px;
+    margin: 0;
+    padding: 0 16px 0 10px;
+    font-size: 16px;
+  }
+
+  .issue-fab img {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* The issue scrolls clear of the floating button. */
+  .issue {
+    padding-bottom: 88px;
+  }
+
+  /* A window stays above the tab bar, which keeps its tab lit and switches windows. */
+  #app:not(.at-title) .modal-layer:not(:empty) {
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  }
+
+  #app:not(.at-title) .modal.window {
+    max-height: calc(100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px) - 24px);
+  }
+}

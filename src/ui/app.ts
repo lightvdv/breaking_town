@@ -1795,12 +1795,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
       }
       return;
     }
-    // The step is done elsewhere: the window's «×» glows.
+    // The step is done elsewhere: the window's «×» glows, but the window stays bright — it may have
+    // opened by itself (the board's offer, a fork) and its cards are worth taking.
     const close = modal !== null ? modalLayer.querySelector<HTMLElement>('.modal-title .icon-btn') : null;
-    if (close) {
-      close.classList.add('tut-target');
-      spotlightOn(close);
-    }
+    if (close) close.classList.add('tut-target');
   }
 
   /**

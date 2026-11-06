@@ -7956,3 +7956,15 @@ button.camp-ties {
 .tut-bar-full .guide-title {
   font-weight: 700;
 }
+
+/* The language buttons in the settings (CONCEPT.md §7.5). */
+.lang-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lang-row button.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}

@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { crimePressure, streetCrime } from './crime';
 import { quitStained, stainedChoice } from './hunt';
 import { chance, int, next, pick, weightedPick, type RngState } from './rng';
@@ -263,7 +264,7 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
   // The city defends itself when it is in trouble.
   const defense = state.metrics.cityIndex < b.defenseCityIndex;
   if (defense) {
-    notes.push('Мэрия запустила опровержения и программу занятости');
+    notes.push(tr('Мэрия запустила опровержения и программу занятости'));
     for (const r of state.residents) {
       if (r.status !== 'active') continue;
       if (r.quitFrom.length && chance(rng, b.defenseDebunkChance)) r.quitFrom = [];
@@ -296,7 +297,7 @@ export function advanceCity(state: GameState, c: Content, rng: RngState): string
       tryAssignJob(r, groupOf(c, g.id), state.buildings, workers);
       state.residents.push(r);
     }
-    if (arrivals > 0) notes.push(`В город переехали новые жители: ${arrivals}`);
+    if (arrivals > 0) notes.push(tr('В город переехали новые жители: {0}', arrivals));
   }
 
   state.metrics = computeMetrics(state, c);

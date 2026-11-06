@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { requirementMet } from './economy';
 import { clamp } from './lookup';
 import { getModifiers } from './modifiers';
@@ -70,8 +71,8 @@ export function shopRequestCost(state: GameState, c: Content): number {
 export function refreshShop(state: GameState, c: Content): void {
   if (state.outcome) throw new Error('Game is over');
   const cost = shopRequestCost(state, c);
-  if (state.money < cost) throw new Error('Не хватает денег');
-  if (!deckCards(state, c).length) throw new Error('В колоде не осталось карт');
+  if (state.money < cost) throw new Error(tr('Не хватает денег'));
+  if (!deckCards(state, c).length) throw new Error(tr('В колоде не осталось карт'));
   state.money -= cost;
   state.shopExtras = (state.shopExtras ?? 0) + 1;
   dealShop(state, c, state.rng);

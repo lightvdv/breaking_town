@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { STORAGE_SUFFIX } from '../assets';
 import type { Content, Difficulty, GameMode, TownDef } from '../sim';
 
@@ -21,7 +22,7 @@ export interface Campaign {
 
 /** The three passes of a town in order (CONCEPT.md §9.1). */
 export const PASSES: Difficulty[] = ['easy', 'normal', 'hard'];
-export const passNames: Record<Difficulty, string> = { easy: 'Первый тираж', normal: 'Второй тираж', hard: 'Третий тираж' };
+export const passNames: Record<Difficulty, string> = { easy: tr('Первый тираж'), normal: tr('Второй тираж'), hard: tr('Третий тираж') };
 
 const KEY = `breaking-town-campaign${STORAGE_SUFFIX}`;
 

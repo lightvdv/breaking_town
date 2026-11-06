@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { reporterOf, type Content } from '../sim';
 import { h } from './dom';
 
@@ -20,33 +21,33 @@ export function introSlides(c: Content): IntroSlide[] {
   return [
     {
       art: 'town',
-      kicker: 'Где-то в провинции',
-      text: `Тихий городок. ${b.population} жителей, завод, рынок и бар по пятницам. Здесь давно ничего не случалось.`,
+      kicker: tr('Где-то в провинции'),
+      text: tr('Тихий городок. {0} жителей, завод, рынок и бар по пятницам. Здесь давно ничего не случалось.', b.population),
     },
     {
       art: 'board',
-      kicker: 'Столица · совет директоров «Медиа-Плюс»',
-      text: 'Медиахолдинг проверяет теорию: страх продаётся лучше всего. Для опыта выбрали этот город и купили его газету за копейки.',
+      kicker: tr('Столица · совет директоров «Медиа-Плюс»'),
+      text: tr('Медиахолдинг проверяет теорию: страх продаётся лучше всего. Для опыта выбрали этот город и купили его газету за копейки.'),
     },
     {
       art: 'editor',
-      kicker: 'Редакция «Городского Вестника»',
-      text: `Вы — новый главный редактор. Бюджет — ${b.startMoney} монет, в штате — один репортёр, ${reporter}. Остальных наймёте сами.`,
+      kicker: tr('Редакция «Городского Вестника»'),
+      text: tr('Вы — новый главный редактор. Бюджет — {0} монет, в штате — один репортёр, {1}. Остальных наймёте сами.', b.startMoney, reporter),
     },
     {
       art: 'method',
-      kicker: 'Как это работает',
-      text: 'Репортёры приносят новости. Вы решаете, что поставить на первую полосу и насколько приукрасить. Люди верят, пугаются и ссорятся. Мешать будет честный «Голос города»: он успокаивает людей и опровергает вашу ложь.',
+      kicker: tr('Как это работает'),
+      text: tr('Репортёры приносят новости. Вы решаете, что поставить на первую полосу и насколько приукрасить. Люди верят, пугаются и ссорятся. Мешать будет честный «Голос города»: он успокаивает людей и опровергает вашу ложь.'),
     },
     {
       art: 'goal',
-      kicker: 'Задание',
-      text: `За ${b.turnLimit} дней доведите город до стадии «${below(b.winCityIndex)}». Не обанкротьтесь и не потеряйте репутацию: разоблачённая газета никому не нужна.`,
+      kicker: tr('Задание'),
+      text: tr('За {0} дней доведите город до стадии «{1}». Не обанкротьтесь и не потеряйте репутацию: разоблачённая газета никому не нужна.', b.turnLimit, below(b.winCityIndex)),
     },
     {
       art: 'reward',
-      kicker: 'Награда',
-      text: 'Докажете теорию — и совет директоров отдаст вам следующий город.',
+      kicker: tr('Награда'),
+      text: tr('Докажете теорию — и совет директоров отдаст вам следующий город.'),
     },
   ];
 }
@@ -65,7 +66,7 @@ export function playIntro(host: HTMLElement, c: Content, assetBase: string): Pro
       h('div', { class: 'letterbox top' }),
       h('div', { class: 'letterbox bottom' }),
       card,
-      h('div', { class: 'intro-controls' }, dots, next, h('button', { class: 'ghost intro-skip', onclick: () => finish() }, 'Пропустить')),
+      h('div', { class: 'intro-controls' }, dots, next, h('button', { class: 'ghost intro-skip', onclick: () => finish() }, tr('Пропустить'))),
     );
     const finish = () => {
       document.removeEventListener('keydown', onKey);
@@ -84,7 +85,7 @@ export function playIntro(host: HTMLElement, c: Content, assetBase: string): Pro
       void card.offsetWidth;
       card.classList.add('in');
       dots.replaceChildren(...slides.map((_, k) => h('span', { class: k === i ? 'on' : '' })));
-      next.textContent = i === slides.length - 1 ? 'К первому выпуску ▸' : 'Дальше ▸';
+      next.textContent = i === slides.length - 1 ? tr('К первому выпуску ▸') : tr('Дальше ▸');
     };
     const advance = () => {
       if (i === slides.length - 1) return finish();

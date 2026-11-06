@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { ASSET_BASE } from '../assets';
 import { getModifiers, groupOf, reporterOf, searchLuck, skilledReporter, staffOf, type Content, type Find, type GameState, type ReporterDef } from '../sim';
 import { h, pct } from './dom';
@@ -17,16 +18,16 @@ export function skillLine(c: Content, state: GameState, r: ReporterDef): string 
   // Skills as experience has grown them (CONCEPT.md §3.3б).
   const s = state.reporters.includes(r.id) ? skilledReporter(state, c, r) : r;
   const luck = searchLuck(state, c, s, getModifiers(state, c));
-  return `Удача ${pct(luck)} · Чутьё ${stars(s.skills.nose)} · ${scopeLabels[s.skills.scope]}`;
+  return tr('Удача {0} · Чутьё {1} · {2}', pct(luck), stars(s.skills.nose), scopeLabels[s.skills.scope]);
 }
 
-export const levelNames = ['Новичок', 'Опытный', 'Мастер', 'Легенда'];
+export const levelNames = [tr('Новичок'), tr('Опытный'), tr('Мастер'), tr('Легенда')];
 /** «До «Мастера» ещё…» */
-export const levelNamesGen = ['Новичка', 'Опытного', 'Мастера', 'Легенды'];
+export const levelNamesGen = [tr('Новичка'), tr('Опытного'), tr('Мастера'), tr('Легенды')];
 
 /** Luck as a horseshoe, nose for news as a nose: four looks each (CONCEPT.md §3.3б). */
-export const luckNames = ['Ржавая подкова', 'Железная подкова', 'Серебряная подкова', 'Золотая подкова'];
-export const noseNames = ['Заложенный нос', 'Обычный нос', 'Чуткий нос', 'Нюх ищейки'];
+export const luckNames = [tr('Ржавая подкова'), tr('Железная подкова'), tr('Серебряная подкова'), tr('Золотая подкова')];
+export const noseNames = [tr('Заложенный нос'), tr('Обычный нос'), tr('Чуткий нос'), tr('Нюх ищейки')];
 /** Luck from which the horseshoe gets better: iron, silver, golden. */
 const LUCK_STEPS = [0.6, 0.75, 0.9];
 
@@ -41,19 +42,19 @@ export function skillTiers(c: Content, state: GameState, r: ReporterDef): { luck
 /** Loyalty in a word and its colour: devoted, wavering, about to leave. */
 export function loyaltyOf(c: Content, state: GameState, r: ReporterDef): { word: string; level: 'ok' | 'mid' | 'bad' } {
   const l = staffOf(state, c, r.id).loyalty;
-  if (l >= 0.6) return { word: r.female ? 'Предана' : 'Предан', level: 'ok' };
-  if (l >= 0.4) return { word: 'Сомневается', level: 'mid' };
-  return { word: 'На грани ухода', level: 'bad' };
+  if (l >= 0.6) return { word: r.female ? tr('Предана') : tr('Предан'), level: 'ok' };
+  if (l >= 0.4) return { word: tr('Сомневается'), level: 'mid' };
+  return { word: tr('На грани ухода'), level: 'bad' };
 }
 
 /** What sits behind the «?» by the name: who they are, how they take lies, their personal story, their topics. */
 export function aboutLine(r: ReporterDef): string {
-  const honest = r.honesty >= 0.7 ? 'Не терпит лжи.' : r.honesty <= 0.2 ? `Ложь ${r.female ? 'её' : 'его'} не смущает.` : '';
+  const honest = r.honesty >= 0.7 ? tr('Не терпит лжи.') : r.honesty <= 0.2 ? tr('Ложь {0} не смущает.', r.female ? tr('её') : tr('его')) : '';
   return [r.bio, honest, r.tie?.text ?? '', `${topicLine(r)} · ${scopeLabels[r.skills.scope].toLowerCase()}.`].filter(Boolean).join(' ');
 }
 
 export function topicLine(r: ReporterDef): string {
-  return r.skills.topics.length ? `Темы: ${r.skills.topics.map((t) => topicLabels[t].toLowerCase()).join(', ')}` : 'Пишет обо всём';
+  return r.skills.topics.length ? tr('Темы: {0}', r.skills.topics.map((t) => topicLabels[t].toLowerCase()).join(', ')) : tr('Пишет обо всём');
 }
 
 export function portrait(id: string, cls = 'portrait'): HTMLImageElement {
@@ -95,7 +96,7 @@ export class ReporterBar {
     for (const id of ids) {
       const portrait = this.cards.get(id)?.root.querySelector('.rep-portrait');
       if (!portrait) continue;
-      const fx = h('span', { class: 'level-up', 'aria-hidden': 'true' }, h('span', { class: 'level-up-ring' }), h('span', { class: 'level-up-tag' }, '▲ Повышение'));
+      const fx = h('span', { class: 'level-up', 'aria-hidden': 'true' }, h('span', { class: 'level-up-ring' }), h('span', { class: 'level-up-tag' }, tr('▲ Повышение')));
       portrait.append(fx);
       window.setTimeout(() => fx.remove(), 3600);
     }
@@ -142,7 +143,7 @@ export class ReporterBar {
             'button',
             {
               class: 'rep-slot',
-              title: `Нанять репортёра (свободно мест: ${max - state.reporters.length})`,
+              title: tr('Нанять репортёра (свободно мест: {0})', max - state.reporters.length),
               onclick: (e: Event) => {
                 e.stopPropagation();
                 this.onHire();
@@ -150,7 +151,7 @@ export class ReporterBar {
             },
             h('span', { class: 'rep-plus' }, '+'),
             // Like a reporter's surname: what the empty place is for.
-            h('span', { class: 'rep-name' }, h('b', {}, 'Нанять')),
+            h('span', { class: 'rep-name' }, h('b', {}, tr('Нанять'))),
           ),
         );
       }
@@ -162,28 +163,28 @@ export class ReporterBar {
     for (const [id, card] of this.cards) {
       const r = reporterOf(this.c, id);
       const inv = state.investigations.find((x) => x.reporterId === id);
-      const invLine = inv ? `Расследует: ${inv.target === 'rival' ? '«Голос города»' : groupOf(this.c, inv.target).name.toLowerCase()} · ещё ${inv.turnsLeft} ${inv.turnsLeft === 1 ? 'ход' : 'хода'}` : '';
+      const invLine = inv ? tr('Расследует: {0} · ещё {1} {2}', inv.target === 'rival' ? tr('«Голос города»') : groupOf(this.c, inv.target).name.toLowerCase(), inv.turnsLeft, inv.turnsLeft === 1 ? tr('ход') : tr('хода')) : '';
       // Name and skills on hover; the portrait itself only shows a status dot.
       card.root.title = [
         r.name,
         inv ? invLine : skillLine(this.c, state, r),
-        `${searchLine(state, r)} · ${r.salary} в день`,
+        tr('{0} · {1} в день', searchLine(state, r), r.salary),
         r.bio,
-        'Щёлкните — темы поиска и расследование.',
+        tr('Щёлкните — темы поиска и расследование.'),
       ].join('\n');
       const s = statuses.get(id);
       const found = state.hand.filter((x) => x.reporterId === id).length;
       const doing = s?.phase === 'searching'
-        ? 'ищет…'
+        ? tr('ищет…')
         : animating && !s
           ? ''
           : inv
-            ? `копает ${inv.total - inv.turnsLeft}/${inv.total}`
+            ? tr('копает {0}/{1}', inv.total - inv.turnsLeft, inv.total)
             : state.rivalWatch.includes(id)
-              ? 'следит'
+              ? tr('следит')
               : found
-                ? `${r.female ? 'нашла' : 'нашёл'} ${found}`
-                : 'пусто';
+                ? `${r.female ? tr('нашла') : tr('нашёл')} ${found}`
+                : tr('пусто');
       card.name.replaceChildren(h('b', {}, r.name.split(' ').pop() ?? r.name), h('small', {}, doing));
       const statusKey = !s ? `idle:${invLine}` : s.phase === 'searching' ? 'searching' : `done:${s.find.kind}:${s.find.tier ?? 'empty'}`;
       if (statusKey === card.key) continue;
@@ -200,17 +201,17 @@ export class ReporterBar {
       card.root.className = `rep-card${s ? ` is-${s.phase}` : ''}${result ? ` ${result}` : ''}${inv ? ' investigating' : ''}`;
       if (!s) card.status.replaceChildren();
       else if (s.phase === 'searching') {
-        card.status.replaceChildren(h('span', {}, inv ? 'Копает грязь' : 'Ищет новость'), h('span', { class: 'dots' }, '...'));
+        card.status.replaceChildren(h('span', {}, inv ? tr('Копает грязь') : tr('Ищет новость')), h('span', { class: 'dots' }, '...'));
       } else if (s.find.kind === 'investigating') {
-        card.status.replaceChildren(h('b', {}, 'Расследует'), h('span', {}, invLine.replace(/^Расследует: /, '')));
+        card.status.replaceChildren(h('b', {}, tr('Расследует')), h('span', {}, invLine.replace(/^Расследует: /, '')));
       } else if (s.find.cardUid === null || s.find.tier === null) {
-        card.status.replaceChildren(h('b', {}, 'Пусто'), h('span', {}, 'Ничего не нашёл'));
+        card.status.replaceChildren(h('b', {}, tr('Пусто')), h('span', {}, tr('Ничего не нашёл')));
       } else {
         card.status.replaceChildren(
           s.find.kind === 'investigation'
-            ? h('b', { class: 'sensation-banner' }, 'ЭКСКЛЮЗИВ!')
+            ? h('b', { class: 'sensation-banner' }, tr('ЭКСКЛЮЗИВ!'))
             : s.find.tier === 3
-              ? h('b', { class: 'sensation-banner' }, 'СЕНСАЦИЯ!')
+              ? h('b', { class: 'sensation-banner' }, tr('СЕНСАЦИЯ!'))
               : '',
           h('span', { class: 'clip-tier' }, tierLabels[s.find.tier]),
           h('span', { class: 'clip-title' }, s.title ?? ''),
@@ -224,6 +225,6 @@ export class ReporterBar {
 /** What the reporter is looking for: the player's topics, or their own specialties. */
 export function searchLine(state: GameState, r: ReporterDef): string {
   const assigned = state.reporterTopics[r.id] ?? [];
-  if (state.rival && !state.rival.closed && state.rivalWatch.includes(r.id)) return `Следит за «${rivalNames[state.rival.kind].ins}»`;
-  return assigned.length ? `Ищет: ${assigned.map((t) => topicLabels[t].toLowerCase()).join(', ')}` : topicLine(r);
+  if (state.rival && !state.rival.closed && state.rivalWatch.includes(r.id)) return tr('Следит за «{0}»', rivalNames[state.rival.kind].ins);
+  return assigned.length ? tr('Ищет: {0}', assigned.map((t) => topicLabels[t].toLowerCase()).join(', ')) : topicLine(r);
 }

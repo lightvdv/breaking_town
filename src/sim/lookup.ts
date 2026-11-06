@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import type {
   BuildingDef,
   BuildingType,
@@ -38,7 +39,7 @@ export function buildingName(state: GameState, c: Content, id: number): string {
 
 /** «Больница закрылась», «Фактчекеры закрылись», «Завод закрылся». */
 export function closedLine(state: GameState, c: Content, id: number): string {
-  return `${buildingName(state, c, id)} ${buildingDefOf(c, state.buildings[id].type).closed ?? 'закрылся'}`;
+  return `${buildingName(state, c, id)} ${buildingDefOf(c, state.buildings[id].type).closed ?? tr('закрылся')}`;
 }
 
 /** Share of a group that follows at least one owned channel, 0..1. */

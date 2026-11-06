@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { removeReporter } from './staff';
 import { channelOf } from './lookup';
 import { getModifiers } from './modifiers';
@@ -115,9 +116,9 @@ export function upkeepItems(state: GameState, c: Content): UpkeepItem[] {
 
 /** Why a loan cannot be taken now, or null (CONCEPT.md §5.4а): one at a time, only when the cash runs low. */
 export function loanBlock(state: GameState, c: Content): string | null {
-  if (state.outcome) return 'Партия окончена';
-  if (state.loan) return 'Сначала погасите прошлый кредит';
-  if (state.money >= c.balance.loanBelow) return `Банк даёт в долг, когда в кассе меньше ${c.balance.loanBelow} ₽`;
+  if (state.outcome) return tr('Партия окончена');
+  if (state.loan) return tr('Сначала погасите прошлый кредит');
+  if (state.money >= c.balance.loanBelow) return tr('Банк даёт в долг, когда в кассе меньше {0} ₽', c.balance.loanBelow);
   return null;
 }
 
@@ -143,7 +144,7 @@ export function loanPayoff(state: GameState, c: Content): number {
 export function repayLoan(state: GameState, c: Content): void {
   if (!state.loan) throw new Error('No loan');
   const sum = loanPayoff(state, c);
-  if (state.money < sum) throw new Error('Не хватает денег');
+  if (state.money < sum) throw new Error(tr('Не хватает денег'));
   state.money -= sum;
   state.loan = null;
 }

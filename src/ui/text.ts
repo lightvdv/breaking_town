@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import {
   buildingDefOf,
   type CardEffect,
@@ -16,49 +17,42 @@ import {
 } from '../sim';
 
 export const reactionLabels: Record<Reaction, string> = {
-  scared: 'поверил плохому',
-  happy: 'поверил хорошему',
-  calm: 'принял к сведению',
-  doubted: 'проигнорировал',
-  talk: 'пересказывает',
-  outraged: 'возмущён разоблачением',
+  scared: tr('поверил плохому'),
+  happy: tr('поверил хорошему'),
+  calm: tr('принял к сведению'),
+  doubted: tr('проигнорировал'),
+  talk: tr('пересказывает'),
+  outraged: tr('возмущён разоблачением'),
 };
 
-/** Russian plural by number: 1 читатель, 2 читателя, 5 читателей. */
-export function plural(n: number, one: string, few: string, many: string): string {
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return one;
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-  return many;
-}
+export { plural } from '../i18n';
 
 /** How the morning after the issue counts the reactions (CONCEPT.md §7.3). */
 export const morningLabels: Record<Reaction, string> = {
-  scared: 'испугались',
-  happy: 'обрадовались',
-  calm: 'приняли к сведению',
-  doubted: 'проигнорировали',
-  talk: 'пересказывают',
-  outraged: 'возмутились',
+  scared: tr('испугались'),
+  happy: tr('обрадовались'),
+  calm: tr('приняли к сведению'),
+  doubted: tr('проигнорировали'),
+  talk: tr('пересказывают'),
+  outraged: tr('возмутились'),
 };
 
-export const truthLabels = ['Правда', 'Полуправда', 'Ложь'];
-export const tierLabels = ['Скучная', 'Обычная', 'Интересная', 'Сенсация'];
-export const scopeLabels: Record<NewsScope | 'any', string> = { local: 'Город', global: 'Мир', any: 'Город и мир' };
-export const placementLabels = ['Заметка', 'Статья', 'Первая полоса'];
-export const issueLevelLabels = ['Скучный', 'Обычный', 'Интересный', 'Сенсационный'];
+export const truthLabels = [tr('Правда'), tr('Полуправда'), tr('Ложь')];
+export const tierLabels = [tr('Скучная'), tr('Обычная'), tr('Интересная'), tr('Сенсация')];
+export const scopeLabels: Record<NewsScope | 'any', string> = { local: tr('Город'), global: tr('Мир'), any: tr('Город и мир') };
+export const placementLabels = [tr('Заметка'), tr('Статья'), tr('Первая полоса')];
+export const issueLevelLabels = [tr('Скучный'), tr('Обычный'), tr('Интересный'), tr('Сенсационный')];
 /** The game mode as the title screen names it. */
 /** Cover price levels of the paper (CONCEPT.md §3.4), from free to dear. */
-export const priceLabels = ['Бесплатно', 'Дёшево', 'Как у всех', 'Дорого'];
+export const priceLabels = [tr('Бесплатно'), tr('Дёшево'), tr('Как у всех'), tr('Дорого')];
 /** Framing of a conflict story between two groups (CONCEPT.md §5.5): calm, as is, heat, inflate. */
-export const framingLabels = ['Успокоить', 'Как есть', 'Подогреть', 'Раздуть'];
+export const framingLabels = [tr('Успокоить'), tr('Как есть'), tr('Подогреть'), tr('Раздуть')];
 /**
  * How a story is told (CONCEPT.md §3.1): «Всё хорошо!» and «Без паники» soothe a bad story (a lie and
  * a half-truth), «Как есть» is the truth, «Это неспроста» and «Всё пропало!» blow it up.
  */
-export const toneLabels = ['Как есть', 'Это неспроста', 'Всё пропало!'];
-export const soothingLabels = ['Без паники', 'Всё хорошо!'];
+export const toneLabels = [tr('Как есть'), tr('Это неспроста'), tr('Всё пропало!')];
+export const soothingLabels = [tr('Без паники'), tr('Всё хорошо!')];
 
 /** The name of the option for this story at this distortion; conflict stories keep their framing scale. */
 export function toneOf(card: CardInstance, distortion: number): string {
@@ -68,52 +62,52 @@ export function toneOf(card: CardInstance, distortion: number): string {
 }
 
 /** Relations between two groups by tension level. */
-export const tensionLabels = ['Мир', 'Трения', 'Вражда', 'Столкновения'];
+export const tensionLabels = [tr('Мир'), tr('Трения'), tr('Вражда'), tr('Столкновения')];
 
 export const topicLabels: Record<Topic, string> = {
-  factory: 'Завод',
-  food: 'Еда',
-  fun: 'Досуг',
-  health: 'Здоровье',
-  power: 'Власть',
-  crime: 'Криминал',
+  factory: tr('Завод'),
+  food: tr('Еда'),
+  fun: tr('Досуг'),
+  health: tr('Здоровье'),
+  power: tr('Власть'),
+  crime: tr('Криминал'),
 };
 
 export const effectLabels: Record<EffectType, string> = {
-  quitJob: 'уволились',
-  avoid: 'избегают',
-  leaveCity: 'уехали',
-  protest: 'протестуют',
-  moodDown: 'расстроились',
-  moodUp: 'обрадовались',
-  stigma: 'ополчились',
-  fear: 'боятся выходить',
-  debunk: 'разубедились',
+  quitJob: tr('уволились'),
+  avoid: tr('избегают'),
+  leaveCity: tr('уехали'),
+  protest: tr('протестуют'),
+  moodDown: tr('расстроились'),
+  moodUp: tr('обрадовались'),
+  stigma: tr('ополчились'),
+  fear: tr('боятся выходить'),
+  debunk: tr('разубедились'),
 };
 
 export function effectText(c: Content, e: CardEffect | null, target?: string): string {
-  if (!e) return 'Без эффекта';
+  if (!e) return tr('Без эффекта');
   const building = e.building ? buildingDefOf(c, e.building).name.toLowerCase() : '';
   switch (e.type) {
     case 'quitJob':
-      return `Поверившие увольняются: ${building}`;
+      return tr('Поверившие увольняются: {0}', building);
     case 'avoid':
-      return `Поверившие избегают: ${building}`;
+      return tr('Поверившие избегают: {0}', building);
     case 'leaveCity':
-      return 'Поверившие уезжают из города';
+      return tr('Поверившие уезжают из города');
     case 'protest':
-      return 'Поверившие выходят на протест';
+      return tr('Поверившие выходят на протест');
     case 'moodDown':
-      return 'Поверившие расстраиваются';
+      return tr('Поверившие расстраиваются');
     case 'moodUp':
-      return 'Поверившие радуются';
+      return tr('Поверившие радуются');
     case 'debunk':
-      return 'Поверившие перестанут верить той новости, а газете, которая её напечатала, — доверять';
+      return tr('Поверившие перестанут верить той новости, а газете, которая её напечатала, — доверять');
     case 'fear':
-      return 'Поверившие боятся выходить из дома: порядок падает, бары и магазины пустеют';
+      return tr('Поверившие боятся выходить из дома: порядок падает, бары и магазины пустеют');
     case 'stigma': {
-      const g = c.groups.find((x) => x.id === target)?.name.toLowerCase() ?? 'группа';
-      return `Город ополчится: злость и протесты, а ${g} почувствуют травлю и начнут уезжать`;
+      const g = c.groups.find((x) => x.id === target)?.name.toLowerCase() ?? tr('группа');
+      return tr('Город ополчится: злость и протесты, а {0} почувствуют травлю и начнут уезжать', g);
     }
   }
 }
@@ -128,28 +122,28 @@ export function impactStep(impact: number): 0 | 1 | 2 {
  * and how hard — intentions, not deeds: each of them acts on it only by chance.
  */
 export function effectShort(c: Content, e: CardEffect | null, impact = 0.8, step: 0 | 1 | 2 = impactStep(impact)): string {
-  if (!e) return 'ничего не изменит';
+  if (!e) return tr('ничего не изменит');
   const building = e.building ? buildingDefOf(c, e.building).name.toLowerCase() : '';
   const by = (light: string, normal: string, strong: string) => [light, normal, strong][step];
   switch (e.type) {
     case 'quitJob':
-      return by(`задумаются, не уволиться ли: ${building}`, `захотят уволиться: ${building}`, `будут рваться уволиться: ${building}`);
+      return by(tr('задумаются, не уволиться ли: {0}', building), tr('захотят уволиться: {0}', building), tr('будут рваться уволиться: {0}', building));
     case 'avoid':
-      return by(`подумают, стоит ли ходить: ${building}`, `захотят обходить: ${building}`, `захотят обходить за версту: ${building}`);
+      return by(tr('подумают, стоит ли ходить: {0}', building), tr('захотят обходить: {0}', building), tr('захотят обходить за версту: {0}', building));
     case 'leaveCity':
-      return by('задумаются об отъезде', 'заговорят об отъезде', 'всерьёз захотят уехать');
+      return by(tr('задумаются об отъезде'), tr('заговорят об отъезде'), tr('всерьёз захотят уехать'));
     case 'protest':
-      return by('начнут ворчать на власти', 'захотят выйти протестовать', 'будут рваться на площадь');
+      return by(tr('начнут ворчать на власти'), tr('захотят выйти протестовать'), tr('будут рваться на площадь'));
     case 'moodDown':
-      return by('немного приуныют', 'расстроятся', 'впадут в уныние');
+      return by(tr('немного приуныют'), tr('расстроятся'), tr('впадут в уныние'));
     case 'moodUp':
-      return by('чуть повеселеют — городу лучше', 'обрадуются — городу лучше', 'воспрянут духом — городу лучше');
+      return by(tr('чуть повеселеют — городу лучше'), tr('обрадуются — городу лучше'), tr('воспрянут духом — городу лучше'));
     case 'debunk':
-      return 'передумают';
+      return tr('передумают');
     case 'fear':
-      return by('станут опасаться выходить по вечерам', 'будут бояться выходить', 'в панике будут бояться выйти на улицу');
+      return by(tr('станут опасаться выходить по вечерам'), tr('будут бояться выходить'), tr('в панике будут бояться выйти на улицу'));
     case 'stigma':
-      return by('косо посмотрят на группу', 'ополчатся на группу', 'возненавидят группу');
+      return by(tr('косо посмотрят на группу'), tr('ополчатся на группу'), tr('возненавидят группу'));
   }
 }
 
@@ -192,24 +186,24 @@ export function framingScale(options: FramingOption[]): Map<number, { step: 0 | 
 
 /** The rival paper in the forms the interface needs (CONCEPT.md §8). */
 export const rivalNames: Record<RivalKind, { name: string; short: string; gen: string; ins: string }> = {
-  guardian: { name: 'Голос города', short: 'Голос', gen: 'Голоса', ins: 'Голосом' },
+  guardian: { name: tr('Голос города'), short: tr('Голос'), gen: tr('Голоса'), ins: tr('Голосом') },
 };
 
 /** Buildings a «close» goal names, in the accusative: «закрыть завод». */
 const closeNames: Partial<Record<BuildingType, string>> = {
-  factory: 'завод',
-  shop: 'все магазины',
-  entertainment: 'все бары',
-  hospital: 'больницу',
-  police: 'полицию',
-  cityHall: 'мэрию',
-  factCheckers: 'фактчекеров',
+  factory: tr('завод'),
+  shop: tr('все магазины'),
+  entertainment: tr('все бары'),
+  hospital: tr('больницу'),
+  police: tr('полицию'),
+  cityHall: tr('мэрию'),
+  factCheckers: tr('фактчекеров'),
 };
 
 /** «Закрыть 2 бара / 5 баров». */
 const closeCounted: Partial<Record<BuildingType, [string, string]>> = {
-  shop: ['магазина', 'магазинов'],
-  entertainment: ['бара', 'баров'],
+  shop: [tr('магазина'), tr('магазинов')],
+  entertainment: [tr('бара'), tr('баров')],
 };
 
 /** A town's main goal in words (CONCEPT.md §9.2), as an order: «Закрыть завод». */
@@ -217,18 +211,18 @@ export function goalTitle(c: Content, g: TownGoal): string {
   switch (g.type) {
     case 'stage': {
       const stage = c.balance.cityStates.find((s) => s.min < g.index)!.name;
-      return g.index <= 30 ? `Стереть город с лица земли — довести до «${stage}»` : `Довести город до стадии «${stage}»`;
+      return g.index <= 30 ? tr('Стереть город с лица земли — довести до «{0}»', stage) : tr('Довести город до стадии «{0}»', stage);
     }
     case 'close':
-      return g.count ? `Закрыть ${g.count} ${(closeCounted[g.building] ?? [g.building, g.building])[g.count < 5 ? 0 : 1]}` : `Закрыть ${closeNames[g.building] ?? g.building}`;
+      return g.count ? tr('Закрыть {0} {1}', g.count, (closeCounted[g.building] ?? [g.building, g.building])[g.count < 5 ? 0 : 1]) : tr('Закрыть {0}', closeNames[g.building] ?? g.building);
     case 'drive':
-      return `Выжить из города ${Math.round(g.share * 100)}% ${groupOf(c, g.group).forms.manyGen}`;
+      return tr('Выжить из города {0}% {1}', Math.round(g.share * 100), groupOf(c, g.group).forms.manyGen);
     case 'clashes':
-      return `Довести горожан до драк и держать так ${g.days} ${g.days === 1 ? 'день' : g.days < 5 ? 'дня' : 'дней'} подряд`;
+      return tr('Довести горожан до драк и держать так {0} {1} подряд', g.days, g.days === 1 ? tr('день') : g.days < 5 ? tr('дня') : tr('дней'));
     case 'rival':
-      return 'Закрыть «Голос города»';
+      return tr('Закрыть «Голос города»');
     case 'gang':
-      return 'Отдать улицы банде';
+      return tr('Отдать улицы банде');
   }
 }
 
@@ -237,34 +231,34 @@ export function goalLine(p: GoalProgress): string {
   const g = p.goal;
   switch (g.type) {
     case 'stage':
-      return `индекс города ${p.now}, нужно ниже ${p.need}`;
+      return tr('индекс города {0}, нужно ниже {1}', p.now, p.need);
     case 'close':
-      return `закрыто ${p.now} из ${p.need}${p.staff && !p.done ? ` · работают ${p.staff.workers} из ${p.staff.jobs}` : ''}`;
+      return tr('закрыто {0} из {1}{2}', p.now, p.need, p.staff && !p.done ? tr(' · работают {0} из {1}', p.staff.workers, p.staff.jobs) : '');
     case 'drive':
-      return `уехало ${p.now} из ${p.need}`;
+      return tr('уехало {0} из {1}', p.now, p.need);
     case 'clashes':
-      return `драки ${p.now} из ${p.need} дней подряд`;
+      return tr('драки {0} из {1} дней подряд', p.now, p.need);
     case 'rival':
-      return p.done ? '«Голос» закрыт' : '«Голос» ещё выходит';
+      return p.done ? tr('«Голос» закрыт') : tr('«Голос» ещё выходит');
     case 'gang':
-      return p.done ? 'банда хозяйничает' : `порядок ${p.now}%, банда придёт ниже ${p.need}%`;
+      return p.done ? tr('банда хозяйничает') : tr('порядок {0}%, банда придёт ниже {1}%', p.now, p.need);
   }
 }
 
 export function outcomeText(o: Outcome, goal = ''): string {
   switch (o.reason) {
     case 'goalDone':
-      return `Победа! ${goal ? `${goal} — сделано. ` : ''}Совет директоров «Медиа-Плюс» доволен и отдаёт вам следующий город.`;
+      return tr('Победа! {0}Совет директоров «Медиа-Плюс» доволен и отдаёт вам следующий город.', goal ? tr('{0} — сделано. ', goal) : '');
     case 'cityDestroyed':
-      return 'Победа! Город опустел, а газета на плаву: страх продаётся. Совет директоров «Медиа-Плюс» доволен и отдаёт вам следующий город.';
+      return tr('Победа! Город опустел, а газета на плаву: страх продаётся. Совет директоров «Медиа-Плюс» доволен и отдаёт вам следующий город.');
     case 'bankrupt':
-      return 'Поражение: газета разорилась. «Медиа-Плюс» сворачивает эксперимент и списывает вас вместе с убытками.';
+      return tr('Поражение: газета разорилась. «Медиа-Плюс» сворачивает эксперимент и списывает вас вместе с убытками.');
     case 'trustCollapse':
-      return 'Поражение: репутация упала до нуля — вам больше никто не верит. Холдинг отрекается от провалившегося редактора.';
+      return tr('Поражение: репутация упала до нуля — вам больше никто не верит. Холдинг отрекается от провалившегося редактора.');
     case 'turnLimit':
-      return 'Поражение: время вышло, а город выстоял. Совет директоров разочарован: теорию придётся проверять с другим редактором.';
+      return tr('Поражение: время вышло, а город выстоял. Совет директоров разочарован: теорию придётся проверять с другим редактором.');
     case 'rivalClosed':
-      return 'Победа! «Голос города» закрылся: защищать город больше некому. Совет директоров доволен и отдаёт вам следующий город.';
+      return tr('Победа! «Голос города» закрылся: защищать город больше некому. Совет директоров доволен и отдаёт вам следующий город.');
   }
 }
 
@@ -272,7 +266,7 @@ export function outcomeText(o: Outcome, goal = ''): string {
  * How likely fact-checkers catch a story (CONCEPT.md §7.3 «Риск выпуска»): the red pencil's note in
  * the margin, by risk step (`riskStep`).
  */
-export const riskNotes = ['— вряд ли проверят', '— могут проверить', '— скорее всего проверят', '— проверят почти наверняка'];
+export const riskNotes = [tr('— вряд ли проверят'), tr('— могут проверить'), tr('— скорее всего проверят'), tr('— проверят почти наверняка')];
 
 /** 0–3 by a story's exposure risk: under 10%, 25%, 45% and above. */
 export function riskStep(risk: number): number {
@@ -291,7 +285,7 @@ export function issueStampOf(untrue: number, risk: number, printed: number): Iss
   return risk < 0.3 ? 'risk' : 'danger';
 }
 export const stampLabels: Record<IssueStamp, [string, string]> = {
-  clean: ['ЧИСТО', 'всё правда'],
-  risk: ['РИСК', 'ложь могут найти'],
-  danger: ['ОПАСНО', 'могут поймать'],
+  clean: [tr('ЧИСТО'), tr('всё правда')],
+  risk: [tr('РИСК'), tr('ложь могут найти')],
+  danger: [tr('ОПАСНО'), tr('могут поймать')],
 };

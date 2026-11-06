@@ -1,4 +1,7 @@
-import tutorial from '../content/tutorial.json';
+import tutorialJson from '../content/tutorial.json';
+import { localized } from '../content';
+
+const tutorial = localized('tutorial', tutorialJson);
 import { cardTruth, lureBlock, templateOf, tipConflict, type Balance, type CardInstance, type Content, type Decision, type Difficulty, type GameLength, type GameState, type TurnReport } from '../sim';
 
 /**

@@ -8,6 +8,7 @@ import { defineConfig } from 'vite';
  * on every build, and the game loads them from there (src/assets.ts). The dev server serves them as is.
  */
 const version = `v${Date.now().toString(36)}`;
+let outDir = 'dist';
 
 export default defineConfig(({ command }) => ({
   define: { __ASSET_VERSION__: JSON.stringify(command === 'build' ? version : '') },
@@ -15,8 +16,11 @@ export default defineConfig(({ command }) => ({
     {
       name: 'versioned-assets',
       apply: 'build',
+      configResolved(config) {
+        outDir = config.build.outDir;
+      },
       closeBundle() {
-        const dist = join(process.cwd(), 'dist', 'assets');
+        const dist = join(process.cwd(), outDir, 'assets');
         const source = join(process.cwd(), 'public', 'assets');
         if (!existsSync(source)) return;
         cpSync(source, join(dist, version), { recursive: true });

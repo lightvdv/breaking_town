@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { buildingDefOf, clamp, templateOf } from './lookup';
 import { isHarmful, storyEffect } from './news';
 import { reporterOf } from './reporters';
@@ -30,7 +31,7 @@ export function offerText(state: GameState, c: Content, def: OfferDef, offer: { 
   return def.text
     .replace('{place}', offer.building !== undefined ? placeName(state, c, offer.building) : '')
     .replace('{reporter}', offer.reporterId ? reporterOf(c, offer.reporterId).name : '')
-    .replace('{amount}', `${amount} ₽`)
+    .replace('{amount}', tr('{0} ₽', amount))
     .replace('{days}', String(def.days ?? 0));
 }
 
@@ -44,11 +45,11 @@ export function advanceOffers(state: GameState, c: Content, rng: RngState): stri
   // A lured reporter we did not answer for goes over to the rival.
   if (state.offer && offerOf(c, state.offer.id).kind === 'poach') {
     const id = state.offer.reporterId!;
-    if (state.reporters.includes(id)) notes.push(`${reporterOf(c, id).name} ${reporterOf(c, id).female ? 'ушла' : 'ушёл'} к конкуренту`);
+    if (state.reporters.includes(id)) notes.push(tr('{0} {1} к конкуренту', reporterOf(c, id).name, reporterOf(c, id).female ? tr('ушла') : tr('ушёл')));
     defect(state, c, id);
   }
   state.offer = null;
-  for (const deal of state.deals.filter((x) => x.untilTurn < state.turn)) notes.push(`Сделка «${offerOf(c, deal.id).title}» закончилась`);
+  for (const deal of state.deals.filter((x) => x.untilTurn < state.turn)) notes.push(tr('Сделка «{0}» закончилась', offerOf(c, deal.id).title));
   state.deals = state.deals.filter((x) => x.untilTurn >= state.turn);
   // The rival lures our best reporter: that offer comes first.
   const lured = poachTarget(state, c, rng);

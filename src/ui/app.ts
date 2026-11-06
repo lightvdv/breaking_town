@@ -1,3 +1,5 @@
+import { LANGS, lang, quoted, tr } from '../i18n';
+import { chooseLang } from '../lang';
 import { ASSET_BASE } from '../assets';
 import { CityScene, REACTION_ICON, type HoverTarget } from '../render/scene';
 import {
@@ -189,13 +191,13 @@ interface Draft {
 
 /** «Сводка»'s tabs, in order: the windows behind the top bar's tiles and the cards. */
 const SUMMARY_TABS = [
-  { id: 'shop', name: 'Карты', icon: 'cards' },
-  { id: 'team', name: 'Редакция', icon: 'newsroom' },
-  { id: 'money', name: 'Деньги', icon: 'money' },
-  { id: 'readers', name: 'Читатели', icon: 'readers' },
-  { id: 'reputation', name: 'Репутация', icon: 'reputation' },
-  { id: 'city', name: 'Город', icon: 'city' },
-  { id: 'population', name: 'Жители', icon: 'residents' },
+  { id: 'shop', name: tr('Карты'), icon: 'cards' },
+  { id: 'team', name: tr('Редакция'), icon: 'newsroom' },
+  { id: 'money', name: tr('Деньги'), icon: 'money' },
+  { id: 'readers', name: tr('Читатели'), icon: 'readers' },
+  { id: 'reputation', name: tr('Репутация'), icon: 'reputation' },
+  { id: 'city', name: tr('Город'), icon: 'city' },
+  { id: 'population', name: tr('Жители'), icon: 'residents' },
 ] as const;
 
 type Modal =
@@ -222,7 +224,7 @@ type Modal =
   | null;
 
 /** How an upgrade series is called in the upgrades window. */
-const seriesNames: Record<string, string> = { kiosks: 'Киоски' };
+const seriesNames: Record<string, string> = { kiosks: tr('Киоски') };
 const assetBase = ASSET_BASE;
 
 function seedFromUrl(): number {
@@ -395,7 +397,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // One top row (CONCEPT.md §7.3): resources, reporter portraits, the issue level and the buttons.
   const hudRes = h('div', { class: 'resources' });
   const hudActions = h('div', { class: 'hud-buttons' });
-  const hudMenu = h('button', { class: 'icon-btn hud-menu', title: 'Меню', onclick: () => openModal('pause') }, '☰');
+  const hudMenu = h('button', { class: 'icon-btn hud-menu', title: tr('Меню'), onclick: () => openModal('pause') }, '☰');
   const reporterBar = new ReporterBar(
     c,
     () => openModal('team', 'agency'),
@@ -409,14 +411,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // «Сводка» is one window with tabs: the cards, money, readers, reputation and the city.
   const hudShop = h(
     'button',
-    { class: 'icon-btn hud-shop', title: 'Сводка: карты, деньги, читатели, репутация, город', 'aria-label': 'Сводка', onclick: () => openModal('shop') },
+    { class: 'icon-btn hud-shop', title: tr('Сводка: карты, деньги, читатели, репутация, город'), 'aria-label': tr('Сводка'), onclick: () => openModal('shop') },
     h('img', { class: 'shop-icon', src: `${assetBase}sprites/ui/folder.png`, alt: '', width: 16, height: 16 }),
     // Wide screens only: the folder says what it is.
-    h('span', { class: 'shop-label' }, 'Сводка'),
+    h('span', { class: 'shop-label' }, tr('Сводка')),
   );
   // Wide screens: the reporters are one block «Редакция», as wide as a full newsroom, so nothing
   // after it moves when someone is hired; on phones the wrapper melts away.
-  const hudTeam = h('div', { class: 'hud-team' }, h('span', { class: 'hud-team-label' }, 'Редакция'), reporterBar.el);
+  const hudTeam = h('div', { class: 'hud-team' }, h('span', { class: 'hud-team-label' }, tr('Редакция')), reporterBar.el);
   // The black cash, the cards' abilities and the moves acting today: icons in the top bar (CONCEPT.md §3.5в).
   const abilityBar = h('div', { class: 'ability-bar hud-abilities', hidden: true });
   const hudControls = h('div', { class: 'hud-controls' }, hudTeam, hudShop, abilityBar, hudMenu);
@@ -435,11 +437,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ),
       h('span', { class: 'tab-label' }, label),
     );
-  const tabCards = tab('tab-cards', 'cards', 'Карты', () => openModal('shop'));
-  const tabTeam = tab('tab-team', 'newsroom', 'Редакция', () => openModal('team'));
-  const tabSummary = tab('tab-summary', 'folder', 'Сводка', () => openModal('money'));
-  const tabCash = tab('tab-cash', '💰', 'Касса', () => openModal('cash'));
-  const tabBar = h('nav', { class: 'tab-bar', 'aria-label': 'Действия' }, tabCards, tabTeam, tabSummary, tabCash);
+  const tabCards = tab('tab-cards', 'cards', tr('Карты'), () => openModal('shop'));
+  const tabTeam = tab('tab-team', 'newsroom', tr('Редакция'), () => openModal('team'));
+  const tabSummary = tab('tab-summary', 'folder', tr('Сводка'), () => openModal('money'));
+  const tabCash = tab('tab-cash', '💰', tr('Касса'), () => openModal('cash'));
+  const tabBar = h('nav', { class: 'tab-bar', 'aria-label': tr('Действия') }, tabCards, tabTeam, tabSummary, tabCash);
   const hudGoal = h('div', { class: 'hud-goal' });
   // A narrow track keeps only the names of the city's stage and the goal (CSS `.tight`).
   new ResizeObserver(() => hudGoal.classList.toggle('tight', hudGoal.offsetWidth < 400)).observe(hudGoal);
@@ -448,27 +450,27 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const cityEvents = h('div', { class: 'city-events' });
   // The same events at the top of the open issue: over the city they would show through its shade.
   const issueEvents = h('div', { class: 'city-events issue-events' });
-  const loading = h('div', { class: 'city-loading' }, 'Строим город…');
+  const loading = h('div', { class: 'city-loading' }, tr('Строим город…'));
   const tools = h(
     'div',
     { class: 'city-tools' },
-    h('button', { class: 'icon-btn', title: 'Приблизить', onclick: () => scene?.zoomBy(1) }, '+'),
-    h('button', { class: 'icon-btn', title: 'Отдалить', onclick: () => scene?.zoomBy(-1) }, '−'),
-    h('button', { class: 'icon-btn', title: 'Весь город', onclick: () => scene?.resetView() }, '⌂'),
+    h('button', { class: 'icon-btn', title: tr('Приблизить'), onclick: () => scene?.zoomBy(1) }, '+'),
+    h('button', { class: 'icon-btn', title: tr('Отдалить'), onclick: () => scene?.zoomBy(-1) }, '−'),
+    h('button', { class: 'icon-btn', title: tr('Весь город'), onclick: () => scene?.resetView() }, '⌂'),
   );
   const issueHead = h('div', { class: 'issue-head' });
   // The issue is a newspaper mock-up: front page, the article, columns of briefs, and a tray for
   // stories left out; stories are dragged between them (CONCEPT.md §7.3).
   type ZoneKey = Placement | 'out';
   const zoneTexts: Record<string, [string, string]> = {
-    2: ['Первая полоса', 'главную новость'],
-    1: ['Статья', 'статью'],
-    0: ['Заметки', 'заметку'],
-    out: ['Не печатать', 'новость, чтобы не печатать её'],
+    2: [tr('Первая полоса'), tr('главную новость')],
+    1: [tr('Статья'), tr('статью')],
+    0: [tr('Заметки'), tr('заметку')],
+    out: [tr('Не печатать'), tr('новость, чтобы не печатать её')],
   };
   /** The empty place whose «choose a story» list is open. */
   let chooserFor: ZoneKey | null = null;
-  const targetTexts: Record<string, string> = { 2: 'На первую полосу', 1: 'Статьёй', 0: 'Заметкой', out: 'Не печатать' };
+  const targetTexts: Record<string, string> = { 2: tr('На первую полосу'), 1: tr('Статьёй'), 0: tr('Заметкой'), out: tr('Не печатать') };
   const makeZone = (key: ZoneKey) => {
     const items = h('div', { class: 'zone-items' });
     // An empty place is a button: it lists the stories that can go here.
@@ -486,7 +488,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const chooser = h('div', { class: 'zone-chooser' });
     const label = h('h4', { class: 'zone-label' }, zoneTexts[key][0]);
     // While a story is picked, every other place shows a big target; a tap on it moves the story.
-    const target = h('button', { class: 'zone-target', 'data-tut': key === 2 ? 'to-front' : undefined, onclick: () => moveSelected(key) }, h('span', {}, `Сюда: ${targetTexts[key]}`));
+    const target = h('button', { class: 'zone-target', 'data-tut': key === 2 ? 'to-front' : undefined, onclick: () => moveSelected(key) }, h('span', {}, tr('Сюда: {0}', targetTexts[key])));
     const root = h('section', { class: `zone zone-${key}`, 'data-zone': String(key) }, label, items, empty, chooser, target);
     return { root, items, empty, chooser, label, target };
   };
@@ -509,8 +511,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     'header',
     { class: 'masthead' },
     h('div', { class: 'stamp-box' }, issueStamp, streakBadge),
-    h('h2', {}, 'Городской Вестник'),
-    h('button', { class: 'paper-close', title: 'Свернуть — посмотреть на город', onclick: () => closeIssue() }, '—'),
+    h('h2', {}, tr('Городской Вестник')),
+    h('button', { class: 'paper-close', title: tr('Свернуть — посмотреть на город'), onclick: () => closeIssue() }, '—'),
     h('div', { class: 'masthead-row' }, priceSelect, todayLine, issueNo),
   );
   // The tray of stories left out is the last rubric of the page, folded into one line (CONCEPT.md §7.3).
@@ -539,9 +541,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // The folded issue: a newspaper over the city; a tap unfolds it.
   const issueFab = h(
     'button',
-    { class: 'issue-fab', title: 'Вернуться к выпуску', 'aria-label': 'Вернуться к выпуску', hidden: true, onclick: () => openIssue() },
+    { class: 'issue-fab', title: tr('Вернуться к выпуску'), 'aria-label': tr('Вернуться к выпуску'), hidden: true, onclick: () => openIssue() },
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
-    h('span', {}, 'К выпуску'),
+    h('span', {}, tr('К выпуску')),
   );
   const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, issueEvents, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, huntNotice, rivalNotice, paper));
   issue.addEventListener('click', (e) => {
@@ -575,7 +577,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   });
   // Start-of-turn notice about exposed stories; hovering it shows the cards (CONCEPT.md §7.3).
   // The day's summary after the scenes; it waits for «Следующий день» (CONCEPT.md §7.3).
-  const daySummary = h('section', { class: 'day-summary', hidden: true, role: 'dialog', 'aria-label': 'Итоги дня' });
+  const daySummary = h('section', { class: 'day-summary', hidden: true, role: 'dialog', 'aria-label': tr('Итоги дня') });
   // City cutscene before the issue: letterbox bars and a caption of the bright moment (CONCEPT.md §7.3).
   const cutsceneCaption = h('div', { class: 'cutscene-caption' });
   const cutscene = h(
@@ -584,7 +586,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     h('div', { class: 'letterbox top' }),
     h('div', { class: 'letterbox bottom' }),
     cutsceneCaption,
-    h('button', { class: 'cutscene-skip', onclick: () => scene?.skipCutscene() }, 'Пропустить ▸'),
+    h('button', { class: 'cutscene-skip', onclick: () => scene?.skipCutscene() }, tr('Пропустить ▸')),
   );
   const tooltip = h('div', { class: 'tooltip', hidden: true });
   const modalLayer = h('div', { class: 'modal-layer' });
@@ -610,7 +612,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       if (titleOpen) s.startTour();
     })
     .catch((e) => {
-      loading.textContent = `Не удалось загрузить графику: ${e instanceof Error ? e.message : e}`;
+      loading.textContent = tr('Не удалось загрузить графику: {0}', e instanceof Error ? e.message : e);
     });
 
   // ---------- Start-of-turn search ----------
@@ -718,20 +720,20 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const label = (i: number) => priceLabels[i] ?? priceLabels[priceLabels.length - 1];
     // Who buys at this price, in words: no numbers in the paper (CONCEPT.md §3.4).
     const who = (i: number) => {
-      const classes: Record<WealthClass, string> = { working: 'работающие', pensioner: 'пенсионеры', jobless: 'безработные' };
+      const classes: Record<WealthClass, string> = { working: tr('работающие'), pensioner: tr('пенсионеры'), jobless: tr('безработные') };
       const buyers = (Object.keys(classes) as WealthClass[]).filter((k) => (b.priceBuy[k][i] ?? 0) > 0);
       const text =
         buyers.length === 3
-          ? 'Берут все, даже безработные.'
-          : `Берут ${buyers.map((k) => classes[k] + ((b.priceBuy[k][i] ?? 0) < 0.6 ? ' (неохотно)' : '')).join(' и ')}.`;
-      const extra = b.prices[i] === 0 ? ' Доход только с рекламы.' : i === b.prices.length - 1 ? ' Больше денег с каждого.' : '';
+          ? tr('Берут все, даже безработные.')
+          : tr('Берут {0}.', buyers.map((k) => classes[k] + ((b.priceBuy[k][i] ?? 0) < 0.6 ? tr(' (неохотно)') : '')).join(tr(' и ')));
+      const extra = b.prices[i] === 0 ? tr(' Доход только с рекламы.') : i === b.prices.length - 1 ? tr(' Больше денег с каждого.') : '';
       return text + extra;
     };
     const chip = h(
       'button',
       {
         class: `price-chip${priceMenuOpen ? ' on' : ''}`,
-        title: `Цена выпуска: ${label(state.price).toLowerCase()}. ${who(state.price)}`,
+        title: tr('Цена выпуска: {0}. {1}', label(state.price).toLowerCase(), who(state.price)),
         'aria-haspopup': 'menu',
         'aria-expanded': String(priceMenuOpen),
         disabled: busy || !!state.outcome,
@@ -768,7 +770,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           ),
         )
       : null;
-    priceSelect.replaceChildren(h('span', { class: 'price-label' }, 'Цена газеты:'), chip, ...(menu ? [menu] : []));
+    priceSelect.replaceChildren(h('span', { class: 'price-label' }, tr('Цена газеты:')), chip, ...(menu ? [menu] : []));
   }
 
   /** One sensation per issue (CONCEPT.md §4.2а): a story brought back or moved up is toned down if needed. */
@@ -1007,12 +1009,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
   };
 
   const highlightLabels: Record<Highlight['kind'], string> = {
-    fight: 'Драка',
-    clash: 'Столкновения',
-    protest: 'Протест',
-    exodus: 'Отъезд',
-    closed: 'Закрытие',
-    reconcile: 'Примирение',
+    fight: tr('Драка'),
+    clash: tr('Столкновения'),
+    protest: tr('Протест'),
+    exodus: tr('Отъезд'),
+    closed: tr('Закрытие'),
+    reconcile: tr('Примирение'),
   };
 
   /** A story's illustration; a conflict story about any pair shows exactly its two groups. */
@@ -1029,10 +1031,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const readers = r.readers.after - r.readers.before;
     const chips = [
       summaryChip(`${assetBase}sprites/ui/readers.png`, `${signedNum(readers)} ${plural(Math.abs(readers), 'читатель', 'читателя', 'читателей')}`, readers > 0 ? 'up' : readers < 0 ? 'down' : ''),
-      summaryChip(`${assetBase}sprites/ui/money.png`, `${signedNum(r.moneyDelta)} ₽`, r.moneyDelta > 0 ? 'up' : r.moneyDelta < 0 ? 'down' : ''),
+      summaryChip(`${assetBase}sprites/ui/money.png`, tr('{0} ₽', signedNum(r.moneyDelta)), r.moneyDelta > 0 ? 'up' : r.moneyDelta < 0 ? 'down' : ''),
     ];
     const trust = Math.round(r.trustAfter - r.trustBefore);
-    if (trust !== 0) chips.push(summaryChip(`${assetBase}sprites/ui/reputation.png`, `${signedNum(trust)}% репутации`, trust > 0 ? 'up' : 'down'));
+    if (trust !== 0) chips.push(summaryChip(`${assetBase}sprites/ui/reputation.png`, tr('{0}% репутации', signedNum(trust)), trust > 0 ? 'up' : 'down'));
     return h('span', { class: 'morning-chips' }, ...chips);
   }
 
@@ -1072,19 +1074,19 @@ export function mountApp(root: HTMLElement, base: Content): void {
         { class: 'summary-story-head' },
         h('span', { class: 'summary-place' }, placementLabels[p.placement]),
         h('span', { class: `summary-truth t${p.truth}` }, truthLabels[p.truth]),
-        p.exposed ? h('span', { class: 'summary-exposed' }, 'Разоблачена') : null,
+        p.exposed ? h('span', { class: 'summary-exposed' }, tr('Разоблачена')) : null,
       ),
       h(main ? 'b' : 'span', { class: 'summary-story-title' }, p.title),
       h(
         'span',
         { class: 'story-facts' },
         // Believers and doubters count those who heard it from friends too, so the sum shows both.
-        h('span', { class: 'story-read' }, `прочитали ${p.reached}`, p.wordOfMouth ? ` · ещё ${p.wordOfMouth} узнали от знакомых` : ''),
+        h('span', { class: 'story-read' }, tr('прочитали {0}', p.reached), p.wordOfMouth ? tr(' · ещё {0} узнали от знакомых', p.wordOfMouth) : ''),
         // The reaction follows the story: fear for a harmful one, joy for a good one, a plain fact is just noted.
         p.believed
           ? summaryChip(
               `${assetBase}sprites/fx/${REACTION_ICON[mood]}.png`,
-              mood === 'calm' ? `${p.believed} ${morningLabels.calm}` : `${p.believed} поверили и ${feeling}`,
+              mood === 'calm' ? `${p.believed} ${morningLabels.calm}` : tr('{0} поверили и {1}', p.believed, feeling),
               `react-${mood}${reactionGoal(mood)}`,
             )
           : null,
@@ -1102,8 +1104,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const main = mainStory(r);
     cutsceneCaption.className = 'cutscene-caption kind-morning';
     cutsceneCaption.replaceChildren(
-      h('span', { class: 'cutscene-kicker' }, `Утро · выпуск № ${r.turn} · ${issueLevelLabels[r.issue.level].toLowerCase()}`),
-      h('b', {}, main ? main.title : 'Газета не вышла'),
+      h('span', { class: 'cutscene-kicker' }, tr('Утро · выпуск № {0} · {1}', r.turn, issueLevelLabels[r.issue.level].toLowerCase())),
+      h('b', {}, main ? main.title : tr('Газета не вышла')),
     );
     cutsceneCaption.hidden = false;
     cutscene.hidden = false;
@@ -1121,10 +1123,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const t = state.twist;
     if (!r.twist || !t) return [];
     const def = twistOf(c, t.id);
-    if (r.twist.started) return [`Начинается: ${def.title.toLowerCase()}`];
-    if (t.result === 'peacemaker' || t.result === 'hardliner') return [`Выборы: новый мэр — ${mayorName()}`];
-    if (def.kind === 'governor') return ['Губернатор уехал'];
-    return [t.result === 'passed' ? `${def.title} пройдена` : `${def.title} провалена: бюджет урезан`];
+    if (r.twist.started) return [tr('Начинается: {0}', def.title.toLowerCase())];
+    if (t.result === 'peacemaker' || t.result === 'hardliner') return [tr('Выборы: новый мэр — {0}', mayorName())];
+    if (def.kind === 'governor') return [tr('Губернатор уехал')];
+    return [t.result === 'passed' ? tr('{0} пройдена', def.title) : tr('{0} провалена: бюджет урезан', def.title)];
   }
 
   /**
@@ -1139,17 +1141,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const group = (title: string, ...body: (HTMLElement | null)[]) => h('section', { class: 'summary-group' }, h('h4', {}, title), ...body);
     const events: HTMLElement[] = [
       ...r.highlights.map((x) => h('li', {}, x.title)),
-      ...r.exposures.map((x) => h('li', { class: 'bad' }, `Разоблачили: «${x.title}»`)),
-      ...r.deals.broken.map((x) => h('li', { class: 'bad' }, `Сделка «${x}» сорвана`)),
-      ...r.staff.quit.map((id) => h('li', { class: 'bad' }, `${reporterOf(c, id).name} ${reporterOf(c, id).female ? 'уволилась' : 'уволился'}`)),
-      ...(r.rival?.cured ? [h('li', {}, `Опровержения разубедили ${r.rival.cured} ${peopleWord(r.rival.cured)}`)] : []),
-      ...(r.cleanStreak.bonus ? [h('li', { class: 'good' }, `✓ ${c.balance.cleanStreakDays} выпусков подряд без лжи: +${Math.round(r.cleanStreak.bonus)}% репутации`)] : []),
-      ...(r.cleanStreak.broken ? [h('li', { class: 'bad' }, 'Серия выпусков без лжи прервалась')] : []),
-      ...(r.moleCaught ? [h('li', { class: 'bad' }, `Крота раскрыли: −${c.balance.molePenalty}% репутации`)] : []),
-      ...r.tasks.done.map((id) => h('li', { class: 'good' }, `✓ Задание выполнено: ${taskOf(c, id).title} (${prizeText(taskOf(c, id))})`)),
-      ...r.tasks.failed.map((id) => h('li', { class: 'bad' }, `✗ Задание провалено: ${taskOf(c, id).title}`)),
+      ...r.exposures.map((x) => h('li', { class: 'bad' }, tr('Разоблачили: «{0}»', x.title))),
+      ...r.deals.broken.map((x) => h('li', { class: 'bad' }, tr('Сделка «{0}» сорвана', x))),
+      ...r.staff.quit.map((id) => h('li', { class: 'bad' }, `${reporterOf(c, id).name} ${reporterOf(c, id).female ? tr('уволилась') : tr('уволился')}`)),
+      ...(r.rival?.cured ? [h('li', {}, tr('Опровержения разубедили {0} {1}', r.rival.cured, peopleWord(r.rival.cured)))] : []),
+      ...(r.cleanStreak.bonus ? [h('li', { class: 'good' }, tr('✓ {0} выпусков подряд без лжи: +{1}% репутации', c.balance.cleanStreakDays, Math.round(r.cleanStreak.bonus)))] : []),
+      ...(r.cleanStreak.broken ? [h('li', { class: 'bad' }, tr('Серия выпусков без лжи прервалась'))] : []),
+      ...(r.moleCaught ? [h('li', { class: 'bad' }, tr('Крота раскрыли: −{0}% репутации', c.balance.molePenalty))] : []),
+      ...r.tasks.done.map((id) => h('li', { class: 'good' }, tr('✓ Задание выполнено: {0} ({1})', taskOf(c, id).title, prizeText(taskOf(c, id))))),
+      ...r.tasks.failed.map((id) => h('li', { class: 'bad' }, tr('✗ Задание провалено: {0}', taskOf(c, id).title))),
       ...twistLines(r).map((x) => h('li', {}, x)),
-      ...(r.hunt?.won ? [h('li', { class: 'good' }, `🎯 Травля удалась: ${lowerFirst(r.hunt.won)}. Город потрясён`)] : []),
+      ...(r.hunt?.won ? [h('li', { class: 'good' }, tr('🎯 Травля удалась: {0}. Город потрясён', lowerFirst(r.hunt.won)))] : []),
     ];
     return new Promise((done) => {
       const finish = () => {
@@ -1162,32 +1164,32 @@ export function mountApp(root: HTMLElement, base: Content): void {
         e.preventDefault();
         finish();
       };
-      const next = h('button', { class: 'primary big summary-next', onclick: finish }, state.outcome ? 'Чем всё кончилось ▸' : 'Следующий день ▸');
+      const next = h('button', { class: 'primary big summary-next', onclick: finish }, state.outcome ? tr('Чем всё кончилось ▸') : tr('Следующий день ▸'));
       daySummary.replaceChildren(
-        h('span', { class: 'summary-kicker' }, `Итоги дня ${r.turn}`),
+        h('span', { class: 'summary-kicker' }, tr('Итоги дня {0}', r.turn)),
         h(
           'section',
           { class: 'summary-issue' },
           h(
             'div',
             { class: 'summary-issue-head' },
-            h('b', {}, `Выпуск № ${r.turn}`),
+            h('b', {}, tr('Выпуск № {0}', r.turn)),
             h('span', { class: `summary-level level-${r.issue.level}` }, issueLevelLabels[r.issue.level]),
             h('span', { class: 'summary-count' }, main ? `${stories.length} ${plural(stories.length, 'новость', 'новости', 'новостей')}` : ''),
           ),
-          main ? summaryStory(main, true) : h('b', { class: 'summary-title' }, 'Газета не вышла'),
+          main ? summaryStory(main, true) : h('b', { class: 'summary-title' }, tr('Газета не вышла')),
           rest.length
             ? h(
                 'details',
                 { class: 'summary-more' },
-                h('summary', {}, `Весь выпуск: ещё ${rest.length} ${plural(rest.length, 'новость', 'новости', 'новостей')}`),
+                h('summary', {}, tr('Весь выпуск: ещё {0} {1}', rest.length, plural(rest.length, 'новость', 'новости', 'новостей'))),
                 ...rest.map((p) => summaryStory(p)),
               )
             : null,
         ),
-        group('Газета', paperChips(r)),
-        group('Город', cityChips(r)),
-        ...(events.length ? [group('События дня', h('ul', { class: 'summary-events' }, ...events))] : []),
+        group(tr('Газета'), paperChips(r)),
+        group(tr('Город'), cityChips(r)),
+        ...(events.length ? [group(tr('События дня'), h('ul', { class: 'summary-events' }, ...events))] : []),
         next,
       );
       tooltip.hidden = true;
@@ -1206,7 +1208,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       cutsceneCaption.hidden = !hl;
       if (!hl) return;
       cutsceneCaption.className = `cutscene-caption kind-${hl.kind}`;
-      cutsceneCaption.replaceChildren(h('span', { class: 'cutscene-kicker' }, `Срочно · ${highlightLabels[hl.kind]}`), h('b', {}, hl.title));
+      cutsceneCaption.replaceChildren(h('span', { class: 'cutscene-kicker' }, tr('Срочно · {0}', highlightLabels[hl.kind])), h('b', {}, hl.title));
     });
     cutscene.hidden = true;
     cutscene.parentElement!.classList.remove('in-cutscene');
@@ -1228,24 +1230,24 @@ export function mountApp(root: HTMLElement, base: Content): void {
       if (!r) return;
       lines.push(
         h('strong', {}, groupOf(c, r.group).name),
-        h('span', {}, `Настроение: ${pct(r.mood)} · настрой: ${pct(r.outlook)}`),
-        h('span', {}, `Работа: ${r.job === null ? 'нет' : buildingDefOf(c, state.buildings[r.job].type).name}`),
-        h('span', {}, `Ваша репутация: ${Math.round(r.trust)}`),
+        h('span', {}, tr('Настроение: {0} · настрой: {1}', pct(r.mood), pct(r.outlook))),
+        h('span', {}, tr('Работа: {0}', r.job === null ? tr('нет') : buildingDefOf(c, state.buildings[r.job].type).name)),
+        h('span', {}, tr('Ваша репутация: {0}', Math.round(r.trust))),
       );
-      if (r.status === 'left') lines.push(h('span', { class: 'bad' }, 'Уезжает из города'));
-      if (r.protestTurns > 0) lines.push(h('span', { class: 'bad' }, 'Протестует'));
+      if (r.status === 'left') lines.push(h('span', { class: 'bad' }, tr('Уезжает из города')));
+      if (r.protestTurns > 0) lines.push(h('span', { class: 'bad' }, tr('Протестует')));
       if (r.beliefs.length) {
-        lines.push(h('span', { class: 'muted' }, 'Верит:'), ...r.beliefs.slice(-3).map((b) => h('span', {}, `• ${b.title}`)));
+        lines.push(h('span', { class: 'muted' }, tr('Верит:')), ...r.beliefs.slice(-3).map((b) => h('span', {}, `• ${b.title}`)));
       }
     } else {
       const b = state.buildings[t.id];
       const workers = state.residents.filter((r) => r.status === 'active' && r.job === b.id).length;
       const residents = state.residents.filter((r) => r.status === 'active' && r.home === b.id).length;
       lines.push(h('strong', {}, buildingDefOf(c, b.type).name));
-      if (b.type === 'home') lines.push(h('span', {}, residents ? `Жильцов: ${residents}` : 'Дом опустел'));
+      if (b.type === 'home') lines.push(h('span', {}, residents ? tr('Жильцов: {0}', residents) : tr('Дом опустел')));
       else {
-        lines.push(h('span', {}, `Работников: ${workers} из ${b.jobs}`));
-        lines.push(h('span', { class: b.open ? '' : 'bad' }, b.open ? 'Работает' : 'Закрыто'));
+        lines.push(h('span', {}, tr('Работников: {0} из {1}', workers, b.jobs)));
+        lines.push(h('span', { class: b.open ? '' : 'bad' }, b.open ? tr('Работает') : tr('Закрыто')));
       }
     }
     tooltip.replaceChildren(...lines);
@@ -1272,7 +1274,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (delta === null || delta === 0) return null;
     const up = delta > 0;
     const good = town ? !up : up;
-    const title = unit === null ? (up ? 'Городу стало лучше за день' : 'Городу стало хуже за день') : `${up ? '+' : ''}${delta}${unit} за день`;
+    const title = unit === null ? (up ? tr('Городу стало лучше за день') : tr('Городу стало хуже за день')) : tr('{0}{1}{2} за день', up ? '+' : '', delta, unit);
     return h('span', { class: `trend ${good ? 'up' : 'down'}`, title }, up ? '▲' : '▼');
   }
 
@@ -1285,15 +1287,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (next === here && diff === 0) return null;
     // Stage numbers grow towards ruin: a bigger one is worse for the city.
     const worse = next !== here ? next > here : diff < 0;
-    const text = next !== here ? `≈→ ${c.balance.cityStates[next].name.toLowerCase()}` : `город ≈${worse ? '▼' : '▲'}`;
+    const text = next !== here ? `≈→ ${c.balance.cityStates[next].name.toLowerCase()}` : tr('город ≈{0}', worse ? '▼' : '▲');
     // What is worse for the town is good for us: green.
-    return h('small', { class: `res-forecast ${worse ? 'up' : 'down'}`, title: 'Ожидается, если выпустить газету так и никакую ложь не поймают' }, text);
+    return h('small', { class: `res-forecast ${worse ? 'up' : 'down'}`, title: tr('Ожидается, если выпустить газету так и никакую ложь не поймают') }, text);
   }
 
   /** The list of stories that can fill an empty place: every other story of today, best first. */
   function storyChooser(key: Placement, ordered: CardInstance[], whereOf: (card: CardInstance) => Placement | 'out'): HTMLElement {
     const others = ordered.filter((x) => whereOf(x) !== key);
-    const placeName = (w: Placement | 'out') => (w === 'out' ? 'не в печати' : `сейчас: ${placementLabels[w].toLowerCase()}`);
+    const placeName = (w: Placement | 'out') => (w === 'out' ? tr('не в печати') : tr('сейчас: {0}', placementLabels[w].toLowerCase()));
     return h(
       'div',
       { class: 'place-menu chooser-menu', role: 'menu' },
@@ -1317,7 +1319,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
               ),
             ),
           )
-        : [h('p', { class: 'hint' }, 'Других новостей сегодня нет.')]),
+        : [h('p', { class: 'hint' }, tr('Других новостей сегодня нет.'))]),
     );
   }
 
@@ -1325,7 +1327,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function forecastTag(expected: number): HTMLElement | null {
     const n = Math.round(expected);
     if (n === 0) return null;
-    return h('small', { class: `res-forecast ${n > 0 ? 'up' : 'down'}`, title: 'Ожидается, если выпустить газету так и никакую ложь не поймают' }, `≈${n > 0 ? '+' : '−'}${Math.abs(n)}`);
+    return h('small', { class: `res-forecast ${n > 0 ? 'up' : 'down'}`, title: tr('Ожидается, если выпустить газету так и никакую ложь не поймают') }, `≈${n > 0 ? '+' : '−'}${Math.abs(n)}`);
   }
 
   /**
@@ -1340,7 +1342,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const p = goalProgress(state, c);
       const share = p.done ? 1 : own.type === 'close' && p.staff ? Math.max(p.now / Math.max(1, p.need), 1 - p.staff.workers / Math.max(1, p.staff.jobs)) : own.type === 'gang' ? Math.max(0, Math.min(1, (100 - p.now) / Math.max(1, 100 - p.need))) : Math.min(1, p.now / Math.max(1, p.need));
       hudGoal.replaceChildren(
-        h('b', { class: 'goal-title' }, 'Цель'),
+        h('b', { class: 'goal-title' }, tr('Цель')),
         h(
           'div',
           { class: 'goal-own' },
@@ -1369,7 +1371,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const share = passed(state.metrics.cityIndex);
     const ghost = fc ? at(next, passed(fc.cityIndex)) : null;
     hudGoal.replaceChildren(
-      h('b', { class: 'goal-title' }, 'Цель'),
+      h('b', { class: 'goal-title' }, tr('Цель')),
       h(
         'div',
         { class: 'goal-track' },
@@ -1381,7 +1383,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             style: i === here ? `--passed: ${Math.round(share * 100)}%` : undefined,
           }),
         ),
-        h('i', { class: 'goal-flag', style: `left: ${pos(goal)}`, title: 'Цель' }, '🏁'),
+        h('i', { class: 'goal-flag', style: `left: ${pos(goal)}`, title: tr('Цель') }, '🏁'),
         ghost && fc && Math.round(fc.cityIndex) !== Math.round(state.metrics.cityIndex) ? h('i', { class: 'goal-marker ghost', style: `left: ${ghost}` }) : null,
         h('i', { class: 'goal-marker', style: `left: ${at(here, share)}` }),
       ),
@@ -1408,7 +1410,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const text = unit === null ? (up ? '▲' : '▼') : `${up ? '+' : '−'}${Math.abs(delta)}`;
     // The city (unit null) is coloured by the player's goal: a fall is green.
     const good = unit === null ? !up : up;
-    return h('small', { class: `res-delta ${good ? 'up' : 'down'}`, title: unit === null ? (up ? 'Городу стало лучше за день' : 'Городу стало хуже за день') : `${up ? '+' : '−'}${Math.abs(delta)}${unit} за день` }, text);
+    return h('small', { class: `res-delta ${good ? 'up' : 'down'}`, title: unit === null ? (up ? tr('Городу стало лучше за день') : tr('Городу стало хуже за день')) : tr('{0}{1}{2} за день', up ? '+' : '−', Math.abs(delta), unit) }, text);
   }
 
   /** The city's stage: what the player sees instead of the city index (CONCEPT.md §2.3). */
@@ -1421,8 +1423,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   };
   const cityGoal = () =>
     goalOf(c).type !== 'stage'
-      ? `Цель — ${goalTitle(c, goalOf(c)).replace(/^./, (x) => x.toLowerCase())}`
-      : `Цель — довести город до стадии «${stageBelow(c.balance.winCityIndex)}»`;
+      ? tr('Цель — {0}', goalTitle(c, goalOf(c)).replace(/^./, (x) => x.toLowerCase()))
+      : tr('Цель — довести город до стадии «{0}»', stageBelow(c.balance.winCityIndex));
 
   function resource(
     icon: string,
@@ -1457,10 +1459,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const items: (HTMLElement | null)[] = [
       resource(
         'money',
-        'Деньги',
+        tr('Деньги'),
         `${state.money}`,
         r ? r.moneyDelta : null,
-        `Расходы: ${totalUpkeep(state, c)} в день. Нажмите — доходы и расходы.`,
+        tr('Расходы: {0} в день. Нажмите — доходы и расходы.', totalUpkeep(state, c)),
         state.money < 0 ? 'bad' : '',
         '',
         () => openModal('money'),
@@ -1468,10 +1470,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ),
       resource(
         'readers',
-        'Читатели',
+        tr('Читатели'),
         `${readerCount(state)}`,
         r ? r.readers.after - r.readers.before : null,
-        'Постоянные читатели покупают каждый выпуск и приносят доход. Нажмите — кто пришёл и ушёл.',
+        tr('Постоянные читатели покупают каждый выпуск и приносят доход. Нажмите — кто пришёл и ушёл.'),
         '',
         '',
         () => openModal('readers'),
@@ -1479,10 +1481,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ),
       resource(
         'reputation',
-        'Репутация',
+        tr('Репутация'),
         `${Math.round(trust)}%`,
         r ? Math.round(r.trustAfter - r.trustBefore) : null,
-        'Чем выше, тем больше верят и реже проверяют. Упадёт до нуля — игра проиграна. Нажмите — подробности.',
+        tr('Чем выше, тем больше верят и реже проверяют. Упадёт до нуля — игра проиграна. Нажмите — подробности.'),
         trust < 20 ? 'bad' : '',
         '%',
         () => openModal('reputation'),
@@ -1490,10 +1492,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ),
       resource(
         `city_state_${cityStateOf(c, state.metrics.cityIndex)}`,
-        'Город',
+        tr('Город'),
         cityStage().name,
         r ? Math.round(r.metricsAfter.cityIndex - r.metricsBefore.cityIndex) : null,
-        `${cityGoal()}. Нажмите — подробности.`,
+        tr('{0}. Нажмите — подробности.', cityGoal()),
         'city-state',
         null,
         () => openModal('city'),
@@ -1542,27 +1544,27 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const { printed, untrue, risk } = issueRisk();
     const stamp = issueStampOf(untrue, risk, printed);
     if (stamp !== 'risk' && stamp !== 'danger') return null;
-    return h('span', { class: `risk-dot ${stamp}`, title: stamp === 'danger' ? 'Опасный выпуск: ложь могут поймать' : 'В выпуске есть ложь' });
+    return h('span', { class: `risk-dot ${stamp}`, title: stamp === 'danger' ? tr('Опасный выпуск: ложь могут поймать') : tr('В выпуске есть ложь') });
   }
 
   function publishButton(): HTMLElement {
     const disabled = busy || !!state.outcome;
-    if (searching) return h('button', { class: 'primary publish', disabled: true }, 'Репортёры ищут…');
+    if (searching) return h('button', { class: 'primary publish', disabled: true }, tr('Репортёры ищут…'));
     const b = c.balance;
     const level = currentIssueLevel();
     const hint =
-      `${issueLevelLabels[level]} выпуск. ` +
-      (b.issueAcquisition[level] > 0 ? `Новых читателей ×${b.issueAcquisition[level]}` : 'Новых читателей не будет') +
-      `, равнодушные уходят с шансом ${pct(b.issueChurn[level])}` +
-      (b.issueChurnBelievers[level] > 0 ? `, даже поверившие — ${pct(b.issueChurnBelievers[level])}.` : '.') +
-      ' Нажмите — опубликовать и завершить ход.';
+      tr('{0} выпуск. ', issueLevelLabels[level]) +
+      (b.issueAcquisition[level] > 0 ? tr('Новых читателей ×{0}', b.issueAcquisition[level]) : tr('Новых читателей не будет')) +
+      tr(', равнодушные уходят с шансом {0}', pct(b.issueChurn[level])) +
+      (b.issueChurnBelievers[level] > 0 ? tr(', даже поверившие — {0}.', pct(b.issueChurnBelievers[level])) : '.') +
+      tr(' Нажмите — опубликовать и завершить ход.');
     return h(
       'button',
       // A novice's first day: the button glows, it is the one thing to press (CONCEPT.md §7.3).
       { class: `publish level-${level}${levelBump ? ` ${levelBump}` : ''}`, title: hint, onclick: endTurn, disabled },
       h('img', { src: `${assetBase}sprites/ui/issue_${level}.png`, alt: '', width: 24, height: 24 }),
       // On a small laptop the level's word goes (its colour stays) so the top row keeps every button.
-      h('span', {}, 'В печать', h('span', { class: 'publish-level' }, h('span', { class: 'publish-dot' }, ' · '), h('b', {}, level === 3 ? 'СЕНСАЦИЯ!' : issueLevelLabels[level]))),
+      h('span', {}, tr('В печать'), h('span', { class: 'publish-level' }, h('span', { class: 'publish-dot' }, ' · '), h('b', {}, level === 3 ? tr('СЕНСАЦИЯ!') : issueLevelLabels[level]))),
       riskDot(),
       h('span', { 'aria-hidden': 'true' }, '▸'),
     );
@@ -1571,21 +1573,21 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function renderCityEvents(): void {
     const rec = state.reconciliation;
     const lines = [
-      h('div', { class: 'day' }, `${state.town ? `${base.towns.find((t) => t.id === state.town)?.name ?? ''} · ` : ''}День ${state.turn}`),
+      h('div', { class: 'day' }, tr('{0}День {1}', state.town ? `${base.towns.find((t) => t.id === state.town)?.name ?? ''} · ` : '', state.turn)),
       // Events no free reporter could write up are greyed (CONCEPT.md §3.3: one story a reporter a day).
       ...state.todayEvents.map((e) =>
-        state.missedEvents.includes(e) ? h('div', { class: 'event missed', title: 'Свободного репортёра не нашлось' }, `• ${e} — никто не написал`) : h('div', { class: 'event' }, `• ${e}`),
+        state.missedEvents.includes(e) ? h('div', { class: 'event missed', title: tr('Свободного репортёра не нашлось') }, tr('• {0} — никто не написал', e)) : h('div', { class: 'event' }, `• ${e}`),
       ),
-      ...state.missedEvents.filter((e) => !state.todayEvents.includes(e)).map((e) => h('div', { class: 'event missed', title: 'Свободного репортёра не нашлось' }, `• ${e} — никто не написал`)),
-      ...(rec ? [h('div', { class: 'event peace' }, `☮ Примирение: ${pairNames(rec.pair, ' и ')} · ещё ${rec.turnsLeft} ${turnsWord(rec.turnsLeft)}`)] : []),
-      ...(mayorName() ? [h('div', { class: 'event' }, `Мэр: ${mayorName()}`)] : []),
+      ...state.missedEvents.filter((e) => !state.todayEvents.includes(e)).map((e) => h('div', { class: 'event missed', title: tr('Свободного репортёра не нашлось') }, tr('• {0} — никто не написал', e))),
+      ...(rec ? [h('div', { class: 'event peace' }, tr('☮ Примирение: {0} · ещё {1} {2}', pairNames(rec.pair, tr(' и ')), rec.turnsLeft, turnsWord(rec.turnsLeft)))] : []),
+      ...(mayorName() ? [h('div', { class: 'event' }, tr('Мэр: {0}', mayorName()))] : []),
       // Crime (CONCEPT.md §5.6): how ripe the town is, the gang that stayed, a town without police.
       ...crimeLines().map((t) => h('div', { class: 'event crime' }, t)),
       // Investigations under way (CONCEPT.md §3.3а): who digs under whom, and the day before it is ready.
       ...state.investigations.map((x) => {
         const who = reporterOf(c, x.reporterId).name;
         const whom = digWhom(x.target);
-        return h('div', { class: 'event digging' }, x.turnsLeft <= 1 ? `⛏ Завтра: эксклюзив про ${whom} (${who})` : `⛏ ${who} копает под ${whom} — ещё ${x.turnsLeft} ${turnsWord(x.turnsLeft)}`);
+        return h('div', { class: 'event digging' }, x.turnsLeft <= 1 ? tr('⛏ Завтра: эксклюзив про {0} ({1})', whom, who) : tr('⛏ {0} копает под {1} — ещё {2} {3}', who, whom, x.turnsLeft, turnsWord(x.turnsLeft)));
       }),
     ];
     cityEvents.replaceChildren(...lines);
@@ -1596,9 +1598,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function crimeLines(): string[] {
     const p = crimePressure(state, c);
     const out: string[] = [];
-    if (p >= 0.1) out.push(`🚨 Преступность: ${p >= 0.4 ? 'разгул' : p >= 0.2 ? 'растёт' : 'неспокойно'}`);
-    if (state.crimeBoost > 0) out.push('🚨 Банда держит улицы');
-    if (policeLost(state)) out.push('🚨 В городе нет полиции');
+    if (p >= 0.1) out.push(tr('🚨 Преступность: {0}', p >= 0.4 ? tr('разгул') : p >= 0.2 ? tr('растёт') : tr('неспокойно')));
+    if (state.crimeBoost > 0) out.push(tr('🚨 Банда держит улицы'));
+    if (policeLost(state)) out.push(tr('🚨 В городе нет полиции'));
     return out;
   }
 
@@ -1606,8 +1608,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     pairOf(key)
       .map((g) => groupOf(c, g).name.toLowerCase())
       .join(sep);
-  const turnsWord = (n: number) => (n === 1 ? 'ход' : n < 5 ? 'хода' : 'ходов');
-  const peopleWord = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? 'человека' : 'человек');
+  const turnsWord = (n: number) => (n === 1 ? tr('ход') : n < 5 ? tr('хода') : tr('ходов'));
+  const peopleWord = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? tr('человека') : tr('человек'));
 
   /** The mayor elected mid-game, if any. */
   const mayorName = () => {
@@ -1620,32 +1622,32 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** What a done task gives: money and its prize (CONCEPT.md §4.8). */
   function prizeText(def: TaskDef): string {
     const p = def.prize;
-    const parts = def.reward ? [`+${taskReward(c, def)} ₽`] : [];
-    if (p?.type === 'voucher') parts.push('бесплатное улучшение');
-    if (p?.type === 'trust') parts.push(`+${p.amount}% репутации`);
-    if (p?.type === 'xp') parts.push(`+${p.amount} опыта репортёрам`);
-    return parts.join(' и ');
+    const parts = def.reward ? [tr('+{0} ₽', taskReward(c, def))] : [];
+    if (p?.type === 'voucher') parts.push(tr('бесплатное улучшение'));
+    if (p?.type === 'trust') parts.push(tr('+{0}% репутации', p.amount));
+    if (p?.type === 'xp') parts.push(tr('+{0} опыта репортёрам', p.amount));
+    return parts.join(tr(' и '));
   }
 
   /** Where a task stands, in a few words: «3 из 8», «сейчас 52%», «ещё 4 дня». */
   function taskLine(t: TaskState): string {
     const def = taskOf(c, t.id);
-    if (t.status === 'done') return `выполнено · ${prizeText(def)}`;
-    if (t.status === 'failed') return def.penalty ? `провалено · бюджет −${def.penalty} ₽ в день` : 'провалено';
+    if (t.status === 'done') return tr('выполнено · {0}', prizeText(def));
+    if (t.status === 'failed') return def.penalty ? tr('провалено · бюджет −{0} ₽ в день', def.penalty) : tr('провалено');
     const p = taskProgress(state, c, t);
     const left = t.untilTurn - state.turn + 1;
-    const days = `${left > 1 ? `ещё ${left} ${daysWord(left)}` : 'последний день'}`;
+    const days = `${left > 1 ? tr('ещё {0} {1}', left, daysWord(left)) : tr('последний день')}`;
     const ch = def.check.type;
     const now =
       ch === 'noExposure' || ch === 'closed'
         ? ''
         : ch === 'cityBelow'
-          ? `сейчас: ${cityStage().name.toLowerCase()} · `
+          ? tr('сейчас: {0} · ', cityStage().name.toLowerCase())
         : ch === 'trust' || ch === 'mood'
-          ? `сейчас ${p.value}% · `
+          ? tr('сейчас {0}% · ', p.value)
           : ch === 'income'
-            ? `вчера ${p.value} ₽ · `
-            : `${Math.max(0, p.value)} из ${p.target} · `;
+            ? tr('вчера {0} ₽ · ', p.value)
+            : tr('{0} из {1} · ', Math.max(0, p.value), p.target);
     return `${now}${days} · ${prizeText(def)}`;
   }
 
@@ -1664,7 +1666,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     tasksNotice.hidden = !list.length || searching || !!state.outcome;
     if (tasksNotice.hidden) return;
     const own = state.tasks.filter((t) => !taskOf(c, t.id).twist);
-    const giver = 'Задания «Медиа-Плюс»';
+    const giver = tr('Задания «Медиа-Плюс»');
     const icon = h('img', { src: `${assetBase}sprites/ui/task.png`, alt: '', width: 24, height: 24 });
     const toggle = (open: boolean) => (e: Event) => {
       e.stopPropagation();
@@ -1672,7 +1674,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       saveSettings(settings);
       render();
     };
-    const doneCount = `${own.filter((t) => t.status === 'done').length} из ${own.length}`;
+    const doneCount = tr('{0} из {1}', own.filter((t) => t.status === 'done').length, own.length);
     tasksNotice.classList.toggle('folded', !settings.tasksOpen);
     if (!settings.tasksOpen) {
       tasksNotice.replaceChildren(
@@ -1681,7 +1683,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       return;
     }
     tasksNotice.replaceChildren(
-      h('div', { class: 'notice-head' }, icon, h('b', {}, giver), h('span', { class: 'rival-stats' }, `выполнено ${doneCount}`), h('button', { class: 'rival-hide', title: 'Свернуть', 'aria-label': 'Свернуть', onclick: toggle(false) }, '▴')),
+      h('div', { class: 'notice-head' }, icon, h('b', {}, giver), h('span', { class: 'rival-stats' }, tr('выполнено {0}', doneCount)), h('button', { class: 'rival-hide', title: tr('Свернуть'), 'aria-label': tr('Свернуть'), onclick: toggle(false) }, '▴')),
       h(
         'ul',
         { class: 'task-list' },
@@ -1707,10 +1709,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const left = t.untilTurn - state.turn;
     const icon = h('img', { src: `${assetBase}sprites/ui/${def.kind === 'election' ? 'ballot' : def.kind}.png`, alt: '', width: 24, height: 24 });
     const when =
-      def.kind === 'election' ? (left > 1 ? `голосование через ${left} ${daysWord(left)}` : 'голосование завтра') : def.kind === 'governor' ? `ещё ${left} ${daysWord(left)}` : 'задание — в списке заданий';
+      def.kind === 'election' ? (left > 1 ? tr('голосование через {0} {1}', left, daysWord(left)) : tr('голосование завтра')) : def.kind === 'governor' ? tr('ещё {0} {1}', left, daysWord(left)) : tr('задание — в списке заданий');
     const lead =
       def.kind === 'election' && def.candidates
-        ? h('p', { class: 'notice-note twist-lead' }, `Если бы голосовали сегодня, победил бы ${def.candidates[electionLeader(state, c) === 'peacemaker' ? 0 : 1]}: город ${electionLeader(state, c) === 'peacemaker' ? 'спокоен' : 'напуган'}.`)
+        ? h('p', { class: 'notice-note twist-lead' }, tr('Если бы голосовали сегодня, победил бы {0}: город {1}.', def.candidates[electionLeader(state, c) === 'peacemaker' ? 0 : 1], electionLeader(state, c) === 'peacemaker' ? tr('спокоен') : tr('напуган')))
         : null;
     twistNotice.replaceChildren(
       h('div', { class: 'notice-head' }, icon, h('b', {}, def.title), h('span', { class: 'rival-stats' }, when)),
@@ -1751,10 +1753,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return h(
       'span',
       { class: 'tut-nav' },
-      h('button', { class: 'tut-nav-btn', title: 'Предыдущий шаг', 'aria-label': 'Предыдущий шаг', disabled: viewed <= 0, onclick: go(viewed - 1) }, '◀'),
-      h('span', { class: 'tut-count' }, `Обучение · шаг ${viewed + 1} из ${tutorialSteps.length}`),
-      h('button', { class: 'tut-nav-btn', title: 'Следующий шаг', 'aria-label': 'Следующий шаг', disabled: viewed >= step.index, onclick: go(viewed + 1) }, '▶'),
-      viewed !== step.index ? h('button', { class: 'tut-nav-now ghost', onclick: go(null) }, 'К текущему') : null,
+      h('button', { class: 'tut-nav-btn', title: tr('Предыдущий шаг'), 'aria-label': tr('Предыдущий шаг'), disabled: viewed <= 0, onclick: go(viewed - 1) }, '◀'),
+      h('span', { class: 'tut-count' }, tr('Обучение · шаг {0} из {1}', viewed + 1, tutorialSteps.length)),
+      h('button', { class: 'tut-nav-btn', title: tr('Следующий шаг'), 'aria-label': tr('Следующий шаг'), disabled: viewed >= step.index, onclick: go(viewed + 1) }, '▶'),
+      viewed !== step.index ? h('button', { class: 'tut-nav-now ghost', onclick: go(null) }, tr('К текущему')) : null,
     );
   }
 
@@ -1763,13 +1765,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (viewed !== step.index) {
       const def = tutorialSteps[viewed];
       const done = (tutorial!.done ?? []).includes(def.id);
-      return [h('b', { class: 'guide-title' }, def.title), h('span', { class: 'tut-state' }, done ? 'Шаг пройден.' : 'Шаг ещё не пройден.'), def.text];
+      return [h('b', { class: 'guide-title' }, def.title), h('span', { class: 'tut-state' }, done ? tr('Шаг пройден.') : tr('Шаг ещё не пройден.')), def.text];
     }
     return [
       h('b', { class: 'guide-title' }, step.def.title),
       step.ready ? step.def.text : (step.def.ready ?? step.def.text),
       // The money for this step, once it can be done (CONCEPT.md §7.3 «Обучение»).
-      step.ready && step.def.grant && (tutorial!.granted ?? []).includes(step.def.id) ? h('span', { class: 'tut-grant' }, `«Медиа-Плюс» прислал ${step.def.grant} ₽ — ${step.def.grantNote ?? ''}`) : null,
+      step.ready && step.def.grant && (tutorial!.granted ?? []).includes(step.def.id) ? h('span', { class: 'tut-grant' }, tr('«Медиа-Плюс» прислал {0} ₽ — {1}', step.def.grant, step.def.grantNote ?? '')) : null,
     ].filter((x): x is HTMLElement | string => x !== null);
   }
 
@@ -1788,7 +1790,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     };
     guideNote.replaceChildren(
       h('div', { class: 'guide-text' }, tutorialNav(step, viewed), ...tutorialText(step, viewed)),
-      ...(step.def.id === 'goal' || viewed !== step.index ? [] : [h('button', { class: 'guide-skip ghost', title: 'Пропустить этот шаг', onclick: skip }, 'Пропустить')]),
+      ...(step.def.id === 'goal' || viewed !== step.index ? [] : [h('button', { class: 'guide-skip ghost', title: tr('Пропустить этот шаг'), onclick: skip }, tr('Пропустить'))]),
     );
   }
 
@@ -1811,7 +1813,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'div',
           { class: 'tut-bar-line' },
-          h('span', { class: 'tut-count' }, `Шаг ${step.index + 1}`),
+          h('span', { class: 'tut-count' }, tr('Шаг {0}', step.index + 1)),
           h('span', { class: 'tut-bar-hint' }, step.def.hint),
           h(
             'button',
@@ -1824,7 +1826,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
                 render();
               },
             },
-            folded ? 'Подробнее ▾' : 'Свернуть ▴',
+            folded ? tr('Подробнее ▾') : tr('Свернуть ▴'),
           ),
         ),
         ...(folded ? [] : [h('div', { class: 'tut-bar-full' }, tutorialNav(step, viewed), ...tutorialText(step, viewed))]),
@@ -1913,12 +1915,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'notice-head' },
         h('img', { src: `${assetBase}sprites/fx/peace.png`, alt: '', width: 24, height: 24 }),
-        h('b', {}, `Мэрия объявила примирение: ${pairNames(rec.pair, ' и ')}`),
+        h('b', {}, tr('Мэрия объявила примирение: {0}', pairNames(rec.pair, tr(' и ')))),
         h(
           'button',
           {
             class: 'icon-btn',
-            title: 'Закрыть',
+            title: tr('Закрыть'),
             onclick: () => {
               reconcileSeen = true;
               render();
@@ -1927,7 +1929,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           '×',
         ),
       ),
-      h('p', { class: 'notice-note' }, `${rec.turnsLeft} ${turnsWord(rec.turnsLeft)} их вражда будет остывать, а фактчекеры проверяют прессу строже.`),
+      h('p', { class: 'notice-note' }, tr('{0} {1} их вражда будет остывать, а фактчекеры проверяют прессу строже.', rec.turnsLeft, turnsWord(rec.turnsLeft))),
     );
   }
 
@@ -1942,7 +1944,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     lettersBox.hidden = !letters.length || searching;
     if (lettersBox.hidden) return;
     lettersBox.replaceChildren(
-      h('h4', { class: 'zone-label' }, 'Письма читателей'),
+      h('h4', { class: 'zone-label' }, tr('Письма читателей')),
       h(
         'div',
         { class: 'letters-list' },
@@ -1951,7 +1953,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             'div',
             { class: `letter letter-${l.kind}` },
             l.from ? personPortrait(l.from) : null,
-            h('div', {}, h('p', { class: 'letter-text' }, `«${l.text}»`), h('p', { class: 'letter-sign' }, `— ${l.name}`)),
+            h('div', {}, h('p', { class: 'letter-text' }, `${quoted(l.text)}`), h('p', { class: 'letter-sign' }, `— ${l.name}`)),
           ),
         ),
       ),
@@ -1960,19 +1962,19 @@ export function mountApp(root: HTMLElement, base: Content): void {
 
   /** What happened to a named resident, in words. */
   function fateText(p: PersonDef, e: FateEvent): string {
-    const a = p.female ? 'а' : '';
-    const place = e.building !== undefined && state.buildings[e.building] ? buildingName(state, c, e.building) : 'работа';
+    const a = p.female ? tr('а') : '';
+    const place = e.building !== undefined && state.buildings[e.building] ? buildingName(state, c, e.building) : tr('работа');
     switch (e.kind) {
       case 'lostJob':
-        return state.buildings[e.building ?? -1]?.open === false ? `${closedLine(state, c, e.building!)} — остал${p.female ? 'ась' : 'ся'} без работы` : `потерял${a} работу (${lowerFirst(place)})`;
+        return state.buildings[e.building ?? -1]?.open === false ? tr('{0} — остал{1} без работы', closedLine(state, c, e.building!), p.female ? tr('ась') : tr('ся')) : tr('потерял{0} работу ({1})', a, lowerFirst(place));
       case 'gotJob':
-        return `${p.female ? 'нашла' : 'нашёл'} работу: ${lowerFirst(place)}`;
+        return tr('{0} работу: {1}', p.female ? tr('нашла') : tr('нашёл'), lowerFirst(place));
       case 'left':
-        return `уехал${a} из города`;
+        return tr('уехал{0} из города', a);
       case 'protest':
-        return `выш${p.female ? 'ла' : 'ел'} на протест`;
+        return tr('выш{0} на протест', p.female ? tr('ла') : tr('ел'));
       case 'fear':
-        return `боится выходить из дома`;
+        return tr('боится выходить из дома');
     }
   }
 
@@ -1981,16 +1983,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return c.people.flatMap((p) => {
       const r = personResident(state, p.id);
       if (!r) return [];
-      const a = p.female ? 'а' : '';
+      const a = p.female ? tr('а') : '';
       const now =
         r.status === 'left'
-          ? `Уехал${a} из города.`
+          ? tr('Уехал{0} из города.', a)
           : [
-              r.job !== null ? `Работает: ${lowerFirst(buildingName(state, c, r.job))}` : groupOf(c, p.group).jobs.length ? 'Без работы' : 'На пенсии',
-              r.protestTurns > 0 ? 'протестует' : '',
-              r.fearTurns > 0 ? 'боится выходить из дома' : '',
-              r.mood < 0.35 ? 'в отчаянии' : r.mood > 0.7 ? (p.female ? 'довольна жизнью' : 'доволен жизнью') : '',
-              r.follows.length ? 'читает «Вестник»' : '',
+              r.job !== null ? tr('Работает: {0}', lowerFirst(buildingName(state, c, r.job))) : groupOf(c, p.group).jobs.length ? tr('Без работы') : tr('На пенсии'),
+              r.protestTurns > 0 ? tr('протестует') : '',
+              r.fearTurns > 0 ? tr('боится выходить из дома') : '',
+              r.mood < 0.35 ? tr('в отчаянии') : r.mood > 0.7 ? (p.female ? tr('довольна жизнью') : tr('доволен жизнью')) : '',
+              r.follows.length ? tr('читает «Вестник»') : '',
             ]
               .filter(Boolean)
               .join(' · ');
@@ -2006,7 +2008,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             h('b', {}, `${p.name}, ${p.role}`),
             h('p', { class: 'hint' }, p.bio),
             h('p', { class: r.status === 'left' || (r.job === null && groupOf(c, p.group).jobs.length) ? 'bad' : '' }, now),
-            ...log.map((e) => h('p', { class: 'person-log' }, `День ${e.turn}: ${fateText(p, e)}`)),
+            ...log.map((e) => h('p', { class: 'person-log' }, tr('День {0}: {1}', e.turn, fateText(p, e)))),
           ),
         ),
       ];
@@ -2018,13 +2020,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const st = report?.staff;
     const lines = st
       ? [
-          ...st.levelUps.map((id) => `${reporterOf(c, id).name} ${reporterOf(c, id).female ? 'получила' : 'получил'} повышение: теперь ${levelNames[levelOf(c, staffOf(state, c, id).xp)].toLowerCase()}, пишет лучше и находит больше.`),
+          ...st.levelUps.map((id) => tr('{0} {1} повышение: теперь {2}, пишет лучше и находит больше.', reporterOf(c, id).name, reporterOf(c, id).female ? tr('получила') : tr('получил'), levelNames[levelOf(c, staffOf(state, c, id).xp)].toLowerCase())),
           ...st.quit.map((id) => {
             const r = reporterOf(c, id);
-            const a = r.female ? 'а' : '';
+            const a = r.female ? tr('а') : '';
             return st.leaked.includes(id)
-              ? `${r.name} уволил${r.female ? 'ась' : 'ся'} из-за лжи в газете — и рассказал${a} конкурентам, что мы врали.`
-              : `${r.name} не выдержал${a} и уволил${r.female ? 'ась' : 'ся'}.`;
+              ? tr('{0} уволил{1} из-за лжи в газете — и рассказал{2} конкурентам, что мы врали.', r.name, r.female ? tr('ась') : tr('ся'), a)
+              : tr('{0} не выдержал{1} и уволил{2}.', r.name, a, r.female ? tr('ась') : tr('ся'));
           }),
         ]
       : [];
@@ -2043,9 +2045,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'button',
           { class: 'rival-toggle', onclick: toggle(true) },
-          h('b', {}, 'Редакция'),
+          h('b', {}, tr('Редакция')),
           h('span', { class: 'staff-first' }, lines[0]),
-          lines.length > 1 ? h('span', { class: 'rival-count' }, `ещё ${lines.length - 1}`) : null,
+          lines.length > 1 ? h('span', { class: 'rival-count' }, tr('ещё {0}', lines.length - 1)) : null,
           h('span', { class: 'chip-arrow' }, '▾'),
         ),
       );
@@ -2055,13 +2057,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'div',
         { class: 'notice-head' },
-        h('b', {}, 'Редакция'),
-        h('button', { class: 'rival-hide', title: 'Свернуть', 'aria-label': 'Свернуть', onclick: toggle(false) }, '▴'),
+        h('b', {}, tr('Редакция')),
+        h('button', { class: 'rival-hide', title: tr('Свернуть'), 'aria-label': tr('Свернуть'), onclick: toggle(false) }, '▴'),
         h(
           'button',
           {
             class: 'icon-btn',
-            title: 'Закрыть',
+            title: tr('Закрыть'),
             onclick: () => {
               staffSeen = true;
               render();
@@ -2086,7 +2088,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         if (card) revealed.add(card.uid);
         offerError = '';
       } catch {
-        offerError = 'Не хватает денег.';
+        offerError = tr('Не хватает денег.');
       }
       render();
     };
@@ -2106,9 +2108,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'button',
           { class: 'primary', onclick: answer(true) },
-          poach ? `Удержать за ${retainCost(c, offer.reporterId!)}` : def.kind === 'kompromat' ? 'Взять документы' : 'Согласиться',
+          poach ? tr('Удержать за {0}', retainCost(c, offer.reporterId!)) : def.kind === 'kompromat' ? tr('Взять документы') : tr('Согласиться'),
         ),
-        h('button', { onclick: answer(false) }, poach ? 'Отпустить' : 'Отказаться'),
+        h('button', { onclick: answer(false) }, poach ? tr('Отпустить') : tr('Отказаться')),
         offerError ? h('span', { class: 'bad' }, offerError) : null,
       ),
     );
@@ -2127,9 +2129,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
     rivalNotice.classList.toggle('notice-guardian', rival.kind === 'guardian');
     const r = report?.rival;
     const notes: string[] = [];
-    if (r?.cured) notes.push(`Вчера опровержения разубедили ${r.cured} ${peopleWord(r.cured)}.`);
+    if (r?.cured) notes.push(tr('Вчера опровержения разубедили {0} {1}.', r.cured, peopleWord(r.cured)));
     const rn = rivalNames[rival.kind];
-    for (const p of r?.publications ?? []) if (p.exposed) notes.push(`«${rn.short}» пойман на лжи: «${p.title}».`);
+    for (const p of r?.publications ?? []) if (p.exposed) notes.push(tr('«{0}» пойман на лжи: «{1}».', rn.short, p.title));
     // Nothing printed yet and nothing to tell: no notice at all.
     rivalNotice.hidden = !rival || searching || !!state.outcome || (!rival.closed && !rival.printed.length && !notes.length);
     if (!rival || rivalNotice.hidden) return;
@@ -2148,8 +2150,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'button',
           { class: 'rival-toggle', onclick: toggle(true) },
           icon,
-          h('span', {}, rival.closed ? `«${rn.name}» закрылся` : `«${rn.name}»`),
-          fresh ? h('span', { class: 'rival-count' }, `${fresh} ${fresh === 1 ? 'новая' : fresh < 5 ? 'новые' : 'новых'}`) : null,
+          h('span', {}, rival.closed ? tr('«{0}» закрылся', rn.name) : `${quoted(rn.name)}`),
+          fresh ? h('span', { class: 'rival-count' }, `${fresh} ${fresh === 1 ? tr('новая') : fresh < 5 ? tr('новые') : tr('новых')}`) : null,
           h('span', { class: 'chip-arrow' }, '▾'),
         ),
       );
@@ -2158,15 +2160,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const inIssue = new Set(state.hand.filter((x) => x.debunk && drafts.get(x.uid)?.publish).map((x) => x.debunk!.uid));
     const inHand = new Set(state.hand.filter((x) => x.debunk).map((x) => x.debunk!.uid));
     const status = (uid: number, debunked: boolean, exposed?: boolean) =>
-      debunked ? '✓ опровергнуто' : exposed ? '✓ пойман на лжи' : inIssue.has(uid) ? 'опровержение в выпуске' : inHand.has(uid) ? 'опровержение не в выпуске' : '';
+      debunked ? tr('✓ опровергнуто') : exposed ? tr('✓ пойман на лжи') : inIssue.has(uid) ? tr('опровержение в выпуске') : inHand.has(uid) ? tr('опровержение не в выпуске') : '';
     rivalNotice.replaceChildren(
       h(
         'div',
         { class: 'notice-head' },
         icon,
-        h('b', {}, rival.closed ? `«${rn.name}» закрылся` : `«${rn.name}»`),
-        h('span', { class: 'rival-stats' }, `читателей ${rivalReaders(state)} · доверие ${Math.round(rivalTrust(state))}%`),
-        h('button', { class: 'rival-hide', title: 'Свернуть', 'aria-label': 'Свернуть', onclick: toggle(false) }, '▴'),
+        h('b', {}, rival.closed ? tr('«{0}» закрылся', rn.name) : `${quoted(rn.name)}`),
+        h('span', { class: 'rival-stats' }, tr('читателей {0} · доверие {1}%', rivalReaders(state), Math.round(rivalTrust(state)))),
+        h('button', { class: 'rival-hide', title: tr('Свернуть'), 'aria-label': tr('Свернуть'), onclick: toggle(false) }, '▴'),
       ),
       ...(rival.printed.length
         ? [
@@ -2178,7 +2180,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
                   'li',
                   { class: p.debunked || p.exposed || inIssue.has(p.uid) ? 'answered' : '' },
                   h('span', { class: 'rival-place' }, placementLabels[p.placement].toLowerCase()),
-                  h('span', { class: 'rival-title' }, `«${p.title}»`),
+                  h('span', { class: 'rival-title' }, `${quoted(p.title)}`),
                   h('span', { class: 'rival-answer' }, status(p.uid, p.debunked, p.exposed)),
                 ),
               ),
@@ -2188,11 +2190,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
       // The mole at the rival's: what it prints today, with ours (CONCEPT.md §3.5).
       ...(getModifiers(state, c).seeRivalPlan && rival.plan.length
         ? [
-            h('p', { class: 'notice-note mole-line' }, '🕵 Крот: сегодня «' + rn.short + '» напечатает:'),
+            h('p', { class: 'notice-note mole-line' }, tr('🕵 Крот: сегодня «') + rn.short + tr('» напечатает:')),
             h(
               'ul',
               { class: 'rival-list mole-list' },
-              ...rival.plan.map((x) => h('li', {}, h('span', { class: 'rival-place' }, placementLabels[x.placement].toLowerCase()), h('span', { class: 'rival-title' }, `«${storyTitle(c, x.card, x.distortion)}»`))),
+              ...rival.plan.map((x) => h('li', {}, h('span', { class: 'rival-place' }, placementLabels[x.placement].toLowerCase()), h('span', { class: 'rival-title' }, `${quoted(storyTitle(c, x.card, x.distortion))}`))),
             ),
           ]
         : []),
@@ -2207,38 +2209,38 @@ export function mountApp(root: HTMLElement, base: Content): void {
    */
   function rivalStrikes(): HTMLElement {
     const block = lureBlock(state, c);
-    const lureWhy: Record<string, string> = { 'nobody left': 'переманивать больше некого', 'no money': 'не хватает денег', 'not yet': 'он ещё не выходит', 'no rival': '' };
+    const lureWhy: Record<string, string> = { 'nobody left': tr('переманивать больше некого'), 'no money': tr('не хватает денег'), 'not yet': tr('он ещё не выходит'), 'no rival': '' };
     const digging = state.investigations.find((x) => x.target === RIVAL_DIG);
     const free = state.reporters.filter((id) => !state.investigations.some((x) => x.reporterId === id));
     const surname = (id: string) => reporterOf(c, id).name.split(' ').pop()!;
     return h(
       'div',
       { class: 'rival-strikes' },
-      h('span', { class: 'strikes-label', title: 'Интересный выпуск сам перехватывает его читателей: кого зацепила наша новость, тот чаще бросает «Голос»' }, 'Ударить по «Голосу»:'),
+      h('span', { class: 'strikes-label', title: tr('Интересный выпуск сам перехватывает его читателей: кого зацепила наша новость, тот чаще бросает «Голос»') }, tr('Ударить по «Голосу»:')),
       h(
         'button',
         {
           class: 'ghost strike',
           'data-tut': 'lure',
           disabled: !!block,
-          title: block ? lureWhy[block] : 'Его ведущий автор уходит к нам: «Голос» печатает на одну новость в день меньше, его читатели доверяют ему меньше',
+          title: block ? lureWhy[block] : tr('Его ведущий автор уходит к нам: «Голос» печатает на одну новость в день меньше, его читатели доверяют ему меньше'),
           onclick: actNow(() => lureRivalAuthor(state, c)),
         },
-        `Сманить автора · ${lureCost(state, c)} ₽`,
+        tr('Сманить автора · {0} ₽', lureCost(state, c)),
       ),
       digging
-        ? h('span', { class: 'strike-note' }, `${surname(digging.reporterId)} копает под «Голос» ${digging.total - digging.turnsLeft}/${digging.total}`)
+        ? h('span', { class: 'strike-note' }, tr('{0} копает под «Голос» {1}/{2}', surname(digging.reporterId), digging.total - digging.turnsLeft, digging.total))
         : free.length > 1 || (free.length === 1 && state.reporters.length > 1)
           ? h(
               'span',
               { class: 'strike-dig' },
-              'Копать компромат:',
+              tr('Копать компромат:'),
               ...free.map((id) =>
                 h(
                   'button',
                   {
                     class: 'ghost strike',
-                    title: `${surname(id)} несколько дней не ищет новостей и приносит документы о том, кто платит «Голосу». Поверившие перестают ему доверять. ${c.balance.investigationCost} ₽ в день`,
+                    title: tr('{0} несколько дней не ищет новостей и приносит документы о том, кто платит «Голосу». Поверившие перестают ему доверять. {1} ₽ в день', surname(id), c.balance.investigationCost),
                     onclick: actNow(() => startInvestigation(state, c, id, RIVAL_DIG)),
                   },
                   surname(id),
@@ -2315,7 +2317,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     });
     const chart = svg(
       'svg',
-      { class: 'relations', viewBox: `-70 -10 ${W + 140} ${H + 20}`, role: 'img', 'aria-label': 'Отношения между группами' },
+      { class: 'relations', viewBox: `-70 -10 ${W + 140} ${H + 20}`, role: 'img', 'aria-label': tr('Отношения между группами') },
       svg('defs', {}, ...c.groups.map((g) => svg('clipPath', { id: `rel-clip-${g.id}` }, svg('circle', { cx: pos.get(g.id)!.x, cy: pos.get(g.id)!.y, r: 22 })))),
       svg('rect', { x: -70, y: -10, width: W + 140, height: H + 20, fill: 'transparent', onclick: focus(null) }),
       ...lines,
@@ -2339,9 +2341,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
         })
       : [];
     const out: (HTMLElement | null)[] = [
-      h('h3', { class: 'section' }, 'Отношения между группами'),
+      h('h3', { class: 'section' }, tr('Отношения между группами')),
       h('div', { class: 'relations-box' }, chart, changes.length ? h('div', { class: 'rel-changes' }, ...changes) : null),
-      state.reconciliation ? h('p', { class: 'hint-line' }, `☮ Мэрия мирит: ${pairNames(state.reconciliation.pair, ' и ')}.`) : null,
+      state.reconciliation ? h('p', { class: 'hint-line' }, tr('☮ Мэрия мирит: {0}.', pairNames(state.reconciliation.pair, tr(' и ')))) : null,
       // A group picked on the circle: dig dirt on it from here (CONCEPT.md §3.3а).
       relFocus && !state.outcome
         ? h(
@@ -2354,7 +2356,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
                 openModal('dig');
               },
             },
-            `⛏ Копать компромат на ${groupOf(c, relFocus).forms.manyGen}`,
+            tr('⛏ Копать компромат на {0}', groupOf(c, relFocus).forms.manyGen),
           )
         : null,
     ];
@@ -2367,8 +2369,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const read = pct(b.placementRead[place]);
     const impact = b.placementImpact[place];
     const risk = b.placementExposureRisk[place];
-    const text = ['Мельком в подвале', 'Обычная статья в номере', 'Главный материал номера'][place];
-    return `${text}: прочтут ${read} читателей, воздействие ×${impact}, риск ×${risk}.`;
+    const text = [tr('Мельком в подвале'), tr('Обычная статья в номере'), tr('Главный материал номера')][place];
+    return tr('{0}: прочтут {1} читателей, воздействие ×{2}, риск ×{3}.', text, read, impact, risk);
   }
 
   /** Placeholder "text" under a headline: grey lines of varying length, stable per card. */
@@ -2389,9 +2391,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const tpl = templateOf(c, card.templateId);
     const d = draftOf(card);
     const p = previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: d.distortion });
-    const audience = tpl.audience?.length ? tpl.audience.map((g) => groupOf(c, g).name.toLowerCase()).join(', ') : 'все жители';
+    const audience = tpl.audience?.length ? tpl.audience.map((g) => groupOf(c, g).name.toLowerCase()).join(', ') : tr('все жители');
     const investigation = tpl.source === 'investigation';
-    const target = tpl.target === RIVAL_DIG ? '«Голос города»' : tpl.target ? groupOf(c, tpl.target).name : '';
+    const target = tpl.target === RIVAL_DIG ? tr('«Голос города»') : tpl.target ? groupOf(c, tpl.target).name : '';
     const reporter = reporterOf(c, card.reporterId);
     const open = details.has(card.uid);
     // Distortion raises the tier, and the item restyles itself at once (CONCEPT.md §3.1).
@@ -2402,7 +2404,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       render();
     };
 
-    const sourceLabel = { event: 'событие', fact: 'факт', rumor: 'слух', investigation: `компромат на группу «${target}»`, debunk: 'опровержение', offer: 'документы от анонима' }[tpl.source];
+    const sourceLabel = { event: tr('событие'), fact: tr('факт'), rumor: tr('слух'), investigation: tr('компромат на группу «{0}»', target), debunk: tr('опровержение'), offer: tr('документы от анонима') }[tpl.source];
     // Truth menu next to the headline (CONCEPT.md §7.3); the place is changed by dragging or by a tap
     // on the story and then on a place in the paper.
     const menuOpen = truthMenuFor === card.uid;
@@ -2445,13 +2447,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
                 h(
                   'span',
                   { class: 'opt' },
-                  h('span', { class: 'opt-head' }, h('b', {}, placementLabels[pl]), taken(pl) && where !== pl ? h('small', {}, 'поменяется местами') : null),
+                  h('span', { class: 'opt-head' }, h('b', {}, placementLabels[pl]), taken(pl) && where !== pl ? h('small', {}, tr('поменяется местами')) : null),
                 ),
               );
               if (pl === 2) item.dataset.tut = 'to-front';
               return item;
             }),
-            menuItem(where === 'out', false, moveTo('out'), h('span', { class: 'move-out' }, '✕'), h('span', { class: 'opt' }, h('span', { class: 'opt-head' }, h('b', {}, 'Не печатать')))),
+            menuItem(where === 'out', false, moveTo('out'), h('span', { class: 'move-out' }, '✕'), h('span', { class: 'opt' }, h('span', { class: 'opt-head' }, h('b', {}, tr('Не печатать'))))),
           )
         : null;
     // Truth: the icon shows the current level; a story can only be made less true.
@@ -2471,7 +2473,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       {
         class: `truth-chip ${d.distortion < 0 && card.conflict ? 'calm' : `t${p.truth}`}${menuOpen ? ' on' : ''}`,
         'data-tut': 'framing',
-        title: `${toneOf(card, d.distortion)} (${truthLabels[p.truth].toLowerCase()}) — изменить подачу`,
+        title: tr('{0} ({1}) — изменить подачу', toneOf(card, d.distortion), truthLabels[p.truth].toLowerCase()),
         'aria-haspopup': 'menu',
         'aria-expanded': String(menuOpen),
         disabled: busy,
@@ -2481,7 +2483,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           selected = null;
         }),
       },
-      h('span', { class: 'chip-prefix' }, 'Подача:'),
+      h('span', { class: 'chip-prefix' }, tr('Подача:')),
       d.distortion < 0 && card.conflict ? calmIcon() : truthIcon(p.truth),
       h('span', { class: 'chip-label' }, toneOf(card, d.distortion)),
       h('span', { class: 'chip-arrow' }, '▾'),
@@ -2492,7 +2494,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       'button',
       {
         class: 'out-btn',
-        title: out ? 'Вернуть в выпуск заметкой' : 'Не печатать',
+        title: out ? tr('Вернуть в выпуск заметкой') : tr('Не печатать'),
         disabled: busy,
         onclick: act(() => {
           selected = null;
@@ -2514,7 +2516,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const option = (dist: number, icon: Node, blockedHint: string | null) => {
       const preview = tellings.get(dist)!;
       const steps = preview.tier - card.tier;
-      const stats = `${truthLabels[preview.truth]} · ${tierLabels[preview.tier]}${steps > 0 ? ` ${'↑'.repeat(steps)}` : steps < 0 ? ` ${'↓'.repeat(-steps)}` : ''} · риск ${Math.round(preview.exposureRisk * 100)}%`;
+      const stats = tr('{0} · {1}{2} · риск {3}%', truthLabels[preview.truth], tierLabels[preview.tier], steps > 0 ? ` ${'↑'.repeat(steps)}` : steps < 0 ? ` ${'↓'.repeat(-steps)}` : '', Math.round(preview.exposureRisk * 100));
       const item = menuItem(
         d.distortion === dist,
         !!blockedHint,
@@ -2524,7 +2526,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'span',
           { class: 'opt' },
           h('span', { class: 'opt-head' }, h('b', {}, toneOf(card, dist)), h('small', {}, blockedHint ?? stats)),
-          h('span', { class: 'opt-title' }, `«${preview.title}»`),
+          h('span', { class: 'opt-title' }, `${quoted(preview.title)}`),
           effectLine(preview, huntBase, scale.get(dist)),
         ),
       );
@@ -2544,7 +2546,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             // Only one sensation per issue: a second one cannot be blown up.
             const blocked = d.publish && dist > 0 && effectiveTier(card, dist) === 3 && card.tier < 3 && sensationTaken(card);
             const icon = dist < 0 && card.conflict ? calmIcon() : truthIcon(cardTruth(card, dist));
-            return option(dist, icon, blocked ? 'в выпуске уже есть сенсация' : null);
+            return option(dist, icon, blocked ? tr('в выпуске уже есть сенсация') : null);
           }),
         )
       : null;
@@ -2555,32 +2557,32 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ? h(
           'div',
           { class: 'news-info' },
-          h('p', {}, h('b', {}, tierLabels[tier]), raised ? ` (было: ${tierLabels[card.tier].toLowerCase()}, поднято искажением)` : ''),
+          h('p', {}, h('b', {}, tierLabels[tier]), raised ? tr(' (было: {0}, поднято искажением)', tierLabels[card.tier].toLowerCase()) : ''),
           h('p', {}, `${truthLabels[p.truth]} · ${topicLabels[tpl.topic]} · ${sourceLabel} · ${scopeLabels[card.scope]}`),
           h('p', { class: 'effect' }, effectText(c, p.effect, tpl.target)),
-          h('p', {}, `Аудитория: ${audience}`),
+          h('p', {}, tr('Аудитория: {0}', audience)),
           h(
             'div',
-            { class: 'card-stat', title: 'Насколько сильно поверившие отреагируют: уровень, место в газете, масштаб, аудитория' },
-            h('span', {}, 'Воздействие'),
+            { class: 'card-stat', title: tr('Насколько сильно поверившие отреагируют: уровень, место в газете, масштаб, аудитория') },
+            h('span', {}, tr('Воздействие')),
             meter(p.impact / 2.5, p.impact >= 1.4 ? 'danger' : 'ok'),
             h('em', {}, `×${p.impact.toFixed(1)}`),
           ),
-          bar('Охват города', p.reachChance),
-          bar('Риск разоблачения', p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
+          bar(tr('Охват города'), p.reachChance),
+          bar(tr('Риск разоблачения'), p.exposureRisk, p.exposureRisk > 0.2 ? 'danger' : 'warn'),
           pair && p.tension
             ? h(
                 'p',
                 { class: p.tension.delta > 0 ? 'bad' : '' },
                 `${pairNames[0].toUpperCase()}${pairNames.slice(1)}: ${tensionLabels[tensionLevel(c, state.tension[pair])].toLowerCase()}. ` +
-                  `Новость ${p.tension.delta > 0 ? 'разожжёт' : 'остудит'} конфликт ${Math.abs(p.tension.delta) >= 8 ? 'сильно' : Math.abs(p.tension.delta) >= 3 ? 'заметно' : 'чуть-чуть'}.`,
+                  tr('Новость {0} конфликт {1}.', p.tension.delta > 0 ? tr('разожжёт') : tr('остудит'), Math.abs(p.tension.delta) >= 8 ? tr('сильно') : Math.abs(p.tension.delta) >= 3 ? tr('заметно') : tr('чуть-чуть')),
               )
             : null,
           arcLeanNow !== null
             ? h(
                 'p',
                 { class: arcLeanNow > 0 ? 'bad' : '' },
-                `Сюжет «${arc!.name}» идёт к ${arcLeanNow > 0 ? 'плохой' : 'хорошей'} развязке. Раздутая новость тянет его к плохой, успокоенная — к хорошей.`,
+                tr('Сюжет «{0}» идёт к {1} развязке. Раздутая новость тянет его к плохой, успокоенная — к хорошей.', arc!.name, arcLeanNow > 0 ? tr('плохой') : tr('хорошей')),
               )
             : null,
           where !== 'out' ? h('p', { class: 'hint' }, placementNote(where)) : null,
@@ -2594,17 +2596,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
       .filter(Boolean)
       .join(' ');
     const children: (HTMLElement | null)[] = [
-      investigation ? h('div', { class: 'kicker' }, `Расследование · эксклюзив · ${target.toLowerCase()}`) : null,
-      card.expert ? h('div', { class: 'kicker expert-kicker', title: 'Событие по специальности репортёра: на уровень сильнее' }, `Эксклюзив · ${reporter.name} знает тему`) : null,
-      card.debunk ? h('div', { class: 'kicker debunk-kicker' }, `Опровержение · «${rivalNames.guardian.name}»`) : null,
-      pair ? h('div', { class: `kicker conflict-kicker level-${tensionLevel(c, state.tension[pair])}` }, `Конфликт · ${pairNames}`) : null,
-      tpl.source === 'offer' ? h('div', { class: 'kicker offer-kicker' }, 'Документы от анонима · подлинность не проверена') : null,
-      brokenDeal ? h('div', { class: 'kicker deal-kicker' }, `Нарушит сделку «${offerOf(c, brokenDeal.id).title}»`) : null,
+      investigation ? h('div', { class: 'kicker' }, tr('Расследование · эксклюзив · {0}', target.toLowerCase())) : null,
+      card.expert ? h('div', { class: 'kicker expert-kicker', title: tr('Событие по специальности репортёра: на уровень сильнее') }, tr('Эксклюзив · {0} знает тему', reporter.name)) : null,
+      card.debunk ? h('div', { class: 'kicker debunk-kicker' }, tr('Опровержение · «{0}»', rivalNames.guardian.name)) : null,
+      pair ? h('div', { class: `kicker conflict-kicker level-${tensionLevel(c, state.tension[pair])}` }, tr('Конфликт · {0}', pairNames)) : null,
+      tpl.source === 'offer' ? h('div', { class: 'kicker offer-kicker' }, tr('Документы от анонима · подлинность не проверена')) : null,
+      brokenDeal ? h('div', { class: 'kicker deal-kicker' }, tr('Нарушит сделку «{0}»', offerOf(c, brokenDeal.id).title)) : null,
       arc
         ? h(
             'div',
             { class: `kicker arc-kicker${arcLeanNow !== null ? (arcLeanNow > 0 ? ' arc-bad' : ' arc-good') : ''}` },
-            `Сюжет · ${arc.name} · ${arc.day < arc.days ? `день ${arc.day} из ${arc.days}` : 'развязка'}`,
+            tr('Сюжет · {0} · {1}', arc.name, arc.day < arc.days ? tr('день {0} из {1}', arc.day, arc.days) : tr('развязка')),
           )
         : null,
       // Which place the story is about, and the hunt against it (CONCEPT.md §3.6а).
@@ -2619,7 +2621,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           truthButton,
           huntChip(card, p.effect),
           where !== 'out' ? helpChip(p.effect) : null,
-          pencil !== null ? h('span', { class: 'pencil-note', title: `Риск разоблачения ${Math.round(p.exposureRisk * 100)}%` }, riskNotes[pencil]) : null,
+          pencil !== null ? h('span', { class: 'pencil-note', title: tr('Риск разоблачения {0}%', Math.round(p.exposureRisk * 100)) }, riskNotes[pencil]) : null,
           watchChip(card, tpl, p.effect),
           outButton,
         ),
@@ -2646,7 +2648,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             'button',
             {
               class: `info-btn${open ? ' on' : ''}`,
-              title: 'Подробности: эффект, аудитория, воздействие, охват, риск',
+              title: tr('Подробности: эффект, аудитория, воздействие, охват, риск'),
               'aria-expanded': String(open),
               onclick: act(() => (open ? details.delete(card.uid) : details.add(card.uid))),
             },
@@ -2664,7 +2666,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * a story about the target, a «Начать травлю» button on a story about any other workplace.
    */
   /** Whom an investigation digs under, in the genitive: a group or «Голос города» (CONCEPT.md §8.4). */
-  const digWhom = (target: string) => (target === RIVAL_DIG ? '«Голос города»' : groupOf(c, target).forms.manyGen);
+  const digWhom = (target: string) => (target === RIVAL_DIG ? tr('«Голос города»') : groupOf(c, target).forms.manyGen);
 
   const actNow = (f: () => void) => () => {
     f();
@@ -2686,8 +2688,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const days = state.topicStreak[tpl.topic] ?? 0;
     return h(
       'span',
-      { class: 'watch-chip', title: `Фактчекеры следят за темой «${topicLabels[tpl.topic]}»: ${days} ${daysWord(days)} подряд в газете. Неправду этой темы ловят на ${Math.round((watch - 1) * 100)}% чаще. День без этой темы — и надзор снимется.` },
-      `👁 Под надзором +${Math.round((watch - 1) * 100)}%`,
+      { class: 'watch-chip', title: tr('Фактчекеры следят за темой «{0}»: {1} {2} подряд в газете. Неправду этой темы ловят на {3}% чаще. День без этой темы — и надзор снимется.', topicLabels[tpl.topic], days, daysWord(days), Math.round((watch - 1) * 100)) },
+      tr('👁 Под надзором +{0}%', Math.round((watch - 1) * 100)),
     );
   }
 
@@ -2705,9 +2707,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const bonus = Math.round((huntBonus(state, c, getModifiers(state, c)) - 1) * 100);
       return h(
         'span',
-        { class: `hunt-chip on${hits ? '' : ' idle'}`, title: hits ? `Травля: ${name} — эта новость бьёт по цели` : 'В такой подаче новость не страшная и по цели не ударит' },
+        { class: `hunt-chip on${hits ? '' : ' idle'}`, title: hits ? tr('Травля: {0} — эта новость бьёт по цели', name) : tr('В такой подаче новость не страшная и по цели не ударит') },
         '🎯 ',
-        hits ? (bonus ? `Травля +${bonus}%` : 'Травля') : 'Не ударит',
+        hits ? (bonus ? tr('Травля +{0}%', bonus) : tr('Травля')) : tr('Не ударит'),
       );
     }
     // One target at a time: while a hunt runs, other places get no button (CONCEPT.md §3.6а).
@@ -2716,10 +2718,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
       'button',
       {
         class: 'hunt-chip',
-        title: `Начать травлю: ${name}. Бить по этому месту день за днём: каждая страшная новость о нём подряд сильнее прошлой, люди его обходят, работники уходят`,
+        title: tr('Начать травлю: {0}. Бить по этому месту день за днём: каждая страшная новость о нём подряд сильнее прошлой, люди его обходят, работники уходят', name),
         onclick: actNow(() => startHunt(state, x.id)),
       },
-      '🎯 Травить',
+      tr('🎯 Травить'),
     );
   }
 
@@ -2731,8 +2733,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (state.mode !== 'destroy' || effect?.type !== 'moodUp') return null;
     return h(
       'span',
-      { class: 'help-chip', title: 'Хорошая новость радует горожан — городу станет лучше. Вам нужно наоборот: подайте её страшнее или уберите в «Не печатать».' },
-      '⚠ Поможет городу',
+      { class: 'help-chip', title: tr('Хорошая новость радует горожан — городу станет лучше. Вам нужно наоборот: подайте её страшнее или уберите в «Не печатать».') },
+      tr('⚠ Поможет городу'),
     );
   }
 
@@ -2743,12 +2745,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const toGoal = helps === 0 ? 0 : (helps < 0) === (state.mode === 'destroy') ? 1 : -1;
     const n = Math.round(p.believers);
     // In a hunt: how hard this telling hits the target, next to the story told as it is.
-    const hit = huntBase === null ? null : !p.huntHit ? '🎯 по цели не ударит' : huntBase > 0 ? `🎯 удар ×${(p.huntHit / huntBase).toFixed(1)}` : '🎯 ударит по цели';
+    const hit = huntBase === null ? null : !p.huntHit ? tr('🎯 по цели не ударит') : huntBase > 0 ? tr('🎯 удар ×{0}', (p.huntHit / huntBase).toFixed(1)) : tr('🎯 ударит по цели');
     return h(
       'span',
       { class: `opt-effect${toGoal > 0 ? ' for' : toGoal < 0 ? ' against' : ''}` },
       p.effect ? `≈${n} ${plural(n, 'поверит', 'поверят', 'поверят')} · ${short}` : short,
-      scaled?.ratio && scaled.ratio > 1.05 && !hit ? h('span', { class: 'opt-hunt' }, ` · сильнее ×${scaled.ratio.toFixed(1)}`) : null,
+      scaled?.ratio && scaled.ratio > 1.05 && !hit ? h('span', { class: 'opt-hunt' }, tr(' · сильнее ×{0}', scaled.ratio.toFixed(1))) : null,
       hit ? h('span', { class: 'opt-hunt' }, ` · ${hit}`) : null,
     );
   }
@@ -2763,7 +2765,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const name = buildingName(state, c, camp.building);
     const stain = state.stains[camp.building] ?? 0;
     const staff = state.residents.filter((r) => r.status === 'active' && r.job === x.id).length;
-    const shaky = stain < 0.15 ? 'держится' : stain < 0.4 ? 'люди его обходят' : 'на грани';
+    const shaky = stain < 0.15 ? tr('держится') : stain < 0.4 ? tr('люди его обходят') : tr('на грани');
     const bonus = Math.round((huntBonus(state, c, getModifiers(state, c)) - 1) * 100);
     const pips = h('span', { class: 'pips hunt-pips' }, ...Array.from({ length: b.huntMaxSteps }, (_, i) => h('span', { class: i < camp.step ? 'on' : '' })));
     huntNotice.replaceChildren(
@@ -2771,17 +2773,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'notice-head' },
         h('span', { class: 'hunt-icon', 'aria-hidden': 'true' }, '🎯'),
-        h('b', {}, `Травля: ${name}`),
+        h('b', {}, tr('Травля: {0}', name)),
         pips,
-        h('span', { class: 'rival-stats' }, bonus ? `удар +${bonus}%` : 'ударьте сегодня'),
-        h('button', { class: 'ghost hunt-stop', title: 'Прекратить травлю', onclick: actNow(() => endHunt(state)) }, 'Прекратить'),
+        h('span', { class: 'rival-stats' }, bonus ? tr('удар +{0}%', bonus) : tr('ударьте сегодня')),
+        h('button', { class: 'ghost hunt-stop', title: tr('Прекратить травлю'), onclick: actNow(() => endHunt(state)) }, tr('Прекратить')),
       ),
       h(
         'p',
         { class: 'hunt-line' },
         `${shaky[0].toUpperCase()}${shaky.slice(1)}`,
-        x.type === 'shop' || x.type === 'entertainment' ? '' : ` · работников ${staff}`,
-        ' · каждый день подряд со страшной новостью о нём бьёт сильнее, пропуск остужает травлю.',
+        x.type === 'shop' || x.type === 'entertainment' ? '' : tr(' · работников {0}', staff),
+        tr(' · каждый день подряд со страшной новостью о нём бьёт сильнее, пропуск остужает травлю.'),
       ),
     );
   }
@@ -2938,14 +2940,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
     // An empty day says why when the newsroom is away digging (CONCEPT.md §3.3а).
     const digging = state.reporters.length > 0 && state.reporters.every((id) => state.investigations.some((x) => x.reporterId === id));
     const note = searching
-      ? 'Репортёры ищут новости… (щёлкните, чтобы пропустить)'
+      ? tr('Репортёры ищут новости… (щёлкните, чтобы пропустить)')
       : !visible.length
         ? digging
-          ? 'Сегодня новостей нет: вся редакция копает компромат.'
-          : 'Сегодня новостей нет.'
+          ? tr('Сегодня новостей нет: вся редакция копает компромат.')
+          : tr('Сегодня новостей нет.')
         : '';
     issueHead.replaceChildren(...(note ? [h('p', {}, note)] : []), ...(error ? [h('p', { class: 'bad' }, error)] : []));
-    issueNo.textContent = `Выпуск № ${state.turn}`;
+    issueNo.textContent = tr('Выпуск № {0}', state.turn);
     renderPrice();
     renderToday();
     renderAbilities();
@@ -2979,9 +2981,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
             render();
           },
         },
-        left ? `Не печатать (${left}) ${trayOpen ? '▴' : '▾'}` : 'Не печатать',
+        left ? tr('Не печатать ({0}) {1}', left, trayOpen ? '▴' : '▾') : tr('Не печатать'),
       ),
-      left ? '' : h('span', { class: 'tray-hint' }, isPhone() ? 'нажмите ✕ у новости' : 'перетащите сюда новость или нажмите ✕'),
+      left ? '' : h('span', { class: 'tray-hint' }, isPhone() ? tr('нажмите ✕ у новости') : tr('перетащите сюда новость или нажмите ✕')),
     );
     // The hiring hint is said once, in the first empty place; an empty place with nothing to put there stays blank.
     let hireSaid = false;
@@ -2994,11 +2996,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
       zones[key].empty.classList.toggle('hire', hire);
       zones[key].empty.textContent = hire
         ? hireSaid
-          ? '＋ Нанять репортёра'
-          : `Больше новостей нет: ${state.reporters.length === 1 ? 'репортёр приносит одну' : 'каждый репортёр приносит одну'} в день. ＋ Нанять ещё`
+          ? tr('＋ Нанять репортёра')
+          : tr('Больше новостей нет: {0} в день. ＋ Нанять ещё', state.reporters.length === 1 ? tr('репортёр приносит одну') : tr('каждый репортёр приносит одну'))
         : isPhone()
-          ? `＋ Выбрать ${zoneTexts[key][1]}`
-          : `Перетащите сюда ${zoneTexts[key][1]} — или нажмите и выберите`;
+          ? tr('＋ Выбрать {0}', zoneTexts[key][1])
+          : tr('Перетащите сюда {0} — или нажмите и выберите', zoneTexts[key][1]);
       if (hire && here.length === 0) hireSaid = true;
       if (zones[key].empty.hidden && chooserFor === key) chooserFor = null;
       zones[key].chooser.replaceChildren(...(chooserFor === key && key !== 'out' ? [storyChooser(key, ordered, whereOf)] : []));
@@ -3080,32 +3082,32 @@ export function mountApp(root: HTMLElement, base: Content): void {
       return;
     }
     const level = currentIssueLevel();
-    const parts: (HTMLElement | string)[] = [printed ? h('b', {}, level === 3 ? 'сенсация' : `${issueLevelLabels[level].toLowerCase()} выпуск`) : h('b', {}, 'газета выйдет пустой')];
+    const parts: (HTMLElement | string)[] = [printed ? h('b', {}, level === 3 ? tr('сенсация') : tr('{0} выпуск', issueLevelLabels[level].toLowerCase())) : h('b', {}, tr('газета выйдет пустой'))];
     if (printed)
       parts.push(
         !untrue
-          ? 'всё правда'
+          ? tr('всё правда')
           : risk <= 0
-            ? 'есть неправда · пока не проверяют'
-            : h('span', {}, 'есть неправда — ', h('b', { class: `risk-word step-${stamp === 'danger' ? 3 : riskStep(risk)}` }, stamp === 'danger' ? 'опасно' : risk < 0.1 ? 'риск небольшой' : 'рискованно')),
+            ? tr('есть неправда · пока не проверяют')
+            : h('span', {}, tr('есть неправда — '), h('b', { class: `risk-word step-${stamp === 'danger' ? 3 : riskStep(risk)}` }, stamp === 'danger' ? tr('опасно') : risk < 0.1 ? tr('риск небольшой') : tr('рискованно'))),
       );
     // An untrue story from yesterday may still be caught today: the forecast leaves it out, this says it.
-    if (state.pendingLies.length) parts.push(h('span', { class: 'late-risk' }, 'вчерашняя ложь ещё может всплыть'));
+    if (state.pendingLies.length) parts.push(h('span', { class: 'late-risk' }, tr('вчерашняя ложь ещё может всплыть')));
     const fc = currentForecast();
     if (fc) {
       const here = cityStateOf(c, state.metrics.cityIndex);
       const next = cityStateOf(c, fc.cityIndex);
       const diff = fc.cityIndex - state.metrics.cityIndex;
       // In the player's colours (CONCEPT.md §7.3): what brings the goal nearer, and a warning when the issue helps the other side.
-      const text = next !== here ? `город ≈ → ${c.balance.cityStates[next].name.toLowerCase()}` : Math.abs(diff) < 1 ? 'город почти не заметит' : diff < 0 ? 'город просядет' : 'городу станет лучше';
+      const text = next !== here ? tr('город ≈ → {0}', c.balance.cityStates[next].name.toLowerCase()) : Math.abs(diff) < 1 ? tr('город почти не заметит') : diff < 0 ? tr('город просядет') : tr('городу станет лучше');
       const toGoal = Math.abs(diff) < 1 ? 0 : (diff < 0) === (state.mode === 'destroy') ? 1 : -1;
       parts.push(
         toGoal === 0
           ? text
-          : h('span', { class: `goal-word ${toGoal > 0 ? 'for' : 'against'}`, title: toGoal > 0 ? 'Это приближает вашу цель' : 'Это уводит от вашей цели' }, toGoal < 0 ? `⚠ ${text}` : text),
+          : h('span', { class: `goal-word ${toGoal > 0 ? 'for' : 'against'}`, title: toGoal > 0 ? tr('Это приближает вашу цель') : tr('Это уводит от вашей цели') }, toGoal < 0 ? `⚠ ${text}` : text),
       );
     }
-    todayLine.replaceChildren('Сегодня в номере: ', ...parts.flatMap((x, i) => (i ? [' · ', x] : [x])));
+    todayLine.replaceChildren(tr('Сегодня в номере: '), ...parts.flatMap((x, i) => (i ? [' · ', x] : [x])));
   }
 
   /**
@@ -3119,13 +3121,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const days = state.cleanStreak;
     const breaks = lieLaidOut && days > 0;
     streakBadge.className = `streak-badge${breaks ? ' breaks' : ''}${lieLaidOut ? ' dim' : ''}`;
-    const about = `${b.cleanStreakDays} выпусков подряд без полуправды и лжи — +${b.cleanStreakBonus}% репутации у всего города. Ложь обнуляет серию, пустой выпуск её не двигает.`;
+    const about = tr('{0} выпусков подряд без полуправды и лжи — +{1}% репутации у всего города. Ложь обнуляет серию, пустой выпуск её не двигает.', b.cleanStreakDays, b.cleanStreakBonus);
     streakBadge.title = streakTipOpen ? '' : about;
     streakBadge.replaceChildren(
-      h('span', { class: 'streak-label' }, breaks ? 'Серия прервётся' : 'Без лжи'),
-      h('span', { class: 'streak-pips', 'aria-label': `${days} из ${b.cleanStreakDays}` }, ...Array.from({ length: b.cleanStreakDays }, (_, i) => h('i', { class: i < days ? 'on' : '' }))),
-      h('span', { class: 'streak-prize' }, `→ +${b.cleanStreakBonus}% репутации`),
-      ...(streakTipOpen ? [h('span', { class: 'streak-tip' }, `${about} Сейчас: ${days} из ${b.cleanStreakDays}.`)] : []),
+      h('span', { class: 'streak-label' }, breaks ? tr('Серия прервётся') : tr('Без лжи')),
+      h('span', { class: 'streak-pips', 'aria-label': tr('{0} из {1}', days, b.cleanStreakDays) }, ...Array.from({ length: b.cleanStreakDays }, (_, i) => h('i', { class: i < days ? 'on' : '' }))),
+      h('span', { class: 'streak-prize' }, tr('→ +{0}% репутации', b.cleanStreakBonus)),
+      ...(streakTipOpen ? [h('span', { class: 'streak-tip' }, tr('{0} Сейчас: {1} из {2}.', about, days, b.cleanStreakDays))] : []),
     );
   }
 
@@ -3150,9 +3152,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'span',
           {},
-          `${truthLabels[x.truth]} · выпуск дня ${x.turn}, ${placementLabels[x.placement].toLowerCase()}` +
-            (x.setup ? ' · документы оказались фальшивкой' : '') +
-            (x.leaked ? ' · слил ушедший репортёр' : ''),
+          tr('{0} · выпуск дня {1}, {2}', truthLabels[x.truth], x.turn, placementLabels[x.placement].toLowerCase()) +
+            (x.setup ? tr(' · документы оказались фальшивкой') : '') +
+            (x.leaked ? tr(' · слил ушедший репортёр') : ''),
         ),
       ),
       h('b', { class: 'exposed-loss' }, `−${x.trustLoss.toFixed(1)}%`),
@@ -3169,13 +3171,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'notice-head' },
         h('img', { src: `${assetBase}sprites/fx/exposed.png`, alt: '', width: 24, height: 24 }),
-        h('b', {}, list.length === 1 ? 'Новость разоблачили!' : `Разоблачили новостей: ${list.length}`),
-        h('span', { class: 'notice-loss' }, `репутация −${loss.toFixed(1)}%`),
+        h('b', {}, list.length === 1 ? tr('Новость разоблачили!') : tr('Разоблачили новостей: {0}', list.length)),
+        h('span', { class: 'notice-loss' }, tr('репутация −{0}%', loss.toFixed(1))),
         h(
           'button',
           {
             class: 'icon-btn',
-            title: 'Закрыть',
+            title: tr('Закрыть'),
             onclick: () => {
               exposuresSeen = true;
               render();
@@ -3205,17 +3207,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
       });
     return [
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
-      h('h3', { class: 'section' }, `Штат (${state.reporters.length} / ${max})`),
+      h('h3', { class: 'section' }, tr('Штат ({0} / {1})', state.reporters.length, max)),
       ...state.reporters.map((id) =>
         row(
           id,
-          `зарплата ${reporterOf(c, id).salary} в день${state.rivalWatch.includes(id) && state.rival && !state.rival.closed ? ` · 👁 следит за «${rivalNames[state.rival.kind].ins}»` : ''}`,
+          tr('зарплата {0} в день{1}', reporterOf(c, id).salary, state.rivalWatch.includes(id) && state.rival && !state.rival.closed ? tr(' · 👁 следит за «{0}»', rivalNames[state.rival.kind].ins) : ''),
           // Topics and the «Компромат» list (digging, watching the rival) are right on the card; the last one cannot be fired.
           h(
             'span',
             { class: 'team-actions' },
             digButton(id),
-            state.reporters.length > 1 ? h('button', { class: 'ghost', disabled: !!state.outcome, onclick: () => fire(id) }, 'Уволить') : null,
+            state.reporters.length > 1 ? h('button', { class: 'ghost', disabled: !!state.outcome, onclick: () => fire(id) }, tr('Уволить')) : null,
           ),
           teamTools(id),
         ),
@@ -3271,12 +3273,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'div',
         { class: 'team-topics' },
-        h('span', { class: 'team-label' }, 'Ищет:', infoButton(topicKey, 'Темы поиска')),
-        chip('Любое', assigned.length === 0, () => setReporterTopics(state, c, id, [])),
+        h('span', { class: 'team-label' }, tr('Ищет:'), infoButton(topicKey, tr('Темы поиска'))),
+        chip(tr('Любое'), assigned.length === 0, () => setReporterTopics(state, c, id, [])),
         ...topics.map((t) => {
           const special = r.skills.topics.includes(t);
           const on = assigned.includes(t);
-          const el = chip(`${special ? '★ ' : ''}${topicLabels[t]}`, on, () => setReporterTopics(state, c, id, on ? assigned.filter((x) => x !== t) : [...assigned, t]), special ? 'Специальность репортёра' : '');
+          const el = chip(`${special ? '★ ' : ''}${topicLabels[t]}`, on, () => setReporterTopics(state, c, id, on ? assigned.filter((x) => x !== t) : [...assigned, t]), special ? tr('Специальность репортёра') : '');
           el.dataset.tut = `topic-${t}`;
           return el;
         }),
@@ -3287,8 +3289,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'p',
           { class: 'hint info-text' },
-          `С шансом ${pct(b.assignFocus)} репортёр приносит новость на выбранные темы. ★ — его специальность: если все выбранные темы из них, удача +${pct(b.specialtyLuck)}.` +
-            (onSpecialty(state, r) ? ' Сейчас он работает по специальности.' : ''),
+          tr('С шансом {0} репортёр приносит новость на выбранные темы. ★ — его специальность: если все выбранные темы из них, удача +{1}.', pct(b.assignFocus), pct(b.specialtyLuck)) +
+            (onSpecialty(state, r) ? tr(' Сейчас он работает по специальности.') : ''),
         ),
       );
     if (digMenuFor === id && !state.investigations.some((x) => x.reporterId === id)) out.push(digMenu(id));
@@ -3302,8 +3304,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       return h(
         'span',
         { class: 'team-dig' },
-        h('span', { class: 'dig-progress', title: 'Пока идёт расследование, репортёр не ищет обычные новости' }, `Копает под ${digWhom(inv.target)} · ${inv.total - inv.turnsLeft}/${inv.total}`),
-        h('button', { class: 'ghost', disabled: !!state.outcome, onclick: teamAct(() => cancelInvestigation(state, id)) }, 'Отозвать'),
+        h('span', { class: 'dig-progress', title: tr('Пока идёт расследование, репортёр не ищет обычные новости') }, tr('Копает под {0} · {1}/{2}', digWhom(inv.target), inv.total - inv.turnsLeft, inv.total)),
+        h('button', { class: 'ghost', disabled: !!state.outcome, onclick: teamAct(() => cancelInvestigation(state, id)) }, tr('Отозвать')),
       );
     const open = digMenuFor === id;
     return h(
@@ -3318,7 +3320,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           render();
         },
       },
-      `Компромат ${open ? '▴' : '▾'}`,
+      tr('Компромат {0}', open ? '▴' : '▾'),
     );
   }
 
@@ -3346,18 +3348,18 @@ export function mountApp(root: HTMLElement, base: Content): void {
           },
           name,
         ),
-        infoButton(key, 'Что это даст?'),
+        infoButton(key, tr('Что это даст?')),
         openInfo.has(key) ? promise() : null,
       );
     };
     return h(
       'div',
       { class: 'dig-menu' },
-      h('p', { class: 'dig-menu-head' }, `На кого копать? ${turns} ${turnsWord(turns)} и ${c.balance.investigationCost} ₽ в день — всё это время репортёр не пишет новостей.`),
+      h('p', { class: 'dig-menu-head' }, tr('На кого копать? {0} {1} и {2} ₽ в день — всё это время репортёр не пишет новостей.', turns, turnsWord(turns), c.balance.investigationCost)),
       ...c.groups.map((g) => option(g.id, g.name, () => digPromise(g.id, id))),
       // One reporter at a time digs into the rival paper.
       state.rival && !state.rival.closed && !state.investigations.some((x) => x.target === RIVAL_DIG)
-        ? option(RIVAL_DIG, '«Голос города»', () => h('div', { class: 'dig-promise' }, h('p', { class: 'dig-effect' }, 'Документы о том, кто платит «Голосу». Поверившие перестают ему доверять.')))
+        ? option(RIVAL_DIG, tr('«Голос города»'), () => h('div', { class: 'dig-promise' }, h('p', { class: 'dig-effect' }, tr('Документы о том, кто платит «Голосу». Поверившие перестают ему доверять.'))))
         : null,
       state.rival && !state.rival.closed ? watchRow(id) : null,
     );
@@ -3375,14 +3377,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'button',
         { class: `dig-pick${on ? ' on' : ''}`, 'aria-pressed': String(on), disabled: !!state.outcome, onclick: teamAct(() => setRivalWatch(state, id, !on)) },
-        on ? `👁 Следит за «${rivalNames[rival.kind].ins}» — перестать` : `👁 Не копать, а следить за «${rivalNames[rival.kind].ins}»`,
+        on ? tr('👁 Следит за «{0}» — перестать', rivalNames[rival.kind].ins) : tr('👁 Не копать, а следить за «{0}»', rivalNames[rival.kind].ins),
       ),
-      infoButton(key, 'Что это даст?'),
+      infoButton(key, tr('Что это даст?')),
       openInfo.has(key)
         ? h(
             'div',
             { class: 'dig-promise' },
-            h('p', { class: 'dig-effect' }, `Репортёр по-прежнему ищет новости, но с шансом ${pct(b.assignFocus)} приносит опровержение свежей лжи «${rivalNames[rival.kind].gen}» вместо обычной новости; остальные находят его случайно, с шансом ${pct(b.debunkFindChance)}.`),
+            h('p', { class: 'dig-effect' }, tr('Репортёр по-прежнему ищет новости, но с шансом {0} приносит опровержение свежей лжи «{1}» вместо обычной новости; остальные находят его случайно, с шансом {2}.', pct(b.assignFocus), rivalNames[rival.kind].gen, pct(b.debunkFindChance))),
           )
         : null,
     );
@@ -3398,7 +3400,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const pool = c.reporters.filter((r) => r.weight > 0 && !state.reporters.includes(r.id)).length;
     // The first search a day is free (CONCEPT.md §3.3).
     const fee = agencyCost(state, c);
-    const price = fee ? `−${fee}` : 'бесплатно';
+    const price = fee ? `−${fee}` : tr('бесплатно');
     const canCall = !full && pool > 0 && state.money >= fee && !state.outcome;
     const act = (f: () => void) => () => {
       try {
@@ -3410,30 +3412,30 @@ export function mountApp(root: HTMLElement, base: Content): void {
       render();
     };
     return [
-      h('h3', { class: 'section', id: 'agency' }, 'Кадровое агентство «Перо и Ко»'),
+      h('h3', { class: 'section', id: 'agency' }, tr('Кадровое агентство «Перо и Ко»')),
       h(
         'p',
         { class: 'hint' },
         full
-          ? `В редакции не больше ${b.maxReporters} репортёров. Чтобы нанять другого, кого-то придётся уволить.`
-          : `Первый поиск в день бесплатно, следующий — ${b.agencyFee}. Кандидаты ждут до конца дня.`,
+          ? tr('В редакции не больше {0} репортёров. Чтобы нанять другого, кого-то придётся уволить.', b.maxReporters)
+          : tr('Первый поиск в день бесплатно, следующий — {0}. Кандидаты ждут до конца дня.', b.agencyFee),
       ),
       ...state.agencyOffer.map((id) => {
         const r = reporterOf(c, id);
         return row(
           id,
-          `зарплата ${r.salary} в день`,
+          tr('зарплата {0} в день', r.salary),
           h(
             'button',
             { class: state.money >= r.hireCost ? 'primary' : '', 'data-tut': 'hire', disabled: full || state.money < r.hireCost || !!state.outcome, onclick: act(() => hireFromAgency(state, c, id)) },
-            `Нанять (−${r.hireCost})`,
+            tr('Нанять (−{0})', r.hireCost),
           ),
         );
       }),
       h(
         'button',
         { class: state.agencyOffer.length ? '' : 'primary', 'data-tut': 'agency', disabled: !canCall, onclick: act(() => callAgency(state, c)) },
-        state.agencyOffer.length ? `Искать других (${price})` : `Найти репортёров (${price})`,
+        state.agencyOffer.length ? tr('Искать других ({0})', price) : tr('Найти репортёров ({0})', price),
       ),
     ];
   }
@@ -3442,7 +3444,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const parts: string[] = [];
     if (req?.channel) parts.push(channelOf(c, req.channel).name);
     if (req?.upgrade) parts.push(c.upgrades.find((u) => u.id === req.upgrade)?.name ?? req.upgrade);
-    return parts.length ? `Нужно: ${parts.join(', ')}` : '';
+    return parts.length ? tr('Нужно: {0}', parts.join(', ')) : '';
   }
 
   /**
@@ -3467,30 +3469,30 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (e.adRateAdd) money += followersOf(state, ch) * e.adRateAdd;
     if (e.upkeepAdd) money += totalUpkeep(state, c) - totalUpkeep(withIt, c);
     if (e.reachAdd || e.reachMul || e.groupReach || e.trustBonus || e.acquisitionMul) readers += expectedJoins(withIt, c, modsWith, level) - expectedJoins(state, c, mods, level);
-    if (money >= 0.5) parts.push(`≈ +${Math.round(money)} ₽ в день`);
-    if (readers >= 0.75) parts.push(`≈ +${Math.round(readers)} ${plural(Math.round(readers), 'читатель', 'читателя', 'читателей')} в день`);
+    if (money >= 0.5) parts.push(tr('≈ +{0} ₽ в день', Math.round(money)));
+    if (readers >= 0.75) parts.push(tr('≈ +{0} {1} в день', Math.round(readers), plural(Math.round(readers), 'читатель', 'читателя', 'читателей')));
     else if (readers >= 0.1) {
       const every = Math.max(2, Math.round(1 / readers));
-      parts.push(`≈ +1 читатель за ${every} ${plural(every, 'день', 'дня', 'дней')}`);
-    } else if (readers <= -0.75) parts.push(`≈ −${Math.round(-readers)} ${plural(Math.round(-readers), 'новый читатель', 'новых читателя', 'новых читателей')} в день`);
+      parts.push(tr('≈ +1 читатель за {0} {1}', every, plural(every, 'день', 'дня', 'дней')));
+    } else if (readers <= -0.75) parts.push(tr('≈ −{0} {1} в день', Math.round(-readers), plural(Math.round(-readers), 'новый читатель', 'новых читателя', 'новых читателей')));
     if (e.churnMul && report) {
       const lost = report.readers.lost - report.readers.lostBy.price;
       const saved = lost * (1 - e.churnMul);
       readers += saved;
-      if (lost > 0) parts.push(`вчера ушли ${lost} ${plural(lost, 'читатель', 'читателя', 'читателей')} — ушли бы ≈ ${Math.round(lost - saved)}`);
+      if (lost > 0) parts.push(tr('вчера ушли {0} {1} — ушли бы ≈ {2}', lost, plural(lost, 'читатель', 'читателя', 'читателей'), Math.round(lost - saved)));
     }
-    if (e.trustBonus) parts.push(`+${e.trustBonus} к репутации`);
+    if (e.trustBonus) parts.push(tr('+{0} к репутации', e.trustBonus));
     if (e.reporterLuck && state.reporters.length) {
       const luck = (m: typeof mods) => state.reporters.reduce((s, id) => s + searchLuck(state, c, skilledReporter(state, c, reporterOf(c, id)), m), 0) / state.reporters.length;
-      parts.push(`удача редакции ${Math.round(luck(mods) * 100)}% → ${Math.round(luck(modsWith) * 100)}%`);
+      parts.push(tr('удача редакции {0}% → {1}%', Math.round(luck(mods) * 100), Math.round(luck(modsWith) * 100)));
     }
     if (e.exposurePenaltyMul) {
       const loss = report?.exposures.reduce((s, x) => s + x.trustLoss, 0) ?? 0;
       const ratio = modsWith.exposurePenaltyMul / mods.exposurePenaltyMul;
       parts.push(
         loss >= 0.5
-          ? `вчерашнее разоблачение стоило бы −${Math.round(loss * ratio)} репутации, а не −${Math.round(loss)}`
-          : `разоблачения будут стоить на ${Math.round(Math.abs(1 - ratio) * 100)}% ${ratio < 1 ? 'меньше' : 'больше'} репутации`,
+          ? tr('вчерашнее разоблачение стоило бы −{0} репутации, а не −{1}', Math.round(loss * ratio), Math.round(loss))
+          : tr('разоблачения будут стоить на {0}% {1} репутации', Math.round(Math.abs(1 - ratio) * 100), ratio < 1 ? tr('меньше') : tr('больше')),
       );
     }
     if (e.checkerMul) {
@@ -3498,8 +3500,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const after = issueRisk(modsWith);
       parts.push(
         now.untrue && now.risk > 0
-          ? `риск этого выпуска ${Math.round(now.risk * 100)}% → ${Math.round(after.risk * 100)}%`
-          : `ложь будут ловить на ${Math.round(Math.abs(1 - e.checkerMul) * 100)}% ${e.checkerMul < 1 ? 'реже' : 'чаще'}`,
+          ? tr('риск этого выпуска {0}% → {1}%', Math.round(now.risk * 100), Math.round(after.risk * 100))
+          : tr('ложь будут ловить на {0}% {1}', Math.round(Math.abs(1 - e.checkerMul) * 100), e.checkerMul < 1 ? tr('реже') : tr('чаще')),
       );
     }
     if (!parts.length) return null;
@@ -3538,7 +3540,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function cardFace(u: UpgradeDef, opts: { level?: number; locked?: boolean; fresh?: boolean; foot?: HTMLElement | null; extra?: HTMLElement | null } = {}): HTMLElement {
     const rarity = u.rarity ?? 'common';
     if (opts.locked) {
-      return h('div', { class: `coll-card rarity-${rarity} locked` }, h('span', { class: 'coll-rarity' }, rarityNames[rarity]), h('span', { class: 'coll-icon' }, '?'), h('b', {}, '???'), h('p', { class: 'hint' }, 'Выпадает в конвертах и сейфах.'));
+      return h('div', { class: `coll-card rarity-${rarity} locked` }, h('span', { class: 'coll-rarity' }, rarityNames[rarity]), h('span', { class: 'coll-icon' }, '?'), h('b', {}, '???'), h('p', { class: 'hint' }, tr('Выпадает в конвертах и сейфах.')));
     }
     const level = opts.level ?? 1;
     const power = c.balance.cardLevelPower[level - 1] ?? 1;
@@ -3546,10 +3548,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
       'div',
       { class: `coll-card rarity-${rarity}${u.ability ? ' is-ability' : ''}` },
       h('span', { class: 'coll-rarity' }, rarityNames[rarity]),
-      opts.fresh ? h('span', { class: 'coll-new' }, 'Новая') : null,
+      opts.fresh ? h('span', { class: 'coll-new' }, tr('Новая')) : null,
       cardArt(u),
       h('b', {}, u.name),
-      h('span', { class: 'coll-level', title: `Уровень ${level} из ${MAX_LEVEL}${power > 1 ? `: польза ×${power}` : ''}` }, '★'.repeat(level) + '☆'.repeat(MAX_LEVEL - level), power > 1 ? h('small', {}, ` польза ×${power}`) : null),
+      h('span', { class: 'coll-level', title: tr('Уровень {0} из {1}{2}', level, MAX_LEVEL, power > 1 ? tr(': польза ×{0}', power) : '') }, '★'.repeat(level) + '☆'.repeat(MAX_LEVEL - level), power > 1 ? h('small', {}, tr(' польза ×{0}', power)) : null),
       u.tags?.length ? h('span', { class: 'coll-tags' }, ...u.tags.map((t) => h('span', { class: `tag-chip tag-${t}` }, tagNames[t] ?? t))) : null,
       h('p', { class: 'upg-plus' }, `+ ${u.description}`),
       u.drawback ? h('p', { class: 'upg-minus' }, `− ${u.drawback}`) : null,
@@ -3568,7 +3570,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
   function collectionCount(): string {
     const all = collectable(base);
-    return `${all.filter((u) => collection.cards[u.id]).length} из ${all.length}`;
+    return tr('{0} из {1}', all.filter((u) => collection.cards[u.id]).length, all.length);
   }
   function cardsIcon(): HTMLElement {
     return h('img', { class: 'office-icon', src: `${assetBase}sprites/ui/cards.png`, alt: '', width: 16, height: 16 });
@@ -3598,23 +3600,23 @@ export function mountApp(root: HTMLElement, base: Content): void {
           h(
             'p',
             { class: 'pack-reveal-title' },
-            !best ? `Все карты уже у вас — вернули ${result.refund} ✦` : best.rarity === 'legendary' ? 'Легендарная карта!' : best.rarity === 'rare' ? 'Редкая карта!' : 'Новая карта',
-            best && result.refund ? ` · вернули ${result.refund} ✦` : '',
+            !best ? tr('Все карты уже у вас — вернули {0} ✦', result.refund) : best.rarity === 'legendary' ? tr('Легендарная карта!') : best.rarity === 'rare' ? tr('Редкая карта!') : tr('Новая карта'),
+            best && result.refund ? tr(' · вернули {0} ✦', result.refund) : '',
           ),
           ...(result.cards.length ? [h('div', { class: 'pack-reveal-cards' }, ...result.cards.map((x) => cardFace(x.card, { level: 1 })))] : []),
         )
       : null;
     const kinds = ['legendary', 'rare', 'common'] as const;
-    const rarityTabs = { legendary: 'Легендарные', rare: 'Редкие', common: 'Обычные' };
+    const rarityTabs = { legendary: tr('Легендарные'), rare: tr('Редкие'), common: tr('Обычные') };
     return [
       h(
         'div',
         { class: 'office-head' },
-        h('p', { class: 'office-wallet' }, cardsIcon(), h('b', {}, `Ваши карты: ${owned} из ${all.length}`), h('span', { class: 'office-ties' }, `✦ ${collection.currency} связей`)),
-        h('p', { class: 'hint office-earn' }, 'Связи даются за каждую партию: поражение +15, победа +40 и +15 за каждую звезду, город кампании ×1.5. На них здесь покупают новые карты и улучшают свои.'),
+        h('p', { class: 'office-wallet' }, cardsIcon(), h('b', {}, tr('Ваши карты: {0} из {1}', owned, all.length)), h('span', { class: 'office-ties' }, tr('✦ {0} связей', collection.currency))),
+        h('p', { class: 'hint office-earn' }, tr('Связи даются за каждую партию: поражение +15, победа +40 и +15 за каждую звезду, город кампании ×1.5. На них здесь покупают новые карты и улучшают свои.')),
       ),
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
-      h('h3', { class: 'section' }, 'Ларёк «Медиа-Плюс» — новые карты'),
+      h('h3', { class: 'section' }, tr('Ларёк «Медиа-Плюс» — новые карты')),
       h(
         'div',
         { class: 'packs' },
@@ -3634,13 +3636,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
                   packResult = openPack(collection, base, p);
                 }),
               },
-              short <= 0 ? `Открыть за ✦ ${p.cost}` : `Нужно ещё ✦ ${short}`,
+              short <= 0 ? tr('Открыть за ✦ {0}', p.cost) : tr('Нужно ещё ✦ {0}', short),
             ),
           );
         }),
       ),
       ...(reveal ? [reveal] : []),
-      h('h3', { class: 'section' }, 'Коллекция'),
+      h('h3', { class: 'section' }, tr('Коллекция')),
       h(
         'div',
         { class: 'office-tabs', role: 'tablist' },
@@ -3655,8 +3657,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
               render();
             },
           },
-          h('b', {}, 'Все'),
-          h('small', {}, `${owned} из ${all.length}`),
+          h('b', {}, tr('Все')),
+          h('small', {}, tr('{0} из {1}', owned, all.length)),
         ),
         ...kinds.map((r) => {
           const list = all.filter((u) => u.rarity === r);
@@ -3672,7 +3674,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
               },
             },
             h('b', {}, rarityTabs[r]),
-            h('small', {}, `${list.filter((u) => collection.cards[u.id]).length} из ${list.length}`),
+            h('small', {}, tr('{0} из {1}', list.filter((u) => collection.cards[u.id]).length, list.length)),
           );
         }),
       ),
@@ -3692,20 +3694,20 @@ export function mountApp(root: HTMLElement, base: Content): void {
               fresh: collection.fresh.includes(u.id),
               foot:
                 cost === null
-                  ? h('span', { class: 'coll-max' }, 'Высший уровень')
-                  : h('button', { class: collection.currency >= cost ? 'primary' : '', disabled: collection.currency < cost, onclick: act(() => levelUp(collection, u)) }, `↑ Улучшить · ✦ ${cost}`),
+                  ? h('span', { class: 'coll-max' }, tr('Высший уровень'))
+                  : h('button', { class: collection.currency >= cost ? 'primary' : '', disabled: collection.currency < cost, onclick: act(() => levelUp(collection, u)) }, tr('↑ Улучшить · ✦ {0}', cost)),
             });
           }),
       ),
-      h('h3', { class: 'section' }, 'Наборы'),
-      h('p', { class: 'hint' }, 'Три карты одного направления в одной партии дают бонус набора.'),
+      h('h3', { class: 'section' }, tr('Наборы')),
+      h('p', { class: 'hint' }, tr('Три карты одного направления в одной партии дают бонус набора.')),
       h(
         'div',
         { class: 'sets' },
         ...base.synergies.map((x) => {
           const cards = all.filter((u) => u.tags?.includes(x.tag));
           const have = cards.filter((u) => collection.cards[u.id]).length;
-          return h('p', { class: 'set-line' }, h('span', { class: `tag-chip tag-${x.tag}` }, tagNames[x.tag] ?? x.tag), h('b', {}, ` ${x.name}`), h('span', { class: 'set-have' }, ` · в коллекции ${have} из ${cards.length}`), ` — ${x.description}`);
+          return h('p', { class: 'set-line' }, h('span', { class: `tag-chip tag-${x.tag}` }, tagNames[x.tag] ?? x.tag), h('b', {}, ` ${x.name}`), h('span', { class: 'set-have' }, tr(' · в коллекции {0} из {1}', have, cards.length)), ` — ${x.description}`);
         }),
       ),
       h(
@@ -3720,7 +3722,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             openModal(null);
           },
         },
-        'Закрыть',
+        tr('Закрыть'),
       ),
     ];
   }
@@ -3740,8 +3742,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       })
       .map((u) => `${u.icon ?? '★'} ${u.name}`);
     const sets = getModifiers(state, c).synergies.map((t) => c.synergies.find((x) => x.tag === t)!).filter((x) => (x.effects.topicImpactMul?.[tpl.topic] ?? 1) > 1 || (harmful && (x.effects.scaryImpactMul ?? 1) > 1) || (hunted && (x.effects.stainMul ?? 1) > 1) || (!!card.conflict && (x.effects.tensionMul ?? 1) > 1));
-    const all = [...names, ...sets.map((x) => `набор «${x.name}»`)];
-    return all.length ? h('p', { class: 'boost-line', title: 'Карты газеты, которые делают эту новость сильнее' }, 'Усиливают: ', all.join(', ')) : null;
+    const all = [...names, ...sets.map((x) => tr('набор «{0}»', x.name))];
+    return all.length ? h('p', { class: 'boost-line', title: tr('Карты газеты, которые делают эту новость сильнее') }, tr('Усиливают: '), all.join(', ')) : null;
   }
 
   /** Sets in this game: how many cards of each direction are owned, and the bonus once there are enough. */
@@ -3766,12 +3768,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
           { class: `set-line${active.includes(x.tag) ? ' on' : ''}` },
           h('span', { class: `tag-chip tag-${x.tag}` }, tagNames[x.tag] ?? x.tag),
           h('b', {}, x.name),
-          h('span', { class: 'set-stars', title: `${got} из ${x.count}` }, '★'.repeat(got) + '☆'.repeat(x.count - got)),
+          h('span', { class: 'set-stars', title: tr('{0} из {1}', got, x.count) }, '★'.repeat(got) + '☆'.repeat(x.count - got)),
           h(
             'button',
             {
               class: `section-info${info ? ' on' : ''}`,
-              title: info ? 'Скрыть' : 'Что даёт набор?',
+              title: info ? tr('Скрыть') : tr('Что даёт набор?'),
               'aria-expanded': String(info),
               onclick: () => {
                 if (info) openInfo.delete(key);
@@ -3781,11 +3783,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
             },
             '?',
           ),
-          short ? h('p', { class: 'hint set-short' }, `В вашей коллекции не хватает карт «${tagNames[x.tag] ?? x.tag}», чтобы собрать набор в этой партии. Новые карты покупают между партиями — кнопка «Карты» на главном экране и на карте кампании.`) : null,
-          info ? h('p', { class: 'hint info-text' }, active.includes(x.tag) ? `Действует: ${x.description}` : `Ещё ${x.count - n} — и ${x.description.charAt(0).toLowerCase()}${x.description.slice(1)}`) : null,
+          short ? h('p', { class: 'hint set-short' }, tr('В вашей коллекции не хватает карт «{0}», чтобы собрать набор в этой партии. Новые карты покупают между партиями — кнопка «Карты» на главном экране и на карте кампании.', tagNames[x.tag] ?? x.tag)) : null,
+          info ? h('p', { class: 'hint info-text' }, active.includes(x.tag) ? tr('Действует: {0}', x.description) : tr('Ещё {0} — и {1}{2}', x.count - n, x.description.charAt(0).toLowerCase(), x.description.slice(1))) : null,
         );
       });
-    return lines.length ? [h('h3', { class: 'section' }, 'Наборы'), ...lines] : [];
+    return lines.length ? [h('h3', { class: 'section' }, tr('Наборы')), ...lines] : [];
   }
 
   /**
@@ -3807,7 +3809,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const price = (u: UpgradeDef) => {
       const o = options.get(u.id);
       const free = o?.cost === 0 && u.cost > 0;
-      const label = u.fork ? (free ? 'бесплатно' : `${u.cost}`) : 'Взять';
+      const label = u.fork ? (free ? tr('бесплатно') : `${u.cost}`) : tr('Взять');
       return h('button', { class: o?.affordable ? 'primary' : '', 'data-tut': 'buy', disabled: !o?.affordable || !!state.outcome, onclick: () => buy(u.id) }, label);
     };
     const icon = (u: UpgradeDef, cls = 'upg-icon') => h('span', { class: cls, 'aria-hidden': 'true' }, u.icon ?? '★');
@@ -3821,10 +3823,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
       return h(
         'p',
         { class: 'gain-line' },
-        'Сейчас: ',
+        tr('Сейчас: '),
         h('b', {}, g.parts.join(', ')),
-        payback && g.payback ? h('span', { class: 'payback' }, ` · окупится за ${g.payback} ${plural(g.payback, 'день', 'дня', 'дней')}`) : null,
-        payback && g.never ? h('span', { class: 'payback never' }, ' · не окупится до конца партии') : null,
+        payback && g.payback ? h('span', { class: 'payback' }, tr(' · окупится за {0} {1}', g.payback, plural(g.payback, 'день', 'дня', 'дней'))) : null,
+        payback && g.never ? h('span', { class: 'payback never' }, tr(' · не окупится до конца партии')) : null,
       );
     };
     const minus = (u: UpgradeDef) => (u.drawback ? h('p', { class: 'upg-minus' }, `− ${u.drawback}`) : null);
@@ -3846,17 +3848,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: `deck-card rarity-${rarity}${u.ability ? ' is-ability' : ''}${cls ? ` ${cls}` : ''}` },
         cardArt(u),
-        h('span', { class: `deck-tag tag-${rarity}` }, u.fork ? 'развилка' : u.ability ? `приём · ${rarityNames[rarity]}` : u.cash ? `касса · ${rarityNames[rarity]}` : rarityNames[rarity]),
-        u.id === best ? h('span', { class: 'best-mark' }, 'выгоднее всего') : null,
+        h('span', { class: `deck-tag tag-${rarity}` }, u.fork ? tr('развилка') : u.ability ? tr('приём · {0}', rarityNames[rarity]) : u.cash ? tr('касса · {0}', rarityNames[rarity]) : rarityNames[rarity]),
+        u.id === best ? h('span', { class: 'best-mark' }, tr('выгоднее всего')) : null,
         h('div', { class: 'card-name' }, h('b', {}, line ? `${seriesNames[u.series!] ?? u.name}: ${u.name.toLowerCase()}` : u.name, line ? pips(line) : null)),
         h(
           'div',
           { class: 'card-meta' },
           ...(u.tags ?? []).map((t) => h('span', { class: `tag-chip tag-${t}` }, tagNames[t] ?? t)),
-          u.fork ? null : h('span', { class: 'coll-level', title: `Уровень карты в вашей коллекции: ${level} из ${MAX_LEVEL}` }, '★'.repeat(level) + '☆'.repeat(MAX_LEVEL - level)),
+          u.fork ? null : h('span', { class: 'coll-level', title: tr('Уровень карты в вашей коллекции: {0} из {1}', level, MAX_LEVEL) }, '★'.repeat(level) + '☆'.repeat(MAX_LEVEL - level)),
         ),
         // What the card gives, its minus and what it needs: always in sight.
-        h('p', { class: 'upg-plus' }, `+ ${u.description}`, level > 1 && !u.fork ? h('small', {}, ` · польза ×${b.cardLevelPower[level - 1]}`) : null),
+        h('p', { class: 'upg-plus' }, `+ ${u.description}`, level > 1 && !u.fork ? h('small', {}, tr(' · польза ×{0}', b.cardLevelPower[level - 1])) : null),
         minus(u),
         options.get(u.id) && !options.get(u.id)!.unlocked ? h('p', { class: 'req' }, requirementText(u.requires)) : null,
         foot,
@@ -3872,10 +3874,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
         { class: 'event-bar' },
         h('span', { class: 'event-name' }, label),
         h('span', { class: 'event-track' }, h('i', { style: `width: ${Math.round(Math.max(0, Math.min(1, 1 - left / Math.max(1, span))) * 100)}%` })),
-        h('small', {}, left <= 1 ? 'завтра' : `через ${left} ${plural(left, 'день', 'дня', 'дней')}`),
+        h('small', {}, left <= 1 ? tr('завтра') : tr('через {0} {1}', left, plural(left, 'день', 'дня', 'дней'))),
       );
     const prevFork = next ? Math.max(1, ...c.forks.filter((f) => f.day < next.day).map((f) => f.day)) : 1;
-    const events = [...(next ? [bar(`Решение редакции: ${next.title}`, next.day - state.turn, next.day - prevFork)] : []), ...(deck.length ? [] : [bar('Предложение совета', days, b.shopRefreshDays)])];
+    const events = [...(next ? [bar(tr('Решение редакции: {0}', next.title), next.day - state.turn, next.day - prevFork)] : []), ...(deck.length ? [] : [bar(tr('Предложение совета'), days, b.shopRefreshDays)])];
     const owned = c.upgrades.filter((u) => state.upgrades.includes(u.id) && !(u.series && c.upgrades.filter((x) => x.series === u.series && state.upgrades.includes(x.id)).pop() !== u));
     // Three more cards out of turn (CONCEPT.md §3.5б): any time, dearer with every request until the next offer.
     const requestCost = shopRequestCost(state, c);
@@ -3885,7 +3887,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         {
           class: 'shop-request',
           disabled: state.money < requestCost || !deckCards(state, c).length || !!state.outcome,
-          title: 'Совет пришлёт ещё три карты из вашей коллекции; одну из них можно взять бесплатно. Каждый следующий запрос до очередного предложения дороже.',
+          title: tr('Совет пришлёт ещё три карты из вашей коллекции; одну из них можно взять бесплатно. Каждый следующий запрос до очередного предложения дороже.'),
           onclick: () => {
             try {
               refreshShop(state, c);
@@ -3896,27 +3898,27 @@ export function mountApp(root: HTMLElement, base: Content): void {
             render();
           },
         },
-        `${label} · ${requestCost} ₽`,
+        tr('{0} · {1} ₽', label, requestCost),
       );
     return [
-      state.vouchers ? h('p', { class: 'good voucher-line' }, `За задания: из предложения совета можно взять ещё ${state.vouchers === 1 ? 'одну карту' : `${state.vouchers} карты`}.`) : null,
+      state.vouchers ? h('p', { class: 'good voucher-line' }, tr('За задания: из предложения совета можно взять ещё {0}.', state.vouchers === 1 ? tr('одну карту') : tr('{0} карты', state.vouchers))) : null,
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
       taken.length ? h('div', { class: 'paper-style' }, ...taken.map((u) => h('span', { class: 'style-chip' }, icon(u, 'style-icon'), u.name))) : null,
       events.length ? h('div', { class: 'event-bars' }, ...events) : null,
       ...(open
         ? [
-            h('h3', { class: 'section' }, `Решение редакции: ${open.title} — одно из двух навсегда`),
-            h('div', { class: 'fork' }, offerCard(upgrade(open.options[0])), h('span', { class: 'fork-or' }, 'или'), offerCard(upgrade(open.options[1]))),
+            h('h3', { class: 'section' }, tr('Решение редакции: {0} — одно из двух навсегда', open.title)),
+            h('div', { class: 'fork' }, offerCard(upgrade(open.options[0])), h('span', { class: 'fork-or' }, tr('или')), offerCard(upgrade(open.options[1]))),
           ]
         : []),
-      ...(deck.length || state.outcome ? [] : [h('div', { class: 'deck-head' }, h('span', { class: 'hint' }, 'Не хотите ждать совета?'), requestButton('Запросить ещё три карты'))]),
+      ...(deck.length || state.outcome ? [] : [h('div', { class: 'deck-head' }, h('span', { class: 'hint' }, tr('Не хотите ждать совета?')), requestButton(tr('Запросить ещё три карты')))]),
       ...(deck.length
         ? [
             h(
               'div',
               { class: 'deck-head' },
-              h('h3', { class: 'section' }, state.shopPicks ? 'Можно взять ещё одну — за награду задания' : 'Совет директоров предлагает — возьмите одну'),
-              requestButton(state.shopPicks ? 'Запросить ещё три' : 'Другие три'),
+              h('h3', { class: 'section' }, state.shopPicks ? tr('Можно взять ещё одну — за награду задания') : tr('Совет директоров предлагает — возьмите одну')),
+              requestButton(state.shopPicks ? tr('Запросить ещё три') : tr('Другие три')),
             ),
             h('div', { class: 'deck' }, ...deck.map(offerCard)),
           ]
@@ -3924,7 +3926,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       // Sets of three cards of one direction (CONCEPT.md §3.5б): what is gathered and what it gives.
       ...setLines(),
       // What the paper has: the same cards, without «Сейчас» and «Взять».
-      ...(owned.length ? [h('h3', { class: 'section' }, 'Ваша газета'), h('div', { class: 'deck owned-deck' }, ...owned.map((u) => cardView(u, null, 'owned')))] : []),
+      ...(owned.length ? [h('h3', { class: 'section' }, tr('Ваша газета')), h('div', { class: 'deck owned-deck' }, ...owned.map((u) => cardView(u, null, 'owned')))] : []),
     ].filter((x): x is HTMLElement => x !== null);
   }
 
@@ -3937,18 +3939,18 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'div',
         { class: 'debug-actions' },
-        h('button', { disabled: !report, onclick: () => openModal('report') }, 'Итоги хода'),
-        h('button', { onclick: () => newGame() }, 'Новая игра'),
+        h('button', { disabled: !report, onclick: () => openModal('report') }, tr('Итоги хода')),
+        h('button', { onclick: () => newGame() }, tr('Новая игра')),
       ),
-      h('h3', { class: 'section' }, 'Игра'),
-      row('Ход', `${Math.min(state.turn, b.turnLimit)} / ${b.turnLimit}`),
-      row('Сид города', `${state.seed}`),
-      row('Индекс города', `${Math.round(m.cityIndex)} (победа < ${b.winCityIndex})`),
-      row('Каналы', state.ownedChannels.map((ch) => channelOf(c, ch).name).join(', ')),
-      row('Расходы в день', `${totalUpkeep(state, c)}`),
-      row('Реклама после скандала', `×${state.scandal.toFixed(2)}`),
-      row('Неразоблачённая ложь', `${state.pendingLies.length}`),
-      row('Ходов в минусе', `${state.brokeTurns} / ${b.brokeTurnsLimit}`),
+      h('h3', { class: 'section' }, tr('Игра')),
+      row(tr('Ход'), `${Math.min(state.turn, b.turnLimit)} / ${b.turnLimit}`),
+      row(tr('Сид города'), `${state.seed}`),
+      row(tr('Индекс города'), tr('{0} (победа < {1})', Math.round(m.cityIndex), b.winCityIndex)),
+      row(tr('Каналы'), state.ownedChannels.map((ch) => channelOf(c, ch).name).join(', ')),
+      row(tr('Расходы в день'), `${totalUpkeep(state, c)}`),
+      row(tr('Реклама после скандала'), `×${state.scandal.toFixed(2)}`),
+      row(tr('Неразоблачённая ложь'), `${state.pendingLies.length}`),
+      row(tr('Ходов в минусе'), `${state.brokeTurns} / ${b.brokeTurnsLimit}`),
     ];
   }
 
@@ -3972,11 +3974,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   function upkeepLabel(x: UpkeepItem): string {
-    if (x.kind === 'channel') return `Содержание: ${channelOf(c, x.id).name}`;
-    if (x.kind === 'salary') return `Зарплата: ${reporterOf(c, x.id).name}`;
-    if (x.kind === 'budget') return 'Урезанный бюджет (проверка провалена)';
-    if (x.kind === 'loan') return `Кредит банка${state.loan ? ` (ещё ${state.loan.daysLeft} ${daysWord(state.loan.daysLeft)})` : ''}`;
-    return `Расследование: ${reporterOf(c, x.id).name}`;
+    if (x.kind === 'channel') return tr('Содержание: {0}', channelOf(c, x.id).name);
+    if (x.kind === 'salary') return tr('Зарплата: {0}', reporterOf(c, x.id).name);
+    if (x.kind === 'budget') return tr('Урезанный бюджет (проверка провалена)');
+    if (x.kind === 'loan') return tr('Кредит банка{0}', state.loan ? tr(' (ещё {0} {1})', state.loan.daysLeft, daysWord(state.loan.daysLeft)) : '');
+    return tr('Расследование: {0}', reporterOf(c, x.id).name);
   }
 
   /**
@@ -3997,15 +3999,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (state.loan) {
       const payoff = loanPayoff(state, c);
       return [
-        h('h3', { class: 'section', id: 'bank' }, 'Банк'),
-        h('p', {}, `Кредит ${state.loan.amount} ₽: ещё ${state.loan.daysLeft} ${daysWord(state.loan.daysLeft)} по ${state.loan.perDay} ₽ — платёж уже в расходах.`),
-        h('button', { disabled: state.money < payoff || !!state.outcome, onclick: act(() => repayLoan(state, c)) }, `Погасить досрочно · ${payoff} ₽`),
+        h('h3', { class: 'section', id: 'bank' }, tr('Банк')),
+        h('p', {}, tr('Кредит {0} ₽: ещё {1} {2} по {3} ₽ — платёж уже в расходах.', state.loan.amount, state.loan.daysLeft, daysWord(state.loan.daysLeft), state.loan.perDay)),
+        h('button', { disabled: state.money < payoff || !!state.outcome, onclick: act(() => repayLoan(state, c)) }, tr('Погасить досрочно · {0} ₽', payoff)),
       ];
     }
     const block = loanBlock(state, c);
     return [
-      h('h3', { class: 'section', id: 'bank' }, 'Банк'),
-      h('p', { class: 'hint' }, block ?? `Деньги сразу, потом ${b.loanDays} ${daysWord(b.loanDays)} платежей: переплата ${Math.round(b.loanRate * 100)}%. Кредит один за раз, погасить можно досрочно — без оставшихся процентов.`),
+      h('h3', { class: 'section', id: 'bank' }, tr('Банк')),
+      h('p', { class: 'hint' }, block ?? tr('Деньги сразу, потом {0} {1} платежей: переплата {2}%. Кредит один за раз, погасить можно досрочно — без оставшихся процентов.', b.loanDays, daysWord(b.loanDays), Math.round(b.loanRate * 100))),
       ...(block
         ? []
         : [
@@ -4013,7 +4015,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
               'div',
               { class: 'loan-options' },
               ...b.loanAmounts.map((amount) =>
-                h('button', { class: state.money < 0 ? 'primary' : '', onclick: act(() => takeLoan(state, c, amount)) }, h('b', {}, `Взять ${amount} ₽`), h('small', {}, `по ${loanPerDay(c, amount)} ₽ × ${b.loanDays} дн.`)),
+                h('button', { class: state.money < 0 ? 'primary' : '', onclick: act(() => takeLoan(state, c, amount)) }, h('b', {}, tr('Взять {0} ₽', amount)), h('small', {}, tr('по {0} ₽ × {1} дн.', loanPerDay(c, amount), b.loanDays))),
               ),
             ),
           ]),
@@ -4030,25 +4032,25 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const subsidies = state.deals.map((x) => ({ ...offerOf(c, x.id), until: x.untilTurn })).filter((x) => x.kind === 'subsidy');
     const net = forecastIncome.reduce((s, x) => s + x.sum, 0) + subsidies.reduce((s, x) => s + (x.amount ?? 0), 0) - items.reduce((s, x) => s + x.amount, 0);
     const out: (HTMLElement | null)[] = [
-      h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/money.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${state.money}`), h('span', {}, 'денег в кассе'))),
-      state.brokeTurns > 0 ? h('p', { class: 'bad' }, `Касса в минусе ${state.brokeTurns} ход(а) из ${b.brokeTurnsLimit} допустимых — потом банкротство.`) : null,
+      h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/money.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${state.money}`), h('span', {}, tr('денег в кассе')))),
+      state.brokeTurns > 0 ? h('p', { class: 'bad' }, tr('Касса в минусе {0} ход(а) из {1} допустимых — потом банкротство.', state.brokeTurns, b.brokeTurnsLimit)) : null,
       // In debt the bank comes first; otherwise it waits under the day's ledger.
       ...(state.money < 0 ? bankSection() : []),
-      h('h3', { class: 'section' }, 'Ожидается в этом ходу'),
-      ...forecastIncome.map((x) => ledgerRow(`Продажи: ${channelOf(c, x.ch).name}`, x.sum, `${x.buyers} чит. × ${incomePerReader(state, c, x.ch)} (цена «${priceLabels[state.price]}» ${c.balance.prices[state.price]} + реклама ${adRateOf(state, c, x.ch)})`)),
-      scandalNext < 1 ? h('p', { class: 'hint' }, `После скандала реклама приносит ×${scandalNext.toFixed(1)}, восстанавливается на ${b.scandalRecovery} в день.`) : null,
-      ...subsidies.map((x) => ledgerRow(x.title, x.amount ?? 0, `до дня ${x.until}`)),
+      h('h3', { class: 'section' }, tr('Ожидается в этом ходу')),
+      ...forecastIncome.map((x) => ledgerRow(tr('Продажи: {0}', channelOf(c, x.ch).name), x.sum, tr('{0} чит. × {1} (цена «{2}» {3} + реклама {4})', x.buyers, incomePerReader(state, c, x.ch), priceLabels[state.price], c.balance.prices[state.price], adRateOf(state, c, x.ch)))),
+      scandalNext < 1 ? h('p', { class: 'hint' }, tr('После скандала реклама приносит ×{0}, восстанавливается на {1} в день.', scandalNext.toFixed(1), b.scandalRecovery)) : null,
+      ...subsidies.map((x) => ledgerRow(x.title, x.amount ?? 0, tr('до дня {0}', x.until))),
       ...items.map((x) => ledgerRow(upkeepLabel(x), -x.amount)),
-      ledgerTotal('Итого за день', net),
+      ledgerTotal(tr('Итого за день'), net),
       ...(state.money < 0 ? [] : bankSection()),
       ...(state.deals.length
         ? [
-            h('h3', { class: 'section' }, 'Сделки'),
+            h('h3', { class: 'section' }, tr('Сделки')),
             ...state.deals.map((x) =>
               h(
                 'p',
                 { class: 'hint' },
-                `${offerOf(c, x.id).title}: до дня ${x.untilTurn}. ${offerOf(c, x.id).kind === 'silence' && x.building !== undefined ? `Молчим о: ${buildingName(state, c, x.building)}.` : 'Ни одной плохой новости о власти.'}`,
+                tr('{0}: до дня {1}. {2}', offerOf(c, x.id).title, x.untilTurn, offerOf(c, x.id).kind === 'silence' && x.building !== undefined ? tr('Молчим о: {0}.', buildingName(state, c, x.building)) : tr('Ни одной плохой новости о власти.')),
               ),
             ),
           ]
@@ -4056,12 +4058,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
     ];
     if (r) {
       out.push(
-        h('h3', { class: 'section' }, `Прошлый ход (${r.turn})`),
-        ...Object.entries(r.income).map(([ch, v]) => ledgerRow(`Продажи: ${channelOf(c, ch).name}`, v, `${r.buyers[ch] ?? 0} чит.`)),
-        ...(r.deals?.paid ? [ledgerRow('Субсидия мэрии', r.deals.paid)] : []),
+        h('h3', { class: 'section' }, tr('Прошлый ход ({0})', r.turn)),
+        ...Object.entries(r.income).map(([ch, v]) => ledgerRow(tr('Продажи: {0}', channelOf(c, ch).name), v, tr('{0} чит.', r.buyers[ch] ?? 0))),
+        ...(r.deals?.paid ? [ledgerRow(tr('Субсидия мэрии'), r.deals.paid)] : []),
         ...r.upkeepItems.map((x) => ledgerRow(upkeepLabel(x), -x.amount)),
-        ...(r.deals?.broken ?? []).map((t) => ledgerRow(`Нарушена сделка «${t}»`, -(c.offers.find((o) => o.title === t)?.penalty ?? 0))),
-        ledgerTotal('Итого', r.moneyDelta),
+        ...(r.deals?.broken ?? []).map((t) => ledgerRow(tr('Нарушена сделка «{0}»', t), -(c.offers.find((o) => o.title === t)?.penalty ?? 0))),
+        ledgerTotal(tr('Итого'), r.moneyDelta),
       );
     }
     return out.filter((x): x is HTMLElement => x !== null);
@@ -4071,16 +4073,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function readersContent(): HTMLElement[] {
     const r = report;
     const reasons: Record<ChurnReason, string> = {
-      exposed: 'увидели разоблачённую ложь',
-      doubted: 'проигнорировали новость',
-      boring: 'выпуск их не зацепил',
-      empty: 'выпуска не было',
-      price: 'цена им не по карману или кажется высокой',
-      style: 'газета стала не для них',
+      exposed: tr('увидели разоблачённую ложь'),
+      doubted: tr('проигнорировали новость'),
+      boring: tr('выпуск их не зацепил'),
+      empty: tr('выпуска не было'),
+      price: tr('цена им не по карману или кажется высокой'),
+      style: tr('газета стала не для них'),
     };
     const out: HTMLElement[] = [
-      h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${readerCount(state)}`), h('span', {}, 'постоянных читателей'))),
-      h('h3', { class: 'section' }, 'По группам'),
+      h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${readerCount(state)}`), h('span', {}, tr('постоянных читателей')))),
+      h('h3', { class: 'section' }, tr('По группам')),
       ...c.groups.map((g) =>
         countRow(g.name, state.residents.filter((x) => x.status === 'active' && x.group === g.id && x.follows.some((ch) => state.ownedChannels.includes(ch))).length),
       ),
@@ -4088,13 +4090,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (r) {
       const rd = r.readers;
       out.push(
-        h('h3', { class: 'section' }, `Прошлый ход (${r.turn})`),
-        h('div', { class: 'ledger-row' }, h('span', {}, 'Выпуск'), h('b', {}, `${issueLevelLabels[r.issue.level]} · ${c.balance.issueAcquisition[r.issue.level] ? `новых ×${c.balance.issueAcquisition[r.issue.level]}` : 'новых нет'}`)),
-        countRow('Было', rd.before),
-        ...(Object.keys(reasons) as ChurnReason[]).filter((k) => rd.lostBy[k] > 0).map((k) => ledgerRow(`Ушли: ${reasons[k]}`, -rd.lostBy[k])),
-        ...(rd.movedAway ? [ledgerRow('Уехали из города', -rd.movedAway)] : []),
-        ledgerRow('Пришли новые', rd.gained),
-        ledgerTotal('Итого', rd.after - rd.before),
+        h('h3', { class: 'section' }, tr('Прошлый ход ({0})', r.turn)),
+        h('div', { class: 'ledger-row' }, h('span', {}, tr('Выпуск')), h('b', {}, `${issueLevelLabels[r.issue.level]} · ${c.balance.issueAcquisition[r.issue.level] ? tr('новых ×{0}', c.balance.issueAcquisition[r.issue.level]) : tr('новых нет')}`)),
+        countRow(tr('Было'), rd.before),
+        ...(Object.keys(reasons) as ChurnReason[]).filter((k) => rd.lostBy[k] > 0).map((k) => ledgerRow(tr('Ушли: {0}', reasons[k]), -rd.lostBy[k])),
+        ...(rd.movedAway ? [ledgerRow(tr('Уехали из города'), -rd.movedAway)] : []),
+        ledgerRow(tr('Пришли новые'), rd.gained),
+        ledgerTotal(tr('Итого'), rd.after - rd.before),
       );
     }
     return out;
@@ -4106,30 +4108,30 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const r = report;
     const trust = averageTrust(state, c);
     const out: HTMLElement[] = [
-      h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/reputation.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${Math.round(trust)}%`), h('span', {}, 'средняя репутация у жителей'))),
+      h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/reputation.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${Math.round(trust)}%`), h('span', {}, tr('средняя репутация у жителей')))),
       meter(trust / 100, trust < 20 ? 'danger' : 'ok'),
-      h('div', { class: 'ledger-row' }, h('span', {}, 'Фактчекеры проверяют вас реже на'), h('b', {}, `${Math.round(b.trustShield * trust)}%`)),
+      h('div', { class: 'ledger-row' }, h('span', {}, tr('Фактчекеры проверяют вас реже на')), h('b', {}, `${Math.round(b.trustShield * trust)}%`)),
       h(
         'div',
         { class: 'ledger-row' },
-        h('span', {}, `Выпусков подряд без лжи`, h('small', {}, ` за ${b.cleanStreakDays} — +${b.cleanStreakBonus}% всему городу`)),
-        h('b', {}, `${state.cleanStreak} из ${b.cleanStreakDays}`),
+        h('span', {}, tr('Выпусков подряд без лжи'), h('small', {}, tr(' за {0} — +{1}% всему городу', b.cleanStreakDays, b.cleanStreakBonus))),
+        h('b', {}, tr('{0} из {1}', state.cleanStreak, b.cleanStreakDays)),
       ),
       h(
         'p',
         { class: 'hint' },
-        `Правда приносит репутацию: на первой полосе больше всего, в заметке меньше; немного достаётся и тем, кто вас не читает. Пойманная ложь отнимает примерно столько, сколько дают 3–4 честных выпуска.`,
+        tr('Правда приносит репутацию: на первой полосе больше всего, в заметке меньше; немного достаётся и тем, кто вас не читает. Пойманная ложь отнимает примерно столько, сколько дают 3–4 честных выпуска.'),
       ),
     ];
     if (r) {
       const loss = r.exposures.reduce((s, x) => s + x.trustLoss, 0);
       const delta = r.trustAfter - r.trustBefore;
       out.push(
-        h('h3', { class: 'section' }, `Прошлый ход (${r.turn})`),
-        ...r.exposures.map((x) => ledgerRow(`Разоблачено: «${x.title}»`, -Math.round(x.trustLoss * 10) / 10, `выпуск дня ${x.turn}`, '%')),
-        ...(r.cleanStreak.bonus ? [ledgerRow(`${c.balance.cleanStreakDays} выпусков без лжи`, Math.round(r.cleanStreak.bonus * 10) / 10, '', '%')] : []),
-        ledgerRow('Правдивые новости и прочее', Math.round((delta + loss - r.cleanStreak.bonus) * 10) / 10, '', '%'),
-        ledgerTotal('Итого', Math.round(delta * 10) / 10, '%'),
+        h('h3', { class: 'section' }, tr('Прошлый ход ({0})', r.turn)),
+        ...r.exposures.map((x) => ledgerRow(tr('Разоблачено: «{0}»', x.title), -Math.round(x.trustLoss * 10) / 10, tr('выпуск дня {0}', x.turn), '%')),
+        ...(r.cleanStreak.bonus ? [ledgerRow(tr('{0} выпусков без лжи', c.balance.cleanStreakDays), Math.round(r.cleanStreak.bonus * 10) / 10, '', '%')] : []),
+        ledgerRow(tr('Правдивые новости и прочее'), Math.round((delta + loss - r.cleanStreak.bonus) * 10) / 10, '', '%'),
+        ledgerTotal(tr('Итого'), Math.round(delta * 10) / 10, '%'),
       );
     }
     return out;
@@ -4158,16 +4160,16 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'div',
           {},
           h('b', {}, `${m.activeResidents}`),
-          h('span', {}, `жителей из ${state.initialPopulation}`),
+          h('span', {}, tr('жителей из {0}', state.initialPopulation)),
         ),
         r ? trend(r.metricsAfter.activeResidents - r.metricsBefore.activeResidents, '', true) : null,
       ),
-      h('h3', { class: 'section' }, 'Подробности'),
-      metric('Население', 'population'),
-      metric('Занятость', 'employment'),
-      metric('Экономика', 'economy'),
-      metric('Настроение', 'mood'),
-      metric('Порядок и безопасность', 'order'),
+      h('h3', { class: 'section' }, tr('Подробности')),
+      metric(tr('Население'), 'population'),
+      metric(tr('Занятость'), 'employment'),
+      metric(tr('Экономика'), 'economy'),
+      metric(tr('Настроение'), 'mood'),
+      metric(tr('Порядок и безопасность'), 'order'),
       ...placesSection(),
     ];
   }
@@ -4184,26 +4186,26 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const row = (x: (typeof places)[number]) => {
       const stain = state.stains[x.id] ?? 0;
       const staff = state.residents.filter((r) => r.status === 'active' && r.job === x.id).length;
-      const status = !x.open ? 'закрыто' : stain >= 0.4 ? 'на грани' : stain >= 0.15 ? 'теряет людей' : 'работает';
+      const status = !x.open ? tr('закрыто') : stain >= 0.4 ? tr('на грани') : stain >= 0.15 ? tr('теряет людей') : tr('работает');
       const action =
         state.outcome || !x.open
           ? null
           : x.id === target
-            ? h('button', { class: 'ghost', onclick: actNow(() => endHunt(state)) }, 'Прекратить')
+            ? h('button', { class: 'ghost', onclick: actNow(() => endHunt(state)) }, tr('Прекратить'))
             : target === undefined
-              ? h('button', { class: 'hunt-chip', title: 'Бить по этому месту день за днём: люди его обходят, работники уходят, и оно закрывается', onclick: actNow(() => startHunt(state, x.id)) }, '🎯 Травить')
+              ? h('button', { class: 'hunt-chip', title: tr('Бить по этому месту день за днём: люди его обходят, работники уходят, и оно закрывается'), onclick: actNow(() => startHunt(state, x.id)) }, tr('🎯 Травить'))
               : null;
       return h(
         'div',
         { class: `place-row${x.id === target ? ' target' : ''}${x.open ? '' : ' closed'}` },
         h('b', { class: 'place-name' }, x.id === target ? '🎯 ' : '', buildingName(state, c, x.id)),
-        h('span', { class: 'place-staff' }, x.open ? `работают ${staff} из ${x.jobs}` : '—'),
-        h('span', { class: 'place-stain', title: 'Пятно травли: чем больше, тем быстрее уходят люди' }, meter(Math.min(1, stain), stain >= 0.4 ? 'danger' : 'warn'), h('em', {}, `${Math.round(stain * 100)}%`)),
-        h('span', { class: `place-status${x.id === target ? ' hot' : ''}` }, x.id === target && x.open ? 'травля' : status),
+        h('span', { class: 'place-staff' }, x.open ? tr('работают {0} из {1}', staff, x.jobs) : '—'),
+        h('span', { class: 'place-stain', title: tr('Пятно травли: чем больше, тем быстрее уходят люди') }, meter(Math.min(1, stain), stain >= 0.4 ? 'danger' : 'warn'), h('em', {}, `${Math.round(stain * 100)}%`)),
+        h('span', { class: `place-status${x.id === target ? ' hot' : ''}` }, x.id === target && x.open ? tr('травля') : status),
         action ?? h('span'),
       );
     };
-    return [h('h3', { class: 'section' }, 'Места для травли'), h('div', { class: 'place-list' }, ...places.map(row))];
+    return [h('h3', { class: 'section' }, tr('Места для травли')), h('div', { class: 'place-list' }, ...places.map(row))];
   }
 
   /** Who lives in the city and how (CONCEPT.md §7.3): every group's size, work, mood, protests, readers. */
@@ -4222,8 +4224,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
         jobs.set(name, (jobs.get(name) ?? 0) + 1);
       }
       const work = g.jobs.length
-        ? [...[...jobs].sort((a, b) => b[1] - a[1]).map(([name, n]) => `${name} ${n}`), `без работы ${here.length - working.length}`].join(' · ')
-        : `на пенсии · пенсия ${g.pension} в день`;
+        ? [...[...jobs].sort((a, b) => b[1] - a[1]).map(([name, n]) => `${name} ${n}`), tr('без работы {0}', here.length - working.length)].join(' · ')
+        : tr('на пенсии · пенсия {0} в день', g.pension);
       const protesting = here.filter((x) => x.protestTurns > 0).length;
       const readersHere = here.filter((x) => x.follows.length > 0).length;
       const believers = here.filter((x) => x.beliefs.length > 0).length;
@@ -4235,19 +4237,19 @@ export function mountApp(root: HTMLElement, base: Content): void {
           { class: 'group-head' },
           h('span', { class: 'group-dot', style: `background:${g.color}` }),
           h('b', {}, g.name),
-          h('span', {}, `${here.length} · ${active.length ? pct(here.length / active.length) : '0%'} города`),
-          left ? h('span', { class: 'bad' }, `уехали ${left}`) : null,
+          h('span', {}, tr('{0} · {1} города', here.length, active.length ? pct(here.length / active.length) : '0%')),
+          left ? h('span', { class: 'bad' }, tr('уехали {0}', left)) : null,
         ),
-        bar('Настроение', avg(here, (x) => x.mood), avg(here, (x) => x.mood) < 0.35 ? 'danger' : 'ok'),
-        bar('Настрой к городу', avg(here, (x) => x.outlook), avg(here, (x) => x.outlook) < 0.35 ? 'danger' : 'ok'),
-        g.jobs.length ? bar('Работают', here.length ? working.length / here.length : 0) : null,
-        bar('Ваша репутация', avg(here, (x) => x.trust) / 100, 'warn'),
-        h('p', { class: 'group-line' }, `Работа: ${work}`),
+        bar(tr('Настроение'), avg(here, (x) => x.mood), avg(here, (x) => x.mood) < 0.35 ? 'danger' : 'ok'),
+        bar(tr('Настрой к городу'), avg(here, (x) => x.outlook), avg(here, (x) => x.outlook) < 0.35 ? 'danger' : 'ok'),
+        g.jobs.length ? bar(tr('Работают'), here.length ? working.length / here.length : 0) : null,
+        bar(tr('Ваша репутация'), avg(here, (x) => x.trust) / 100, 'warn'),
+        h('p', { class: 'group-line' }, tr('Работа: {0}', work)),
         h(
           'p',
           { class: 'group-line' },
-          `Читают вас: ${readersHere} · верят вашим новостям: ${believers} · сбережения ≈ ${Math.round(avg(here, (x) => x.money))}`,
-          protesting ? h('span', { class: 'bad' }, ` · протестуют: ${protesting}`) : '',
+          tr('Читают вас: {0} · верят вашим новостям: {1} · сбережения ≈ {2}', readersHere, believers, Math.round(avg(here, (x) => x.money))),
+          protesting ? h('span', { class: 'bad' }, tr(' · протестуют: {0}', protesting)) : '',
         ),
         h(
           'button',
@@ -4260,7 +4262,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
               openModal('dig');
             },
           },
-          state.investigations.some((x) => x.target === g.id) ? `⛏ Копаем под ${g.forms.manyGen}…` : `⛏ Копать компромат на ${g.forms.manyGen}`,
+          state.investigations.some((x) => x.target === g.id) ? tr('⛏ Копаем под {0}…', g.forms.manyGen) : tr('⛏ Копать компромат на {0}', g.forms.manyGen),
         ),
       );
     });
@@ -4269,26 +4271,26 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'city-index' },
         h('img', { src: `${assetBase}sprites/ui/residents.png`, alt: '', width: 32, height: 32 }),
-        h('div', {}, h('b', {}, `${active.length}`), h('span', {}, `жителей сейчас · всего уехали ${all.length - active.length}`)),
+        h('div', {}, h('b', {}, `${active.length}`), h('span', {}, tr('жителей сейчас · всего уехали {0}', all.length - active.length))),
       ),
       ...relationsContent(),
-      h('h3', { class: 'section' }, 'Горожане'),
+      h('h3', { class: 'section' }, tr('Горожане')),
       ...peopleContent(),
-      h('h3', { class: 'section' }, 'Группы'),
+      h('h3', { class: 'section' }, tr('Группы')),
       ...rows,
     ];
   }
 
   function reportContent(): HTMLElement[] {
-    if (!report) return [h('p', { class: 'hint' }, 'Итоги появятся после первого хода.')];
+    if (!report) return [h('p', { class: 'hint' }, tr('Итоги появятся после первого хода.'))];
     const r = report;
     return [
       ...r.publications.map((p) =>
         h(
           'div',
           { class: `report-item truth-${p.truth}${p.exposed ? ' exposed' : ''}` },
-          h('strong', { class: 'headline' }, `«${p.title}»`),
-          h('p', {}, `${truthLabels[p.truth]}, ${placementLabels[p.placement].toLowerCase()}. Увидели ${p.reached}, поверили ${p.believed}, проигнорировали ${p.doubted}, пересказали ${p.wordOfMouth}.`),
+          h('strong', { class: 'headline' }, `${quoted(p.title)}`),
+          h('p', {}, tr('{0}, {1}. Увидели {2}, поверили {3}, проигнорировали {4}, пересказали {5}.', truthLabels[p.truth], placementLabels[p.placement].toLowerCase(), p.reached, p.believed, p.doubted, p.wordOfMouth)),
           h('p', { class: 'muted' }, Object.entries(p.byChannel).map(([ch, v]) => `${channelOf(c, ch).name}: ${v}`).join(' · ')),
           Object.keys(p.effects).length
             ? h('p', {}, Object.entries(p.effects).map(([k, v]) => `${effectLabels[k as keyof typeof effectLabels]}: ${v}`).join(' · '))
@@ -4297,36 +4299,36 @@ export function mountApp(root: HTMLElement, base: Content): void {
             ? h(
                 'p',
                 { class: 'bad' },
-                `Город ополчился на группу «${groupOf(c, p.stigma.target).name}»: травля ${pct(p.stigma.pressure)}, уехали ${p.stigma.left}.`,
+                tr('Город ополчился на группу «{0}»: травля {1}, уехали {2}.', groupOf(c, p.stigma.target).name, pct(p.stigma.pressure), p.stigma.left),
               )
             : null,
-          p.exposed ? h('p', { class: 'bad' }, 'Разоблачено! Репутация и реклама упали.') : null,
+          p.exposed ? h('p', { class: 'bad' }, tr('Разоблачено! Репутация и реклама упали.')) : null,
         ),
       ),
-      ...(r.publications.length === 0 ? [h('p', { class: 'hint' }, 'В этот ход ничего не опубликовано.')] : []),
+      ...(r.publications.length === 0 ? [h('p', { class: 'hint' }, tr('В этот ход ничего не опубликовано.'))] : []),
       ...r.exposures
         .filter((x) => x.turn !== r.turn)
-        .map((x) => h('div', { class: 'report-item exposed' }, h('p', { class: 'bad' }, `Всплыла старая ложь из выпуска дня ${x.turn}: «${x.title}»`))),
+        .map((x) => h('div', { class: 'report-item exposed' }, h('p', { class: 'bad' }, tr('Всплыла старая ложь из выпуска дня {0}: «{1}»', x.turn, x.title)))),
       h(
         'div',
         { class: 'report-item' },
         h(
           'p',
           {},
-          `Читатели: было ${r.readers.before}, ушли ${r.readers.lost}, пришли ${r.readers.gained}, теперь ${r.readers.after}.`,
+          tr('Читатели: было {0}, ушли {1}, пришли {2}, теперь {3}.', r.readers.before, r.readers.lost, r.readers.gained, r.readers.after),
         ),
-        h('p', {}, `Продажи: ${Object.entries(r.income).map(([ch, v]) => `${channelOf(c, ch).name} ${v} (${r.buyers[ch] ?? 0} читателей)`).join(', ') || 'нет'}`),
-        h('p', {}, `Расходы: −${r.upkeep}. Итого: ${signed(r.moneyDelta)}`),
+        h('p', {}, tr('Продажи: {0}', Object.entries(r.income).map(([ch, v]) => tr('{0} {1} ({2} читателей)', channelOf(c, ch).name, v, r.buyers[ch] ?? 0)).join(', ') || tr('нет'))),
+        h('p', {}, tr('Расходы: −{0}. Итого: {1}', r.upkeep, signed(r.moneyDelta))),
         h(
           'p',
           {},
-          `Город: ${stageChange(r.metricsBefore.cityIndex, r.metricsAfter.cityIndex)}, жителей ${signed(
+          tr('Город: {0}, жителей {1}, разоблачено {2}, репутация {3}', stageChange(r.metricsBefore.cityIndex, r.metricsAfter.cityIndex), signed(
             r.metricsAfter.activeResidents - r.metricsBefore.activeResidents,
-          )}, разоблачено ${r.exposures.length}, репутация ${signed(Math.round(r.trustAfter - r.trustBefore))}`,
+          ), r.exposures.length, signed(Math.round(r.trustAfter - r.trustBefore))),
         ),
       ),
       ...(r.events.length || r.notes.length
-        ? [h('div', { class: 'report-item' }, h('strong', {}, 'Новый день'), ...r.events.map((e) => h('p', {}, `• ${e}`)), ...r.notes.map((n) => h('p', { class: 'muted' }, n)))]
+        ? [h('div', { class: 'report-item' }, h('strong', {}, tr('Новый день')), ...r.events.map((e) => h('p', {}, `• ${e}`)), ...r.notes.map((n) => h('p', { class: 'muted' }, n)))]
         : []),
     ];
   }
@@ -4339,10 +4341,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** What a level gives, for the plaque's hint: «Мастер: удача +10%, чутьё +1, ложь ловят на 20% реже». */
   function levelPerks(level: number): string {
     const b = c.balance;
-    const parts = [`удача +${pct(b.levelLuck[level] ?? 0)}`, `чутьё +${b.levelNose[level] ?? 0}`];
+    const parts = [tr('удача +{0}', pct(b.levelLuck[level] ?? 0)), tr('чутьё +{0}', b.levelNose[level] ?? 0)];
     const check = b.levelCheckMul[level] ?? 1;
-    if (check < 1) parts.push(`ложь в его новостях ловят на ${pct(1 - check)} реже`);
-    return level === 0 ? `${levelNames[0]}: пока без бонусов` : `${levelNames[level]}: ${parts.join(', ')}`;
+    if (check < 1) parts.push(tr('ложь в его новостях ловят на {0} реже', pct(1 - check)));
+    return level === 0 ? tr('{0}: пока без бонусов', levelNames[0]) : `${levelNames[level]}: ${parts.join(', ')}`;
   }
 
   function reporterHead(id: string, opts: { key?: string; lines?: (string | HTMLElement)[]; body?: HTMLElement[]; action?: HTMLElement | null; compact?: boolean } = {}): HTMLElement {
@@ -4384,24 +4386,24 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'div',
           { class: 'rep-head-name' },
           r.name,
-          h('button', { class: `section-info${openInfo.has(`${k}about`) ? ' on' : ''}`, title: 'О репортёре', 'aria-expanded': String(openInfo.has(`${k}about`)), onclick: toggle(`${k}about`) }, '?'),
+          h('button', { class: `section-info${openInfo.has(`${k}about`) ? ' on' : ''}`, title: tr('О репортёре'), 'aria-expanded': String(openInfo.has(`${k}about`)), onclick: toggle(`${k}about`) }, '?'),
         ),
         ...(openInfo.has(`${k}about`) ? [h('p', { class: 'hint info-text' }, aboutLine(r))] : []),
         h(
           'div',
           { class: 'rep-level' },
           h('span', { class: 'level-chip', title: levelPerks(level) }, levelNames[level]),
-          h('span', { class: 'level-pips', title: `Ступень ${level + 1} из ${steps.length}` }, ...steps.map((_, i) => h('i', { class: i <= level ? 'on' : '' }))),
+          h('span', { class: 'level-pips', title: tr('Ступень {0} из {1}', level + 1, steps.length) }, ...steps.map((_, i) => h('i', { class: i <= level ? 'on' : '' }))),
         ),
         ...(hired
           ? [
-              h('div', { class: 'xp-bar', title: next === undefined ? `Опыт ${xp}` : `Опыт ${xp} из ${next}` }, h('b', { style: `width: ${Math.round(share * 100)}%` })),
+              h('div', { class: 'xp-bar', title: next === undefined ? tr('Опыт {0}', xp) : tr('Опыт {0} из {1}', xp, next) }, h('b', { style: `width: ${Math.round(share * 100)}%` })),
               h(
                 'div',
                 { class: 'xp-caption' },
                 ...(next === undefined
-                  ? ['Высшая ступень — расти больше некуда']
-                  : [`До «${levelNamesGen[level + 1]}» ещё `, h('b', {}, `${left} опыта`), opts.compact ? '' : ` · ≈ ${fronts} ${plural(fronts, 'первая полоса', 'первые полосы', 'первых полос')}`]),
+                  ? [tr('Высшая ступень — расти больше некуда')]
+                  : [tr('До «{0}» ещё ', levelNamesGen[level + 1]), h('b', {}, tr('{0} опыта', left)), opts.compact ? '' : ` · ≈ ${fronts} ${plural(fronts, 'первая полоса', 'первые полосы', 'первых полос')}`]),
               ),
             ]
           : []),
@@ -4412,9 +4414,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'div',
         { class: 'rep-corner' },
-        skill(`${k}luck`, `luck_${sk.luckTier}`, `Удача: ${luckNames[sk.luckTier].toLowerCase()}`, `${pct(sk.luck)} — так часто репортёр что-то находит. С опытом подкова становится лучше.`),
-        skill(`${k}nose`, `nose_${sk.noseTier}`, `Чутьё: ${noseNames[sk.noseTier].toLowerCase()}`, 'Чем тоньше нюх, тем чаще находки интересные и сенсационные. С опытом нюх становится тоньше.'),
-        loyal ? h('span', { class: `loyal loyal-${loyal.level}`, title: 'Лояльность: ложь в газете её подтачивает, ниже предела репортёр уходит' }, loyal.word) : null,
+        skill(`${k}luck`, `luck_${sk.luckTier}`, tr('Удача: {0}', luckNames[sk.luckTier].toLowerCase()), tr('{0} — так часто репортёр что-то находит. С опытом подкова становится лучше.', pct(sk.luck))),
+        skill(`${k}nose`, `nose_${sk.noseTier}`, tr('Чутьё: {0}', noseNames[sk.noseTier].toLowerCase()), tr('Чем тоньше нюх, тем чаще находки интересные и сенсационные. С опытом нюх становится тоньше.')),
+        loyal ? h('span', { class: `loyal loyal-${loyal.level}`, title: tr('Лояльность: ложь в газете её подтачивает, ниже предела репортёр уходит') }, loyal.word) : null,
       ),
     );
   }
@@ -4428,24 +4430,24 @@ export function mountApp(root: HTMLElement, base: Content): void {
     abilityBar.hidden = searching || !!state.outcome;
     if (abilityBar.hidden) return;
     const reasons: Record<string, string> = {
-      'nobody free': 'все репортёры заняты',
-      'nothing to raise': 'нечего усиливать',
-      'no money': 'не хватает денег',
+      'nobody free': tr('все репортёры заняты'),
+      'nothing to raise': tr('нечего усиливать'),
+      'no money': tr('не хватает денег'),
     };
     const ready = cashMoves(state, c).filter((x) => !cashBlock(state, c, x.id)).length;
     const active = activeCash();
     // In debt without a loan: the bank is one press away (CONCEPT.md §5.4а).
     const bank =
       state.money < 0 && !loanBlock(state, c)
-        ? h('button', { class: 'ability bank-open ready', onclick: () => openModal('money', 'bank') }, h('span', { class: 'ability-icon', 'aria-hidden': 'true' }, '🏦'), h('span', { class: 'ability-text' }, h('b', {}, 'Касса в минусе'), h('small', {}, 'взять кредит в банке')))
+        ? h('button', { class: 'ability bank-open ready', onclick: () => openModal('money', 'bank') }, h('span', { class: 'ability-icon', 'aria-hidden': 'true' }, '🏦'), h('span', { class: 'ability-text' }, h('b', {}, tr('Касса в минусе')), h('small', {}, tr('взять кредит в банке'))))
         : null;
     abilityBar.replaceChildren(
       ...(bank ? [bank] : []),
       h(
         'button',
-        { class: `ability cash-open${ready ? ' ready' : ' wait'}`, disabled: busy, title: `Чёрная касса: ${ready ? `доступно ходов — ${ready}` : 'пока ничего'}. Деньги газеты на разовые ходы.`, 'aria-label': 'Чёрная касса', onclick: () => openModal('cash') },
+        { class: `ability cash-open${ready ? ' ready' : ' wait'}`, disabled: busy, title: tr('Чёрная касса: {0}. Деньги газеты на разовые ходы.', ready ? tr('доступно ходов — {0}', ready) : tr('пока ничего')), 'aria-label': tr('Чёрная касса'), onclick: () => openModal('cash') },
         h('span', { class: 'ability-icon', 'aria-hidden': 'true' }, '💰'),
-        h('span', { class: 'ability-text' }, h('b', {}, 'Чёрная касса'), h('small', {}, ready ? `доступно: ${ready}` : 'пока ничего')),
+        h('span', { class: 'ability-text' }, h('b', {}, tr('Чёрная касса')), h('small', {}, ready ? tr('доступно: {0}', ready) : tr('пока ничего'))),
         ready ? h('span', { class: 'ability-badge' }, String(ready)) : null,
       ),
       // What acts today or tomorrow: an icon, its words in the tooltip.
@@ -4453,7 +4455,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...owned.map(({ def, readyTurn }) => {
         const block = abilityBlock(state, c, def.id);
         const wait = readyTurn - state.turn;
-        const status = !block ? `готово · −${def.ability!.cost} ₽` : block === 'cooling down' ? `через ${wait} ${plural(wait, 'день', 'дня', 'дней')}` : reasons[block] ?? '';
+        const status = !block ? tr('готово · −{0} ₽', def.ability!.cost) : block === 'cooling down' ? tr('через {0} {1}', wait, plural(wait, 'день', 'дня', 'дней')) : reasons[block] ?? '';
         return h(
           'button',
           {
@@ -4488,8 +4490,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function activeCash(): { def: CashDef; label: string }[] {
     const out: { def: CashDef; label: string }[] = [];
     for (const def of c.cash) {
-      if (cashActive(state, def.id)) out.push({ def, label: def.id === 'bribe' ? 'фактчекеры подкуплены' : def.id === 'giveaway' ? 'выпуск раздаётся бесплатно' : 'сегодня' });
-      else if (cashActive(state, def.id, state.turn + 1)) out.push({ def, label: def.id === 'provoke' ? 'провокаторы выйдут завтра' : 'папарацци принесут снимки завтра' });
+      if (cashActive(state, def.id)) out.push({ def, label: def.id === 'bribe' ? tr('фактчекеры подкуплены') : def.id === 'giveaway' ? tr('выпуск раздаётся бесплатно') : tr('сегодня') });
+      else if (cashActive(state, def.id, state.turn + 1)) out.push({ def, label: def.id === 'provoke' ? tr('провокаторы выйдут завтра') : tr('папарацци принесут снимки завтра') });
     }
     return out;
   }
@@ -4510,14 +4512,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
           return h(
             'div',
             { class: `deck-card cash-card${block ? ' wait' : ''}` },
-            active.has(def.id) ? h('span', { class: 'best-mark' }, 'действует') : null,
+            active.has(def.id) ? h('span', { class: 'best-mark' }, tr('действует')) : null,
             h('span', { class: 'upg-icon', 'aria-hidden': 'true' }, def.icon),
             h('b', {}, def.name),
             h('p', { class: 'upg-plus' }, def.text),
             h(
               'div',
               { class: 'deck-foot' },
-              h('span', { class: 'hint' }, `пауза ${def.cooldown} ${plural(def.cooldown, 'день', 'дня', 'дней')}`),
+              h('span', { class: 'hint' }, tr('пауза {0} {1}', def.cooldown, plural(def.cooldown, 'день', 'дня', 'дней'))),
               h(
                 'button',
                 {
@@ -4538,7 +4540,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
                     render();
                   },
                 },
-                block ?? `Купить · ${cashCost(state, c, def.id)} ₽`,
+                block ?? tr('Купить · {0} ₽', cashCost(state, c, def.id)),
               ),
             ),
           );
@@ -4557,18 +4559,18 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'notice-head' },
         h('span', { class: 'dig-icon', 'aria-hidden': 'true' }, '⛏'),
-        h('b', {}, done.length > 1 ? `Расследований готово: ${done.length}` : 'Расследование готово'),
-        h('button', { class: 'icon-btn', title: 'Закрыть', onclick: () => ((digSeen = true), render()) }, '×'),
+        h('b', {}, done.length > 1 ? tr('Расследований готово: {0}', done.length) : tr('Расследование готово')),
+        h('button', { class: 'icon-btn', title: tr('Закрыть'), onclick: () => ((digSeen = true), render()) }, '×'),
       ),
       ...done.map((f) => {
         const card = state.hand.find((x) => x.uid === f.cardUid);
         return h(
           'p',
           { class: 'notice-note' },
-          `${reporterOf(c, f.reporterId).name} ${reporterOf(c, f.reporterId).female ? 'принесла' : 'принёс'} эксклюзив: `,
-          h('b', {}, card ? `«${storyTitle(c, card, 0)}»` : ''),
-          card?.tier === 3 ? ' — сенсация!' : '',
-          ' Поставьте его на первую полосу.',
+          tr('{0} {1} эксклюзив: ', reporterOf(c, f.reporterId).name, reporterOf(c, f.reporterId).female ? tr('принесла') : tr('принёс')),
+          h('b', {}, card ? `${quoted(storyTitle(c, card, 0))}` : ''),
+          card?.tier === 3 ? tr(' — сенсация!') : '',
+          tr(' Поставьте его на первую полосу.'),
         );
       }),
     );
@@ -4596,24 +4598,24 @@ export function mountApp(root: HTMLElement, base: Content): void {
       .sort((a, b2) => b2.level - a.level);
     const others = state.residents.filter((x) => x.status === 'active' && x.group !== target && x.follows.length > 0).length;
     const effect = [
-      `Настроит остальных против ${g.forms.manyGen}: прочтут ≈ ${others} ваших читателей из других групп.`,
-      ...hot.slice(0, 2).map((p) => `С ${p.x.forms.manyIns} и так ${tensionLabels[p.level].toLowerCase()}${p.level >= 2 ? ' — может дойти до драк' : ''}.`),
-      `Часть ${g.forms.manyGen} уедет — даже те, кто вас не читает.`,
+      tr('Настроит остальных против {0}: прочтут ≈ {1} ваших читателей из других групп.', g.forms.manyGen, others),
+      ...hot.slice(0, 2).map((p) => tr('С {0} и так {1}{2}.', p.x.forms.manyIns, tensionLabels[p.level].toLowerCase(), p.level >= 2 ? tr(' — может дойти до драк') : '')),
+      tr('Часть {0} уедет — даже те, кто вас не читает.', g.forms.manyGen),
     ];
     const odds = r
       ? [
-          truth! >= 0.6 ? 'скорее правда' : truth! >= 0.4 ? 'правда или слух — как повезёт' : 'скорее слух',
-          sensation! >= 0.5 ? 'скорее всего сенсация' : sensation! >= 0.3 ? 'может выйти сенсацией' : 'сенсация — редкость',
+          truth! >= 0.6 ? tr('скорее правда') : truth! >= 0.4 ? tr('правда или слух — как повезёт') : tr('скорее слух'),
+          sensation! >= 0.5 ? tr('скорее всего сенсация') : sensation! >= 0.3 ? tr('может выйти сенсацией') : tr('сенсация — редкость'),
         ].join(', ')
-      : 'с чутьём репортёра выше шанс правды и сенсации';
+      : tr('с чутьём репортёра выше шанс правды и сенсации');
     return h(
       'div',
       { class: 'dig-promise' },
-      tpl ? h('p', { class: 'dig-headline' }, h('span', {}, 'Выйдет примерно так: '), h('b', {}, `«${tpl.titles[0] ?? ''}»`)) : null,
-      h('p', { class: 'dig-when' }, r ? `Через ${days} ${turnsWord(days)} — эксклюзив на первую полосу.` : `Через ${fast === days ? days : `${fast}–${days}`} дня — эксклюзив на первую полосу.`),
+      tpl ? h('p', { class: 'dig-headline' }, h('span', {}, tr('Выйдет примерно так: ')), h('b', {}, `${quoted(tpl.titles[0] ?? '')}`)) : null,
+      h('p', { class: 'dig-when' }, r ? tr('Через {0} {1} — эксклюзив на первую полосу.', days, turnsWord(days)) : tr('Через {0} дня — эксклюзив на первую полосу.', fast === days ? days : `${fast}–${days}`)),
       ...effect.map((t) => h('p', { class: 'dig-effect' }, t)),
-      h('p', { class: 'dig-cost' }, `${b.investigationCost} ₽ в день${r ? ` · ${days} ${turnsWord(days)} ${r.name.split(' ').pop()} не пишет новостей` : ' · репортёр всё это время не пишет новостей'}`),
-      h('p', { class: 'dig-odds' }, `Что выйдет: ${odds}.`),
+      h('p', { class: 'dig-cost' }, tr('{0} ₽ в день{1}', b.investigationCost, r ? tr(' · {0} {1} {2} не пишет новостей', days, turnsWord(days), r.name.split(' ').pop()) : tr(' · репортёр всё это время не пишет новостей'))),
+      h('p', { class: 'dig-odds' }, tr('Что выйдет: {0}.', odds)),
     );
   }
 
@@ -4626,7 +4628,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     return [
       digPromise(target, null),
       ...(error ? [h('p', { class: 'bad' }, error)] : []),
-      h('h3', { class: 'section' }, under ? `Уже копает: ${reporterOf(c, under.reporterId).name}` : 'Кто будет копать'),
+      h('h3', { class: 'section' }, under ? tr('Уже копает: {0}', reporterOf(c, under.reporterId).name) : tr('Кто будет копать')),
       ...state.reporters.map((id) => {
         const r = skilledReporter(state, c, reporterOf(c, id));
         const inv = busy(id);
@@ -4645,8 +4647,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
               'p',
               { class: 'hint' },
               inv
-                ? `Копает под ${digWhom(inv.target)} · ещё ${inv.turnsLeft} ${turnsWord(inv.turnsLeft)}`
-                : `${days} ${turnsWord(days)} · ${truth >= 0.6 ? 'скорее правда' : truth >= 0.4 ? 'правда или слух' : 'скорее слух'} · ${sensation >= 0.5 ? 'скорее сенсация' : sensation >= 0.3 ? 'может выйти сенсацией' : 'сенсация редко'}`,
+                ? tr('Копает под {0} · ещё {1} {2}', digWhom(inv.target), inv.turnsLeft, turnsWord(inv.turnsLeft))
+                : `${days} ${turnsWord(days)} · ${truth >= 0.6 ? tr('скорее правда') : truth >= 0.4 ? tr('правда или слух') : tr('скорее слух')} · ${sensation >= 0.5 ? tr('скорее сенсация') : sensation >= 0.3 ? tr('может выйти сенсацией') : tr('сенсация редко')}`,
             ),
           ),
           h(
@@ -4665,11 +4667,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
                 render();
               },
             },
-            'Копать',
+            tr('Копать'),
           ),
         );
       }),
-      h('button', { class: 'ghost', onclick: () => openModal('population') }, '← Жители'),
+      h('button', { class: 'ghost', onclick: () => openModal('population') }, tr('← Жители')),
     ];
   }
 
@@ -4679,26 +4681,26 @@ export function mountApp(root: HTMLElement, base: Content): void {
       return;
     }
     const titles: Record<Exclude<Modal, null>, string> = {
-      report: report ? `Итоги хода ${report.turn}` : 'Итоги хода',
-      debug: 'Отладка',
-      city: 'Сводка',
-      population: 'Сводка',
-      money: 'Сводка',
-      readers: 'Сводка',
-      reputation: 'Сводка',
-      shop: 'Сводка',
-      cash: 'Чёрная касса',
-      team: 'Сводка',
-      dig: digTarget ? `Компромат на ${groupOf(c, digTarget).forms.manyGen}` : 'Компромат',
-      pause: 'Меню',
-      howto: 'Как играть',
-      settings: 'Настройки',
-      about: 'Об игре',
-      newgame: 'Свободная игра',
-      tutorial: 'Обучение',
-      office: 'Карты · Кабинет редактора',
-      campaignNew: 'Новая кампания',
-      carry: 'Кто поедет дальше',
+      report: report ? tr('Итоги хода {0}', report.turn) : tr('Итоги хода'),
+      debug: tr('Отладка'),
+      city: tr('Сводка'),
+      population: tr('Сводка'),
+      money: tr('Сводка'),
+      readers: tr('Сводка'),
+      reputation: tr('Сводка'),
+      shop: tr('Сводка'),
+      cash: tr('Чёрная касса'),
+      team: tr('Сводка'),
+      dig: digTarget ? tr('Компромат на {0}', groupOf(c, digTarget).forms.manyGen) : tr('Компромат'),
+      pause: tr('Меню'),
+      howto: tr('Как играть'),
+      settings: tr('Настройки'),
+      about: tr('Об игре'),
+      newgame: tr('Свободная игра'),
+      tutorial: tr('Обучение'),
+      office: tr('Карты · Кабинет редактора'),
+      campaignNew: tr('Новая кампания'),
+      carry: tr('Кто поедет дальше'),
     };
     const body =
       modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'dig' ? digContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'tutorial' ? tutorialStartContent() : modal === 'office' ? officeContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : modal === 'cash' ? cashContent() : shopContent();
@@ -4708,7 +4710,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const panel = h(
       'div',
       { class: `modal window${modal === 'office' ? ' office' : ''}${tab ? ' summary' : ''}` },
-      h('div', { class: 'modal-title' }, h('h2', {}, titles[modal], tab ? h('span', { class: 'summary-sub' }, ` · ${tab.name}`) : null), h('button', { class: 'icon-btn', title: 'Закрыть', onclick: () => openModal(null) }, '×')),
+      h('div', { class: 'modal-title' }, h('h2', {}, titles[modal], tab ? h('span', { class: 'summary-sub' }, ` · ${tab.name}`) : null), h('button', { class: 'icon-btn', title: tr('Закрыть'), onclick: () => openModal(null) }, '×')),
       tab ? h('div', { class: 'summary-wrap' }, summaryTabs(modal), h('div', { class: 'modal-body' }, ...body)) : h('div', { class: 'modal-body' }, ...body),
     );
     modalLayer.replaceChildren(panel);
@@ -4743,8 +4745,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       'div',
       { class: 'outcome-stars' },
       h('div', { class: 'stars' }, starLine(s.stars)),
-      h('ul', {}, row(s.win, 'Победа'), row(s.tasks, 'Все задания выполнены'), row(s.clean, 'Ни одного разоблачения')),
-      newRecord ? h('p', { class: 'record new' }, 'Новый рекорд!') : best ? h('p', { class: 'record' }, `Рекорд: ${starLine(best.stars)} · ${best.days} ${daysWord(best.days)}`) : null,
+      h('ul', {}, row(s.win, tr('Победа')), row(s.tasks, tr('Все задания выполнены')), row(s.clean, tr('Ни одного разоблачения'))),
+      newRecord ? h('p', { class: 'record new' }, tr('Новый рекорд!')) : best ? h('p', { class: 'record' }, tr('Рекорд: {0} · {1} {2}', starLine(best.stars), best.days, daysWord(best.days))) : null,
     );
   }
 
@@ -4757,17 +4759,17 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const level = state.difficulty;
       return [
         win
-          ? h('button', { class: 'primary big', onclick: () => (last ? openCampaign() : openModal('carry')) }, last ? 'Кампания пройдена ▸' : 'Кто поедет дальше ▸')
-          : h('button', { class: 'primary big', onclick: () => void startTown(i, level) }, 'Переиграть'),
-        h('button', { onclick: () => openCampaign() }, 'На карту'),
+          ? h('button', { class: 'primary big', onclick: () => (last ? openCampaign() : openModal('carry')) }, last ? tr('Кампания пройдена ▸') : tr('Кто поедет дальше ▸'))
+          : h('button', { class: 'primary big', onclick: () => void startTown(i, level) }, tr('Переиграть')),
+        h('button', { onclick: () => openCampaign() }, tr('На карту')),
       ];
     }
     return [
       // After the tutorial the real game is chosen in «Свободная игра» (length, difficulty).
       win && !tutorial
-        ? h('button', { class: 'primary big', onclick: () => void startGame(state.mode) }, 'Сыграть ещё ▸')
-        : h('button', { class: 'primary big', onclick: () => openModal('newgame') }, 'Свободная игра'),
-      h('button', { onclick: () => showTitle() }, 'Главное меню'),
+        ? h('button', { class: 'primary big', onclick: () => void startGame(state.mode) }, tr('Сыграть ещё ▸'))
+        : h('button', { class: 'primary big', onclick: () => openModal('newgame') }, tr('Свободная игра')),
+      h('button', { onclick: () => showTitle() }, tr('Главное меню')),
     ];
   }
 
@@ -4782,11 +4784,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'div',
         { class: `modal ${state.outcome.result}` },
-        h('h2', {}, state.outcome.result === 'win' ? 'Победа' : 'Поражение'),
+        h('h2', {}, state.outcome.result === 'win' ? tr('Победа') : tr('Поражение')),
         h('p', {}, outcomeText(state.outcome, goalTitle(c, goalOf(c)))),
-        h('p', { class: 'muted' }, `Сыграно ходов: ${Math.min(state.turn - 1, c.balance.turnLimit)}. Город: ${cityStage().name.toLowerCase()}.`),
+        h('p', { class: 'muted' }, tr('Сыграно ходов: {0}. Город: {1}.', Math.min(state.turn - 1, c.balance.turnLimit), cityStage().name.toLowerCase())),
         tutorial
-          ? h('p', { class: 'tutorial-done' }, 'Обучение пройдено. Теперь — настоящая партия на любой сложности («Свободная игра»).')
+          ? h('p', { class: 'tutorial-done' }, tr('Обучение пройдено. Теперь — настоящая партия на любой сложности («Свободная игра»).'))
           : null,
         outcomeStars(),
         // «Связи» for the office (CONCEPT.md §3.5б).
@@ -4794,10 +4796,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
           ? h(
               'p',
               { class: 'reward-line' },
-              h('b', {}, `+${lastReward} ✦ связей`),
-              ' — на новые карты и их улучшение. ',
-              packAffordable() ? h('b', { class: 'reward-enough' }, ' Хватит на конверт с новой картой!') : null,
-              h('button', { class: 'ghost', onclick: () => openModal('office') }, cardsIcon(), 'Карты: купить и улучшить'),
+              h('b', {}, tr('+{0} ✦ связей', lastReward)),
+              tr(' — на новые карты и их улучшение. '),
+              packAffordable() ? h('b', { class: 'reward-enough' }, tr(' Хватит на конверт с новой картой!')) : null,
+              h('button', { class: 'ghost', onclick: () => openModal('office') }, cardsIcon(), tr('Карты: купить и улучшить')),
             )
           : null,
         h(
@@ -4940,7 +4942,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const menu = h(
       'div',
       { class: 'camp-menu' },
-      h('button', { onclick: () => openModal('campaignNew') }, 'Новая кампания'),
+      h('button', { onclick: () => openModal('campaignNew') }, tr('Новая кампания')),
       h(
         'button',
         {
@@ -4949,10 +4951,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
             showTitle();
           },
         },
-        'Главное меню',
+        tr('Главное меню'),
       ),
     );
-    const menuButton = h('button', { class: 'icon-btn camp-burger', title: 'Меню', 'aria-label': 'Меню' }, '☰');
+    const menuButton = h('button', { class: 'icon-btn camp-burger', title: tr('Меню'), 'aria-label': tr('Меню') }, '☰');
     menuButton.onclick = () => menu.classList.toggle('open');
     const pins = base.towns.map((t, i) => {
       const st = townState(base, camp, i);
@@ -4983,15 +4985,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h(
           'span',
           { class: 'camp-assets' },
-          h('span', { class: 'camp-asset', title: `Звёзды кампании. Финал открывается с ${need} ★` }, h('b', {}, `★ ${stars}`), h('small', {}, 'звёзды')),
+          h('span', { class: 'camp-asset', title: tr('Звёзды кампании. Финал открывается с {0} ★', need) }, h('b', {}, `★ ${stars}`), h('small', {}, tr('звёзды'))),
           // The «связи» lead where they are spent: the cards.
-          h('button', { class: 'camp-asset camp-ties', title: 'Связи холдинга — на новые карты и их улучшение', onclick: () => openModal('office') }, h('b', {}, `✦ ${collection.currency}`), h('small', {}, 'связи')),
+          h('button', { class: 'camp-asset camp-ties', title: tr('Связи холдинга — на новые карты и их улучшение'), onclick: () => openModal('office') }, h('b', {}, `✦ ${collection.currency}`), h('small', {}, tr('связи'))),
         ),
         h(
           'button',
-          { class: `camp-office${packAffordable() ? ' can-buy' : ''}`, title: `Карты: купить новые за связи и улучшить свои (в коллекции ${collectionCount()})`, onclick: () => openModal('office') },
+          { class: `camp-office${packAffordable() ? ' can-buy' : ''}`, title: tr('Карты: купить новые за связи и улучшить свои (в коллекции {0})', collectionCount()), onclick: () => openModal('office') },
           cardsIcon(),
-          h('span', { class: 'camp-office-text' }, 'Карты'),
+          h('span', { class: 'camp-office-text' }, tr('Карты')),
           packAffordable() ? h('span', { class: 'buy-badge' }, '!') : null,
         ),
         h('span', { class: 'camp-menu-wrap' }, menuButton, menu),
@@ -5073,7 +5075,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('button', {
         class: `camp-arrow ${dir}`,
         'data-dir': dir,
-        title: 'Показать другую часть карты',
+        title: tr('Показать другую часть карты'),
         onpointerdown: (e: Event) => e.stopPropagation(),
         onclick: () => {
           if (!mapPan) return;
@@ -5134,40 +5136,40 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const ps = passState(base, camp, i, level);
       const res = camp.results[t.id]?.[level];
       const pc = withTown(withDifficulty(base, level, camp.side), t.id, camp.side, level);
-      const goal = camp.side === 'destroy' ? goalTitle(pc, goalOf(pc)) : 'Не дать городу пасть';
+      const goal = camp.side === 'destroy' ? goalTitle(pc, goalOf(pc)) : tr('Не дать городу пасть');
       return h(
         'div',
         { class: `town-pass ${ps}` },
         h('div', { class: 'pass-head' }, h('b', {}, passNames[level]), h('span', { class: 'pass-level' }, base.difficulties.find((d) => d.id === level)?.name ?? ''), res ? h('span', { class: 'pass-stars' }, starLine(res.stars)) : null),
         h('div', { class: 'pass-goal' }, `🎯 ${goal} · ${pc.balance.turnLimit} ${daysWord(pc.balance.turnLimit)}`),
         ps === 'locked'
-          ? h('span', { class: 'pass-lock' }, st === 'gated' ? `Нужно ${t.starsToEnter} ★ (у вас ${campaignStars(camp)})` : st === 'locked' ? 'Сначала пройдите прошлый город' : `Сначала — ${passNames[PASSES[PASSES.indexOf(level) - 1]].toLowerCase()}`)
-          : h('button', { class: ps === 'open' ? 'primary' : '', onclick: () => void startTown(i, level) }, ps === 'won' ? 'Переиграть ради звёзд' : `Ехать в ${t.name} ▸`),
+          ? h('span', { class: 'pass-lock' }, st === 'gated' ? tr('Нужно {0} ★ (у вас {1})', t.starsToEnter, campaignStars(camp)) : st === 'locked' ? tr('Сначала пройдите прошлый город') : tr('Сначала — {0}', passNames[PASSES[PASSES.indexOf(level) - 1]].toLowerCase()))
+          : h('button', { class: ps === 'open' ? 'primary' : '', onclick: () => void startTown(i, level) }, ps === 'won' ? tr('Переиграть ради звёзд') : tr('Ехать в {0} ▸', t.name)),
       );
     };
     return h(
       'aside',
       { class: 'town-card' },
       h('h2', {}, t.name),
-      h('div', { class: 'town-type' }, `${t.type} · жителей ~${pop}`),
+      h('div', { class: 'town-type' }, tr('{0} · жителей ~{1}', t.type, pop)),
       h('div', { class: 'town-rule' }, h('b', {}, t.rule.title), t.rule.text),
       h(
         'div',
         { class: 'town-facts' },
-        h('span', {}, 'Сложность'),
+        h('span', {}, tr('Сложность')),
         // The lit bars take the town's colour: green for the easiest, red for the hardest.
         h('span', { class: `town-bars lvl-${t.stars}` }, ...[1, 2, 3, 4, 5].map((k) => h('i', { class: k <= t.stars ? 'on' : '' }))),
-        h('span', {}, 'Против вас'),
-        h('span', {}, `«${rival}»`),
-        h('span', {}, 'Звёзды'),
-        h('span', { class: 'town-best' }, `★ ${townStars(camp, t.id)} из 9`),
+        h('span', {}, tr('Против вас')),
+        h('span', {}, `${quoted(rival)}`),
+        h('span', {}, tr('Звёзды')),
+        h('span', { class: 'town-best' }, tr('★ {0} из 9', townStars(camp, t.id))),
       ),
       st === 'now' || st === 'done'
         ? h(
             'div',
             { class: 'town-rep' },
             portrait(who.id, 'portrait town-rep-portrait'),
-            h('div', {}, h('b', {}, `${camp.carry ? 'С вами едет' : 'Начнёт с вами'}: ${rep.name}`), h('span', { class: 'level-chip' }, levelNames[levelOf(base, who.xp)])),
+            h('div', {}, h('b', {}, `${camp.carry ? tr('С вами едет') : tr('Начнёт с вами')}: ${rep.name}`), h('span', { class: 'level-chip' }, levelNames[levelOf(base, who.xp)])),
           )
         : null,
       h('div', { class: 'town-passes' }, ...PASSES.map(pass)),
@@ -5179,7 +5181,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** Starting the campaign over: this window only confirms it. */
   function campaignNewContent(): HTMLElement[] {
     return [
-      h('p', { class: 'bad' }, 'Текущая кампания будет потеряна.'),
+      h('p', { class: 'bad' }, tr('Текущая кампания будет потеряна.')),
       h(
         'button',
         {
@@ -5190,9 +5192,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
             openCampaign();
           },
         },
-        'Начать заново',
+        tr('Начать заново'),
       ),
-      h('button', { class: 'ghost', onclick: () => openCampaign() }, '← Назад'),
+      h('button', { class: 'ghost', onclick: () => openCampaign() }, tr('← Назад')),
     ];
   }
 
@@ -5205,7 +5207,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       openCampaign();
     };
     return [
-      h('p', {}, 'В следующий город едет только один репортёр — со всем своим опытом. Остальные останутся здесь.'),
+      h('p', {}, tr('В следующий город едет только один репортёр — со всем своим опытом. Остальные останутся здесь.')),
       ...state.reporters.map((id) => {
         const r = reporterOf(c, id);
         const xp = staffOf(state, c, id).xp;
@@ -5213,8 +5215,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
           'div',
           { class: 'shop-item carry-item' },
           portrait(id, 'portrait carry-portrait'),
-          h('div', {}, h('strong', {}, r.name), h('span', { class: 'level-chip' }, levelNames[levelOf(c, xp)]), h('p', { class: 'hint' }, `Опыт ${xp}`)),
-          h('button', { class: 'primary', onclick: take(id) }, 'Взять'),
+          h('div', {}, h('strong', {}, r.name), h('span', { class: 'level-chip' }, levelNames[levelOf(c, xp)]), h('p', { class: 'hint' }, tr('Опыт {0}', xp))),
+          h('button', { class: 'primary', onclick: take(id) }, tr('Взять')),
         );
       }),
     ];
@@ -5235,7 +5237,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'div',
         { class: 'title-box' },
-        h('h1', { class: 'title-logo' }, h('span', {}, 'УТКА'), ' ', h('span', {}, 'В НОМЕР')),
+        h('h1', { class: 'title-logo' }, h('span', {}, tr('УТКА')), ' ', h('span', {}, tr('В НОМЕР'))),
         h(
           'nav',
           { class: 'title-menu' },
@@ -5243,34 +5245,34 @@ export function mountApp(root: HTMLElement, base: Content): void {
             ? h(
                 'button',
                 { class: 'title-item primary', onclick: continueGame },
-                h('span', {}, 'Продолжить'),
-                h('small', {}, `${tutorial ? 'Обучение' : state.town ? townOf(base, state.town).name : 'Партия'} · день ${Math.min(state.turn, c.balance.turnLimit)} из ${c.balance.turnLimit}`),
+                h('span', {}, tr('Продолжить')),
+                h('small', {}, tr('{0} · день {1} из {2}', tutorial ? tr('Обучение') : state.town ? townOf(base, state.town).name : tr('Партия'), Math.min(state.turn, c.balance.turnLimit), c.balance.turnLimit)),
               )
             : null,
           h(
             'button',
             { class: 'title-item', onclick: () => openCampaign() },
-            h('span', {}, 'Кампания'),
-            campaign ? h('small', {}, `★ ${campaignStars(campaign)} · ${campaign.finished ? 'пройдена' : `город ${campaign.reached + 1} из ${base.towns.length}`}`) : null,
+            h('span', {}, tr('Кампания')),
+            campaign ? h('small', {}, `★ ${campaignStars(campaign)} · ${campaign.finished ? tr('пройдена') : tr('город {0} из {1}', campaign.reached + 1, base.towns.length)}`) : null,
           ),
           // The tutorial mission first for a newcomer (CONCEPT.md §7.3 «Обучение»); a running game is not thrown away without asking.
           h(
             'button',
             { class: `title-item${!settings.tutorialDone && !(hasGame && !state.outcome) ? ' primary' : ''}`, onclick: () => (hasGame && !state.outcome ? openModal('tutorial') : void startGame('destroy', undefined, true)) },
-            h('span', {}, 'Обучение'),
-            settings.tutorialDone ? h('small', {}, 'пройдено') : null,
+            h('span', {}, tr('Обучение')),
+            settings.tutorialDone ? h('small', {}, tr('пройдено')) : null,
           ),
-          item('Свободная игра', () => openModal('newgame'), hasGame && !state.outcome ? '' : settings.tutorialDone ? 'primary' : ''),
+          item(tr('Свободная игра'), () => openModal('newgame'), hasGame && !state.outcome ? '' : settings.tutorialDone ? 'primary' : ''),
           // The collection between games (CONCEPT.md §3.5б).
           h(
             'button',
             { class: `title-item office-item${packAffordable() ? ' can-buy' : ''}`, onclick: () => openModal('office') },
-            h('span', {}, cardsIcon(), 'Карты — купить и улучшить'),
-            h('small', {}, `${collectionCount()} · ✦ ${collection.currency}${packAffordable() ? ' · хватит на конверт!' : ''}`),
+            h('span', {}, cardsIcon(), tr('Карты — купить и улучшить')),
+            h('small', {}, `${collectionCount()} · ✦ ${collection.currency}${packAffordable() ? tr(' · хватит на конверт!') : ''}`),
           ),
-          item('Как играть', () => openModal('howto')),
-          item('Настройки', () => openModal('settings')),
-          item('Об игре', () => openModal('about')),
+          item(tr('Как играть'), () => openModal('howto')),
+          item(tr('Настройки'), () => openModal('settings')),
+          item(tr('Об игре'), () => openModal('about')),
         ),
       ),
     );
@@ -5331,19 +5333,19 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h(
         'nav',
         { class: 'pause-menu' },
-        item('Продолжить', () => openModal(null), 'primary'),
-        item('Как играть', () => openModal('howto')),
-        item('Настройки', () => openModal('settings')),
-        ...(state.town && campaign ? [item('Карта кампании', () => openCampaign())] : []),
-        item('Свободная игра', () => openModal('newgame')),
-        item('Главное меню', () => showTitle()),
-        debugMode ? item('Отладка', () => openModal('debug'), 'ghost') : null,
+        item(tr('Продолжить'), () => openModal(null), 'primary'),
+        item(tr('Как играть'), () => openModal('howto')),
+        item(tr('Настройки'), () => openModal('settings')),
+        ...(state.town && campaign ? [item(tr('Карта кампании'), () => openCampaign())] : []),
+        item(tr('Свободная игра'), () => openModal('newgame')),
+        item(tr('Главное меню'), () => showTitle()),
+        debugMode ? item(tr('Отладка'), () => openModal('debug'), 'ghost') : null,
       ),
       hasGame
         ? h(
             'p',
             { class: 'hint pause-difficulty' },
-            tutorial ? 'Обучение' : `Сложность: ${base.difficulties.find((d) => d.id === state.difficulty)?.name ?? ''}`,
+            tutorial ? tr('Обучение') : tr('Сложность: {0}', base.difficulties.find((d) => d.id === state.difficulty)?.name ?? ''),
           )
         : null,
     ].filter((x): x is HTMLElement => x !== null);
@@ -5352,10 +5354,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** The tutorial over a game in progress: it has its own settings, so only the warning and «Начать». */
   function tutorialStartContent(): HTMLElement[] {
     return [
-      h('p', {}, 'Лёгкая короткая партия: игра шаг за шагом показывает, как нанимать репортёров, приукрашивать новости, копать компромат, стравливать горожан и травить завод. Нужная кнопка подсвечивается.'),
-      h('p', { class: 'bad' }, 'Текущая партия будет потеряна.'),
-      h('button', { class: 'primary big', onclick: () => void startGame('destroy', undefined, true) }, 'Начать обучение'),
-      h('button', { class: 'ghost', onclick: () => openModal(null) }, '← Назад'),
+      h('p', {}, tr('Лёгкая короткая партия: игра шаг за шагом показывает, как нанимать репортёров, приукрашивать новости, копать компромат, стравливать горожан и травить завод. Нужная кнопка подсвечивается.')),
+      h('p', { class: 'bad' }, tr('Текущая партия будет потеряна.')),
+      h('button', { class: 'primary big', onclick: () => void startGame('destroy', undefined, true) }, tr('Начать обучение')),
+      h('button', { class: 'ghost', onclick: () => openModal(null) }, tr('← Назад')),
     ];
   }
 
@@ -5369,7 +5371,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const levels = h(
       'div',
       { class: 'difficulty' },
-      h('span', { class: 'difficulty-label' }, 'Сложность'),
+      h('span', { class: 'difficulty-label' }, tr('Сложность')),
       h(
         'div',
         { class: 'chips' },
@@ -5415,21 +5417,21 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const townCard = h(
       'div',
       { class: 'gen-town' },
-      h('div', { class: 'gen-head' }, h('b', {}, town.name), h('button', { class: 'ghost', onclick: () => setChoice(randomChoice(base, randomSeed())) }, 'Случайно')),
-      row('Размер', 'size', g.sizes.map((x) => ({ id: x.id, name: `${upperFirst(x.name)} · ~${x.population} жителей` }))),
-      row('Уклад', 'way', g.archetypes.map((x) => ({ id: x.id, name: upperFirst(x.type) }))),
-      row('Правило', 'rule', g.rules.map((x) => ({ id: x.id, name: x.title }))),
-      row('Цель', 'goal', g.goals.map((x) => ({ id: x.id, name: x.name }))),
+      h('div', { class: 'gen-head' }, h('b', {}, town.name), h('button', { class: 'ghost', onclick: () => setChoice(randomChoice(base, randomSeed())) }, tr('Случайно'))),
+      row(tr('Размер'), 'size', g.sizes.map((x) => ({ id: x.id, name: tr('{0} · ~{1} жителей', upperFirst(x.name), x.population) }))),
+      row(tr('Уклад'), 'way', g.archetypes.map((x) => ({ id: x.id, name: upperFirst(x.type) }))),
+      row(tr('Правило'), 'rule', g.rules.map((x) => ({ id: x.id, name: x.title }))),
+      row(tr('Цель'), 'goal', g.goals.map((x) => ({ id: x.id, name: x.name }))),
       h('small', { class: 'hint' }, town.rule.text),
       h('div', { class: 'pass-goal' }, `🎯 ${goalTitle(tc, goalOf(tc))} · ${tc.balance.turnLimit} ${daysWord(tc.balance.turnLimit)}`),
-      power.clamped ? h('p', { class: 'bad' }, power.days > 1 ? 'Такой город сложнее выбранной сложности.' : 'Такой город легче выбранной сложности.') : null,
+      power.clamped ? h('p', { class: 'bad' }, power.days > 1 ? tr('Такой город сложнее выбранной сложности.') : tr('Такой город легче выбранной сложности.')) : null,
     );
     return [
-      ...(hasGame && !state.outcome ? [h('p', { class: 'bad' }, 'Текущая партия будет потеряна.')] : []),
+      ...(hasGame && !state.outcome ? [h('p', { class: 'bad' }, tr('Текущая партия будет потеряна.'))] : []),
       townCard,
       levels,
-      ...(record ? [h('small', { class: 'mode-record' }, `Рекорд: ${starLine(record.stars)} · ${record.days} ${daysWord(record.days)}`)] : []),
-      h('button', { class: 'primary big', onclick: () => void startGame('destroy') }, 'Играть'),
+      ...(record ? [h('small', { class: 'mode-record' }, tr('Рекорд: {0} · {1} {2}', starLine(record.stars), record.days, daysWord(record.days)))] : []),
+      h('button', { class: 'primary big', onclick: () => void startGame('destroy') }, tr('Играть')),
     ];
   }
 
@@ -5449,11 +5451,18 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('span', {}, h('b', {}, label), h('small', {}, hint)),
       );
     return [
-      h('h3', { class: 'section' }, 'Анимации'),
-      toggle('Быстрый поиск', 'находки репортёров появляются сразу, без анимации', 'fastSearch'),
-      toggle('Без роликов дня', 'не показывать драки, протесты и другие яркие события перед выпуском', 'skipCutscenes'),
-      h('h3', { class: 'section' }, 'Вступление'),
-      h('button', { onclick: () => void watchIntro() }, 'Посмотреть вступление ещё раз'),
+      // Both names in their own language, so a player who opened the wrong one finds theirs (CONCEPT.md §7.5).
+      h('h3', { class: 'section' }, 'Язык · Language'),
+      h(
+        'div',
+        { class: 'lang-row' },
+        ...LANGS.map((l) => h('button', { class: l.id === lang() ? 'on' : 'ghost', 'aria-pressed': l.id === lang() ? 'true' : 'false', onclick: () => l.id !== lang() && chooseLang(l.id) }, l.name)),
+      ),
+      h('h3', { class: 'section' }, tr('Анимации')),
+      toggle(tr('Быстрый поиск'), tr('находки репортёров появляются сразу, без анимации'), 'fastSearch'),
+      toggle(tr('Без роликов дня'), tr('не показывать драки, протесты и другие яркие события перед выпуском'), 'skipCutscenes'),
+      h('h3', { class: 'section' }, tr('Вступление')),
+      h('button', { onclick: () => void watchIntro() }, tr('Посмотреть вступление ещё раз')),
     ];
   }
 
@@ -5474,26 +5483,26 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const b = cc.balance;
     const townGoal = goalOf(cc);
     const stage = townGoal.type === 'stage';
-    const goalText = stage ? `довести город до стадии «${stageBelow(b.winCityIndex)}»` : goalTitle(cc, townGoal).replace(/^./, (x) => x.toLowerCase());
+    const goalText = stage ? tr('довести город до стадии «{0}»', stageBelow(b.winCityIndex)) : goalTitle(cc, townGoal).replace(/^./, (x) => x.toLowerCase());
     return [
-      h('p', { class: 'howto-lead' }, 'Вы — редактор газеты. Один ход — один день и один выпуск. Город читает вас, верит или не верит — и меняется.'),
+      h('p', { class: 'howto-lead' }, tr('Вы — редактор газеты. Один ход — один день и один выпуск. Город читает вас, верит или не верит — и меняется.')),
       block(
         'ui/city',
-        'Цель: разрушить город',
-        `Вы — газета холдинга «Медиа-Плюс». За ${b.turnLimit} ${daysWord(b.turnLimit)} нужно ${goalText}: пугайте жителей, ссорьте их между собой, оставляйте без работы.`,
+        tr('Цель: разрушить город'),
+        tr('Вы — газета холдинга «Медиа-Плюс». За {0} {1} нужно {2}: пугайте жителей, ссорьте их между собой, оставляйте без работы.', b.turnLimit, daysWord(b.turnLimit), goalText),
         list(
-          stage ? `Победа: город дошёл до стадии «${stageBelow(b.winCityIndex)}» — или закрылся «Голос города», честная газета, которая успокаивает людей и опровергает вашу ложь.` : 'Победа: главная цель города выполнена. Только она и побеждает.',
-          `Поражение: банкротство (деньги в минусе ${b.brokeTurnsLimit} дня подряд), потеря репутации — вам перестали верить — или прошли ${b.turnLimit} ${daysWord(b.turnLimit)}, а цель не выполнена.`,
-          'В кампании и в свободной игре у города своя главная цель: закрыть завод, выжить молодёжь, довести до драк, отдать улицы банде или стереть город до «Руин». Она написана на месте полоски цели.',
-          'В свободной игре город вы собираете сами: размер, уклад, правило и цель. Какой бы он ни вышел, сложность остаётся той, что выбрана: игра подстраивает силу новостей, а если её не хватает — число дней.',
+          stage ? tr('Победа: город дошёл до стадии «{0}» — или закрылся «Голос города», честная газета, которая успокаивает людей и опровергает вашу ложь.', stageBelow(b.winCityIndex)) : tr('Победа: главная цель города выполнена. Только она и побеждает.'),
+          tr('Поражение: банкротство (деньги в минусе {0} дня подряд), потеря репутации — вам перестали верить — или прошли {1} {2}, а цель не выполнена.', b.brokeTurnsLimit, b.turnLimit, daysWord(b.turnLimit)),
+          tr('В кампании и в свободной игре у города своя главная цель: закрыть завод, выжить молодёжь, довести до драк, отдать улицы банде или стереть город до «Руин». Она написана на месте полоски цели.'),
+          tr('В свободной игре город вы собираете сами: размер, уклад, правило и цель. Какой бы он ни вышел, сложность остаётся той, что выбрана: игра подстраивает силу новостей, а если её не хватает — число дней.'),
         ),
       ),
-      h('p', { class: 'hint-line' }, 'Где сейчас город, видно на шкале «Цель» вверху: пять стадий от «Процветает» до «Руин», 🏁 — куда нужно дойти. Метка стоит точно там, где город, и внутри стадии: цветом закрашено, сколько её город уже прошёл. Бледная метка показывает, куда сдвинет город разложенный выпуск.'),
-      h('h3', { class: 'section' }, 'Один день'),
-      step(1, 'Репортёры приносят новости', 'Один репортёр — одна новость в день. Сначала они пишут о событиях дня; на что не хватило людей, то выйдет с пометкой «никто не написал». Остальные ищут сами: как повезёт. Нанимайте кнопкой «Нанять» у портретов, а нажав на портрет, в «Редакции» выбирайте прямо в его карточке, что он ищет. На телефоне портретов наверху нет: «Редакция» — вкладка внизу экрана.'),
-      step(2, 'Разложите выпуск', 'Первая полоса — главная новость: её прочитают все и сильнее всего ей поверят. Статья — вторая по силе. Остальное выходит заметками. Что не нужно — «Не печатать». Нажмите на новость, чтобы переложить её.'),
-      step(3, 'Выберите подачу', 'Кнопка «Подача» над заголовком: «Это неспроста» и «Всё пропало!» делают новость громче, «Без паники» и «Всё хорошо!» — тише, «Как есть» — правда. Чем дальше от правды, тем вероятнее, что вас поймают на лжи. В меню виден риск и что сделают поверившие.'),
-      step(4, 'В печать', 'Кнопка «В печать» показывает, каким выйдет номер: скучным, обычным, интересным или сенсационным. Пока выпуск открыт, «≈» у показателей наверху — прогноз. После печати город отреагирует: над жителями появятся значки, а в итогах дня будет видно, как приняли каждую новость.'),
+      h('p', { class: 'hint-line' }, tr('Где сейчас город, видно на шкале «Цель» вверху: пять стадий от «Процветает» до «Руин», 🏁 — куда нужно дойти. Метка стоит точно там, где город, и внутри стадии: цветом закрашено, сколько её город уже прошёл. Бледная метка показывает, куда сдвинет город разложенный выпуск.')),
+      h('h3', { class: 'section' }, tr('Один день')),
+      step(1, tr('Репортёры приносят новости'), tr('Один репортёр — одна новость в день. Сначала они пишут о событиях дня; на что не хватило людей, то выйдет с пометкой «никто не написал». Остальные ищут сами: как повезёт. Нанимайте кнопкой «Нанять» у портретов, а нажав на портрет, в «Редакции» выбирайте прямо в его карточке, что он ищет. На телефоне портретов наверху нет: «Редакция» — вкладка внизу экрана.')),
+      step(2, tr('Разложите выпуск'), tr('Первая полоса — главная новость: её прочитают все и сильнее всего ей поверят. Статья — вторая по силе. Остальное выходит заметками. Что не нужно — «Не печатать». Нажмите на новость, чтобы переложить её.')),
+      step(3, tr('Выберите подачу'), tr('Кнопка «Подача» над заголовком: «Это неспроста» и «Всё пропало!» делают новость громче, «Без паники» и «Всё хорошо!» — тише, «Как есть» — правда. Чем дальше от правды, тем вероятнее, что вас поймают на лжи. В меню виден риск и что сделают поверившие.')),
+      step(4, tr('В печать'), tr('Кнопка «В печать» показывает, каким выйдет номер: скучным, обычным, интересным или сенсационным. Пока выпуск открыт, «≈» у показателей наверху — прогноз. После печати город отреагирует: над жителями появятся значки, а в итогах дня будет видно, как приняли каждую новость.')),
       // What the icons over residents mean: the city has no legend of its own (CONCEPT.md §7.3).
       h(
         'div',
@@ -5501,37 +5510,37 @@ export function mountApp(root: HTMLElement, base: Content): void {
         ...(Object.keys(REACTION_ICON) as Reaction[]).map((r) =>
           h('span', {}, h('img', { src: `${assetBase}sprites/fx/${REACTION_ICON[r]}.png`, alt: '', width: 16, height: 16 }), reactionLabels[r]),
         ),
-        h('span', {}, h('img', { src: `${assetBase}sprites/fx/rival_guardian.png`, alt: '', width: 16, height: 16 }), `отозвался на «${rivalNames.guardian.name}»`),
+        h('span', {}, h('img', { src: `${assetBase}sprites/fx/rival_guardian.png`, alt: '', width: 16, height: 16 }), tr('отозвался на «{0}»', rivalNames.guardian.name)),
       ),
-      h('h3', { class: 'section' }, 'Что беречь'),
-      block('ui/reputation', 'Репутация', 'Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.'),
-      block('ui/money', 'Деньги и читатели', 'Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. Деньги идут на зарплаты, новых репортёров и разовые ходы «Чёрной кассы» (💰 вверху; рядом — значки приёмов от карт).'),
-      block('ui/folder', 'Сводка и карты', `«Сводка» (папка вверху; на телефоне — вкладки «Карты», «Редакция», «Сводка» и «Касса» внизу экрана, а «В печать» — кнопка над ними справа) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые ${b.shopRefreshDays} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги (${b.shopRefreshCost} ₽, каждый следующий запрос до очередного предложения дороже на ${b.shopRequestStep} ₽), а на развилках («Решение редакции») придётся взять одно из двух навсегда. В день нового предложения или развилки окно открывается само. Новые карты в коллекцию покупают между партиями: кнопка «Карты — купить и улучшить» на главном экране и «Карты» на карте кампании, за связи (✦), которые даёт каждая партия.`),
-      h('h3', { class: 'section' }, 'Чем ещё бить по городу'),
-      block('groups/workers', 'Ссорьте группы', 'Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.'),
-      block('ui/guardian', '«Голос города»', `С ${b.rivalStartTurn.destroy}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.`),
+      h('h3', { class: 'section' }, tr('Что беречь')),
+      block('ui/reputation', tr('Репутация'), tr('Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.')),
+      block('ui/money', tr('Деньги и читатели'), tr('Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. Деньги идут на зарплаты, новых репортёров и разовые ходы «Чёрной кассы» (💰 вверху; рядом — значки приёмов от карт).')),
+      block('ui/folder', tr('Сводка и карты'), tr('«Сводка» (папка вверху; на телефоне — вкладки «Карты», «Редакция», «Сводка» и «Касса» внизу экрана, а «В печать» — кнопка над ними справа) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые {0} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги ({1} ₽, каждый следующий запрос до очередного предложения дороже на {2} ₽), а на развилках («Решение редакции») придётся взять одно из двух навсегда. В день нового предложения или развилки окно открывается само. Новые карты в коллекцию покупают между партиями: кнопка «Карты — купить и улучшить» на главном экране и «Карты» на карте кампании, за связи (✦), которые даёт каждая партия.', b.shopRefreshDays, b.shopRefreshCost, b.shopRequestStep)),
+      h('h3', { class: 'section' }, tr('Чем ещё бить по городу')),
+      block('groups/workers', tr('Ссорьте группы'), tr('Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.')),
+      block('ui/guardian', tr('«Голос города»'), tr('С {0}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.', b.rivalStartTurn.destroy)),
       list(
-        '🎯 Травля: кнопка «Травить» у новости о заводе, магазине или другом месте работы — или в «Сводке», вкладка «Город», где видны все такие места. Репортёры приносят о нём разные истории, по очереди; новости об этом месте бьют всё сильнее, если бить каждый день, люди уходят, и оно закрывается. Цель одна: пока идёт травля, другое место не выбрать — сначала «Прекратить» на её плашке над газетой.',
-        'Компромат: нажмите на портрет (на телефоне — вкладка «Редакция»), в карточке репортёра — «Компромат» и выберите, на кого копать. Репортёр несколько дней не пишет новостей, зато приносит эксклюзив, который настраивает город против группы.',
-        'Криминал: новости о преступности пугают людей и разжигают настоящую преступность. Преступность на улицах сама снижает «Порядок и безопасность», а банда, если она взяла улицы, держит его ниже до конца партии; полиция всё это сдерживает. Пока город раскалён, полиция и мэр отвечают рейдами и патрулями: они остужают улицы и успокаивают напуганных — закрытая полиция рейдов уже не устроит.',
-        '👁 Надзор за темой: если печатать одну тему день за днём, фактчекеры начинают за ней следить — неправду этой темы ловят на 25% чаще за каждый день подряд. Метка «Под надзором» у новости; день без этой темы снимает надзор. Правду надзор не трогает.',
+        tr('🎯 Травля: кнопка «Травить» у новости о заводе, магазине или другом месте работы — или в «Сводке», вкладка «Город», где видны все такие места. Репортёры приносят о нём разные истории, по очереди; новости об этом месте бьют всё сильнее, если бить каждый день, люди уходят, и оно закрывается. Цель одна: пока идёт травля, другое место не выбрать — сначала «Прекратить» на её плашке над газетой.'),
+        tr('Компромат: нажмите на портрет (на телефоне — вкладка «Редакция»), в карточке репортёра — «Компромат» и выберите, на кого копать. Репортёр несколько дней не пишет новостей, зато приносит эксклюзив, который настраивает город против группы.'),
+        tr('Криминал: новости о преступности пугают людей и разжигают настоящую преступность. Преступность на улицах сама снижает «Порядок и безопасность», а банда, если она взяла улицы, держит его ниже до конца партии; полиция всё это сдерживает. Пока город раскалён, полиция и мэр отвечают рейдами и патрулями: они остужают улицы и успокаивают напуганных — закрытая полиция рейдов уже не устроит.'),
+        tr('👁 Надзор за темой: если печатать одну тему день за днём, фактчекеры начинают за ней следить — неправду этой темы ловят на 25% чаще за каждый день подряд. Метка «Под надзором» у новости; день без этой темы снимает надзор. Правду надзор не трогает.'),
       ),
-      h('h3', { class: 'section' }, 'Первые советы'),
+      h('h3', { class: 'section' }, tr('Первые советы')),
       list(
-        `Фактчекеры начинают работу с ${b.factCheckStartTurn}-го дня, и ложь первых выпусков не разоблачат. Потом правда копит репутацию — ваш запас на будущую ложь.`,
-        'Самую громкую новость — на первую полосу. Рискованную ложь дешевле спрятать в заметку.',
-        'Не печатайте одну тему подряд: читатели устают, и новость действует слабее.',
-        'Нажмите на любой показатель наверху — откроется окно с подробностями.',
+        tr('Фактчекеры начинают работу с {0}-го дня, и ложь первых выпусков не разоблачат. Потом правда копит репутацию — ваш запас на будущую ложь.', b.factCheckStartTurn),
+        tr('Самую громкую новость — на первую полосу. Рискованную ложь дешевле спрятать в заметку.'),
+        tr('Не печатайте одну тему подряд: читатели устают, и новость действует слабее.'),
+        tr('Нажмите на любой показатель наверху — откроется окно с подробностями.'),
       ),
-      h('button', { onclick: () => void watchIntro() }, 'Посмотреть вступление'),
+      h('button', { onclick: () => void watchIntro() }, tr('Посмотреть вступление')),
     ];
   }
 
   function aboutContent(): HTMLElement[] {
     return [
-      h('p', {}, h('b', {}, 'Утка в номер'), ' — пошаговая сатирическая стратегия о газете, которая разрушает город новостями.'),
-      h('p', {}, 'Все персонажи, город и медиахолдинг «Медиа-Плюс» вымышлены. Любые совпадения с реальными СМИ — повод задуматься.'),
-      h('p', { class: 'hint-line' }, 'Ранняя версия: графика временная, баланс меняется.'),
+      h('p', {}, h('b', {}, tr('Утка в номер')), tr(' — пошаговая сатирическая стратегия о газете, которая разрушает город новостями.')),
+      h('p', {}, tr('Все персонажи, город и медиахолдинг «Медиа-Плюс» вымышлены. Любые совпадения с реальными СМИ — повод задуматься.')),
+      h('p', { class: 'hint-line' }, tr('Ранняя версия: графика временная, баланс меняется.')),
     ];
   }
 

@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { clamp, closedLine } from './lookup';
 import { getModifiers, type Modifiers } from './modifiers';
 import { huntStainOf, isHarmful, type PublishedNews } from './news';
@@ -22,7 +23,7 @@ export function startHunt(state: GameState, buildingId: number): void {
   if (!x || !x.open || x.jobs === 0) throw new Error(`Cannot start a hunt against ${buildingId}`);
   if (state.hunt?.building === buildingId) return;
   // One target at a time (CONCEPT.md §3.6а): a running hunt must be stopped before another begins.
-  if (state.hunt) throw new Error('Травля уже идёт — сначала прекратите её');
+  if (state.hunt) throw new Error(tr('Травля уже идёт — сначала прекратите её'));
   state.hunt = { building: buildingId, startTurn: state.turn, step: 0, hits: 0 };
 }
 

@@ -1,4 +1,6 @@
 import type { Content } from '../sim/types';
+import { applyOverlay, lang } from '../i18n';
+import overlays from './en.json';
 import arcs from './arcs.json';
 import balance from './balance.json';
 import buildings from './buildings.json';
@@ -22,4 +24,10 @@ import synergies from './synergies.json';
 import cash from './cash.json';
 
 // JSON imports are typed loosely (string instead of literal unions); validateContent checks the shape.
-export const content = { arcs, balance, difficulties, buildings, cards, channels, groups, lengths, letters, synergies, cash, offers, people, reporters, tasks, towns, townGen, townCalibration, twists, upgrades, forks } as unknown as Content;
+/** A content file in the current language (CONCEPT.md §7.5): the English overlay maps text paths to translations. */
+export function localized<T>(name: string, data: T): T {
+  return lang() === 'en' ? applyOverlay(data, (overlays as Record<string, Record<string, string>>)[name]) : data;
+}
+
+const raw = { arcs, balance, difficulties, buildings, cards, channels, groups, lengths, letters, synergies, cash, offers, people, reporters, tasks, towns, townGen, townCalibration, twists, upgrades, forks };
+export const content = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, localized(k, v)])) as unknown as Content;

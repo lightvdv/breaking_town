@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import type { Content, Difficulty, GameLength, Rarity, UpgradeDef } from '../sim';
 import { STORAGE_SUFFIX } from '../assets';
 
@@ -73,9 +74,9 @@ export interface PackDef {
 }
 
 export const packs: PackDef[] = [
-  { id: 'envelope', name: 'Конверт с досье', text: 'Одна новая карта: чаще обычная, иногда редкая, изредка легендарная.', cost: 60, count: 1, odds: { common: 0.7, rare: 0.25, legendary: 0.05 } },
+  { id: 'envelope', name: tr('Конверт с досье'), text: tr('Одна новая карта: чаще обычная, иногда редкая, изредка легендарная.'), cost: 60, count: 1, odds: { common: 0.7, rare: 0.25, legendary: 0.05 } },
   // Three cards for the price of less than three envelopes: the bulk buy for a collector.
-  { id: 'safe', name: 'Сейф из мэрии', text: 'Три новые карты: редкие или легендарные.', cost: 160, count: 3, odds: { common: 0, rare: 0.75, legendary: 0.25 } },
+  { id: 'safe', name: tr('Сейф из мэрии'), text: tr('Три новые карты: редкие или легендарные.'), cost: 160, count: 3, odds: { common: 0, rare: 0.75, legendary: 0.25 } },
 ];
 
 /** What a pack gave: its new cards, and «связи» back for each card there was nothing left to find. */
@@ -89,7 +90,7 @@ const RARITY_ORDER: Rarity[] = ['legendary', 'rare', 'common'];
  * left to find for gives half its share of the price back.
  */
 export function openPack(col: Collection, c: Content, pack: PackDef, random: () => number = Math.random): PackResult {
-  if (col.currency < pack.cost) throw new Error('Не хватает связей');
+  if (col.currency < pack.cost) throw new Error(tr('Не хватает связей'));
   col.currency -= pack.cost;
   const result: PackResult = { cards: [], refund: 0 };
   const missing = (r: Rarity) => collectable(c).filter((u) => u.rarity === r && !col.cards[u.id]);
@@ -130,22 +131,22 @@ export function levelCost(u: UpgradeDef, level: number): number | null {
 export function levelUp(col: Collection, u: UpgradeDef): void {
   const level = col.cards[u.id];
   const cost = level ? levelCost(u, level) : null;
-  if (cost === null || col.currency < cost) throw new Error('Нельзя улучшить');
+  if (cost === null || col.currency < cost) throw new Error(tr('Нельзя улучшить'));
   col.currency -= cost;
   col.cards[u.id] = level + 1;
 }
 
 /** Rarity in words, for the card's ribbon. */
-export const rarityNames: Record<Rarity, string> = { common: 'обычная', rare: 'редкая', legendary: 'легендарная' };
+export const rarityNames: Record<Rarity, string> = { common: tr('обычная'), rare: tr('редкая'), legendary: tr('легендарная') };
 
 /** Directions of the cards in words (the tags of `synergies.json`). */
 export const tagNames: Record<string, string> = {
-  yellow: 'жёлтая пресса',
-  crime: 'криминал',
-  hunt: 'травля',
-  split: 'раскол',
-  money: 'деньги',
-  trust: 'честное лицо',
-  rival: 'против «Голоса»',
-  staff: 'редакция',
+  yellow: tr('жёлтая пресса'),
+  crime: tr('криминал'),
+  hunt: tr('травля'),
+  split: tr('раскол'),
+  money: tr('деньги'),
+  trust: tr('честное лицо'),
+  rival: tr('против «Голоса»'),
+  staff: tr('редакция'),
 };

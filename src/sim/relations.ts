@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { chance, int, pick, weightedPick, type RngState } from './rng';
 import { clamp, conflictsStarted, groupOf } from './lookup';
 import { isRecent } from './reporters';
@@ -106,7 +107,7 @@ export function advanceRelations(state: GameState, c: Content, rng: RngState): {
       state.reconciliation = { pair: worst, turnsLeft: b.reconcileTurns, startedTurn: state.turn };
       state.reconcileReadyTurn = state.turn + b.reconcileCooldown;
       addTension(state, worst, -b.reconcileDrop);
-      notes.push(fillTitle(c, 'Мэрия объявила примирение: {a.many} и {b.many}', pairOf(worst)));
+      notes.push(fillTitle(c, tr('Мэрия объявила примирение: {a.many} и {b.many}'), pairOf(worst)));
     }
   }
 

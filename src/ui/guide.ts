@@ -1,4 +1,5 @@
-import guide from '../content/guide.json';
+import guideJson from '../content/guide.json';
+import { localized } from '../content';
 import { crimePressure, rivalStarted, templateOf, type Content, type GameState, type TurnReport } from '../sim';
 
 /**
@@ -17,6 +18,7 @@ export interface GuideNote {
   action?: { label: string; open: GuideAction };
 }
 
+const guide = localized('guide', guideJson);
 const firsts = guide.firsts as { id: string; title: string; text: string; action?: { label: string; open: GuideAction } }[];
 
 /** What the player sees now: the first issue, the rival's plaque, the latest turn's report. */

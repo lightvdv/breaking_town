@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { groupOf, templateOf } from './lookup';
 import { chance, pick, weightedPick } from './rng';
 import { buyWillingness } from './readers';
@@ -44,13 +45,13 @@ export function cashActive(state: GameState, id: string, turn = state.turn): boo
 
 /** Why a move cannot be bought now, or null. */
 export function cashBlock(state: GameState, c: Content, id: string): string | null {
-  if (state.outcome) return 'Партия окончена';
-  if (!cashOpen(state, c, id)) return 'нужна карта';
+  if (state.outcome) return tr('Партия окончена');
+  if (!cashOpen(state, c, id)) return tr('нужна карта');
   const ready = state.cashReady?.[id] ?? 0;
-  if (ready > state.turn) return `через ${ready - state.turn} ${ready - state.turn === 1 ? 'день' : 'дня'}`;
-  if (state.money < cashCost(state, c, id)) return 'не хватает денег';
-  if (id === 'paparazzi' && !state.hunt) return 'нет травли';
-  if (id === 'leak' && !leakPool(state, c).length) return 'источник молчит';
+  if (ready > state.turn) return tr('через {0} {1}', ready - state.turn, ready - state.turn === 1 ? tr('день') : tr('дня'));
+  if (state.money < cashCost(state, c, id)) return tr('не хватает денег');
+  if (id === 'paparazzi' && !state.hunt) return tr('нет травли');
+  if (id === 'leak' && !leakPool(state, c).length) return tr('источник молчит');
   return null;
 }
 

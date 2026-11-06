@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { goalOf, goalProgress, updateGoal } from './goals';
 import { crimeEvents, crimeResponse, heatCrime } from './crime';
 import { pressHunt, settleHunt } from './hunt';
@@ -486,20 +487,20 @@ function findHighlights(
   for (const i of before.incidents) out.push({ kind: 'fight', title: i.title, building: i.building, groups: [...i.pair] });
   for (const key of pairKeys(c)) {
     if (tensionLevel(c, state.tension[key]) === 3 && tensionLevel(c, before.tensionBefore[key] ?? 0) < 3) {
-      out.push({ kind: 'clash', title: fillTitle(c, 'Столкновения: {a.many} против {b.manyGen}', pairOf(key)), building: hall, groups: pairOf(key) });
+      out.push({ kind: 'clash', title: fillTitle(c, tr('Столкновения: {a.many} против {b.manyGen}'), pairOf(key)), building: hall, groups: pairOf(key) });
     }
   }
   const newProtesters = state.residents.filter((r) => r.status === 'active' && r.protestTurns > 0 && !before.protestingBefore.has(r.id)).length;
-  if (newProtesters >= b.highlightProtestMin) out.push({ kind: 'protest', title: `На протест вышли ${newProtesters} человек`, building: hall, groups: [] });
+  if (newProtesters >= b.highlightProtestMin) out.push({ kind: 'protest', title: tr('На протест вышли {0} человек', newProtesters), building: hall, groups: [] });
   const left = state.residents.filter((r) => r.status === 'left' && before.activeBefore.has(r.id)).length;
-  if (left >= b.highlightLeaveMin) out.push({ kind: 'exodus', title: `Из города уехали ${left} человек`, building: null, groups: [] });
+  if (left >= b.highlightLeaveMin) out.push({ kind: 'exodus', title: tr('Из города уехали {0} человек', left), building: null, groups: [] });
   for (const x of state.buildings) {
     if (!x.open && before.openBefore.has(x.id)) out.push({ kind: 'closed', title: closedLine(state, c, x.id), building: x.id, groups: [] });
   }
   if (before.reconciliationStarted) {
     out.push({
       kind: 'reconcile',
-      title: fillTitle(c, 'Мэрия мирит: {a.many} и {b.many}', pairOf(before.reconciliationStarted)),
+      title: fillTitle(c, tr('Мэрия мирит: {a.many} и {b.many}'), pairOf(before.reconciliationStarted)),
       building: hall,
       groups: pairOf(before.reconciliationStarted),
     });

@@ -1,7 +1,8 @@
 name: Pages
 # One GitHub Pages site, two builds:
 #   /breaking_town/      — the beta for testers, built from the commit in .github/beta-commit (frozen);
-#   /breaking_town/dev/  — the latest master, for watching changes.
+#   /breaking_town/dev/  — the latest master, for watching changes;
+#   /breaking_town/dev/breaking-town-itch.zip — master as an English zip to upload to itch.io.
 # A new beta = put a new commit hash into .github/beta-commit and push.
 on:
   push:
@@ -35,6 +36,10 @@ jobs:
         run: |
           npm run build -- --base=/${{ github.event.repository.name }}/dev/
           mkdir -p site && mv dist site/dev
+      - name: Build the itch.io zip (English, relative paths) next to the dev preview
+        run: |
+          npm run build:itch
+          mv breaking-town-itch.zip site/dev/
       - name: Build the beta
         working-directory: beta-src
         run: |

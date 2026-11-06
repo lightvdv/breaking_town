@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { clamp } from './lookup';
 import { pick, type RngState } from './rng';
 import { giveTask } from './tasks';
@@ -72,7 +73,7 @@ export function advanceTwist(state: GameState, c: Content, rng: RngState): { not
   // The morning after its last day: the town has voted; the governor leaves. The audit ends with its task.
   if (def.kind === 'election') {
     t.result = electionLeader(state, c);
-    out.notes.push(`Новый мэр — ${def.candidates?.[t.result === 'peacemaker' ? 0 : 1] ?? ''}`);
+    out.notes.push(tr('Новый мэр — {0}', def.candidates?.[t.result === 'peacemaker' ? 0 : 1] ?? ''));
     out.ended = true;
   } else if (def.kind === 'governor') {
     t.result = 'passed';

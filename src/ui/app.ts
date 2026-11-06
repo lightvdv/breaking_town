@@ -1,5 +1,6 @@
 import { LANGS, lang, quoted, tr } from '../i18n';
 import { chooseLang } from '../lang';
+import { gameProps, initAnalytics, setAnalytics, track, trackLeave, trackTurn } from './analytics';
 import { ASSET_BASE } from '../assets';
 import { CityScene, REACTION_ICON, type HoverTarget } from '../render/scene';
 import {
@@ -284,6 +285,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   // (add &new to the URL to start over in that city).
   const params = new URLSearchParams(location.search);
   const settings = loadSettings();
+  initAnalytics(settings.analytics);
   const saved = params.has('new') ? null : loadSave<Draft>(base);
   // The debug window is a pause menu item only with ?debug in the address.
   const debugMode = params.has('debug');
@@ -838,6 +840,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   };
 
   function openModal(m: Modal, anchor?: string): void {
+    if (m && m !== modal) track('window_open', { window: m, in_game: !titleOpen && hasGame });
     modal = m;
     render();
     if (anchor) document.getElementById(anchor)?.scrollIntoView({ block: 'start' });
@@ -881,6 +884,18 @@ export function mountApp(root: HTMLElement, base: Content): void {
     issue.animate(frames, { duration: 320, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' });
   }
 
+  /** What kind of game is on, for the statistics (CONCEPT.md §7.6). */
+  const gameKind = () => (tutorial ? 'tutorial' : state.town && !isGeneratedTown(state.town) ? 'campaign' : 'free');
+
+  // Where the player stopped when the tab closes: the screen, the day, the open window (CONCEPT.md §7.6).
+  addEventListener('pagehide', () =>
+    trackLeave({
+      screen: introPlaying ? 'intro' : titleOpen ? 'title' : campaignOpen ? 'campaign' : hasGame ? 'game' : 'other',
+      window: modal,
+      ...(hasGame ? { ...gameProps(state, gameKind()), outcome: state.outcome?.result ?? null, tutorial_step: tutorial ? trackedStep : null } : {}),
+    }),
+  );
+
   const newGame = (seed = randomSeed(), mode: GameMode = 'destroy', town: string | null = null, tutorialGame = false) => {
     hasGame = true;
     // A campaign town keeps the campaign's difficulty and starts with the reporter brought along;
@@ -904,6 +919,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     modal = null;
     scene?.setState(state, false);
     scene?.resetView();
+    track('game_start', gameProps(state, gameKind()));
     void runSearch();
   };
 
@@ -958,6 +974,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     try {
       report = playTurn(state, c, decision);
       error = '';
+      trackTurn(state, c, gameKind(), decision, report);
       // The tutorial's steps that are done by printing (CONCEPT.md §7.3 «Обучение»).
       if (tutorial) tutorial.flags = [...new Set([...tutorial.flags, ...issueFlags(hand, c, decision, report)])];
       if (tutorial && state.outcome && !settings.tutorialDone) {
@@ -1775,15 +1792,23 @@ export function mountApp(root: HTMLElement, base: Content): void {
     ].filter((x): x is HTMLElement | string => x !== null);
   }
 
+  /** The tutorial step last reported to the statistics. */
+  let trackedStep = '';
+
   function renderTutorial(): void {
     const step = tutorialStep();
     guideNote.hidden = !step || !issueOpen;
     guideNote.classList.add('tutorial-note');
     guideNote.classList.remove('folded');
     if (!step) return;
+    if (step.def.id !== trackedStep) {
+      trackedStep = step.def.id;
+      track('tutorial_step', { step: step.def.id, index: step.index, day: state.turn });
+    }
     if (tutorialPeek !== null && tutorialPeek >= step.index) tutorialPeek = null;
     const viewed = tutorialPeek ?? step.index;
     const skip = () => {
+      track('tutorial_skip', { step: step.def.id, index: step.index });
       skipStep(tutorial!, step.def.id);
       tutorialPeek = null;
       render();
@@ -4892,6 +4917,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
 
   /** The map of the campaign. Without one, a new one starts right away. */
   function openCampaign(): void {
+    track('campaign_open');
     if (!campaign) {
       campaign = newCampaign('destroy');
       saveCampaign(campaign);
@@ -5288,6 +5314,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   function continueGame(): void {
+    track('game_continue', gameProps(state, gameKind()));
     titleOpen = false;
     modal = null;
     scene?.stopTour();
@@ -5319,7 +5346,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
     scene?.startTour();
     // The game interface hides behind the story as it does behind the title screen.
     root.classList.add('at-title');
+    const introStart = Date.now();
+    track('intro_start', { first: !settings.introSeen });
     await playIntro(root, c, assetBase);
+    track('intro_end', { seconds: Math.round((Date.now() - introStart) / 1000) });
     introPlaying = false;
     root.classList.remove('at-title');
     settings.introSeen = true;
@@ -5461,6 +5491,21 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('h3', { class: 'section' }, tr('Анимации')),
       toggle(tr('Быстрый поиск'), tr('находки репортёров появляются сразу, без анимации'), 'fastSearch'),
       toggle(tr('Без роликов дня'), tr('не показывать драки, протесты и другие яркие события перед выпуском'), 'skipCutscenes'),
+      h('h3', { class: 'section' }, tr('Статистика')),
+      h(
+        'label',
+        { class: 'setting' },
+        h('input', {
+          type: 'checkbox',
+          checked: settings.analytics,
+          onchange: (e: Event) => {
+            settings.analytics = (e.target as HTMLInputElement).checked;
+            saveSettings(settings);
+            setAnalytics(settings.analytics);
+          },
+        }),
+        h('span', {}, h('b', {}, tr('Отправлять анонимную статистику')), h('small', {}, tr('как проходят партии и где их бросают — без имён и личных данных; помогает делать игру лучше'))),
+      ),
       h('h3', { class: 'section' }, tr('Вступление')),
       h('button', { onclick: () => void watchIntro() }, tr('Посмотреть вступление ещё раз')),
     ];

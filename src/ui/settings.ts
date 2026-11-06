@@ -28,12 +28,14 @@ export interface Settings {
   tasksOpen: boolean;
   /** The «Редакция» plaque (promotions, quits) is unfolded; folded (the default) it is one line. */
   staffOpen: boolean;
+  /** Anonymous play statistics are sent (CONCEPT.md §7.6); on unless the player turns them off. */
+  analytics: boolean;
   /** The town the player composed for a free game (CONCEPT.md §9.5); none yet = the default one. */
   town: TownChoice | null;
 }
 
 const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
-const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, difficulty: 'normal', rivalOpen: false, hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: false, staffOpen: false, town: null };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, difficulty: 'normal', rivalOpen: false, hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: false, staffOpen: false, analytics: true, town: null };
 
 export function loadSettings(): Settings {
   try {

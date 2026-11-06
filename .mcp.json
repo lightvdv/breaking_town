@@ -6,6 +6,13 @@
       "headers": {
         "Authorization": "Bearer ${PIXELLAB_API_KEY}"
       }
+    },
+    "posthog": {
+      "type": "http",
+      "url": "https://mcp-eu.posthog.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${POSTHOG_PERSONAL_API_KEY}"
+      }
     }
   }
 }

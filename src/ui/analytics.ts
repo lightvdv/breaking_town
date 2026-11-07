@@ -34,6 +34,14 @@ export function initAnalytics(enabled: boolean): void {
       capture_pageleave: true,
       capture_exceptions: true,
       disable_session_recording: false,
+      // Only what the reports use: the extras (heatmaps, dead clicks, web vitals, surveys, console in
+      // the replay) each load a script and watch the page, and the game must stay smooth.
+      capture_heatmaps: false,
+      capture_dead_clicks: false,
+      capture_performance: false,
+      enable_recording_console_log: false,
+      disable_surveys: true,
+      disable_web_experiments: true,
       opt_out_capturing_by_default: !enabled,
       // `?phdebug` in the address logs what PostHog does to the console.
       loaded: (ph) => {

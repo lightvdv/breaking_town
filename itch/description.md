@@ -12,7 +12,7 @@
 - **Inputs:** Mouse, Touchscreen
 - **Average session:** About half an hour
 - **Cover image:** `cover.png` (630 × 500)
-- **Trailer:** upload `trailer.mp4` to YouTube and paste the link. `trailer.gif` can go straight into the description.
+- **Trailer:** upload `trailer-v1.mp4` to YouTube and paste the link. `trailer-v1.gif` can go straight into the description.
 - **Screenshots:** `screenshots/01-…` to `screenshots/08-…`, in that order (itch.io shows them in the sidebar; the first three matter most)
 
 ---

@@ -156,7 +156,7 @@ import { recordOf, starLine, submitRecord } from './records';
 import { collectable, levelCost, levelUp, loadCollection, MAX_LEVEL, openPack, packs, rarityNames, rewardFor, saveCollection, tagNames, type Collection, type PackResult } from './collection';
 import { campaignStars, loadCampaign, newCampaign, PASSES, passNames, passState, saveCampaign, townStars, townState, winTown, type Campaign } from './campaign';
 import { MAP_H, MAP_W, REGION_ART, townArt } from './campaignMap';
-import { sound, type MusicMood, type SfxName } from './sound';
+import { sound, SFX_NAMES, type MusicMood, type SfxName } from './sound';
 import { aboutLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillTiers, type RepStatus } from './reporterBar';
 import {
   priceLabels,
@@ -4002,6 +4002,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       row(tr('Реклама после скандала'), `×${state.scandal.toFixed(2)}`),
       row(tr('Неразоблачённая ложь'), `${state.pendingLies.length}`),
       row(tr('Ходов в минусе'), `${state.brokeTurns} / ${b.brokeTurnsLimit}`),
+      h('h3', { class: 'section' }, tr('Звуки')),
+      h('div', { class: 'debug-actions' }, ...SFX_NAMES.map((n) => h('button', { onclick: () => sound.play(n) }, n))),
     ];
   }
 

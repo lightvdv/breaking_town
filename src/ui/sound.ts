@@ -4,25 +4,8 @@
  * for the paper, the press, the reporters and the crowd. The same engine renders offline (the trailer).
  */
 
-export type SfxName =
-  | 'click'
-  | 'paper'
-  | 'type'
-  | 'sensation'
-  | 'press'
-  | 'stamp'
-  | 'crowdScared'
-  | 'crowdHappy'
-  | 'crowdDoubt'
-  | 'fight'
-  | 'chant'
-  | 'exodus'
-  | 'shutter'
-  | 'chime'
-  | 'coin'
-  | 'exposed'
-  | 'win'
-  | 'lose';
+export const SFX_NAMES = ['click', 'paper', 'type', 'sensation', 'press', 'stamp', 'crowdScared', 'crowdHappy', 'crowdDoubt', 'fight', 'chant', 'exodus', 'shutter', 'chime', 'coin', 'exposed', 'win', 'lose'] as const;
+export type SfxName = (typeof SFX_NAMES)[number];
 
 /** 0 — a thriving or calm town, 1 — crisis, 2 — decline and ruins. */
 export type MusicMood = 0 | 1 | 2;
@@ -191,6 +174,91 @@ export function composeTune(mood: MusicMood): Score {
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
+// ---------- Voices ----------
+
+/** Vowels as three formants (Hz) and their loudness; `m` is a closed mouth humming. */
+const VOWELS = {
+  a: { f: [730, 1090, 2440], g: [1, 0.5, 0.2] },
+  o: { f: [570, 840, 2410], g: [1, 0.45, 0.12] },
+  u: { f: [300, 870, 2240], g: [1, 0.25, 0.08] },
+  e: { f: [530, 1840, 2480], g: [1, 0.45, 0.2] },
+  i: { f: [300, 2290, 3010], g: [1, 0.35, 0.2] },
+  y: { f: [400, 1500, 2400], g: [1, 0.35, 0.12] },
+  m: { f: [250, 1000, 2200], g: [1, 0.06, 0.02] },
+} as const;
+type Vowel = keyof typeof VOWELS;
+
+/** A syllable: vowel, length, pitch at its start and end (× the speaker's own), loudness, pause before. */
+interface Syllable {
+  v: Vowel;
+  dur: number;
+  p0: number;
+  p1: number;
+  amp?: number;
+  gap?: number;
+}
+interface Speaker {
+  pitch: number;
+  female: boolean;
+  gain: number;
+  pan: number;
+  muffle: number;
+}
+/** How loud one voice is. */
+const VOICE = 0.6;
+const S = (v: Vowel, dur: number, p0: number, p1: number, amp = 1, gap = 0): Syllable => ({ v, dur, p0, p1, amp, gap });
+
+/** Mumbled words: `n` syllables of the given vowels, the pitch drifting from `from` to `to`. */
+const mutter = (n: number, vowels: Vowel[], from: number, to: number, fast = 1): Syllable[] =>
+  Array.from({ length: n }, (_, i) => {
+    const p = from + ((to - from) * i) / Math.max(1, n - 1);
+    const d = (0.09 + Math.random() * 0.08) / fast;
+    return S(vowels[Math.floor(Math.random() * vowels.length)], d, p * (1 + (Math.random() - 0.5) * 0.08), p * 0.97, 0.7 + Math.random() * 0.3, Math.random() < 0.2 ? 0.06 : 0.012);
+  });
+
+/** What people say, by reaction. Each call builds fresh phrases, so no two crowds sound alike. */
+const PHRASES = {
+  /** Bad news: low, falling grumbling — «м-да…», «ну во-от», «о-ох», muttering. */
+  grumble: (): Syllable[][] => [
+    [S('m', 0.18, 0.95, 0.9), S('a', 0.32, 0.92, 0.78, 0.9, 0.03)],
+    [S('u', 0.1, 1, 0.98), S('o', 0.38, 0.98, 0.8, 1, 0.02)],
+    [S('o', 0.5, 1.02, 0.78, 0.9)],
+    [S('m', 0.45, 0.95, 0.8, 0.8)],
+    mutter(5, ['u', 'o', 'y', 'e'], 1, 0.82),
+    mutter(7, ['u', 'o', 'a', 'y'], 0.98, 0.85),
+    [...mutter(3, ['y', 'e', 'o'], 1, 0.92), S('o', 0.35, 0.95, 0.78, 0.9, 0.05)],
+  ],
+  /** Good news: calm agreement — «м-хм», «о-кей», «а-га», «ну и хорошо». */
+  approve: (): Syllable[][] => [
+    [S('m', 0.14, 1, 1.12, 0.8), S('m', 0.22, 1.08, 0.95, 0.9, 0.05)],
+    [S('o', 0.14, 1.04, 1.06), S('e', 0.3, 1.12, 0.96, 1, 0.025)],
+    [S('a', 0.12, 1, 1.08), S('a', 0.26, 1.04, 0.92, 1, 0.04)],
+    [S('u', 0.1, 1, 1), S('i', 0.08, 1.02, 1.02, 0.7, 0.01), S('o', 0.1, 1.05, 1.05, 0.8, 0.02), S('o', 0.1, 1.08, 1.06, 0.8, 0.01), S('o', 0.28, 1.06, 0.94, 1, 0.01)],
+    [S('a', 0.32, 1.02, 0.95, 0.8)],
+    mutter(4, ['o', 'e', 'a'], 1.05, 0.98),
+  ],
+  /** Doubt: a rising «хм?», «э-э?», «да ну». */
+  doubt: (): Syllable[][] => [
+    [S('m', 0.3, 0.95, 1.25, 0.9)],
+    [S('e', 0.34, 0.98, 1.2, 0.8)],
+    [S('a', 0.1, 1, 1), S('u', 0.3, 1.02, 0.85, 0.9, 0.04)],
+    mutter(3, ['y', 'e', 'a'], 1, 1.15),
+  ],
+  /** Fear: a high «ой!», «а-ах», fast anxious chatter. */
+  scared: (): Syllable[][] => [
+    [S('o', 0.12, 1.45, 1.4), S('i', 0.22, 1.35, 1.05, 0.8)],
+    [S('a', 0.42, 1.4, 1.0, 0.9)],
+    mutter(8, ['a', 'e', 'o', 'i'], 1.25, 1.15, 1.5),
+    mutter(6, ['o', 'a', 'y'], 1.2, 1.05, 1.4),
+  ],
+  /** A fight: short grunts and shouts. */
+  fight: (): Syllable[][] => [
+    [S('u', 0.1, 1.3, 0.9)],
+    [S('a', 0.14, 1.45, 1.1)],
+    [S('e', 0.12, 1.35, 1.0), S('a', 0.18, 1.4, 1.1, 1, 0.1)],
+  ],
+};
+
 /** A synth bound to an audio context and two outputs (music and effects). */
 export class Synth {
   readonly ctx: BaseAudioContext;
@@ -310,33 +378,92 @@ export class Synth {
     return (score.bars * 4 * 60) / score.bpm;
   }
 
-  /** A crowd: noise through moving vowel-like bands, swelling and falling for `dur` seconds. */
-  private crowd(t: number, dur: number, peak: number, bands: number[], jitter = 0.5): void {
-    for (const [i, f] of bands.entries()) {
-      const s = this.ctx.createBufferSource();
-      s.buffer = this.noise;
-      s.loop = true;
-      const bp = this.ctx.createBiquadFilter();
+  /**
+   * One person saying a phrase: a voice tone (its pitch following each syllable's intonation)
+   * through three formant filters that glide from vowel to vowel, with a little breath. Returns
+   * when the phrase ends.
+   */
+  private speak(t: number, phrase: Syllable[], v: Speaker): number {
+    const ctx = this.ctx;
+    const scale = v.female ? 1.16 : 1;
+    const src = ctx.createOscillator();
+    src.type = 'sawtooth';
+    const breath = ctx.createBufferSource();
+    breath.buffer = this.noise;
+    breath.loop = true;
+    const breathGain = ctx.createGain();
+    breathGain.gain.value = 0.2;
+    const soft = ctx.createBiquadFilter();
+    soft.type = 'lowpass';
+    soft.frequency.value = v.muffle;
+    src.connect(soft);
+    breath.connect(breathGain);
+    breathGain.connect(soft);
+    const mouth = ctx.createGain();
+    mouth.gain.value = 0;
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = v.pan;
+    mouth.connect(pan);
+    pan.connect(this.sfx);
+    const formants = [0, 1, 2].map((k) => {
+      const bp = ctx.createBiquadFilter();
       bp.type = 'bandpass';
-      bp.Q.value = 5;
-      const g = this.ctx.createGain();
-      const steps = Math.max(4, Math.round(dur * 9));
-      const curve = new Float32Array(steps);
-      const freq = new Float32Array(steps);
-      for (let k = 0; k < steps; k++) {
-        const shape = Math.sin((Math.PI * (k + 0.5)) / steps);
-        curve[k] = peak * shape * (1 - jitter + jitter * Math.random());
-        freq[k] = f * (0.85 + 0.3 * Math.random());
-      }
-      g.gain.setValueAtTime(0, t);
-      g.gain.setValueCurveAtTime(curve, t + 0.001, dur);
-      bp.frequency.setValueCurveAtTime(freq, t + 0.001, dur);
-      s.connect(bp);
+      const g = ctx.createGain();
+      soft.connect(bp);
       bp.connect(g);
-      g.connect(this.sfx);
-      s.start(t, i * 0.37);
-      s.stop(t + dur + 0.05);
+      g.connect(mouth);
+      return { bp, g, k };
+    });
+    let at = t;
+    for (const syl of phrase) {
+      at += syl.gap ?? 0;
+      const f = VOWELS[syl.v];
+      const amp = (syl.amp ?? 1) * v.gain;
+      const end = at + syl.dur;
+      // Pitch: from the start to the end of the syllable, with a slight natural wobble.
+      src.frequency.setValueAtTime(v.pitch * syl.p0, at);
+      src.frequency.linearRampToValueAtTime(v.pitch * (syl.p0 + syl.p1) * 0.5 * (1 + (Math.random() - 0.5) * 0.03), at + syl.dur * 0.5);
+      src.frequency.linearRampToValueAtTime(v.pitch * syl.p1, end);
+      // The mouth moves to the vowel quickly but not at once.
+      for (const x of formants) {
+        x.bp.frequency.setTargetAtTime(f.f[x.k] * scale, at, 0.025);
+        x.bp.Q.setTargetAtTime((f.f[x.k] * scale) / [90, 110, 150][x.k], at, 0.025);
+        x.g.gain.setTargetAtTime(f.g[x.k], at, 0.025);
+      }
+      mouth.gain.setValueAtTime(0.0001, at);
+      mouth.gain.linearRampToValueAtTime(amp, at + syl.dur * 0.25);
+      mouth.gain.linearRampToValueAtTime(amp * 0.85, at + syl.dur * 0.6);
+      mouth.gain.exponentialRampToValueAtTime(0.0001, end);
+      at = end;
     }
+    src.start(t);
+    breath.start(t, Math.random() * 1.5);
+    src.stop(at + 0.05);
+    breath.stop(at + 0.05);
+    return at;
+  }
+
+  /** A group of people reacting: each says a phrase or two from the list, a little apart. */
+  private murmur(t: number, phrases: Syllable[][], o: { people: number; spread: number; low: number; high: number; gain: number; muffle: number; twice?: number }): void {
+    for (let i = 0; i < o.people; i++) {
+      const female = Math.random() < 0.45;
+      const base = female ? 175 + Math.random() * 45 : 95 + Math.random() * 40;
+      const v: Speaker = {
+        pitch: base * (o.low + Math.random() * (o.high - o.low)),
+        female,
+        gain: o.gain * (0.6 + Math.random() * 0.4),
+        pan: Math.random() * 1.4 - 0.7,
+        muffle: o.muffle * (0.8 + Math.random() * 0.3),
+      };
+      let at = t + Math.random() * o.spread;
+      at = this.speak(at, phrases[Math.floor(Math.random() * phrases.length)], v);
+      if (Math.random() < (o.twice ?? 0)) this.speak(at + 0.15 + Math.random() * 0.4, phrases[Math.floor(Math.random() * phrases.length)], v);
+    }
+  }
+
+  /** «Пф»: a short puff of air through the lips. */
+  private puff(t: number, gain: number): void {
+    this.hiss(t, 0.14, gain, this.sfx, 'lowpass', 900, 0.7, 0.008, 300);
   }
 
   /** Plays an effect at time `t` (default now). */
@@ -381,15 +508,18 @@ export class Synth {
         this.hiss(t, 0.06, 0.25, s, 'lowpass', 1500);
         break;
       case 'crowdScared':
-        this.crowd(t, 2.6, 0.35, [380, 620, 900, 1400], 0.6);
-        this.tone('sawtooth', hz(38), t, 2.4, 0.03, s, { attack: 0.8, cutoff: 300 });
+        // Bad news: the town grumbles, and someone gasps «ой».
+        this.murmur(t, PHRASES.grumble(), { people: 6, spread: 0.9, low: 0.9, high: 1.0, gain: VOICE, muffle: 1800, twice: 0.5 });
+        this.murmur(t + 0.2, PHRASES.scared().slice(0, 2), { people: 1, spread: 0.6, low: 1, high: 1, gain: VOICE * 0.8, muffle: 2600 });
         break;
       case 'crowdHappy':
-        this.crowd(t, 2.0, 0.3, [450, 800, 1250, 2000], 0.4);
-        for (let i = 0; i < 5; i++) this.hiss(t + 0.3 + i * 0.13, 0.05, 0.12, s, 'bandpass', 2600, 2);
+        // Good news: a calm «м-хм», «ну и хорошо» — agreement, not cheering.
+        this.murmur(t, PHRASES.approve(), { people: 4, spread: 0.8, low: 0.98, high: 1.05, gain: VOICE * 1.1, muffle: 2200, twice: 0.3 });
         break;
       case 'crowdDoubt':
-        this.crowd(t, 1.6, 0.26, [260, 420, 700], 0.7);
+        this.murmur(t, PHRASES.doubt(), { people: 3, spread: 0.7, low: 0.95, high: 1.05, gain: VOICE * 1.3, muffle: 2000 });
+        this.puff(t + 0.35 + Math.random() * 0.3, 0.12);
+        this.puff(t + 0.9 + Math.random() * 0.3, 0.09);
         break;
       case 'fight':
         for (let i = 0; i < 4; i++) {
@@ -398,13 +528,19 @@ export class Synth {
           this.tone('sine', 120, k, 0.12, 0.34, s, { slideTo: 50 });
           this.hiss(k, 0.05, 0.3, s, 'lowpass', 1200);
         }
-        this.crowd(t, 1.6, 0.2, [500, 900, 1500], 0.8);
+        this.murmur(t, PHRASES.fight(), { people: 4, spread: 1.1, low: 1, high: 1.1, gain: VOICE, muffle: 2600 });
+        this.murmur(t + 0.3, PHRASES.scared().slice(2), { people: 3, spread: 0.6, low: 1, high: 1.05, gain: VOICE * 0.5, muffle: 1800 });
         break;
-      case 'chant':
-        // A protest: «ta-ta, ta-ta-ta».
-        for (const [i, k] of [0, 0.3, 0.75, 0.95, 1.15].entries()) this.crowd(t + k, 0.22, 0.45, [420, 700, 1100], 0.2 + i * 0);
-        this.crowd(t, 1.6, 0.12, [300, 600], 0.6);
+      case 'chant': {
+        // A protest: everyone together «до-лой! до-лой!», over the crowd's muttering.
+        const chant = [S('o', 0.16, 1.15, 1.15), S('o', 0.3, 1.3, 1.15, 1, 0.04), S('o', 0.16, 1.15, 1.15, 1, 0.22), S('o', 0.3, 1.3, 1.15, 1, 0.04)];
+        for (let i = 0; i < 6; i++) {
+          const female = i % 2 === 1;
+          this.speak(t + Math.random() * 0.03, chant, { pitch: female ? 200 : 115 * (0.95 + Math.random() * 0.1), female, gain: VOICE * 0.75, pan: (i / 5) * 1.2 - 0.6, muffle: 2400 });
+        }
+        this.murmur(t, PHRASES.grumble(), { people: 3, spread: 1.0, low: 0.95, high: 1.05, gain: VOICE * 0.4, muffle: 1500 });
         break;
+      }
       case 'exodus':
         // A car driving off.
         this.tone('sawtooth', 55, t, 1.6, 0.08, s, { slideTo: 90, cutoff: 500, attack: 0.1 });

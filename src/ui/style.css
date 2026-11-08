@@ -660,6 +660,7 @@ button.publish.level-3.bump-up {
 
 .debug-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 

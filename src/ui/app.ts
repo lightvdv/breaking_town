@@ -156,6 +156,7 @@ import { recordOf, starLine, submitRecord } from './records';
 import { collectable, levelCost, levelUp, loadCollection, MAX_LEVEL, openPack, packs, rarityNames, rewardFor, saveCollection, tagNames, type Collection, type PackResult } from './collection';
 import { campaignStars, loadCampaign, newCampaign, PASSES, passNames, passState, saveCampaign, townStars, townState, winTown, type Campaign } from './campaign';
 import { MAP_H, MAP_W, REGION_ART, townArt } from './campaignMap';
+import { sound, type MusicMood, type SfxName } from './sound';
 import { aboutLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillTiers, type RepStatus } from './reporterBar';
 import {
   priceLabels,
@@ -286,6 +287,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const params = new URLSearchParams(location.search);
   const settings = loadSettings();
   initAnalytics(settings.analytics);
+  // Sound starts with the first press: browsers allow it only after one (CONCEPT.md §7.2а).
+  sound.setVolumes(settings.musicVolume, settings.sfxVolume);
+  const unlockSound = () => sound.unlock();
+  addEventListener('pointerdown', unlockSound, true);
+  addEventListener('keydown', unlockSound, true);
+  addEventListener('click', (e) => (e.target as Element | null)?.closest?.('button, summary, .title-item') && sound.play('click'), true);
   const saved = params.has('new') ? null : loadSave<Draft>(base);
   // The debug window is a pause menu item only with ?debug in the address.
   const debugMode = params.has('debug');
@@ -666,6 +673,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       if (run !== searchRun) return;
       repStatus.set(f.reporterId, { phase: 'done', find: f, title: titleOf(f.cardUid) });
       if (f.cardUid !== null && !skipSearch) {
+        sound.play(f.tier === 3 ? 'sensation' : 'type');
         revealed.add(f.cardUid);
         flyQueue.add(f.cardUid);
       }
@@ -863,6 +871,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function closeIssue(): void {
     if (folding || !issueOpen) return;
     folding = true;
+    sound.play('paper');
     // The icon is laid out (invisible) to learn where the paper flies.
     issueFab.hidden = false;
     issueFab.style.visibility = 'hidden';
@@ -879,6 +888,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function openIssue(): void {
     if (folding || issueOpen) return;
     const frames = foldFrames().reverse();
+    sound.play('paper');
     issueOpen = true;
     render();
     issue.animate(frames, { duration: 320, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' });
@@ -936,6 +946,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const buy = (id: string) => {
     try {
       purchase(state, c, id);
+      sound.play('coin');
       error = '';
       scene?.setState(state, false);
     } catch (e) {
@@ -973,6 +984,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const hand = state.hand;
     try {
       report = playTurn(state, c, decision);
+      sound.play('press');
       error = '';
       trackTurn(state, c, gameKind(), decision, report);
       // The tutorial's steps that are done by printing (CONCEPT.md §7.3 «Обучение»).
@@ -1033,6 +1045,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     closed: tr('Закрытие'),
     reconcile: tr('Примирение'),
   };
+
+  const highlightSounds: Record<Highlight['kind'], SfxName> = { fight: 'fight', clash: 'fight', protest: 'chant', exodus: 'exodus', closed: 'shutter', reconcile: 'chime' };
 
   /** A story's illustration; a conflict story about any pair shows exactly its two groups. */
   const newsArt = (templateId: string, pair?: [string, string]) =>
@@ -1130,6 +1144,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
     cutscene.parentElement!.classList.add('in-cutscene');
     // The crowd acts out how the main story was taken: believed (scared or happy) or doubted.
     const reaction = !main || main.believed + main.doubted === 0 ? null : main.believed >= main.doubted ? (main.mood ?? 'scared') : 'doubted';
+    window.setTimeout(() => {
+      if (reaction === 'scared') sound.play('crowdScared');
+      else if (reaction === 'happy') sound.play('crowdHappy');
+      else if (reaction === 'doubted') sound.play('crowdDoubt');
+    }, 900);
     await scene!.playMorning(main?.building ?? null, reaction);
     cutscene.hidden = true;
     cutscene.parentElement!.classList.remove('in-cutscene');
@@ -1174,6 +1193,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const finish = () => {
         document.removeEventListener('keydown', onKey);
         daySummary.hidden = true;
+        if (state.outcome) sound.play(state.outcome.result === 'win' ? 'win' : 'lose');
         done();
       };
       const onKey = (e: KeyboardEvent) => {
@@ -1211,6 +1231,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       );
       tooltip.hidden = true;
       daySummary.hidden = false;
+      sound.play('paper');
+      if (r.exposures.length) window.setTimeout(() => sound.play('exposed'), 350);
       document.addEventListener('keydown', onKey);
       next.focus({ preventScroll: true });
     });
@@ -1224,6 +1246,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     await scene!.playHighlights(highlights, (hl) => {
       cutsceneCaption.hidden = !hl;
       if (!hl) return;
+      sound.play(highlightSounds[hl.kind]);
       cutsceneCaption.className = `cutscene-caption kind-${hl.kind}`;
       cutsceneCaption.replaceChildren(h('span', { class: 'cutscene-kicker' }, tr('Срочно · {0}', highlightLabels[hl.kind])), h('b', {}, hl.title));
     });
@@ -2545,7 +2568,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
       const item = menuItem(
         d.distortion === dist,
         !!blockedHint,
-        () => (d.distortion = dist),
+        () => {
+          d.distortion = dist;
+          sound.play('stamp');
+        },
         icon,
         h(
           'span',
@@ -4837,6 +4863,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   function render(): void {
+    // The music darkens with the town: calm, crisis, decline (CONCEPT.md §7.2а).
+    const stage = hasGame && !titleOpen ? cityStateOf(c, state.metrics.cityIndex) : 0;
+    sound.setMood((stage <= 1 ? 0 : stage === 2 ? 1 : 2) as MusicMood);
     // The tutorial sends a step's money before the panel shows it (CONCEPT.md §7.3 «Обучение»).
     if (tutorial && !busy && !searching) {
       const step = tutorialStep();
@@ -4861,6 +4890,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (report && !searching && !busy && promotedTurn !== report.turn) {
       promotedTurn = report.turn;
       reporterBar.celebrate(report.staff.levelUps);
+      if (report.staff.levelUps.length) sound.play('chime');
     }
     renderCityEvents();
     renderIssue();
@@ -5480,6 +5510,32 @@ export function mountApp(root: HTMLElement, base: Content): void {
         }),
         h('span', {}, h('b', {}, label), h('small', {}, hint)),
       );
+    // Loudness of the music and of the effects; at zero that part is off (CONCEPT.md §7.2а).
+    const volume = (label: string, key: 'musicVolume' | 'sfxVolume') => {
+      const value = h('small', { class: 'volume-value' }, settings[key] > 0 ? `${Math.round(settings[key] * 100)}%` : tr('выкл.'));
+      return h(
+        'label',
+        { class: 'setting volume' },
+        h('b', {}, label),
+        h('input', {
+          type: 'range',
+          min: '0',
+          max: '100',
+          step: '5',
+          value: String(Math.round(settings[key] * 100)),
+          oninput: (e: Event) => {
+            settings[key] = Number((e.target as HTMLInputElement).value) / 100;
+            value.textContent = settings[key] > 0 ? `${Math.round(settings[key] * 100)}%` : tr('выкл.');
+            sound.setVolumes(settings.musicVolume, settings.sfxVolume);
+          },
+          onchange: () => {
+            saveSettings(settings);
+            if (key === 'sfxVolume') sound.play('type');
+          },
+        }),
+        value,
+      );
+    };
     return [
       // Both names in their own language, so a player who opened the wrong one finds theirs (CONCEPT.md §7.5).
       h('h3', { class: 'section' }, 'Язык · Language'),
@@ -5488,6 +5544,9 @@ export function mountApp(root: HTMLElement, base: Content): void {
         { class: 'lang-row' },
         ...LANGS.map((l) => h('button', { class: l.id === lang() ? 'on' : 'ghost', 'aria-pressed': l.id === lang() ? 'true' : 'false', onclick: () => l.id !== lang() && chooseLang(l.id) }, l.name)),
       ),
+      h('h3', { class: 'section' }, tr('Звук')),
+      volume(tr('Музыка'), 'musicVolume'),
+      volume(tr('Звуки'), 'sfxVolume'),
       h('h3', { class: 'section' }, tr('Анимации')),
       toggle(tr('Быстрый поиск'), tr('находки репортёров появляются сразу, без анимации'), 'fastSearch'),
       toggle(tr('Без роликов дня'), tr('не показывать драки, протесты и другие яркие события перед выпуском'), 'skipCutscenes'),

@@ -1112,6 +1112,27 @@ button.publish.level-3.bump-up {
   accent-color: var(--accent);
 }
 
+/* A loudness slider: name, slider, value in one row (CONCEPT.md §7.2а). */
+.setting.volume {
+  align-items: center;
+}
+
+.setting.volume b {
+  min-width: 72px;
+}
+
+.setting.volume input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.setting.volume .volume-value {
+  min-width: 44px;
+  text-align: right;
+}
+
 .setting span {
   display: flex;
   flex-direction: column;

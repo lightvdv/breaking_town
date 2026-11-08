@@ -30,12 +30,15 @@ export interface Settings {
   staffOpen: boolean;
   /** Anonymous play statistics are sent (CONCEPT.md §7.6); on unless the player turns them off. */
   analytics: boolean;
+  /** Music and effects loudness, 0..1 (CONCEPT.md §7.2а); 0 turns that part off. */
+  musicVolume: number;
+  sfxVolume: number;
   /** The town the player composed for a free game (CONCEPT.md §9.5); none yet = the default one. */
   town: TownChoice | null;
 }
 
 const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
-const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, difficulty: 'normal', rivalOpen: false, hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: false, staffOpen: false, analytics: true, town: null };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, difficulty: 'normal', rivalOpen: false, hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: false, staffOpen: false, analytics: true, musicVolume: 0.6, sfxVolume: 0.8, town: null };
 
 export function loadSettings(): Settings {
   try {

@@ -1,10 +1,9 @@
 /**
- * Sound (CONCEPT.md §7.2а): synthesized with Web Audio — a swing tune for the newsroom whose mood
- * darkens with the town, and short effects for the paper, the press and the reporters. Only the crowd's
- * voices are recordings (CC0, public/assets/sounds/crowd): synthesized voices sound like robots.
- * The same engine renders offline (the trailer).
+ * Sound (CONCEPT.md §7.2а): everything is synthesized with Web Audio — no audio files, like the
+ * procedural art. A swing tune for the newsroom whose mood darkens with the town, short effects for the
+ * paper, the press and the reporters, and the crowd's reactions as pixel babble: chirps whose
+ * intonation says how people feel, without words. The same engine renders offline (the trailer).
  */
-import { ASSET_BASE } from '../assets';
 
 export const SFX_NAMES = ['click', 'paper', 'type', 'sensation', 'press', 'stamp', 'crowdScared', 'crowdHappy', 'crowdDoubt', 'fight', 'chant', 'exodus', 'shutter', 'chime', 'coin', 'exposed', 'win', 'lose'] as const;
 export type SfxName = (typeof SFX_NAMES)[number];
@@ -176,43 +175,37 @@ export function composeTune(mood: MusicMood): Score {
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
-// ---------- Crowd recordings ----------
+// ---------- The crowd ----------
 
-/** How loud a crowd clip plays next to the synthesized effects. */
-const CROWD = 0.35;
-
-/**
- * Short clips of real crowds (GameSoundCon 2024 Walla by ShangusBurger, freesound.org, CC0), cut and
- * evened out in loudness: grumbling, a calm «mm-hm», gasps, gossip, «pff», the noise of a protest.
- */
-const CLIPS = {
-  grumble: ['grumble_1', 'grumble_2', 'grumble_3', 'grumble_4'],
-  approve: ['approve_1', 'approve_2', 'approve_3', 'approve_4'],
-  gasp: ['gasp_1', 'gasp_2'],
-  gossip: ['gossip_1', 'gossip_2'],
-  pff: ['pff_1', 'pff_2'],
-  protest: ['protest_1'],
-} as const;
-type ClipKind = keyof typeof CLIPS;
-const clipBuffers = new Map<string, AudioBuffer>();
-let clipsLoading: Promise<void> | null = null;
-
-/** Fetches and decodes the crowd clips once (buffers work in any context). Never throws. */
-export function loadClips(ctx: BaseAudioContext): Promise<void> {
-  clipsLoading ??= Promise.all(
-    Object.values(CLIPS)
-      .flat()
-      .map(async (id) => {
-        try {
-          const r = await fetch(`${ASSET_BASE}sounds/crowd/${id}.mp3`);
-          if (r.ok) clipBuffers.set(id, await ctx.decodeAudioData(await r.arrayBuffer()));
-        } catch {
-          // A missing clip is a silent one.
-        }
-      }),
-  ).then(() => undefined);
-  return clipsLoading;
+/** One chirp of pixel babble: start (s, from the phrase's start), length, pitch at its start and end (× the voice's), loudness. */
+interface Blip {
+  at: number;
+  dur: number;
+  p0: number;
+  p1: number;
+  amp?: number;
 }
+interface BlipVoice {
+  base: number;
+  wave: OscillatorType;
+  cutoff: number;
+  gain: number;
+}
+const rand = (a: number, b: number) => a + Math.random() * (b - a);
+
+/** Mumbled words: `n` chirps of about `len` seconds, the pitch drifting from `from` to `to`. */
+function mumble(n: number, from: number, to: number, len: number, jitter: number, start = 0): Blip[] {
+  const out: Blip[] = [];
+  let at = start;
+  for (let i = 0; i < n; i++) {
+    const p = (from + ((to - from) * i) / Math.max(1, n - 1)) * (1 + rand(-jitter, jitter));
+    const dur = len * rand(0.75, 1.25);
+    out.push({ at, dur, p0: p, p1: p * rand(0.94, 1.0), amp: rand(0.7, 1) });
+    at += dur + (Math.random() < 0.2 ? rand(0.08, 0.15) : rand(0.02, 0.05));
+  }
+  return out;
+}
+const blipEnd = (bs: Blip[]) => bs.reduce((e, b) => Math.max(e, b.at + b.dur), 0);
 
 /** A synth bound to an audio context and two outputs (music and effects). */
 export class Synth {
@@ -333,26 +326,80 @@ export class Synth {
     return (score.bars * 4 * 60) / score.bpm;
   }
 
-  private lastClip = new Map<ClipKind, string>();
-
-  /** A crowd clip of a kind (not the one played last), a little faster or slower and to one side. */
-  private clip(kind: ClipKind, t: number, gain: number): void {
-    const ids = CLIPS[kind].filter((id) => clipBuffers.has(id));
-    const fresh = ids.length > 1 ? ids.filter((id) => id !== this.lastClip.get(kind)) : ids;
-    const id = fresh[Math.floor(Math.random() * fresh.length)];
-    if (!id) return;
-    this.lastClip.set(kind, id);
-    const src = this.ctx.createBufferSource();
-    src.buffer = clipBuffers.get(id)!;
-    src.playbackRate.value = 0.94 + Math.random() * 0.12;
+  /** A pixel voice saying chirps: one square or triangle tone, its pitch following each chirp. */
+  private babble(t: number, blips: Blip[], v: BlipVoice): void {
+    const o = this.ctx.createOscillator();
+    o.type = v.wave;
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = v.cutoff;
     const g = this.ctx.createGain();
-    g.gain.value = gain;
+    g.gain.value = 0;
     const pan = this.ctx.createStereoPanner();
-    pan.pan.value = Math.random() * 0.6 - 0.3;
-    src.connect(g);
+    pan.pan.value = rand(-0.6, 0.6);
+    o.connect(lp);
+    lp.connect(g);
     g.connect(pan);
     pan.connect(this.sfx);
-    src.start(t);
+    for (const b of blips) {
+      const at = t + b.at;
+      const peak = v.gain * (b.amp ?? 1);
+      o.frequency.setValueAtTime(v.base * b.p0, at);
+      o.frequency.exponentialRampToValueAtTime(v.base * b.p1, at + b.dur);
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.linearRampToValueAtTime(peak, at + 0.012);
+      g.gain.setValueAtTime(peak, at + b.dur * 0.7);
+      g.gain.linearRampToValueAtTime(0.0001, at + b.dur);
+    }
+    o.start(t);
+    o.stop(t + blipEnd(blips) + 0.05);
+  }
+
+  /** The crowd's reactions in pixel babble: intonation without words. */
+  private babbleReaction(name: SfxName, t: number): void {
+    const low = (): BlipVoice => ({ base: rand(105, 160), wave: 'square', cutoff: 1300, gain: 0.07 });
+    const mid = (): BlipVoice => ({ base: rand(170, 290), wave: 'triangle', cutoff: 2600, gain: 0.14 });
+    const high = (): BlipVoice => ({ base: rand(260, 400), wave: 'square', cutoff: 2400, gain: 0.06 });
+    switch (name) {
+      case 'crowdScared':
+        // Bad news: an «oh!», then low, falling grumbling ending in a sigh.
+        this.babble(t, [{ at: 0, dur: 0.2, p0: 1.6, p1: 1.1 }], mid());
+        for (let i = 0; i < 3; i++) {
+          const words = mumble(Math.round(rand(5, 8)), 1.0, 0.8, 0.12, 0.07);
+          words.push({ at: blipEnd(words) + 0.06, dur: 0.32, p0: 0.85, p1: 0.68, amp: 0.8 });
+          this.babble(t + 0.25 + rand(0, 0.5), words, low());
+        }
+        break;
+      case 'crowdHappy': {
+        // Good news: a calm «mm-hm», «o-kay», «a-ha».
+        const says: Blip[][] = [
+          [{ at: 0, dur: 0.12, p0: 1.0, p1: 1.18 }, { at: 0.19, dur: 0.22, p0: 1.15, p1: 0.95 }],
+          [{ at: 0, dur: 0.1, p0: 1.05, p1: 1.05 }, { at: 0.13, dur: 0.24, p0: 1.25, p1: 1.0 }],
+          [{ at: 0, dur: 0.1, p0: 1.0, p1: 1.1 }, { at: 0.16, dur: 0.2, p0: 1.1, p1: 0.92 }],
+        ];
+        const first = Math.floor(Math.random() * 3);
+        for (let i = 0; i < 3; i++) this.babble(t + i * rand(0.25, 0.4), says[(first + i) % 3], mid());
+        break;
+      }
+      case 'crowdDoubt':
+        // Doubt: a rising «hm?», a «pff» and a puzzled murmur.
+        this.babble(t, [{ at: 0, dur: 0.3, p0: 0.95, p1: 1.4 }], mid());
+        this.hiss(t + 0.45, 0.14, 0.12, this.sfx, 'lowpass', 900, 0.7, 0.008, 300);
+        this.babble(t + 0.7, mumble(3, 1.0, 1.2, 0.1, 0.05), { ...mid(), gain: 0.1 });
+        break;
+      case 'fight':
+        // Shouts over the blows.
+        for (let i = 0; i < 3; i++) this.babble(t + rand(0, 0.9), [{ at: 0, dur: 0.13, p0: 1.5, p1: 0.9 }], high());
+        this.babble(t + 0.2, mumble(9, 1.3, 1.15, 0.06, 0.1), { ...high(), gain: 0.04 });
+        break;
+      case 'chant': {
+        // A protest: everyone in time, «do-loy! do-loy! do-loy!».
+        const words: Blip[] = [];
+        for (let k = 0; k < 3; k++) words.push({ at: k * 0.62, dur: 0.13, p0: 1.0, p1: 1.0 }, { at: k * 0.62 + 0.17, dur: 0.27, p0: 1.22, p1: 1.12 });
+        for (let i = 0; i < 5; i++) this.babble(t + rand(0, 0.025), words, { base: [130, 165, 200, 250, 320][i] * rand(0.97, 1.03), wave: 'square', cutoff: 2000, gain: 0.045 });
+        break;
+      }
+    }
   }
 
   /** Plays an effect at time `t` (default now). */
@@ -397,18 +444,10 @@ export class Synth {
         this.hiss(t, 0.06, 0.25, s, 'lowpass', 1500);
         break;
       case 'crowdScared':
-        // Bad news: a gasp, then the town grumbles.
-        this.clip('gasp', t, CROWD * 0.35);
-        this.clip('grumble', t + 0.25, CROWD);
-        break;
       case 'crowdHappy':
-        // Good news: a calm «mm-hm» of agreement, not cheering.
-        this.clip('approve', t, CROWD);
-        break;
       case 'crowdDoubt':
-        // Not believed: «pff» and whispering.
-        this.clip('pff', t, CROWD * 0.9);
-        this.clip('gossip', t + 0.3, CROWD * 0.4);
+      case 'chant':
+        this.babbleReaction(name, t);
         break;
       case 'fight':
         for (let i = 0; i < 4; i++) {
@@ -417,13 +456,7 @@ export class Synth {
           this.tone('sine', 120, k, 0.12, 0.34, s, { slideTo: 50 });
           this.hiss(k, 0.05, 0.3, s, 'lowpass', 1200);
         }
-        this.clip('gasp', t, CROWD * 0.7);
-        this.clip('protest', t + 0.2, CROWD * 0.5);
-        break;
-      case 'chant':
-        // A protest: the crowd's angry noise over grumbling.
-        this.clip('protest', t, CROWD);
-        this.clip('grumble', t + 0.4, CROWD * 0.5);
+        this.babbleReaction(name, t);
         break;
       case 'exodus':
         // A car driving off.
@@ -485,7 +518,6 @@ class Player {
         this.master = this.ctx.createGain();
         this.master.connect(this.ctx.destination);
         this.synth = new Synth(this.ctx, this.master);
-        void loadClips(this.ctx);
         this.applyVolumes();
         document.addEventListener('visibilitychange', () => {
           if (!this.ctx) return;
@@ -575,7 +607,6 @@ export const sound = new Player();
 export async function renderAudio(seconds: number, moods: [number, MusicMood][], effects: [number, SfxName][], musicGain = 0.5): Promise<Blob> {
   const rate = 44100;
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * rate), rate);
-  await loadClips(ctx);
   const synth = new Synth(ctx, ctx.destination);
   synth.music.gain.value = musicGain;
   synth.sfx.gain.value = 1;

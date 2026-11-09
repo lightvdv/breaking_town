@@ -394,7 +394,6 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
 
   state.hand = [];
 
-  const tensionMid = { ...state.tension };
   state.exposedTotal += exposures.length;
   state.rng = createRng(daySeed);
   const day = startTurn(state, c);
@@ -409,7 +408,8 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   state.outcome = checkOutcome(state, c);
   const reconciliationStarted = state.reconciliation && state.reconciliation !== reconcileBefore ? { ...state.reconciliation } : null;
   const highlights = findHighlights(state, c, {
-    tensionBefore: tensionMid,
+    // Before the issue: clashes our own story set off are shown too, not only those the night brought.
+    tensionBefore,
     protestingBefore,
     activeBefore,
     openBefore,

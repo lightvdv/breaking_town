@@ -12,7 +12,7 @@
 - **Inputs:** Mouse, Touchscreen
 - **Average session:** About half an hour
 - **Cover image:** `cover.png` (630 × 500)
-- **Trailer:** upload `trailer-v2.mp4` (with the game's own synthesized music and sounds) to YouTube and paste the link. `trailer-v1.mp4` is the silent first cut. `trailer-v1.gif` can go straight into the description (a GIF has no sound anyway).
+- **Trailer:** upload `trailer-v3.mp4` (35 s, with the game's own synthesized music and sounds; the spin is one quick swap of the headline) to YouTube and paste the link. `trailer-v2.mp4` is the longer cut with the whole spin menu, `trailer-v1.mp4` the silent first cut. `trailer-v1.gif` can go straight into the description (a GIF has no sound anyway).
 - **Screenshots:** `screenshots/01-…` to `screenshots/08-…`, in that order (itch.io shows them in the sidebar; the first three matter most)
 
 ---

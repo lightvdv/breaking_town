@@ -12,7 +12,7 @@
 - **Inputs:** Mouse, Touchscreen
 - **Average session:** About half an hour
 - **Cover image:** `cover.png` (630 × 500)
-- **Trailer:** upload `trailer-v4.mp4` (42 s, with the game's own synthesized music and sounds: a quick headline swap, then a quarrel story blown up into clashes on the streets) to YouTube and paste the link. `trailer-v3.mp4` is the same without the quarrel, `trailer-v2.mp4` the longer cut with the whole spin menu, `trailer-v1.mp4` the silent first cut. `trailer-v1.gif` can go straight into the description (a GIF has no sound anyway).
+- **Trailer:** upload `trailer-v5.mp4` (48 s, with the game's own synthesized music and sounds: a quick headline swap, then a quarrel story blown up into clashes on the streets, each headline and its result held long enough to read) to YouTube and paste the link. `trailer-v4.mp4` is the same cut with shorter shots, `trailer-v3.mp4` has no quarrel, `trailer-v2.mp4` the longer cut with the whole spin menu, `trailer-v1.mp4` the silent first cut. `trailer-v1.gif` can go straight into the description (a GIF has no sound anyway).
 - **Screenshots:** `screenshots/01-…` to `screenshots/08-…`, in that order (itch.io shows them in the sidebar; the first three matter most)
 
 ---

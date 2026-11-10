@@ -99,7 +99,7 @@ export function trackTurn(state: GameState, c: Content, kind: string, decision: 
     day: report.turn,
     money: state.money,
     readers: readerCount(state),
-    reputation: Math.round(averageTrust(state, c) * 100),
+    reputation: Math.round(averageTrust(state, c)),
     city_index: Math.round(report.metricsAfter.cityIndex),
     city_stage: cityStateOf(c, report.metricsAfter.cityIndex),
     printed: printed.length,

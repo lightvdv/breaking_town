@@ -4399,6 +4399,23 @@ button.publish.level-3.bump-up {
   cursor: pointer;
 }
 
+.guide-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  align-self: center;
+  margin-left: auto;
+}
+
+.guide-buttons:empty {
+  display: none;
+}
+
+.guide-buttons .guide-skip {
+  margin-left: 0;
+}
+
 .tut-target {
   position: relative;
   z-index: 3;

@@ -151,7 +151,7 @@ import { h, pct, svg } from './dom';
 import { loadSave, writeSave } from './save';
 import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
-import { currentStep, grantFor, issueFlags, skipStep, tipFor, stepTargets, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
+import { currentStep, grantFor, issueFlags, skipStep, skipTutorial, tipFor, stepTargets, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
 import { recordOf, starLine, submitRecord } from './records';
 import { collectable, levelCost, levelUp, loadCollection, MAX_LEVEL, openPack, packs, rarityNames, rewardFor, saveCollection, tagNames, type Collection, type PackResult } from './collection';
 import { campaignStars, loadCampaign, newCampaign, PASSES, passNames, passState, saveCampaign, townStars, townState, winTown, type Campaign } from './campaign';
@@ -989,6 +989,11 @@ export function mountApp(root: HTMLElement, base: Content): void {
       trackTurn(state, c, gameKind(), decision, report);
       // The tutorial's steps that are done by printing (CONCEPT.md §7.3 «Обучение»).
       if (tutorial) tutorial.flags = [...new Set([...tutorial.flags, ...issueFlags(hand, c, decision, report)])];
+      // The first-day note has done its job once an ordinary issue went to press.
+      if (!tutorial && !settings.notesSeen.includes('first_day')) {
+        settings.notesSeen = [...settings.notesSeen, 'first_day'];
+        saveSettings(settings);
+      }
       if (tutorial && state.outcome && !settings.tutorialDone) {
         settings.tutorialDone = true;
         saveSettings(settings);
@@ -1836,9 +1841,20 @@ export function mountApp(root: HTMLElement, base: Content): void {
       tutorialPeek = null;
       render();
     };
+    const skipAll = () => {
+      track('tutorial_skip_all', { step: step.def.id, index: step.index, day: state.turn });
+      skipTutorial(tutorial!);
+      tutorialPeek = null;
+      render();
+    };
     guideNote.replaceChildren(
       h('div', { class: 'guide-text' }, tutorialNav(step, viewed), ...tutorialText(step, viewed)),
-      ...(step.def.id === 'goal' || viewed !== step.index ? [] : [h('button', { class: 'guide-skip ghost', title: tr('Пропустить этот шаг'), onclick: skip }, tr('Пропустить'))]),
+      h(
+        'div',
+        { class: 'guide-buttons' },
+        step.def.id === 'goal' || viewed !== step.index ? null : h('button', { class: 'guide-skip ghost', title: tr('Пропустить этот шаг'), onclick: skip }, tr('Пропустить шаг')),
+        step.def.id === 'goal' ? null : h('button', { class: 'guide-skip ghost', title: tr('Убрать подсказки и играть дальше самому'), onclick: skipAll }, tr('Пропустить обучение')),
+      ),
     );
   }
 
@@ -1849,6 +1865,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   function renderTutorialTargets(): void {
     for (const el of document.querySelectorAll('.tut-target')) el.classList.remove('tut-target');
     spotlightOn(null);
+    // The first-day note points at «В печать» (a glow, no shade: the player may look around first).
+    if (modal === null && !busy && firstDayNote()) [...document.querySelectorAll<HTMLElement>('.publish')].find((x) => x.getClientRects().length > 0)?.classList.add('tut-target');
     const step = tutorialStep();
     tutorialBar.hidden = !step || modal === null || titleOpen;
     if (!step || titleOpen || busy || searching) return;
@@ -1947,10 +1965,42 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   /** The sticker over the paper: the tutorial's step; an ordinary game shows no notes (CONCEPT.md §7.3). */
+  /** The first day of a player's first ordinary game gets one short note on what to do (CONCEPT.md §7.3). */
+  function firstDayNote(): boolean {
+    return !tutorial && hasGame && !titleOpen && !state.outcome && state.turn <= 1 && issueOpen && !searching && !settings.notesSeen.includes('first_day');
+  }
+
   function renderGuide(): void {
     if (tutorial) return renderTutorial();
     guideNote.classList.remove('tutorial-note');
-    guideNote.hidden = true;
+    guideNote.hidden = !firstDayNote();
+    if (guideNote.hidden) return;
+    guideNote.classList.add('tutorial-note');
+    guideNote.classList.remove('folded');
+    guideNote.replaceChildren(
+      h(
+        'div',
+        { class: 'guide-text' },
+        h('b', { class: 'guide-title' }, tr('Ваш первый номер')),
+        tr('Новости дня уже в газете, главная — на первой полосе. Можно поменять их местами или подать страшнее («Подача»). Затем — «В печать». Цель — вверху экрана.'),
+      ),
+      h(
+        'div',
+        { class: 'guide-buttons' },
+        h(
+          'button',
+          {
+            class: 'guide-skip ghost',
+            onclick: () => {
+              settings.notesSeen = [...settings.notesSeen, 'first_day'];
+              saveSettings(settings);
+              render();
+            },
+          },
+          tr('Понятно'),
+        ),
+      ),
+    );
   }
 
   /** The mayor's reconciliation notice, next to the exposure notice (CONCEPT.md §5.5). */

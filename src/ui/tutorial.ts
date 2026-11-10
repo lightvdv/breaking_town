@@ -176,6 +176,12 @@ export function skipStep(p: TutorialProgress, id: string): void {
   p.done = [...new Set([...(p.done ?? []), id])];
 }
 
+/** Skips the whole tutorial: every step counts as done, the game goes on as an ordinary easy one. */
+export function skipTutorial(p: TutorialProgress): void {
+  p.done = tutorialSteps.map((x) => x.id);
+  p.step = tutorialSteps.length;
+}
+
 /** Selectors of the button to press now, first visible first. */
 export function stepTargets(id: string, v: TutorialView): string[] {
   return logic[id]?.targets(v) ?? [];

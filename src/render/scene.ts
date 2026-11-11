@@ -2,7 +2,7 @@ import { ASSET_BASE } from '../assets';
 import { AnimatedSprite, Application, Container, Sprite, Texture, type Spritesheet } from 'pixi.js';
 import { edgeOf, EDGE_DEPTH, lotGrass, parkDecor, worldDecor, worldGround } from './looks';
 import { isRoadTile, townOf, type Building, type Content, type GameState, type Highlight, type Reaction, type Resident } from '../sim';
-import { loadArt, type ArtAssets } from './assets';
+import { loadArt, loadLooks, type ArtAssets } from './assets';
 
 /**
  * Isometric city view (CONCEPT.md §7.2). Purely presentational: it reads GameState and animates
@@ -125,6 +125,7 @@ export class CityScene {
     c: Content,
     state: GameState,
     onHover: (t: HoverTarget | null) => void,
+    onProgress?: (share: number) => void,
   ): Promise<CityScene> {
     const app = new Application();
     await app.init({
@@ -136,7 +137,13 @@ export class CityScene {
       roundPixels: true,
     });
     host.appendChild(app.canvas);
-    const art = await loadArt(ASSET_BASE);
+    let look: string | null = null;
+    try {
+      look = state.town ? (townOf(c, state.town).look ?? null) : null;
+    } catch {
+      look = null;
+    }
+    const art = await loadArt(ASSET_BASE, look, onProgress);
     const scene = new CityScene(app, art, c, onHover);
     scene.world.addChild(scene.ground, scene.objects, scene.overlay);
     scene.objects.sortableChildren = true;
@@ -145,6 +152,13 @@ export class CityScene {
     app.renderer.on('resize', () => scene.layout());
     scene.setupInput();
     scene.setState(state, false);
+    // The other towns' buildings come after the game has opened; the town on screen gets them at once.
+    void loadLooks(art, ASSET_BASE)
+      .then(() => {
+        scene.buildingKeys.clear();
+        scene.syncBuildings();
+      })
+      .catch(() => undefined);
     return scene;
   }
 

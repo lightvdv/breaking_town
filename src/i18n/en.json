@@ -1024,5 +1024,19 @@
  "🚨 Преступность: {0}": "🚨 Crime: {0}",
  "＋ Выбрать {0}": "＋ Choose {0}",
  "＋ Нанять репортёра": "＋ Hire a reporter",
- "Версия {0}": "Version {0}"
+ "Версия {0}": "Version {0}",
+ "Загрузка…": "Loading…",
+ "событий: {0}": "events: {0}",
+ "Оставить отзыв": "Leave feedback",
+ "✉ Оставить отзыв": "✉ Leave feedback",
+ "Спасибо! Отзыв отправлен — мы прочитаем каждый.": "Thank you! Your feedback is sent — we read every one.",
+ "👍 Нравится": "👍 I like it",
+ "😐 Так себе": "😐 So-so",
+ "👎 Не нравится": "👎 I don't like it",
+ "Что понравилось, что мешало, где запутались?": "What did you like, what got in the way, where did you get lost?",
+ "Пара слов об игре очень поможет: она ещё в разработке.": "A few words about the game help a lot: it is still in development.",
+ "Не удалось отправить. Проверьте интернет или напишите в комментариях на itch.io.": "Could not send it. Check your connection or write in the comments on itch.io.",
+ "Отправляем…": "Sending…",
+ "Отправить": "Send",
+ "Отзыв анонимный. Можно и в комментариях: ": "Feedback is anonymous. You can also comment on "
 }

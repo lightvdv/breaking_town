@@ -126,3 +126,33 @@ export function trackTurn(state: GameState, c: Content, kind: string, decision: 
     });
   }
 }
+
+/**
+ * A player's review from the «Оставить отзыв» form (CONCEPT.md §7.6): the `feedback` event with the
+ * text, the mood and where it was written. Sent straight to the ingestion API, so it goes even when the
+ * statistics are off: the player sends it on purpose. Resolves false if it did not get through.
+ */
+export async function sendFeedback(props: { text: string; mood: string | null; from: string; day: number | null }): Promise<boolean> {
+  const all = { ...props, build: build(), version: APP_VERSION, commit: APP_COMMIT, lang: lang(), phone: matchMedia('(max-width: 900px)').matches };
+  if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
+    console.info('feedback (not sent from the dev server)', all);
+    return true;
+  }
+  let id = '';
+  try {
+    if (on) id = posthog.get_distinct_id();
+  } catch {
+    id = '';
+  }
+  if (!id) id = `feedback-${Math.random().toString(36).slice(2)}`;
+  try {
+    const r = await fetch(`${HOST}/i/v0/e/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: KEY, event: 'feedback', distinct_id: id, properties: all }),
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}

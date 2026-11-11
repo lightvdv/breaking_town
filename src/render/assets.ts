@@ -2,6 +2,12 @@ import { Assets, Spritesheet, Texture, TextureStyle } from 'pixi.js';
 
 /** Written by tools/art/generate.ts next to the sprites. */
 export interface ArtManifest {
+  /** Interface pictures by folder (sprites/ui, reporters, groups, people, intro). */
+  ui?: string[];
+  reporters?: string[];
+  groups?: string[];
+  people?: string[];
+  intro?: string[];
   residents: Record<string, number>;
   buildings: Record<string, { states: string[]; variants: number; size: number }>;
   /** Buildings drawn for one way of life: look → type → its states and variants. */
@@ -26,7 +32,12 @@ export interface ArtAssets {
   fx: Record<string, Texture>;
 }
 
-export async function loadArt(base: string): Promise<ArtAssets> {
+/**
+ * The art the first screen needs: everything but the buildings of other ways of life than `look`
+ * (most of the bytes), which `loadLooks` brings in the background; until then a town of such a look
+ * shows the plain buildings.
+ */
+export async function loadArt(base: string, look: string | null, onProgress?: (share: number) => void): Promise<ArtAssets> {
   TextureStyle.defaultOptions.scaleMode = 'nearest';
   const manifest: ArtManifest = await (await fetch(`${base}manifest.json`)).json();
   const url = (path: string) => `${base}sprites/${path}`;
@@ -38,14 +49,14 @@ export async function loadArt(base: string): Promise<ArtAssets> {
   for (const [type, b] of Object.entries(manifest.buildings)) {
     for (const s of b.states) urls.push(url(`buildings/${type}_${s}.json`));
   }
-  const looks = Object.entries(manifest.buildingLooks ?? {});
+  const looks = Object.entries(manifest.buildingLooks ?? {}).filter(([id]) => id === look);
   for (const [look, types] of looks) for (const [type, b] of Object.entries(types)) for (const s of b.states) urls.push(url(`buildings/${type}_${look}_${s}.json`));
   const tileNames = [...Array.from({ length: manifest.grass }, (_, i) => `grass_${i + 1}`), 'road_x', 'road_y', 'road_cross', ...(manifest.tiles ?? [])];
   for (const t of tileNames) urls.push(url(`tiles/${t}.png`));
   for (const d of manifest.decor) urls.push(url(`decor/${d}.json`));
   for (const f of manifest.fx) urls.push(url(`fx/${f}.png`));
 
-  const loaded: Record<string, Spritesheet | Texture> = await Assets.load(urls);
+  const loaded: Record<string, Spritesheet | Texture> = await Assets.load(urls, onProgress);
   const sheet = (path: string) => loaded[url(path)] as Spritesheet;
   const texture = (path: string) => loaded[url(path)] as Texture;
 
@@ -70,4 +81,19 @@ export async function loadArt(base: string): Promise<ArtAssets> {
     decor: Object.fromEntries(manifest.decor.map((d) => [d, sheet(`decor/${d}.json`)])),
     fx: Object.fromEntries(manifest.fx.map((f) => [f, texture(`fx/${f}.png`)])),
   };
+}
+
+/** The buildings of the other ways of life, after the game has opened; resolves the looks it added. */
+export async function loadLooks(art: ArtAssets, base: string): Promise<string[]> {
+  const url = (path: string) => `${base}sprites/${path}`;
+  const looks = Object.entries(art.manifest.buildingLooks ?? {}).filter(([id]) => !art.lookBuildings[id]);
+  const urls = looks.flatMap(([look, types]) => Object.entries(types).flatMap(([type, b]) => b.states.map((s) => url(`buildings/${type}_${look}_${s}.json`))));
+  if (!urls.length) return [];
+  const loaded: Record<string, Spritesheet> = await Assets.load(urls);
+  for (const [look, types] of looks) {
+    art.lookBuildings[look] = Object.fromEntries(
+      Object.entries(types).map(([type, b]) => [type, Object.fromEntries(b.states.map((s) => [s, loaded[url(`buildings/${type}_${look}_${s}.json`)]]))]),
+    );
+  }
+  return looks.map(([id]) => id);
 }

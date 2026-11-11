@@ -4,8 +4,61 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Утка в номер</title>
+    <!-- The loading screen paints before any script (src/boot.ts lets the game in when everything is here). -->
+    <style>
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        padding: 16px;
+        background: #181425;
+        transition: opacity 0.4s;
+      }
+      #boot.done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #boot img {
+        width: min(100%, 732px, calc((100dvh - 120px) * 244 / 144));
+        aspect-ratio: 244 / 144;
+        image-rendering: pixelated;
+        border: 3px solid #3a4466;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      }
+      #boot .boot-bar {
+        width: min(100%, 420px);
+        height: 14px;
+        border: 2px solid #3a4466;
+        background: #262b44;
+      }
+      #boot .boot-fill {
+        width: 0;
+        height: 100%;
+        background: #feae34;
+        transition: width 0.2s;
+      }
+      #boot .boot-label {
+        min-height: 1.2em;
+        color: #c0cbdc;
+        font: 16px system-ui, sans-serif;
+        text-align: center;
+      }
+      #boot.failed .boot-label {
+        color: #e43b44;
+      }
+    </style>
   </head>
-  <body>
+  <body style="margin: 0; background: #181425">
+    <div id="boot">
+      <img src="/loading.png" alt="" />
+      <div class="boot-bar"><div class="boot-fill"></div></div>
+      <div class="boot-label"></div>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

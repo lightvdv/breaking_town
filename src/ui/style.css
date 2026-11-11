@@ -7846,6 +7846,25 @@ span.hunt-chip {
     padding-bottom: 88px;
   }
 
+  /* While a story's menu is open the floating «В печать» steps aside: it would cover the menu. */
+  #app.menu-open .hud .hud-buttons {
+    display: none;
+  }
+
+  /* The day's events in the issue fold to the day line (a press unfolds them), so the paper starts on the first screen. */
+  .issue-events:not(.open) .event {
+    display: none;
+  }
+
+  .issue-events .events-toggle {
+    cursor: pointer;
+  }
+
+  .issue-events .events-count {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
   /* A window stays above the tab bar, which keeps its tab lit and switches windows. */
   #app:not(.at-title) .modal-layer:not(:empty) {
     bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
@@ -7854,6 +7873,67 @@ span.hunt-chip {
   #app:not(.at-title) .modal.window {
     max-height: calc(100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px) - 24px);
   }
+}
+
+/* A phone on its side: the tab bar shrinks to a row of icons, the windows keep the height. */
+@media (max-width: 900px) and (max-height: 500px) {
+  :root {
+    --tabbar-h: 40px;
+  }
+
+  .tab {
+    flex-direction: row;
+    gap: 16px;
+  }
+
+  .tab-label {
+    font-size: 13px;
+  }
+
+  .tab-icon img {
+    width: 22px;
+    height: 22px;
+  }
+
+  .hud .publish {
+    min-height: 44px;
+  }
+}
+
+/* Wide screens show every event: the toggle is for phones only. */
+@media (min-width: 901px) {
+  .issue-events .events-count {
+    display: none;
+  }
+}
+
+/* «Оставить отзыв» (CONCEPT.md §7.6). */
+.feedback-moods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.feedback-text {
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 2px solid var(--line);
+  background: var(--bg-deep);
+  color: var(--text);
+  font: 16px var(--font);
+  resize: vertical;
+}
+
+.feedback-thanks {
+  font-size: 18px;
+  color: var(--ok);
+}
+
+.outcome-actions + .feedback-btn {
+  margin-top: 10px;
 }
 
 /* The editor's office holds the cards: their icon on its buttons. */

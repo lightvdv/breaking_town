@@ -1,6 +1,6 @@
 import { LANGS, lang, quoted, tr } from '../i18n';
 import { chooseLang } from '../lang';
-import { gameProps, initAnalytics, setAnalytics, track, trackLeave, trackTurn } from './analytics';
+import { gameProps, initAnalytics, sendFeedback, setAnalytics, track, trackLeave, trackTurn } from './analytics';
 import { ASSET_BASE } from '../assets';
 import { versionLabel } from '../version';
 import { CityScene, REACTION_ICON, type HoverTarget } from '../render/scene';
@@ -158,6 +158,7 @@ import { collectable, levelCost, levelUp, loadCollection, MAX_LEVEL, openPack, p
 import { campaignStars, loadCampaign, newCampaign, PASSES, passNames, passState, saveCampaign, townStars, townState, winTown, type Campaign } from './campaign';
 import { MAP_H, MAP_W, REGION_ART, townArt } from './campaignMap';
 import { sound, SFX_NAMES, type MusicMood, type SfxName } from './sound';
+import { bootDone, bootFailed, bootLabel, bootProgress, preloadImages } from '../boot';
 import { aboutLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillTiers, type RepStatus } from './reporterBar';
 import {
   priceLabels,
@@ -224,6 +225,7 @@ type Modal =
   | 'office'
   | 'campaignNew'
   | 'carry'
+  | 'feedback'
   | null;
 
 /** How an upgrade series is called in the upgrades window. */
@@ -615,14 +617,40 @@ export function mountApp(root: HTMLElement, base: Content): void {
   );
   const cardEls = new Map<number, HTMLElement>();
 
-  CityScene.create(cityHost, c, state, showTooltip)
-    .then((s) => {
+  // The loading screen (CONCEPT.md §7.3 «Загрузка») holds the player until everything is here: the
+  // city's art (most of the bar), the interface pictures and the fonts.
+  bootLabel();
+  let artShare = 0;
+  let uiShare = 0;
+  const showBoot = () => bootProgress(artShare * 0.8 + uiShare * 0.2);
+  const uiPictures = fetch(`${assetBase}manifest.json`)
+    .then((r) => r.json() as Promise<Record<string, unknown>>)
+    .then((m) => {
+      const list = (key: string, dir: string) => ((m[key] as string[] | undefined) ?? []).map((x) => `${assetBase}sprites/${dir}/${x}.png`);
+      return preloadImages([...list('ui', 'ui'), ...list('reporters', 'reporters'), ...list('groups', 'groups'), ...list('people', 'people'), ...list('intro', 'intro')], (x) => {
+        uiShare = x;
+        showBoot();
+      });
+    })
+    .catch(() => undefined);
+  Promise.all([
+    CityScene.create(cityHost, c, state, showTooltip, (x) => {
+      artShare = x;
+      showBoot();
+    }),
+    uiPictures,
+    document.fonts?.ready,
+  ])
+    .then(([s]) => {
       scene = s;
       loading.remove();
       if (titleOpen) s.startTour();
+      bootDone();
     })
     .catch((e) => {
-      loading.textContent = tr('Не удалось загрузить графику: {0}', e instanceof Error ? e.message : e);
+      const message = tr('Не удалось загрузить графику: {0}', e instanceof Error ? e.message : e);
+      loading.textContent = message;
+      bootFailed(message);
     });
 
   // ---------- Start-of-turn search ----------
@@ -1616,6 +1644,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
     );
   }
 
+  /** The day's events unfolded in the issue on a phone (folded by default, for the session). */
+  let eventsOpen = false;
   function renderCityEvents(): void {
     const rec = state.reconciliation;
     const lines = [
@@ -1637,7 +1667,22 @@ export function mountApp(root: HTMLElement, base: Content): void {
       }),
     ];
     cityEvents.replaceChildren(...lines);
-    issueEvents.replaceChildren(...lines.map((l) => l.cloneNode(true)));
+    const copies = lines.map((l) => l.cloneNode(true) as HTMLElement);
+    // On a phone the day's events in the issue fold to their day line, so the paper starts on the first screen.
+    const more = copies.length - 1;
+    if (more > 0) {
+      const day = copies[0];
+      day.classList.add('events-toggle');
+      day.setAttribute('role', 'button');
+      day.setAttribute('tabindex', '0');
+      day.append(h('span', { class: 'events-count' }, eventsOpen ? ' ▴' : ` · ${tr('событий: {0}', more)} ▾`));
+      day.addEventListener('click', () => {
+        eventsOpen = !eventsOpen;
+        renderCityEvents();
+      });
+    }
+    issueEvents.classList.toggle('open', eventsOpen);
+    issueEvents.replaceChildren(...copies);
   }
 
   /** «Преступность: неспокойно», «Банда держит улицы», «В городе нет полиции». */
@@ -4805,9 +4850,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
       office: tr('Карты · Кабинет редактора'),
       campaignNew: tr('Новая кампания'),
       carry: tr('Кто поедет дальше'),
+      feedback: tr('Оставить отзыв'),
     };
     const body =
-      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'dig' ? digContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'tutorial' ? tutorialStartContent() : modal === 'office' ? officeContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : modal === 'cash' ? cashContent() : shopContent();
+      modal === 'report' ? reportContent() : modal === 'debug' ? debugContent() : modal === 'city' ? cityContent() : modal === 'population' ? populationContent() : modal === 'money' ? moneyContent() : modal === 'readers' ? readersContent() : modal === 'reputation' ? reputationContent() : modal === 'dig' ? digContent() : modal === 'pause' ? pauseContent() : modal === 'howto' ? howtoContent() : modal === 'settings' ? settingsContent() : modal === 'about' ? aboutContent() : modal === 'newgame' ? newGameContent() : modal === 'tutorial' ? tutorialStartContent() : modal === 'office' ? officeContent() : modal === 'campaignNew' ? campaignNewContent() : modal === 'carry' ? carryContent() : modal === 'team' ? teamContent() : modal === 'cash' ? cashContent() : modal === 'feedback' ? feedbackContent() : shopContent();
     const scroll = modalLayer.querySelector('.modal-body')?.scrollTop ?? 0;
     // «Сводка» (CONCEPT.md §7.3): one window, its tabs in a column on the left of the content.
     const tab = SUMMARY_TABS.find((t) => t.id === modal);
@@ -4911,6 +4957,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           { class: 'outcome-actions' },
           ...outcomeButtons(),
         ),
+        h('button', { class: 'ghost feedback-btn', onclick: () => openFeedback('outcome') }, tr('✉ Оставить отзыв')),
       ),
     );
   }
@@ -4964,7 +5011,24 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderTitle();
     renderCampaign();
     renderTutorialTargets();
+    renderMenus();
     saveSoon();
+  }
+  /**
+   * A story's menu on a phone (CONCEPT.md §7.3): the floating «В печать» steps aside while one is open
+   * (`menu-open`), and a menu that opens below the screen's edge is scrolled into view once.
+   */
+  let scrolledMenu = '';
+  function renderMenus(): void {
+    const key = truthMenuFor !== null ? `t${truthMenuFor}` : moveMenuFor !== null ? `m${moveMenuFor}` : chooserFor !== null ? `c${chooserFor}` : '';
+    root.classList.toggle('menu-open', key !== '');
+    if (!key || key === scrolledMenu) {
+      scrolledMenu = key;
+      return;
+    }
+    scrolledMenu = key;
+    const menu = issue.querySelector('.place-menu, .zone-chooser:not(:empty)');
+    requestAnimationFrame(() => menu?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
   }
   /**
    * The plaques over the paper start folded to their head line (CONCEPT.md §7.3); a press on the head
@@ -5453,6 +5517,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         ...(state.town && campaign ? [item(tr('Карта кампании'), () => openCampaign())] : []),
         item(tr('Свободная игра'), () => openModal('newgame')),
         item(tr('Главное меню'), () => showTitle()),
+        item(tr('✉ Оставить отзыв'), () => openFeedback('pause'), 'feedback-item'),
         debugMode ? item(tr('Отладка'), () => openModal('debug'), 'ghost') : null,
       ),
       hasGame
@@ -5463,6 +5528,76 @@ export function mountApp(root: HTMLElement, base: Content): void {
           )
         : null,
     ].filter((x): x is HTMLElement => x !== null);
+  }
+
+  // ---------- Feedback (CONCEPT.md §7.6) ----------
+
+  /** The «Оставить отзыв» form: a mood, a few words, one press; it lives until it is sent. */
+  const feedback = { from: 'pause', mood: null as string | null, text: '', status: 'idle' as 'idle' | 'sending' | 'sent' | 'failed' };
+  function openFeedback(from: string): void {
+    feedback.from = from;
+    if (feedback.status !== 'sending') feedback.status = 'idle';
+    openModal('feedback');
+  }
+  const ITCH_PAGE = 'https://lightvdv.itch.io/breaking-town';
+  function feedbackContent(): HTMLElement[] {
+    const back = () => openModal(feedback.from === 'pause' ? 'pause' : null);
+    if (feedback.status === 'sent') {
+      return [h('p', { class: 'feedback-thanks' }, tr('Спасибо! Отзыв отправлен — мы прочитаем каждый.')), h('button', { class: 'primary big', onclick: back }, tr('← Назад'))];
+    }
+    const moods: [string, string][] = [
+      ['like', tr('👍 Нравится')],
+      ['meh', tr('😐 Так себе')],
+      ['dislike', tr('👎 Не нравится')],
+    ];
+    const text = h('textarea', {
+      class: 'feedback-text',
+      rows: 5,
+      maxlength: 2000,
+      placeholder: tr('Что понравилось, что мешало, где запутались?'),
+    }) as HTMLTextAreaElement;
+    text.value = feedback.text;
+    text.addEventListener('input', () => {
+      feedback.text = text.value;
+    });
+    const send = async () => {
+      if (!feedback.mood && !feedback.text.trim()) return;
+      feedback.status = 'sending';
+      render();
+      const ok = await sendFeedback({ text: feedback.text.trim(), mood: feedback.mood, from: feedback.from, day: hasGame ? state.turn : null });
+      feedback.status = ok ? 'sent' : 'failed';
+      if (ok) {
+        feedback.text = '';
+        feedback.mood = null;
+      }
+      render();
+    };
+    const parts: (HTMLElement | null)[] = [
+      h('p', {}, tr('Пара слов об игре очень поможет: она ещё в разработке.')),
+      h(
+        'div',
+        { class: 'feedback-moods' },
+        ...moods.map(([id, label]) =>
+          h('button', {
+            class: `chip${feedback.mood === id ? ' on' : ''}`,
+            onclick: () => {
+              feedback.mood = feedback.mood === id ? null : id;
+              render();
+            },
+          }, label),
+        ),
+      ),
+      text,
+      feedback.status === 'failed' ? h('p', { class: 'bad' }, tr('Не удалось отправить. Проверьте интернет или напишите в комментариях на itch.io.')) : null,
+      h(
+        'button',
+        { class: 'primary big', disabled: feedback.status === 'sending' || (!feedback.mood && !feedback.text.trim()), onclick: () => void send() },
+        feedback.status === 'sending' ? tr('Отправляем…') : tr('Отправить'),
+      ),
+      h('p', { class: 'hint-line' }, tr('Отзыв анонимный. Можно и в комментариях: '), h('a', { href: `${ITCH_PAGE}#comments`, target: '_blank', rel: 'noopener' }, 'itch.io')),
+      h('button', { class: 'ghost', onclick: back }, tr('← Назад')),
+    ];
+    return parts.filter((x): x is HTMLElement => x !== null);
   }
 
   /** The tutorial over a game in progress: it has its own settings, so only the warning and «Начать». */

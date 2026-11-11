@@ -539,7 +539,7 @@
   "sensation_day/section": "Tricks",
   "yellow_layout/name": "Yellow layout",
   "yellow_layout/description": "A paper for the street: scary stuff hits 30% harder, the youth and the jobless believe it even when your reputation is low and buy it more readily, and a caught lie costs 10% less.",
-  "yellow_layout/drawback": "Pensioners and intellectuals drop it, the truth gives half the reputation, checks are 10% more frequent.",
+  "yellow_layout/drawback": "Pensioners and intellectuals buy it less and drop it more often, the truth gives half the reputation, checks are 10% more frequent.",
   "solid_style/name": "Respectable style",
   "solid_style/description": "Strict layout and checked facts: the truth gives twice the reputation.",
   "solid_style/drawback": "Scary stories hit 20% weaker.",

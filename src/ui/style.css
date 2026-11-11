@@ -8208,24 +8208,24 @@ button.camp-ties {
   height: 13px;
 }
 
-/* Prototype (`?tabpress`): on a phone «В печать» is the raised middle button of the tab bar, so it
-   never covers the issue. */
+/* On a phone «В печать» is the raised middle button of the tab bar (CONCEPT.md §7.3), so it never
+   covers the issue; these rules override the older floating corner above. */
 .tab-gap {
   display: none;
 }
 
 @media (max-width: 900px) {
   /* Under the top bar's layer, which holds the button. */
-  #app.tab-publish .tab-bar {
+  .tab-bar {
     z-index: 7;
     grid-template-columns: 1fr 1fr 104px 1fr 1fr;
   }
 
-  #app.tab-publish .tab-gap {
+  .tab-gap {
     display: block;
   }
 
-  #app.tab-publish .hud .hud-buttons {
+  .hud .hud-buttons {
     z-index: 22;
     left: 50%;
     right: auto;
@@ -8233,7 +8233,7 @@ button.camp-ties {
     transform: translateX(-50%);
   }
 
-  #app.tab-publish .hud .publish {
+  .hud .publish {
     flex-direction: column;
     justify-content: center;
     gap: 2px;
@@ -8247,26 +8247,26 @@ button.camp-ties {
     text-align: center;
   }
 
-  #app.tab-publish .hud .publish img {
+  .hud .publish img {
     width: 28px;
     height: 28px;
   }
 
-  #app.tab-publish .hud .publish-level {
+  .hud .publish-level {
     font-size: 10px;
   }
 
-  #app.tab-publish .hud .publish .risk-dot {
+  .hud .publish .risk-dot {
     position: absolute;
     top: 6px;
     right: 6px;
   }
 
-  #app.tab-publish .issue {
+  .issue {
     padding-bottom: 24px;
   }
 
-  #app.tab-publish .issue-fab {
+  .issue-fab {
     left: 50%;
     right: auto;
     transform: translateX(-50%);
@@ -8286,4 +8286,17 @@ button.camp-ties {
 
 .untrue-tag + .out-btn {
   margin-left: 0;
+}
+
+/* A phone on its side: the bar is low, so the middle button is too. */
+@media (max-width: 900px) and (max-height: 500px) and (orientation: landscape) {
+  .hud .publish {
+    min-height: 50px;
+    padding: 3px 4px;
+  }
+
+  .hud .publish img {
+    width: 20px;
+    height: 20px;
+  }
 }

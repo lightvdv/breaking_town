@@ -299,8 +299,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const saved = params.has('new') ? null : loadSave<Draft>(base);
   // The debug window is a pause menu item only with ?debug in the address.
   const debugMode = params.has('debug');
-  // Prototype: on a phone «В печать» is the raised middle button of the tab bar (`?tabpress`).
-  if (params.has('tabpress')) root.classList.add('tab-publish');
   /** The title screen is up (CONCEPT.md §7.3 «Меню»); &new in the address starts a game at once. */
   let titleOpen = !params.has('new');
   /** A game was started or continued in this tab, so «Продолжить» makes sense. */
@@ -437,7 +435,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const abilityBar = h('div', { class: 'ability-bar hud-abilities', hidden: true });
   const hudControls = h('div', { class: 'hud-controls' }, hudTeam, hudShop, abilityBar, hudMenu);
   // Phones (CONCEPT.md §7.3): the actions live in a tab bar along the bottom edge, as in mobile games —
-  // the cards, the newsroom, the summary and the city; «В печать» floats above it as a button of its own.
+  // the cards, the newsroom, the summary and the cash; «В печать» is the raised button in its middle.
   const tab = (cls: string, icon: string, label: string, open: () => void) =>
     h(
       'button',
@@ -455,7 +453,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const tabTeam = tab('tab-team', 'newsroom', tr('Редакция'), () => openModal('team'));
   const tabSummary = tab('tab-summary', 'folder', tr('Сводка'), () => openModal('money'));
   const tabCash = tab('tab-cash', '💰', tr('Касса'), () => openModal('cash'));
-  // Prototype (`?tabpress`): «В печать» sits in the middle of the tab bar instead of floating; this gap is its place.
+  // On a phone «В печать» sits in the middle of the tab bar (CONCEPT.md §7.3); this gap is its place.
   const tabBar = h('nav', { class: 'tab-bar', 'aria-label': tr('Действия') }, tabCards, tabTeam, h('div', { class: 'tab-gap', 'aria-hidden': 'true' }), tabSummary, tabCash);
   const hudGoal = h('div', { class: 'hud-goal' });
   // A narrow track keeps only the names of the city's stage and the goal (CSS `.tight`).
@@ -5818,7 +5816,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('h3', { class: 'section' }, tr('Что беречь')),
       block('ui/reputation', tr('Репутация'), tr('Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.')),
       block('ui/money', tr('Деньги и читатели'), tr('Читатели покупают газету каждый день. Скучный выпуск их распугивает, интересный приводит новых. Цену газеты меняют в шапке выпуска. Деньги идут на зарплаты, новых репортёров и разовые ходы «Чёрной кассы» (💰 вверху; рядом — значки приёмов от карт).')),
-      block('ui/folder', tr('Сводка и карты'), tr('«Сводка» (папка вверху; на телефоне — вкладки «Карты», «Редакция», «Сводка» и «Касса» внизу экрана, а «В печать» — кнопка над ними справа) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые {0} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги ({1} ₽, каждый следующий запрос до очередного предложения дороже на {2} ₽), а на развилках («Решение редакции») придётся взять одно из двух навсегда. В день нового предложения или развилки окно открывается само. Новые карты в коллекцию покупают между партиями: кнопка «Карты — купить и улучшить» на главном экране и «Карты» на карте кампании, за связи (✦), которые даёт каждая партия.', b.shopRefreshDays, b.shopRefreshCost, b.shopRequestStep)),
+      block('ui/folder', tr('Сводка и карты'), tr('«Сводка» (папка вверху; на телефоне — вкладки «Карты», «Редакция», «Сводка» и «Касса» внизу экрана, а «В печать» — большая кнопка посередине между ними) — карты газеты, деньги, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Карты бесплатны: каждые {0} дня совет директоров присылает на выбор новые (одну из трёх можно взять); не хотите ждать — запросите ещё три за деньги ({1} ₽, каждый следующий запрос до очередного предложения дороже на {2} ₽), а на развилках («Решение редакции») придётся взять одно из двух навсегда. В день нового предложения или развилки окно открывается само. Новые карты в коллекцию покупают между партиями: кнопка «Карты — купить и улучшить» на главном экране и «Карты» на карте кампании, за связи (✦), которые даёт каждая партия.', b.shopRefreshDays, b.shopRefreshCost, b.shopRequestStep)),
       h('h3', { class: 'section' }, tr('Чем ещё бить по городу')),
       block('groups/workers', tr('Ссорьте группы'), tr('Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.')),
       block('ui/guardian', tr('«Голос города»'), tr('С {0}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.', b.rivalStartTurn.destroy)),

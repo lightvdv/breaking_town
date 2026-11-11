@@ -199,7 +199,7 @@
   "steps/dig/text": "On a reporter's card: “Dirt ▾” → any group. In a couple of days you'll have dirt, and the town will hate that group.",
   "steps/dig/hint": "“Dirt ▾” → a group",
   "steps/streak/title": "A run of truth",
-  "steps/streak/text": "For lies to work, people must believe you. Three issues in a row with no lies and the town trusts you more. Drop rumors with “✕”.",
+  "steps/streak/text": "Now the other way round: lies only work while people believe the paper. Print three issues in a row with nothing but the truth: the “No lies” circles under the paper's name fill up and the whole town trusts you more. The truth is a story with the green “As is” spin. If the issue holds a rumor or a lie (a spin that isn't green, such as “Something's up”), take it out with the “✕” above its headline, on the right — it blinks. Then press “Go to press”.",
   "steps/streak/hint": "3 issues in a row — only the truth",
   "steps/stigma/title": "Print the dirt",
   "steps/stigma/text": "The dirt is ready: front page, then “Go to press”.",

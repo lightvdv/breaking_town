@@ -1,12 +1,18 @@
 name: itch.io
 # Pushes the beta (the commit in .github/beta-commit) to https://lightvdv.itch.io/breaking-town as the
 # English browser build, with butler and the repository secret BUTLER_API_KEY (an itch.io API key).
-# Runs when the beta moves, or by hand from the Actions tab.
+# Runs when the beta moves, or by hand from the Actions tab (input `ref`: a commit or branch to push
+# instead of the beta, e.g. master).
 on:
   push:
     branches: [master]
     paths: [.github/beta-commit]
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit or branch to push (empty = the beta from .github/beta-commit)
+        required: false
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -26,7 +32,10 @@ jobs:
           fi
       - uses: actions/checkout@v4
       - id: beta
-        run: echo "sha=$(tr -d '[:space:]' < .github/beta-commit)" >> "$GITHUB_OUTPUT"
+        env:
+          REF: ${{ inputs.ref }}
+        run: |
+          if [ -n "$REF" ]; then echo "sha=$REF" >> "$GITHUB_OUTPUT"; else echo "sha=$(tr -d '[:space:]' < .github/beta-commit)" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.beta.outputs.sha }}
@@ -48,4 +57,5 @@ jobs:
           chmod +x butler/butler
           ./butler/butler -V
       - name: Push to itch.io
-        run: ./butler/butler push beta-src/breaking-town-itch.zip lightvdv/breaking-town:html5 --userversion "${{ steps.beta.outputs.sha }}"
+        working-directory: beta-src
+        run: ../butler/butler push breaking-town-itch.zip lightvdv/breaking-town:html5 --userversion "$(node -p "require('./package.json').version")-$(git rev-parse --short HEAD)"

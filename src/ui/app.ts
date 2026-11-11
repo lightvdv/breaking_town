@@ -2,6 +2,7 @@ import { LANGS, lang, quoted, tr } from '../i18n';
 import { chooseLang } from '../lang';
 import { gameProps, initAnalytics, setAnalytics, track, trackLeave, trackTurn } from './analytics';
 import { ASSET_BASE } from '../assets';
+import { versionLabel } from '../version';
 import { CityScene, REACTION_ICON, type HoverTarget } from '../render/scene';
 import {
   averageTrust,
@@ -5383,6 +5384,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           item(tr('Об игре'), () => openModal('about')),
         ),
       ),
+      h('div', { class: 'title-version' }, versionLabel),
     );
   }
 
@@ -5697,6 +5699,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('p', {}, h('b', {}, tr('Утка в номер')), tr(' — пошаговая сатирическая стратегия о газете, которая разрушает город новостями.')),
       h('p', {}, tr('Все персонажи, город и медиахолдинг «Медиа-Плюс» вымышлены. Любые совпадения с реальными СМИ — повод задуматься.')),
       h('p', { class: 'hint-line' }, tr('Ранняя версия: графика временная, баланс меняется.')),
+      h('p', { class: 'hint-line' }, tr('Версия {0}', versionLabel)),
     ];
   }
 

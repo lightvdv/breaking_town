@@ -1020,6 +1020,17 @@ button.publish.level-3.bump-up {
   display: none;
 }
 
+/* The build's version in the bottom corner of the title screen. */
+.title-version {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
 /* The game interface stays out of sight behind the title screen. */
 /* The title screen: the city fills the whole window, no empty band where the HUD would be. */
 .at-title .hud {

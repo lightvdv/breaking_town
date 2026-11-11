@@ -1,4 +1,5 @@
-import { cpSync, existsSync, readdirSync, rmSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { cpSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineConfig } from 'vite';
 
@@ -10,8 +11,22 @@ import { defineConfig } from 'vite';
 const version = `v${Date.now().toString(36)}`;
 let outDir = 'dist';
 
+/** The game's version (package.json, raised by hand for each release) and the commit it was built from. */
+const appVersion = JSON.parse(readFileSync('package.json', 'utf8')).version as string;
+const commit = (() => {
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return '';
+  }
+})();
+
 export default defineConfig(({ command }) => ({
-  define: { __ASSET_VERSION__: JSON.stringify(command === 'build' ? version : '') },
+  define: {
+    __ASSET_VERSION__: JSON.stringify(command === 'build' ? version : ''),
+    __APP_VERSION__: JSON.stringify(appVersion),
+    __APP_COMMIT__: JSON.stringify(command === 'build' ? commit : 'dev'),
+  },
   plugins: [
     {
       name: 'versioned-assets',

@@ -7,6 +7,7 @@
 import posthog from 'posthog-js';
 import { lang } from '../i18n';
 import { STORAGE_SUFFIX } from '../assets';
+import { APP_COMMIT, APP_VERSION } from '../version';
 import { averageTrust, cityStateOf, readerCount, scoreOf, type Content, type Decision, type GameState, type TurnReport } from '../sim';
 
 /** The project's public key: it only lets a browser send events, so it is meant to live in the page. */
@@ -48,7 +49,7 @@ export function initAnalytics(enabled: boolean): void {
         if (location.search.includes('phdebug')) ph.debug(true);
       },
     });
-    posthog.register({ build: build(), lang: lang(), phone: matchMedia('(max-width: 900px)').matches });
+    posthog.register({ build: build(), version: APP_VERSION, commit: APP_COMMIT, lang: lang(), phone: matchMedia('(max-width: 900px)').matches });
     on = true;
   } catch {
     on = false;

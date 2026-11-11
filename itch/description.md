@@ -5,7 +5,8 @@
 - **Title:** Breaking Town
 - **Short description / tagline:** Run the local paper. Print the truth, a half-truth, or a lie, and watch the town fall apart.
 - **Kind of project:** HTML (upload `breaking-town-itch.zip`, tick "This file will be played in the browser")
-- **Viewport:** 1280 × 720, tick "Mobile friendly", "Fullscreen button" and "Automatically start on page load"
+- **Viewport:** 1280 × 720, tick "Fullscreen button" and "Automatically start on page load"
+- **Mobile:** tick "Mobile friendly" and set **Orientation: Portrait**. Without it a phone gets the 1280 × 720 frame shrunk down: the game sees a 1280 px wide screen and lays itself out like a desktop, sideways and too small to play. With it itch.io opens the game full screen and upright, and the game uses its phone layout (≤900 px). Butler cannot change these: Edit game → Uploads/Embed options on itch.io.
 - **Genre:** Strategy
 - **Tags:** satire, turn-based, strategy, pixel-art, isometric, city-simulation, card-game, roguelite, management, singleplayer
 - **Languages:** English, Russian

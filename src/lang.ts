@@ -1,7 +1,8 @@
 /**
  * Picks the language before any other module is evaluated (imported first by main.ts), since labels are
  * translated when their modules load (CONCEPT.md §7.5). Order: `?lang=` in the address, the player's
- * choice in the settings, the build's default (`VITE_LANG`, the itch.io build is English), the browser.
+ * choice in the settings, a Russian-speaking browser (ru/uk/be/kk → Russian, also in the itch.io build),
+ * then the build's default (`VITE_LANG`, the itch.io build is English), else English.
  */
 import { setLang, type Lang } from './i18n';
 import { STORAGE_SUFFIX } from './assets';
@@ -18,9 +19,9 @@ function pick(): Lang {
   } catch {
     // No storage: fall through to the defaults.
   }
+  if (/^(ru|uk|be|kk)\b/i.test(navigator.language ?? '')) return 'ru';
   const env = import.meta.env.VITE_LANG as string | undefined;
-  if (ok(env)) return env;
-  return /^(ru|uk|be|kk)\b/i.test(navigator.language ?? '') ? 'ru' : 'en';
+  return ok(env) ? env : 'en';
 }
 
 const chosen = pick();

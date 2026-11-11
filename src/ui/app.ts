@@ -299,6 +299,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const saved = params.has('new') ? null : loadSave<Draft>(base);
   // The debug window is a pause menu item only with ?debug in the address.
   const debugMode = params.has('debug');
+  // Prototype: on a phone «В печать» is the raised middle button of the tab bar (`?tabpress`).
+  if (params.has('tabpress')) root.classList.add('tab-publish');
   /** The title screen is up (CONCEPT.md §7.3 «Меню»); &new in the address starts a game at once. */
   let titleOpen = !params.has('new');
   /** A game was started or continued in this tab, so «Продолжить» makes sense. */
@@ -453,7 +455,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const tabTeam = tab('tab-team', 'newsroom', tr('Редакция'), () => openModal('team'));
   const tabSummary = tab('tab-summary', 'folder', tr('Сводка'), () => openModal('money'));
   const tabCash = tab('tab-cash', '💰', tr('Касса'), () => openModal('cash'));
-  const tabBar = h('nav', { class: 'tab-bar', 'aria-label': tr('Действия') }, tabCards, tabTeam, tabSummary, tabCash);
+  // Prototype (`?tabpress`): «В печать» sits in the middle of the tab bar instead of floating; this gap is its place.
+  const tabBar = h('nav', { class: 'tab-bar', 'aria-label': tr('Действия') }, tabCards, tabTeam, h('div', { class: 'tab-gap', 'aria-hidden': 'true' }), tabSummary, tabCash);
   const hudGoal = h('div', { class: 'hud-goal' });
   // A narrow track keeps only the names of the city's stage and the goal (CSS `.tight`).
   new ResizeObserver(() => hudGoal.classList.toggle('tight', hudGoal.offsetWidth < 400)).observe(hudGoal);
@@ -2772,6 +2775,10 @@ export function mountApp(root: HTMLElement, base: Content): void {
           where !== 'out' ? helpChip(p.effect) : null,
           pencil !== null ? h('span', { class: 'pencil-note', title: tr('Риск разоблачения {0}%', Math.round(p.exposureRisk * 100)) }, riskNotes[pencil]) : null,
           watchChip(card, tpl, p.effect),
+          // The tutorial's run of truth: an untrue story says plainly that it breaks the run and how to drop it.
+          where !== 'out' && p.truth > 0 && tutorial && tutorialStep()?.def.id === 'streak'
+            ? h('span', { class: 'untrue-tag' }, p.truth > 1 ? tr('Это ложь — серия «Без лжи» сорвётся. Уберите:') : tr('Это слух — серия «Без лжи» сорвётся. Уберите:'))
+            : null,
           outButton,
         ),
         h('h3', { class: 'headline' }, p.title, ' ', tierLabel),

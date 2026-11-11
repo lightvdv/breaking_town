@@ -8207,3 +8207,83 @@ button.camp-ties {
   width: 13px;
   height: 13px;
 }
+
+/* Prototype (`?tabpress`): on a phone «В печать» is the raised middle button of the tab bar, so it
+   never covers the issue. */
+.tab-gap {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  /* Under the top bar's layer, which holds the button. */
+  #app.tab-publish .tab-bar {
+    z-index: 7;
+    grid-template-columns: 1fr 1fr 104px 1fr 1fr;
+  }
+
+  #app.tab-publish .tab-gap {
+    display: block;
+  }
+
+  #app.tab-publish .hud .hud-buttons {
+    z-index: 22;
+    left: 50%;
+    right: auto;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
+    transform: translateX(-50%);
+  }
+
+  #app.tab-publish .hud .publish {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    width: 96px;
+    max-width: none;
+    min-height: 76px;
+    padding: 6px 4px;
+    border: 3px solid var(--bg-deep);
+    border-radius: 16px;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  #app.tab-publish .hud .publish img {
+    width: 28px;
+    height: 28px;
+  }
+
+  #app.tab-publish .hud .publish-level {
+    font-size: 10px;
+  }
+
+  #app.tab-publish .hud .publish .risk-dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+  }
+
+  #app.tab-publish .issue {
+    padding-bottom: 24px;
+  }
+
+  #app.tab-publish .issue-fab {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+}
+
+/* The tutorial's run of truth: an untrue story's plain warning, right before its «✕». */
+.untrue-tag {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #b8262e;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.untrue-tag + .out-btn {
+  margin-left: 0;
+}

@@ -71,6 +71,10 @@ interface StepLogic {
   ready?: (v: TutorialView) => boolean;
   /** Where to press, in order: the first selector with a visible element lights up. */
   targets: (v: TutorialView) => string[];
+  /** False when the step only points at things: they glow, the screen is not darkened. */
+  shade?: boolean;
+  /** Also glowing, without a shade, whatever the target: something to look at. */
+  glow?: string[];
 }
 
 /** Lights up «Подача» of the matching story, the strongest option in its menu, then «В печать». */
@@ -95,7 +99,10 @@ const logic: Record<string, StepLogic> = {
   // Rumors and lies break the run: their «✕» glows until the issue is all truth.
   streak: {
     done: (_, f) => f.includes('streak'),
-    targets: (v) => [...v.laidOut.filter((x) => cardTruth(x.card, x.distortion) > 0).map((x) => `[data-uid="${x.card.uid}"] .out-btn`), '.streak-badge'],
+    targets: (v) => v.laidOut.filter((x) => cardTruth(x.card, x.distortion) > 0).map((x) => `[data-uid="${x.card.uid}"] .out-btn`),
+    // The circles to fill always glow; the player may keep a rumor, so nothing goes dark.
+    shade: false,
+    glow: ['.streak-badge'],
   },
   dig: {
     done: (v, f) => v.state.investigations.length > 0 || f.includes('stigma') || v.state.hand.some((x) => isStigma(v, x)),
@@ -186,6 +193,12 @@ export function skipTutorial(p: TutorialProgress): void {
 export function stepTargets(id: string, v: TutorialView): string[] {
   return logic[id]?.targets(v) ?? [];
 }
+
+/** Whether the step darkens the rest of the screen around its target. */
+export const stepShades = (id: string): boolean => logic[id]?.shade !== false;
+
+/** What glows besides the target, without a shade. */
+export const stepGlow = (id: string): string[] => logic[id]?.glow ?? [];
 
 /** After an issue: what it did, for the steps that are done by printing. */
 export function issueFlags(hand: CardInstance[], c: Content, d: Decision, r: TurnReport): string[] {

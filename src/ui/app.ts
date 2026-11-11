@@ -152,7 +152,7 @@ import { h, pct, svg } from './dom';
 import { loadSave, writeSave } from './save';
 import { loadSettings, saveSettings } from './settings';
 import { playIntro } from './intro';
-import { currentStep, grantFor, issueFlags, skipStep, skipTutorial, tipFor, stepTargets, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
+import { currentStep, grantFor, issueFlags, skipStep, skipTutorial, tipFor, stepTargets, stepShades, stepGlow, tutorialDifficulty, tutorialLength, tutorialSteps, withTutorial, type TutorialProgress, type TutorialView } from './tutorial';
 import { recordOf, starLine, submitRecord } from './records';
 import { collectable, levelCost, levelUp, loadCollection, MAX_LEVEL, openPack, packs, rarityNames, rewardFor, saveCollection, tagNames, type Collection, type PackResult } from './collection';
 import { campaignStars, loadCampaign, newCampaign, PASSES, passNames, passState, saveCampaign, townStars, townState, winTown, type Campaign } from './campaign';
@@ -1949,12 +1949,14 @@ export function mountApp(root: HTMLElement, base: Content): void {
     if (!step.ready) return;
     // Over a window only its buttons count; without one, only the game's.
     const scope: ParentNode = modal !== null ? modalLayer : document;
+    const visible = (sel: string) => [...scope.querySelectorAll<HTMLElement>(sel)].find((x) => x.getClientRects().length > 0 && (modal !== null || !modalLayer.contains(x)));
+    for (const sel of stepGlow(step.def.id)) visible(sel)?.classList.add('tut-target');
     for (const sel of stepTargets(step.def.id, tutorialView())) {
-      const el = [...scope.querySelectorAll<HTMLElement>(sel)].find((x) => x.getClientRects().length > 0 && (modal !== null || !modalLayer.contains(x)));
+      const el = visible(sel);
       if (!el) continue;
       el.classList.add('tut-target');
       // The rest of the screen goes dark; a hint that is only something to look at stays undimmed.
-      if (!el.matches('.streak-badge, .hud-goal')) spotlightOn(el);
+      if (stepShades(step.def.id) && !el.matches('.streak-badge, .hud-goal')) spotlightOn(el);
       const key = `${step.index}|${sel}`;
       if (key !== tutorialScrolled) {
         tutorialScrolled = key;

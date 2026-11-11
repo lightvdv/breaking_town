@@ -3406,6 +3406,8 @@ button.publish.level-3.bump-up {
   inset: 0;
   z-index: 20;
   display: grid;
+  /* One column no wider than the screen: a wide picture or word inside never widens the window. */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   background: rgba(24, 20, 37, 0.6);
 }
@@ -7875,8 +7877,9 @@ span.hunt-chip {
   }
 }
 
-/* A phone on its side: the tab bar shrinks to a row of icons, the windows keep the height. */
-@media (max-width: 900px) and (max-height: 500px) {
+/* A phone on its side: the tab bar shrinks to a row of icons, the windows keep the height. Only on its
+   side: a zoomed page (Chrome's page zoom) is short too, but stays upright. */
+@media (max-width: 900px) and (max-height: 500px) and (orientation: landscape) {
   :root {
     --tabbar-h: 40px;
   }
@@ -8097,4 +8100,94 @@ button.camp-ties {
 .lang-row button.on {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* A narrow phone or a zoomed page (Chrome's accessibility zoom leaves ~260px of CSS width):
+   the resources in two rows, only the city's and the goal's stage named on the track, the
+   tab words cut short, the hunt plaque's controls under its name. */
+@media (max-width: 380px) {
+  .hud .resources {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 6px;
+  }
+
+  .hud .resources > .res:nth-child(3) {
+    border-left: 0;
+  }
+
+  .hud-goal .goal-names span:not(.here):not(.goal) {
+    visibility: hidden;
+  }
+
+  .tab-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .notice-hunt .notice-head {
+    flex-wrap: wrap;
+  }
+
+  .notice-hunt .notice-head b {
+    flex-basis: calc(100% - 40px);
+  }
+
+  .modal.window,
+  .modal.window.summary {
+    width: calc(100% - 12px);
+  }
+
+  /* «Сводка»: the tabs in a row over the page, which takes the whole width. */
+  .summary-wrap {
+    flex-direction: column;
+  }
+
+  .summary-tabs {
+    flex-direction: row;
+    padding: 6px;
+    border-right: 0;
+    border-bottom: 2px solid var(--panel-2);
+  }
+
+  .summary-tab {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    height: 36px;
+  }
+
+  .summary-tab img {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* A reporter's card: the portrait over the text. */
+  .rep-head {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .rep-head.compact .rep-head-portrait {
+    width: 96px;
+    height: 96px;
+  }
+
+  .rep-head.compact .rep-head-body {
+    min-height: 0;
+  }
+
+  .rep-head-name {
+    padding-right: 0;
+  }
+
+  .city-index {
+    padding-right: 0;
+  }
+
+  .city-index b {
+    font-size: 21px;
+    overflow-wrap: anywhere;
+  }
 }

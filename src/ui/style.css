@@ -8191,3 +8191,7 @@ button.camp-ties {
     overflow-wrap: anywhere;
   }
 }
+
+.feedback-hint a {
+  color: var(--accent);
+}

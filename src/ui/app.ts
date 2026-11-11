@@ -5446,6 +5446,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
           item(tr('Как играть'), () => openModal('howto')),
           item(tr('Настройки'), () => openModal('settings')),
           item(tr('Об игре'), () => openModal('about')),
+          item(tr('✉ Оставить отзыв'), () => openFeedback('title')),
         ),
       ),
       h('div', { class: 'title-version' }, versionLabel),
@@ -5594,7 +5595,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         { class: 'primary big', disabled: feedback.status === 'sending' || (!feedback.mood && !feedback.text.trim()), onclick: () => void send() },
         feedback.status === 'sending' ? tr('Отправляем…') : tr('Отправить'),
       ),
-      h('p', { class: 'hint-line' }, tr('Отзыв анонимный. Можно и в комментариях: '), h('a', { href: `${ITCH_PAGE}#comments`, target: '_blank', rel: 'noopener' }, 'itch.io')),
+      h('p', { class: 'hint-line feedback-hint' }, tr('Отзыв анонимный. Можно и в комментариях: '), h('a', { href: `${ITCH_PAGE}#comments`, target: '_blank', rel: 'noopener' }, 'itch.io')),
       h('button', { class: 'ghost', onclick: back }, tr('← Назад')),
     ];
     return parts.filter((x): x is HTMLElement => x !== null);

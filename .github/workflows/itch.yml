@@ -1,0 +1,51 @@
+name: itch.io
+# Pushes the beta (the commit in .github/beta-commit) to https://lightvdv.itch.io/breaking-town as the
+# English browser build, with butler and the repository secret BUTLER_API_KEY (an itch.io API key).
+# Runs when the beta moves, or by hand from the Actions tab.
+on:
+  push:
+    branches: [master]
+    paths: [.github/beta-commit]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: itch
+  cancel-in-progress: true
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    env:
+      BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+    steps:
+      - name: Check the key
+        run: |
+          if [ -z "$BUTLER_API_KEY" ]; then
+            echo "::error::No BUTLER_API_KEY secret: add an itch.io API key in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - id: beta
+        run: echo "sha=$(tr -d '[:space:]' < .github/beta-commit)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.beta.outputs.sha }}
+          path: beta-src
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: beta-src/package-lock.json
+      - name: Build the English zip
+        working-directory: beta-src
+        run: |
+          npm ci
+          npm run build:itch
+      - name: Install butler
+        run: |
+          curl -sSfL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d butler
+          chmod +x butler/butler
+          ./butler/butler -V
+      - name: Push to itch.io
+        run: ./butler/butler push beta-src/breaking-town-itch.zip lightvdv/breaking-town:html5 --userversion "${{ steps.beta.outputs.sha }}"

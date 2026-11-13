@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 «Утка в номер» is the name players see in Russian (title screen, browser tab, «Об игре»), «Breaking Town» in English; Breaking Town (formerly News Fights) stays the working title in code, keys and the repo. It is a turn-based satirical strategy game: the player is a media outlet that manipulates true / half-true / false news to destroy a simulated city. Current stage: CONCEPT.md §7.4 step 3 — full simulation, headless bots, isometric PixiJS city with generated placeholder pixel art, UI per §7.3.
 
+**Next version (CONCEPT.md §10, planned, not built yet):** the game loses money altogether (readers, reputation and cards stay), the first days open the controls one by one, and the town answers yesterday's story. Sections 1–9 of the concept and everything below describe the game with money as it is now; whoever builds a step of §10 rewrites those sections and this file in the same change. The last version with money is commit `5040fee` (`git checkout 5040fee`; a tag or branch `money-version`, if the remote has one, points at it) — it must stay easy to bring back, and the beta stays on the money version until the user says to move it.
+
 ## Commands
 
 Node.js is installed but may be missing from PATH in an already-open shell (refresh PATH or restart the app).

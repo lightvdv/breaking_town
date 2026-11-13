@@ -200,7 +200,8 @@ const pairKeyOf = (c: CardInstance) => pairKey(content, c.conflict![0], c.confli
  * reporter digging into it once the newsroom has three.
  */
 function attack(s: GameState): void {
-  if (!s.hunt && s.turn >= 3) {
+  const skipX = process.env.BOT_SKIP ?? '';
+  if (!skipX.includes('hunt') && !s.hunt && s.turn >= 3) {
     // The town's goal picks the target (CONCEPT.md §9.2): the building to close, the police for a gang.
     const goal = goalOf(content);
     const wanted = goal.type === 'close' ? goal.building : goal.type === 'gang' ? 'police' : null;
@@ -210,9 +211,9 @@ function attack(s: GameState): void {
   }
   const rival = s.rival;
   if (!rival || rival.closed || !rivalStarted(s, content)) return;
-  if (!lureBlock(s, content) && averageTrust(s, content) - lureCost(s, content) >= 40) lureRivalAuthor(s, content);
+  if (!skipX.includes('lure') && !lureBlock(s, content) && averageTrust(s, content) - lureCost(s, content) >= 40) lureRivalAuthor(s, content);
   const free = s.reporters.filter((id) => !s.investigations.some((x) => x.reporterId === id) && !s.rivalWatch.includes(id));
-  if (s.reporters.length >= 3 && free.length >= 2 && !s.investigations.some((x) => x.target === RIVAL_DIG)) startInvestigation(s, content, free[0], RIVAL_DIG);
+  if (!skipX.includes('dig') && s.reporters.length >= 3 && free.length >= 2 && !s.investigations.some((x) => x.target === RIVAL_DIG)) startInvestigation(s, content, free[0], RIVAL_DIG);
 }
 
 function manageInvestigations(s: GameState): void {

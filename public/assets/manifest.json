@@ -705,6 +705,7 @@
     "investigation_workers",
     "investigation_youth",
     "investigation_intelligentsia",
+    "investigation_person",
     "conflict_shop_fight",
     "conflict_bar_brawl",
     "conflict_graffiti",

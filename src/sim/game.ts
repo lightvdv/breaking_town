@@ -25,6 +25,7 @@ import { advanceRelations, createTension, fillTitle, pairKeys, pairOf, tensionLe
 import { openSeats, readerCount, seedFollowers, updateReaders } from './readers';
 import { advanceInvestigations, findNews, isRecent, scopeOf } from './reporters';
 import { advanceShop } from './shop';
+import { addNoise, advanceResistance, type Noise } from './resistance';
 import type {
   CardTemplate,
   Content,
@@ -117,6 +118,11 @@ export function createGame(
     todayEvents: [],
     tasks: [],
     exposedTotal: 0,
+    resistance: 0,
+    resistanceFired: [],
+    resistanceBy: {},
+    defenders: [],
+    defendersDone: [],
     cleanStreak: 0,
     shopOffer: [],
     shopRefreshTurn: c.balance.shopFirstTurn ?? 0,
@@ -309,7 +315,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   // changes that story's luck only, not the readers' or tomorrow's town.
   const seedOf = () => int(rng, 0x100000000);
   const storySeed = seedOf();
-  const [checkRng, staffRng, readersRng, peopleRng, dealsRng] = Array.from({ length: 5 }, () => createRng(seedOf()));
+  const [checkRng, staffRng, readersRng, peopleRng, dealsRng, resistRng] = Array.from({ length: 6 }, () => createRng(seedOf()));
   const daySeed = seedOf();
   const storyRng = (uid: number) => createRng((storySeed + Math.imul(uid, 0x9e3779b1)) >>> 0);
 
@@ -351,6 +357,22 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   }
   state.topicStreak = streak;
 
+  // The noise of this issue raises the town's resistance (CONCEPT.md §5.7).
+  const g = c.balance.resistanceGain;
+  const noise: Noise = {};
+  const discredit: Record<string, number> = {};
+  for (const n of published) {
+    const card = state.hand.find((x) => x.uid === n.pub.cardUid)!;
+    addNoise(noise, 'lie', n.truth === 2 ? g.lie : n.truth === 1 ? g.half : 0);
+    if (n.report.stigma) addNoise(noise, 'stigma', g.stigma);
+    if (card.conflict && n.pub.distortion > 0) addNoise(noise, 'conflict', g.heated);
+    if (n.pub.placement === 2 && n.report.mood === 'scared' && n.report.believed > 0) addNoise(noise, 'fear', g.scaryFront);
+    if (card.person && n.report.reached > 0) discredit[card.person] = Math.max(discredit[card.person] ?? 0, n.report.believed / n.report.reached);
+  }
+  addNoise(noise, 'lie', exposures.length * g.exposed);
+  if (pressed?.hit) addNoise(noise, 'hunt', g.huntHit);
+  const clean = published.every((n) => n.truth === 0);
+
   state.hand = [];
 
   state.exposedTotal += exposures.length;
@@ -364,6 +386,11 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const auditEnded = settleAudit(state, c, tasks.done, tasks.failed);
   // The named residents: what the day did to them, and their letters to the paper (CONCEPT.md §2.2а).
   updatePeople(state, c, peopleRng, peopleBefore, published, exposures);
+  const closedByUs = [...openBefore].filter((id) => !state.buildings[id].open && (state.stains[id] ?? 0) > 0).length;
+  addNoise(noise, 'hunt', closedByUs * g.closed);
+  const left = [...activeBefore].filter((id) => state.residents[id].status !== 'active').length;
+  addNoise(noise, 'fear', left / Math.max(1, g.leftPer));
+  const resistance = advanceResistance(state, c, resistRng, noise, clean, discredit);
   state.outcome = checkOutcome(state, c);
   const reconciliationStarted = state.reconciliation && state.reconciliation !== reconcileBefore ? { ...state.reconciliation } : null;
   const highlights = findHighlights(state, c, {
@@ -401,6 +428,7 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     ...(huntTarget !== null && pressed
       ? { hunt: { building: huntTarget, hit: pressed.hit, step: state.hunt?.step ?? 0, stain: pressed.stain, won: huntWon } }
       : {}),
+    ...(resistance ? { resistance } : {}),
     ...(day.twist.started || day.twist.ended || auditEnded ? { twist: { started: day.twist.started, ended: day.twist.ended || auditEnded } } : {}),
   };
 }

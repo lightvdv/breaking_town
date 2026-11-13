@@ -70,7 +70,13 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.ownedChannels = s.ownedChannels.filter((id) => c.channels.some((x) => x.id === id));
     s.upgrades = s.upgrades.filter((id) => c.upgrades.some((x) => x.id === id));
     for (const r of s.residents) r.follows = r.follows.filter((id) => s.ownedChannels.includes(id));
-    s.investigations = (s.investigations ?? []).filter((x) => c.groups.some((g) => g.id === x.target));
+    s.resistance ??= 0;
+    s.resistanceFired ??= [];
+    s.resistanceBy ??= {};
+    s.defenders = (s.defenders ?? []).filter((d) => c.defenders.some((x) => x.id === d.id));
+    s.defendersDone ??= [];
+    // Digging goes on into a group or a standing defender (CONCEPT.md §5.7).
+    s.investigations = (s.investigations ?? []).filter((x) => c.groups.some((g) => g.id === x.target) || s.defenders.some((d) => d.id === x.target));
     s.pendingLies ??= [];
     s.tension ??= createTension(c);
     s.reconciliation ??= null;

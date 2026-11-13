@@ -1,5 +1,5 @@
 import { lotsNeeded } from './map';
-import type { Content, TownGoal } from './types';
+import type { BuildingType, Content, TownGoal } from './types';
 
 /** Returns a list of problems in the content files; empty when everything is consistent. */
 export function validateContent(c: Content): string[] {
@@ -80,7 +80,7 @@ export function validateContent(c: Content): string[] {
     if (t.scope && t.scope !== 'local' && t.scope !== 'global') errors.push(`card ${t.id}: unknown scope ${t.scope}`);
     for (const g of t.audience ?? []) if (!c.groups.some((x) => x.id === g)) errors.push(`card ${t.id}: unknown audience ${g}`);
     const stigma = t.effects.some((e) => e?.type === 'stigma');
-    if (t.source === 'investigation' && (!t.target || !c.groups.some((g) => g.id === t.target))) {
+    if (t.source === 'investigation' && !t.person && (!t.target || !c.groups.some((g) => g.id === t.target))) {
       errors.push(`card ${t.id}: investigation needs a valid target group`);
     }
     if (stigma && !t.target) errors.push(`card ${t.id}: stigma effect needs a target group`);
@@ -183,6 +183,15 @@ export function validateContent(c: Content): string[] {
   for (const g of c.groups) {
     if (!c.cards.some((t) => t.source === 'investigation' && t.target === g.id)) errors.push(`no investigation story about ${g.id}`);
   }
+  // The town's defenders (CONCEPT.md §5.7): named residents, known kinds of noise, dirt to beat them with.
+  for (const d of c.defenders) {
+    if (!c.people.some((p) => p.id === d.id)) errors.push(`defender ${d.id}: not a named resident`);
+    for (const k of d.against) if (!['lie', 'fear', 'hunt', 'stigma', 'conflict'].includes(k)) errors.push(`defender ${d.id}: unknown noise ${k}`);
+    for (const g of Object.keys(d.effect.groupChurn ?? {})) if (!c.groups.some((x) => x.id === g)) errors.push(`defender ${d.id}: unknown group ${g}`);
+    for (const t of Object.keys(d.effect.stainTypeMul ?? {})) if (!buildingTypes.has(t as BuildingType)) errors.push(`defender ${d.id}: unknown building ${t}`);
+  }
+  if (c.defenders.length && !c.cards.some((t) => t.source === 'investigation' && t.person)) errors.push('no investigation story about a defender');
+  if (b.resistanceThresholds.some((t, i) => t <= (b.resistanceThresholds[i - 1] ?? 0) || t >= 100)) errors.push('resistanceThresholds must rise below 100');
   for (const key of Object.keys(b.tensionStart)) {
     const [x, y] = key.split('|');
     const ix = c.groups.findIndex((g) => g.id === x);

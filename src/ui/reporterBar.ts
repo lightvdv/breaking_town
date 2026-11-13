@@ -164,7 +164,7 @@ export class ReporterBar {
     for (const [id, card] of this.cards) {
       const r = reporterOf(this.c, id);
       const inv = state.investigations.find((x) => x.reporterId === id);
-      const invLine = inv ? tr('Расследует: {0} · ещё {1} {2}', groupOf(this.c, inv.target).name.toLowerCase(), inv.turnsLeft, inv.turnsLeft === 1 ? tr('ход') : tr('хода')) : '';
+      const invLine = inv ? tr('Расследует: {0} · ещё {1} {2}', (this.c.groups.some((g) => g.id === inv.target) ? groupOf(this.c, inv.target).name.toLowerCase() : (this.c.people.find((x) => x.id === inv.target)?.name ?? inv.target)), inv.turnsLeft, inv.turnsLeft === 1 ? tr('ход') : tr('хода')) : '';
       // Name and skills on hover; the portrait itself only shows a status dot.
       card.root.title = [
         r.name,

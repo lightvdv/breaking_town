@@ -2960,6 +2960,44 @@
     "weight": 1
   },
   {
+    "id": "investigation_person",
+    "source": "investigation",
+    "person": true,
+    "topic": "power",
+    "baseTruth": 0,
+    "titles": [
+      "{p} скрывает старые долги — документы у редакции",
+      "Кто платит {p}? Странные покровители «защитника города»",
+      "{p} на содержании у мэрии — эксклюзив"
+    ],
+    "effects": [
+      {
+        "type": "moodDown",
+        "strength": 0.02,
+        "duration": 1
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.03,
+        "duration": 1
+      },
+      {
+        "type": "moodDown",
+        "strength": 0.04,
+        "duration": 1
+      }
+    ],
+    "audience": [
+      "pensioners",
+      "workers",
+      "youth",
+      "intelligentsia"
+    ],
+    "interest": 0.7,
+    "engagement": 0.6,
+    "weight": 1
+  },
+  {
     "id": "investigation_youth",
     "source": "investigation",
     "target": "youth",

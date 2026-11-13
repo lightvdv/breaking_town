@@ -67,7 +67,10 @@ export function pressHunt(state: GameState, c: Content, published: PublishedNews
     if (!card || !isHuntStory(state, card, effectOf(n))) continue;
     hit = true;
     const believed = n.report.reached ? n.report.believed / n.report.reached : 0;
-    stain = clamp(stain + huntStainOf(c, n.impact, believed, getModifiers(state, c).stainMul));
+    const mods = getModifiers(state, c);
+    // A defender may stand up for this kind of place (CONCEPT.md §5.7).
+    const typeMul = mods.stainTypeMul[state.buildings[camp.building].type] ?? 1;
+    stain = clamp(stain + huntStainOf(c, n.impact, believed, mods.stainMul * typeMul));
   }
   state.stains[camp.building] = stain;
   camp.hitToday = hit;

@@ -227,8 +227,10 @@ export function startInvestigation(state: GameState, c: Content, reporterId: str
   if (state.outcome) throw new Error('Game is over');
   if (!state.reporters.includes(reporterId)) throw new Error(`Reporter ${reporterId} is not hired`);
   if (state.investigations.some((x) => x.reporterId === reporterId)) throw new Error(`Reporter ${reporterId} is already investigating`);
-  if (!c.groups.some((g) => g.id === target)) throw new Error(`Unknown target ${target}`);
-  if (!c.cards.some((t) => t.source === 'investigation' && t.target === target)) throw new Error(`No investigation story about ${target}`);
+  // A group, or a defender standing against the paper (CONCEPT.md §5.7).
+  const person = state.defenders.some((d) => d.id === target);
+  if (!person && !c.groups.some((g) => g.id === target)) throw new Error(`Unknown target ${target}`);
+  if (!c.cards.some((t) => t.source === 'investigation' && (person ? t.person : t.target === target))) throw new Error(`No investigation story about ${target}`);
   const total = investigationTurns(c, reporterOf(c, reporterId), getModifiers(state, c));
   state.investigations.push({ reporterId, target, turnsLeft: total, total });
 }
@@ -245,6 +247,9 @@ export function advanceInvestigations(state: GameState, c: Content, rng: RngStat
   const keep = [];
   for (const inv of state.investigations) {
     if (!state.reporters.includes(inv.reporterId)) continue;
+    // Dirt on a defender who gave up is no use any more: the reporter comes back to ordinary search.
+    const person = !c.groups.some((g) => g.id === inv.target);
+    if (person && !state.defenders.some((d) => d.id === inv.target)) continue;
     inv.turnsLeft--;
     if (inv.turnsLeft > 0) {
       keep.push(inv);
@@ -254,7 +259,7 @@ export function advanceInvestigations(state: GameState, c: Content, rng: RngStat
     const r = reporterOf(c, inv.reporterId);
     const tpl = pick(
       rng,
-      c.cards.filter((t) => t.source === 'investigation' && t.target === inv.target),
+      c.cards.filter((t) => t.source === 'investigation' && (person ? t.person : t.target === inv.target)),
     );
     const sensation = clamp(b.investigationSensationBase + b.investigationSensationPerNose * r.skills.nose);
     const truthful = clamp(b.investigationTruthBase + b.investigationTruthPerNose * r.skills.nose);
@@ -266,6 +271,7 @@ export function advanceInvestigations(state: GameState, c: Content, rng: RngStat
       tier: chance(rng, sensation) ? 3 : 2,
       scope: 'local',
       reporterId: r.id,
+      ...(person ? { person: inv.target } : {}),
     };
     cards.push(card);
     finds.push({ reporterId: r.id, cardUid: card.uid, tier: card.tier, forced: false, kind: 'investigation' });

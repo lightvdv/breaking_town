@@ -730,6 +730,13 @@ export const scenes: Record<string, Scene> = {
       { name: 'document', x: 98, y: 10 },
     ],
   },
+  investigation_person: {
+    sky: 'night',
+    ground: 'plaza',
+    building: { type: 'cityHall', x: 2 },
+    people: [p('intelligentsia', 'idle_front', 74), p('workers', 'react_outraged', 92, { frame: 1 }), p('pensioners', 'react_outraged', 110, { frame: 3 })],
+    icons: [{ name: 'document', x: 84, y: 10 }],
+  },
   investigation_workers: {
     sky: 'night',
     ground: 'road',

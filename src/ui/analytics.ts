@@ -113,7 +113,14 @@ export function trackTurn(state: GameState, c: Content, kind: string, decision: 
     digging: state.investigations.length,
     seats: state.seats,
     tricks: Object.keys(state.cashReady ?? {}).length,
+    resistance: Math.round(state.resistance),
+    defenders: state.defenders.length,
   });
+  // The town fights back (CONCEPT.md §5.7): who stood up, who was beaten and how.
+  const res = report.resistance;
+  if (res?.rose) track('defender_rise', { ...gameProps(state, kind), day: report.turn, defender: res.rose, resistance: Math.round(res.after) });
+  for (const b of res?.beaten ?? []) track('defender_beaten', { ...gameProps(state, kind), day: report.turn, defender: b.id, why: b.why });
+  if (res?.rallied) track('town_rally', { ...gameProps(state, kind), day: report.turn });
   if (state.outcome) {
     track('game_end', {
       ...gameProps(state, kind),

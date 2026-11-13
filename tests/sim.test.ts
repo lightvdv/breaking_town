@@ -17,6 +17,8 @@ import { checkOutcome } from '../src/sim/game';
 import { quitStained, settleHunt } from '../src/sim/hunt';
 import { crimeEvents, crimePressure, crimeResponse, gangDue, heatCrime, streetCrime } from '../src/sim/crime';
 import { topicWatchOf } from '../src/sim/news';
+import { advanceResistance, defenderOf } from '../src/sim/resistance';
+import { advanceInvestigations } from '../src/sim/reporters';
 import { applyCityEffect, computeMetrics } from '../src/sim/city';
 import {
   averageTrust,
@@ -1968,5 +1970,113 @@ describe('hunting the police (CONCEPT.md §3.6а, §5.6)', () => {
     }
     expect(police.open).toBe(false);
     expect(policeLost(s)).toBe(true);
+  });
+});
+
+describe('the town fights back (CONCEPT.md §5.7)', () => {
+  const later = (seed = 5) => {
+    const s = createGame(content, seed);
+    s.turn = 10;
+    return s;
+  };
+
+  it('stays at zero before its day', () => {
+    const s = createGame(content, 1);
+    s.turn = content.balance.resistanceStartTurn;
+    expect(advanceResistance(s, content, createRng(1), { lie: 30 }, false, {})).toBeNull();
+    expect(s.resistance).toBe(0);
+  });
+
+  it('grows from our noise, falls by itself, and faster after a clean issue', () => {
+    const b = content.balance;
+    const s = later();
+    advanceResistance(s, content, createRng(1), { lie: 6, hunt: 2 }, false, {});
+    expect(s.resistance).toBeCloseTo(8 * b.resistanceGainMul - b.resistanceDecay);
+    const before = s.resistance;
+    advanceResistance(s, content, createRng(1), {}, true, {});
+    expect(s.resistance).toBeCloseTo(Math.max(0, before - b.resistanceDecay - b.resistanceCleanDecay));
+  });
+
+  it('a threshold raises one named resident once, until the scale falls well below it', () => {
+    const s = later();
+    s.resistance = 29;
+    const r = advanceResistance(s, content, createRng(2), { lie: 10 }, false, {})!;
+    expect(r.rose).not.toBeNull();
+    expect(s.defenders.map((d) => d.id)).toEqual([r.rose]);
+    expect(content.people.some((p) => p.id === r.rose)).toBe(true);
+    // Still above the threshold the next day: nobody new.
+    expect(advanceResistance(s, content, createRng(3), { lie: 2 }, false, {})!.rose).toBeNull();
+    expect(s.defenders.length).toBe(1);
+  });
+
+  it('a defender makes the paper weaker', () => {
+    const s = later();
+    const plain = getModifiers(s, content).checkerMul;
+    s.defenders = [{ id: 'irina', level: 2, since: s.turn, building: null }];
+    expect(getModifiers(s, content).checkerMul).toBeCloseTo(plain * (1 + 2 * defenderOf(content, 'irina').effect.checkerMul! * content.balance.defenderPowerMul));
+  });
+
+  it('believed dirt silences a defender; dirt nobody believed makes them stronger', () => {
+    const b = content.balance;
+    const s = later();
+    s.resistance = 50;
+    s.defenders = [
+      { id: 'irina', level: 1, since: s.turn - 1, building: null },
+      { id: 'samuil', level: 1, since: s.turn - 1, building: null },
+    ];
+    const r = advanceResistance(s, content, createRng(1), {}, false, { irina: b.defenderBeatShare + 0.1, samuil: 0.05 })!;
+    expect(r.beaten).toEqual([{ id: 'irina', why: 'discredited' }]);
+    expect(r.stronger).toEqual(['samuil']);
+    expect(s.defenders.map((d) => [d.id, d.level])).toEqual([['samuil', 2]]);
+    expect(s.defendersDone).toContain('irina');
+    expect(s.resistance).toBeCloseTo(50 - b.resistanceDecay - b.defenderBeatenDrop);
+  });
+
+  it('a defender gives up when their workplace closes', () => {
+    const s = later();
+    s.resistance = 50;
+    const work = s.buildings.find((x) => x.open && x.jobs > 0)!;
+    s.defenders = [{ id: 'nikolay', level: 1, since: s.turn - 1, building: work.id }];
+    work.open = false;
+    expect(advanceResistance(s, content, createRng(1), {}, false, {})!.beaten).toEqual([{ id: 'nikolay', why: 'closed' }]);
+  });
+
+  it('a calm town sends the defenders home; at 100 it rallies instead of beating us', () => {
+    const b = content.balance;
+    const s = later();
+    s.resistance = b.resistanceCalm;
+    s.defenders = [{ id: 'irina', level: 1, since: s.turn - 1, building: null }];
+    expect(advanceResistance(s, content, createRng(1), {}, true, {})!.calmed).toEqual(['irina']);
+    expect(s.defenders).toEqual([]);
+
+    const t = later();
+    t.resistance = 99;
+    const key = Object.keys(t.tension)[0];
+    t.tension[key] = 60;
+    const r = advanceResistance(t, content, createRng(1), { lie: 20 }, false, {})!;
+    expect(r.rallied).toBe(true);
+    expect(t.tension[key]).toBeCloseTo(60 - b.rallyTension);
+    expect(t.outcome).toBeNull();
+    expect(t.resistance).toBeLessThan(100);
+  });
+
+  it('a reporter digs dirt on a defender, with their name in the headline', () => {
+    const s = later();
+    s.defenders = [{ id: 'irina', level: 1, since: s.turn - 1, building: null }];
+    const id = s.reporters[0];
+    startInvestigation(s, content, id, 'irina');
+    let card;
+    for (let i = 0; i < 10 && !card; i++) card = advanceInvestigations(s, content, createRng(i)).cards[0];
+    expect(card?.person).toBe('irina');
+    expect(storyTitle(content, card!, 0)).toContain(content.people.find((p) => p.id === 'irina')!.name);
+  });
+
+  it('a game of lies raises the resistance', () => {
+    const s = createGame(content, 11);
+    for (let i = 0; i < 14 && !s.outcome; i++) {
+      const publish = s.hand.slice(0, 3).map((card, k) => ({ cardUid: card.uid, placement: (k === 0 ? 2 : 0) as 0 | 2, distortion: maxDistortion(card) }));
+      playTurn(s, content, { publish });
+    }
+    expect(s.resistance > 0 || s.defenders.length > 0).toBe(true);
   });
 });

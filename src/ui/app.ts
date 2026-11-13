@@ -126,7 +126,11 @@ import {
   type Requirement,
   type UpgradeDef,
   type TurnReport,
+  defenderOf,
+  personOf,
+  personTitle,
 } from '../sim';
+import { defenderEffectLine, personAcc, personName, resistanceLines } from './resistance';
 import { h, pct, svg } from './dom';
 import { loadSave, writeSave } from './save';
 import { loadSettings, saveSettings } from './settings';
@@ -522,6 +526,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const twistNotice = h('section', { class: 'notice notice-twist', hidden: true, role: 'status' });
   // The hunt against a place (CONCEPT.md §3.6а).
   const huntNotice = h('section', { class: 'notice notice-hunt', hidden: true, role: 'status' });
+  const defendNotice = h('section', { class: 'notice notice-defend', hidden: true, role: 'status' });
   // The folded issue: a newspaper over the city; a tap unfolds it.
   const issueFab = h(
     'button',
@@ -529,7 +534,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
     h('span', {}, tr('К выпуску')),
   );
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, issueEvents, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, huntNotice, paper));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, issueEvents, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, huntNotice, defendNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -1120,6 +1125,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...r.highlights.map((x) => h('li', {}, x.title)),
       ...r.exposures.map((x) => h('li', { class: 'bad' }, tr('Разоблачили: «{0}»', x.title))),
       ...r.deals.broken.map((x) => h('li', { class: 'bad' }, tr('Сделка «{0}» сорвана', x))),
+      ...resistanceLines(c, r.resistance).map((x) => h('li', { class: x.good ? 'good' : 'bad' }, x.text)),
       ...r.staff.quit.map((id) => h('li', { class: 'bad' }, `${reporterOf(c, id).name} ${reporterOf(c, id).female ? tr('уволилась') : tr('уволился')}`)),
       ...(r.cleanStreak.bonus ? [h('li', { class: 'good' }, tr('✓ {0} выпусков подряд без лжи: +{1}% репутации', c.balance.cleanStreakDays, Math.round(r.cleanStreak.bonus)))] : []),
       ...(r.cleanStreak.broken ? [h('li', { class: 'bad' }, tr('Серия выпусков без лжи прервалась'))] : []),
@@ -1331,6 +1337,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         ),
       );
       hudGoal.title = `${goalTitle(c, own)}.`;
+      appendResistance(fc);
       return;
     }
     const stages = c.balance.cityStates;
@@ -1369,6 +1376,32 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('div', { class: 'goal-names' }, ...stages.map((x, i) => h('span', { class: [i === here ? 'here' : '', i === goal ? 'goal' : ''].join(' ').trim() }, x.name))),
     );
     hudGoal.title = `${cityGoal()}.`;
+    appendResistance(fc);
+  }
+
+  /**
+   * The town's resistance under the goal (CONCEPT.md §5.7): a thin bar with the thresholds that raise
+   * a defender, the value and what the laid-out issue would add.
+   */
+  function appendResistance(fc: Forecast | null): void {
+    const b = c.balance;
+    if (state.turn < b.resistanceStartTurn) return;
+    const now = Math.round(state.resistance);
+    const delta = fc ? Math.round(fc.resistance - state.resistance) : 0;
+    const row = h(
+      'div',
+      { class: `resist-row${now >= b.resistanceThresholds[0] ? ' hot' : ''}`, title: tr('Отпор города: растёт от лжи, травли, компромата и разоблачений, спадает от честных выпусков. На {0} против газеты встаёт защитник.', b.resistanceThresholds.join(', ')) },
+      h('b', { class: 'resist-title' }, tr('Отпор')),
+      h(
+        'span',
+        { class: 'resist-bar' },
+        h('i', { style: `width: ${now}%` }),
+        fc && delta > 0 ? h('i', { class: 'ghost', style: `left: ${now}%; width: ${Math.min(100 - now, delta)}%` }) : null,
+        ...b.resistanceThresholds.map((t) => h('span', { class: 'resist-tick', style: `left: ${t}%` })),
+      ),
+      h('span', { class: 'resist-value' }, `${now}`, fc && delta !== 0 ? h('small', { class: delta > 0 ? 'up' : 'down' }, ` ≈${delta > 0 ? '+' : ''}${delta}`) : null),
+    );
+    hudGoal.append(row);
   }
 
   /** A story's level as a meter (CONCEPT.md §7.3): three bars, the lit ones by tier, and the word. */
@@ -2584,7 +2617,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * a story about the target, a «Начать травлю» button on a story about any other workplace.
    */
   /** Whom an investigation digs under, in the genitive. */
-  const digWhom = (target: string) => groupOf(c, target).forms.manyGen;
+  const isGroup = (target: string) => c.groups.some((g) => g.id === target);
+  const digWhom = (target: string) => (isGroup(target) ? groupOf(c, target).forms.manyGen : personAcc(c, target));
 
   const actNow = (f: () => void) => () => {
     f();
@@ -2703,6 +2737,76 @@ export function mountApp(root: HTMLElement, base: Content): void {
         x.type === 'shop' || x.type === 'entertainment' ? '' : tr(' · работников {0}', staff),
         tr(' · каждый день подряд со страшной новостью о нём бьёт сильнее, пропуск остужает травлю.'),
       ),
+    );
+  }
+
+  /**
+   * «Против газеты» (CONCEPT.md §5.7): the standing defenders with their portraits, what they do now,
+   * their strength and how to beat them — dirt on the person, or closing where they work.
+   */
+  let riseSeen = -1;
+  function renderDefenders(): void {
+    const list = state.defenders;
+    defendNotice.hidden = !list.length || searching || !!state.outcome;
+    if (defendNotice.hidden) return;
+    // A defender who just stood up is shown unfolded once.
+    if (report?.resistance?.rose && riseSeen !== report.turn) {
+      riseSeen = report.turn;
+      openPlaques.add('defend');
+    }
+    const b = c.balance;
+    defendNotice.replaceChildren(
+      h(
+        'div',
+        { class: 'notice-head' },
+        h('span', { class: 'defend-icon', 'aria-hidden': 'true' }, '✊'),
+        h('b', {}, tr('Против газеты: {0}', list.map((d) => personName(c, d.id)).join(', '))),
+        h('span', { class: 'plaque-stats' }, tr('отпор {0}', Math.round(state.resistance))),
+      ),
+      ...list.map((d) => {
+        const def = defenderOf(c, d.id);
+        const p = personOf(c, d.id);
+        const inv = state.investigations.find((x) => x.target === d.id);
+        const work = d.building !== null ? buildingName(state, c, d.building) : null;
+        return h(
+          'div',
+          { class: 'defender' },
+          h('img', { class: 'defender-portrait', src: `${assetBase}sprites/people/${d.id}.png`, alt: '', width: 48, height: 48 }),
+          h(
+            'div',
+            { class: 'defender-body' },
+            h(
+              'div',
+              { class: 'defender-name' },
+              h('b', {}, p?.name ?? d.id),
+              p ? h('span', { class: 'hint' }, ` · ${p.role}`) : null,
+              h('span', { class: 'pips defender-pips', title: tr('Сила {0} из {1}', d.level, b.defenderMaxLevel) }, ...Array.from({ length: b.defenderMaxLevel }, (_, i) => h('span', { class: i < d.level ? 'on' : '' }))),
+            ),
+            h('p', { class: 'defender-title' }, h('b', {}, def.title), ` — ${def.text}`),
+            h('p', { class: 'defender-effect' }, defenderEffectLine(c, d)),
+            h(
+              'p',
+              { class: 'hint defender-how' },
+              work ? tr('Как остановить: компромат, которому поверит хотя бы треть читателей, или закрыть «{0}», где {1} работает.', work, p?.female ? tr('она') : tr('он')) : tr('Как остановить: компромат, которому поверит хотя бы треть читателей.'),
+              tr(' Пока стоит — крепнет раз в {0} {1}.', b.defenderGrowDays, turnsWord(b.defenderGrowDays)),
+            ),
+          ),
+          inv
+            ? h('span', { class: 'dig-progress' }, tr('Копает {0} · {1}/{2}', reporterOf(c, inv.reporterId).name.split(' ').pop() ?? '', inv.total - inv.turnsLeft, inv.total))
+            : h(
+                'button',
+                {
+                  class: 'primary defender-dig',
+                  'data-tut': 'dig',
+                  onclick: () => {
+                    digTarget = d.id;
+                    openModal('dig');
+                  },
+                },
+                tr('Копать под {0}', personAcc(c, d.id)),
+              ),
+        );
+      }),
     );
   }
 
@@ -3274,6 +3378,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       'div',
       { class: 'dig-menu' },
       h('p', { class: 'dig-menu-head' }, tr('На кого копать? {0} {1} репортёр не пишет новостей.', turns, turnsWord(turns))),
+      // The defenders first: dirt on them takes their brake off the paper (CONCEPT.md §5.7).
+      ...state.defenders.filter((d) => !state.investigations.some((x) => x.target === d.id)).map((d) => option(d.id, tr('✊ {0}', personName(c, d.id)), () => digPromise(d.id, id))),
       ...c.groups.map((g) => option(g.id, g.name, () => digPromise(g.id, id))),
     );
   }
@@ -3820,6 +3926,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       doubted: tr('проигнорировали новость'),
       boring: tr('выпуск их не зацепил'),
       empty: tr('выпуска не было'),
+      boycott: tr('поддались бойкоту защитника'),
     };
     const out: HTMLElement[] = [
       h('div', { class: 'city-index' }, h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 48, height: 48 }), h('div', {}, h('b', {}, `${readerCount(state)}`), h('span', {}, tr('постоянных читателей')))),
@@ -4331,6 +4438,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * days and odds are theirs.
    */
   function digPromise(target: string, reporterId: string | null): HTMLElement {
+    if (!isGroup(target)) return defenderPromise(target, reporterId);
     const b = c.balance;
     const g = groupOf(c, target);
     const tpl = c.cards.find((t) => t.source === 'investigation' && t.target === target);
@@ -4365,6 +4473,24 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...effect.map((t) => h('p', { class: 'dig-effect' }, t)),
       h('p', { class: 'dig-cost' }, r ? tr('{0} {1} {2} не пишет новостей', days, turnsWord(days), r.name.split(' ').pop()) : tr('Репортёр всё это время не пишет новостей')),
       h('p', { class: 'dig-odds' }, tr('Что выйдет: {0}.', odds)),
+    );
+  }
+
+  /** Dirt on a defender (CONCEPT.md §5.7): the headline, when, and what it does. */
+  function defenderPromise(target: string, reporterId: string | null): HTMLElement {
+    const b = c.balance;
+    const tpl = c.cards.find((t) => t.source === 'investigation' && t.person);
+    const r = reporterId ? skilledReporter(state, c, reporterOf(c, reporterId)) : null;
+    const days = r ? investigationTurns(c, r) : b.investigationTurns;
+    const name = personName(c, target);
+    return h(
+      'div',
+      { class: 'dig-promise' },
+      tpl ? h('p', { class: 'dig-headline' }, h('span', {}, tr('Выйдет примерно так: ')), h('b', {}, quoted(personTitle(c, tpl.titles[0] ?? '', target)))) : null,
+      h('p', { class: 'dig-when' }, tr('Через {0} {1} — эксклюзив на первую полосу.', days, turnsWord(days))),
+      h('p', { class: 'dig-effect' }, tr('Поверит хотя бы треть прочитавших — {0} замолчит, а отпор города упадёт на {1}.', name, b.defenderBeatenDrop)),
+      h('p', { class: 'dig-effect' }, tr('Не поверят — защитник окрепнет. Чем выше репутация и громче подача, тем больше поверят.')),
+      h('p', { class: 'dig-cost' }, r ? tr('{0} {1} {2} не пишет новостей', days, turnsWord(days), r.name.split(' ').pop()) : tr('Репортёр всё это время не пишет новостей')),
     );
   }
 
@@ -4420,8 +4546,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
           ),
         );
       }),
-      h('button', { class: 'ghost', onclick: () => openModal('population') }, tr('← Жители')),
-    ];
+      isGroup(target) ? h('button', { class: 'ghost', onclick: () => openModal('population') }, tr('← Жители')) : null,
+    ].filter((x): x is HTMLElement => !!x);
   }
 
   function renderModal(): void {
@@ -4439,7 +4565,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       shop: tr('Сводка'),
       cash: tr('Грязные приёмы'),
       team: tr('Сводка'),
-      dig: digTarget ? tr('Компромат на {0}', groupOf(c, digTarget).forms.manyGen) : tr('Компромат'),
+      dig: digTarget ? tr('Компромат на {0}', digTarget && isGroup(digTarget) ? groupOf(c, digTarget).forms.manyGen : personAcc(c, digTarget)) : tr('Компромат'),
       pause: tr('Меню'),
       howto: tr('Как играть'),
       settings: tr('Настройки'),
@@ -4600,6 +4726,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderTwist();
     renderTasks();
     renderHunt();
+    renderDefenders();
     foldPlaques();
     renderGuide();
     renderModal();
@@ -4638,6 +4765,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       [offerNotice, 'offer'],
       [twistNotice, 'twist'],
       [huntNotice, 'hunt'],
+      [defendNotice, 'defend'],
     ];
     for (const [el, key] of plaques) {
       const head = el.querySelector<HTMLElement>(':scope > .notice-head');
@@ -5410,6 +5538,13 @@ export function mountApp(root: HTMLElement, base: Content): void {
         tr('Компромат: нажмите на портрет (на телефоне — вкладка «Редакция»), в карточке репортёра — «Компромат» и выберите, на кого копать. Репортёр несколько дней не пишет новостей, зато приносит эксклюзив, который настраивает город против группы.'),
         tr('Криминал: новости о преступности пугают людей и разжигают настоящую преступность. Преступность на улицах сама снижает «Порядок и безопасность», а банда, если она взяла улицы, держит его ниже до конца партии; полиция всё это сдерживает. Пока город раскалён, полиция и мэр отвечают рейдами и патрулями: они остужают улицы и успокаивают напуганных — закрытая полиция рейдов уже не устроит.'),
         tr('👁 Надзор за темой: если печатать одну тему день за днём, фактчекеры начинают за ней следить — неправду этой темы ловят на 25% чаще за каждый день подряд. Метка «Под надзором» у новости; день без этой темы снимает надзор. Правду надзор не трогает.'),
+      ),
+      h('h3', { class: 'section' }, tr('Город сопротивляется')),
+      list(
+        tr('✊ Отпор: шкала под целью. С {0}-го дня её поднимают ложь, пойманная ложь, травля и закрытые ею места, компромат на группы, раздутые ссоры, страшные первые полосы и уехавшие жители. Каждый день она спадает, а выпуск без лжи и полуправды сбивает её сильнее.', b.resistanceStartTurn),
+        tr('Когда отпор доходит до {0}, против газеты встаёт защитник — один из горожан. Его плашка над газетой говорит, что он делает: учит ловить ложь, успокаивает людей, отговаривает читать вас. Одновременно — не больше {1}, и раз в {2} дня каждый крепнет.', b.resistanceThresholds.join(', '), b.defendersMax, b.defenderGrowDays),
+        tr('Как остановить защитника: «Копать под …» на его плашке — репортёр приносит на него компромат; если поверит хотя бы треть прочитавших, защитник замолкает, а отпор падает. Не поверят — он окрепнет. Если закрыть место, где он работает, он сдаётся тоже. А если отпор упадёт ниже {0}, защитники сами разойдутся.', b.resistanceCalm),
+        tr('Отпор 100 — город сплачивается: ссоры групп затихают, люди приободряются, защитники крепнут, шкала опускается до {0}. Проиграть от этого нельзя, но город откатится от цели.', b.rallyTo),
       ),
       h('h3', { class: 'section' }, tr('Первые советы')),
       list(

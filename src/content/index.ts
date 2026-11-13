@@ -9,6 +9,7 @@ import channels from './channels.json';
 import offers from './offers.json';
 import letters from './letters.json';
 import people from './people.json';
+import defenders from './defenders.json';
 import difficulties from './difficulties.json';
 import groups from './groups.json';
 import reporters from './reporters.json';
@@ -28,5 +29,5 @@ export function localized<T>(name: string, data: T): T {
   return lang() === 'en' ? applyOverlay(data, (overlays as Record<string, Record<string, string>>)[name]) : data;
 }
 
-const raw = { arcs, balance, difficulties, buildings, cards, channels, groups, lengths, letters, synergies, cash, offers, people, reporters, tasks, towns, townGen, townCalibration, twists, upgrades };
+const raw = { arcs, balance, difficulties, buildings, cards, channels, groups, lengths, letters, synergies, cash, offers, people, defenders, reporters, tasks, towns, townGen, townCalibration, twists, upgrades };
 export const content = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, localized(k, v)])) as unknown as Content;

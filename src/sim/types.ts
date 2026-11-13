@@ -242,6 +242,8 @@ export interface CardTemplate {
   source: 'event' | 'fact' | 'rumor' | 'investigation' | 'offer';
   /** Investigations: the social group the dirt is about. */
   target?: GroupId;
+  /** Dirt on a defender (CONCEPT.md §5.7): an investigation about the person in `CardInstance.person`; `{p}` in titles is their name. */
+  person?: boolean;
   /** local = about this city (default), global = about the country or the world. */
   scope?: NewsScope;
   /** Groups this story interests; they read it more often. Empty or missing = everyone alike. */
@@ -345,9 +347,61 @@ export interface Deal {
 }
 
 /** A named resident whose fate the player can follow (CONCEPT.md §2.2а). */
+/** What raises the town's resistance (CONCEPT.md §5.7); a defender rises against the kinds we lean on. */
+export type NoiseKind = 'lie' | 'fear' | 'hunt' | 'stigma' | 'conflict';
+
+/**
+ * What a defender does against the paper, per level: multipliers move by the value per level
+ * (0.15 → ×1.15, ×1.3), `groupChurn` adds churn for that group's readers.
+ */
+export interface DefenderEffect {
+  checkerMul?: number;
+  scaryImpactMul?: number;
+  wordOfMouthMul?: number;
+  lateExposureMul?: number;
+  crimeCoolMul?: number;
+  groupChurn?: Partial<Record<GroupId, number>>;
+  stainTypeMul?: Partial<Record<BuildingType, number>>;
+}
+
+/** A named resident who may stand up against the paper (CONCEPT.md §5.7); id = the person's id. */
+export interface DefenderDef {
+  id: string;
+  /** «Кружок „Проверь газету“». */
+  title: string;
+  /** What it does, in a sentence. */
+  text: string;
+  against: NoiseKind[];
+  effect: DefenderEffect;
+}
+
+export interface DefenderState {
+  id: string;
+  level: number;
+  /** The turn they stood up: they grow every `defenderGrowDays` from it. */
+  since: number;
+  /** Where they work: if it closes, they give up. */
+  building: number | null;
+}
+
+export interface ResistanceReport {
+  before: number;
+  after: number;
+  /** Points added by kind (before `resistanceGainMul`). */
+  gain: Partial<Record<NoiseKind, number>>;
+  rose: string | null;
+  beaten: { id: string; why: 'discredited' | 'closed' | 'left' }[];
+  /** Dirt nobody believed: the defender grew stronger. */
+  stronger: string[];
+  calmed: string[];
+  rallied: boolean;
+}
+
 export interface PersonDef {
   id: string;
   name: string;
+  /** The name after «на»/«под»: «Копать под Рустама» (CONCEPT.md §5.7). */
+  nameAcc: string;
   /** «бармен», «пенсионерка»: the signature under a letter. */
   role: string;
   group: GroupId;
@@ -504,6 +558,34 @@ export interface Balance {
   /** Heat a believed crime story adds per impact × believed share; it cools by this share a day. The jobless count this much. */
   crimeHeatGain: number;
   crimeHeatDecay: number;
+  /**
+   * The town's resistance (CONCEPT.md §5.7): points our noise adds (per lie, half-truth, caught lie,
+   * hunt hit, place closed by a hunt, dirt on a group, heated quarrel, scary front page, and one per
+   * `leftPer` residents who left), × `resistanceGainMul`; it falls by `resistanceDecay` a day and by
+   * `resistanceCleanDecay` more after an issue without a half-truth or lie. Off before `resistanceStartTurn`.
+   */
+  resistanceStartTurn: number;
+  resistanceGain: { lie: number; half: number; exposed: number; huntHit: number; closed: number; stigma: number; heated: number; scaryFront: number; leftPer: number };
+  resistanceGainMul: number;
+  resistanceDecay: number;
+  resistanceCleanDecay: number;
+  /** Each threshold raises a defender once; it can again after the scale fell `resistanceRearm` below it. */
+  resistanceThresholds: number[];
+  resistanceRearm: number;
+  /** Below this every defender gives up: the town calmed down. */
+  resistanceCalm: number;
+  defendersMax: number;
+  /** A defender grows a level every this many days, up to `defenderMaxLevel`; effects × level × `defenderPowerMul`. */
+  defenderGrowDays: number;
+  defenderMaxLevel: number;
+  defenderPowerMul: number;
+  /** Dirt on a defender beats them when at least this share of its readers believed it; the scale falls by `defenderBeatenDrop`. */
+  defenderBeatShare: number;
+  defenderBeatenDrop: number;
+  /** At 100 the town rallies: every pair's tension falls, every outlook rises, defenders grow, the scale drops to `rallyTo`. */
+  rallyTension: number;
+  rallyOutlook: number;
+  rallyTo: number;
   crimeJobless: number;
   /** A scared resident's fear does not pass on a day with chance crime pressure × this; they leave the town with chance this × `leaveScale`. */
   fearHold: number;
@@ -852,6 +934,7 @@ export interface Content {
   arcs: ArcDef[];
   offers: OfferDef[];
   people: PersonDef[];
+  defenders: DefenderDef[];
   difficulties: DifficultyDef[];
   tasks: TaskDef[];
   twists: TwistDef[];
@@ -938,6 +1021,8 @@ export interface CardInstance {
   soft?: boolean;
   /** Kompromat from an anonymous source that is fake: told as true, it is a lie for the fact-checkers. Hidden. */
   setup?: boolean;
+  /** Dirt on a defender: the named resident it is about (CONCEPT.md §5.7). */
+  person?: string;
   /** An event written by a reporter whose specialty it is: a level stronger (CONCEPT.md §3.3). */
   expert?: boolean;
 }
@@ -990,7 +1075,8 @@ export interface Find {
 /** A reporter digging for dirt on a social group (CONCEPT.md §3.3а). */
 export interface Investigation {
   reporterId: string;
-  target: GroupId;
+  /** A group id, or a defender's person id (CONCEPT.md §5.7). */
+  target: string;
   turnsLeft: number;
   total: number;
 }
@@ -1282,6 +1368,13 @@ export interface GameState {
   crimeHeat: number;
   /** Free cards from the upgrade deck won by tasks (CONCEPT.md §4.8). */
   vouchers: number;
+  /** The town's resistance 0..100 (CONCEPT.md §5.7), the thresholds that already raised a defender, our noise since the last one. */
+  resistance: number;
+  resistanceFired: number[];
+  resistanceBy: Partial<Record<NoiseKind, number>>;
+  defenders: DefenderState[];
+  /** Defenders beaten this game: they do not stand up again. */
+  defendersDone: string[];
   /** The campaign town this game is played in (CONCEPT.md §9); null for a single game. */
   town: string | null;
   outcome: Outcome | null;
@@ -1317,7 +1410,7 @@ export interface PublicationReport {
 export type IssueLevel = 0 | 1 | 2 | 3;
 
 /** Why readers stopped buying (CONCEPT.md §5.2). */
-export type ChurnReason = 'exposed' | 'doubted' | 'boring' | 'empty';
+export type ChurnReason = 'exposed' | 'doubted' | 'boring' | 'empty' | 'boycott';
 
 export interface ReadersChange {
   lost: number;
@@ -1366,4 +1459,6 @@ export interface TurnReport {
   hunt?: { building: number; hit: boolean; step: number; stain: number; won: string | null };
   /** The twist began or ended this turn. */
   twist?: { started: boolean; ended: boolean };
+  /** The town's resistance and its defenders (CONCEPT.md §5.7), once it started. */
+  resistance?: ResistanceReport;
 }

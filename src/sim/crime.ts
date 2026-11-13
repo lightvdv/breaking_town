@@ -39,7 +39,8 @@ export function streetCrime(state: GameState, c: Content): number {
  */
 export function heatCrime(state: GameState, c: Content, published: PublishedNews[]): number {
   const b = c.balance;
-  let heat = state.crimeHeat * (1 - b.crimeHeatDecay);
+  // A defender's patrols cool it faster (CONCEPT.md §5.7).
+  let heat = state.crimeHeat * (1 - Math.min(1, b.crimeHeatDecay * getModifiers(state, c).crimeCoolMul));
   for (const n of published) {
     const card = state.hand.find((x) => x.uid === n.pub.cardUid);
     if (!card || templateOf(c, card.templateId).topic !== 'crime' || !n.report.reached) continue;

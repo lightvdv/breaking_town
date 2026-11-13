@@ -1,4 +1,5 @@
-import type { ChannelId, Content, GameState, GroupId, Placement, Topic, UpgradeEffects } from './types';
+import { applyDefenders } from './resistance';
+import type { BuildingType, ChannelId, Content, GameState, GroupId, Placement, Topic, UpgradeEffects } from './types';
 
 export interface ChannelMods {
   reachAdd: number;
@@ -35,6 +36,11 @@ export interface Modifiers {
   crimeHeatMul: number;
   stainMul: number;
   cashCooldownAdd: number;
+  /** The town's defenders (CONCEPT.md §5.7): old lies surface more often, crime heat cools faster, readers of a group boycott us, a type of place shrugs off the hunt. */
+  lateExposureMul: number;
+  crimeCoolMul: number;
+  groupChurn: Partial<Record<GroupId, number>>;
+  stainTypeMul: Partial<Record<BuildingType, number>>;
   /** Sets of three cards of one direction in force (`synergies.json`), by tag. */
   synergies: string[];
   channels: Record<ChannelId, ChannelMods>;
@@ -65,7 +71,9 @@ export function levelEffects(e: UpgradeEffects, power: number): UpgradeEffects {
 }
 
 export function getModifiers(state: GameState, c: Content): Modifiers {
-  return modifiersOf(c, state.upgrades, state.collection ?? undefined);
+  const m = modifiersOf(c, state.upgrades, state.collection ?? undefined);
+  applyDefenders(state, c, m);
+  return m;
 }
 
 /**
@@ -96,6 +104,10 @@ export function modifiersOf(c: Content, upgrades: string[], levels: Record<strin
     crimeHeatMul: 1,
     stainMul: 1,
     cashCooldownAdd: 0,
+    lateExposureMul: 1,
+    crimeCoolMul: 1,
+    groupChurn: {},
+    stainTypeMul: {},
     synergies: [],
     channels: {},
   };

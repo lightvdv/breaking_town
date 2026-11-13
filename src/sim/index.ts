@@ -6,7 +6,7 @@ export { agencyBlock, callAgency, freeSeats, cancelInvestigation, hireFromAgency
 export { expectedJoins, followersOf, nextSeatReaders, readerCount } from './readers';
 export { cityStateOf } from './city';
 export { getModifiers, levelEffects, modifiersOf, placementSlots, rankedPlacements, type Modifiers } from './modifiers';
-export { topicWatchOf, previewPublication, storyEffect, cardTruth, effectiveTier, framingOf, isHarmful, issueLevel, limitSensations, issueScore, isSoothed, maxDistortion, minDistortion, outletReach, storyTitle, type IssueStory, type PublicationPreview } from './news';
+export { topicWatchOf, previewPublication, storyEffect, cardTruth, effectiveTier, framingOf, isHarmful, issueLevel, limitSensations, issueScore, isSoothed, maxDistortion, minDistortion, outletReach, personTitle, storyTitle, type IssueStory, type PublicationPreview } from './news';
 export { createTension, fillTitle, pairKey, pairKeys, pairOf, startTension, tensionLevel, tipConflict } from './relations';
 export { averageTrust, closedLine, buildingDefOf, buildingName, channelOf, groupOf, templateOf } from './lookup';
 export { validateContent } from './validateContent';
@@ -26,3 +26,4 @@ export { crimePressure, policeLost, streetCrime } from './crime';
 export { bribeMul, cashActive, cashBlock, cashCooldown, cashCost, cashMoves, cashOf, cashOpen, isLeak, useCash } from './cash';
 export { goalOf, goalProgress, type GoalProgress } from './goals';
 export { choiceId, composeTown, generateTown, isGeneratedTown, parseChoice, powerMul, randomChoice, townPower, GEN_PREFIX } from './townGen';
+export { defenderOf, isDefending, personOf } from './resistance';

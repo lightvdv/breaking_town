@@ -4,7 +4,8 @@
     "name": "Легко",
     "text": "Фактчекеры ленивы, травля бьёт сильнее, а спасать город нужно меньше дней.",
     "balance": {
-      "checkerBase": 0.17
+      "checkerBase": 0.17,
+      "resistanceGainMul": 0.8
     },
     "modes": {
       "destroy": {
@@ -39,7 +40,9 @@
     "name": "Сложно",
     "text": "Фактчекеры не спят, город держится крепче, а время работает против вас.",
     "balance": {
-      "checkerBase": 0.22
+      "checkerBase": 0.22,
+      "resistanceGainMul": 1.2,
+      "defenderPowerMul": 1.25
     },
     "modes": {
       "destroy": {

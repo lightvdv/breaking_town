@@ -8005,3 +8005,162 @@ button.camp-ties {
     height: 20px;
   }
 }
+
+/* ---------- The town's resistance and its defenders (CONCEPT.md §5.7) ---------- */
+/* A thin bar under the goal track: its title in the goal's first column, the bar and value after it. */
+.resist-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  margin-top: 3px;
+}
+
+.resist-title {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.resist-row > .resist-bar,
+.resist-row > .resist-value {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.resist-bar {
+  position: relative;
+  height: 6px;
+  margin-right: 46px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.resist-bar > i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: #8b9bb4;
+}
+
+.resist-row.hot .resist-bar > i {
+  background: var(--danger);
+}
+
+.resist-bar > i.ghost {
+  background: repeating-linear-gradient(45deg, var(--danger) 0 3px, transparent 3px 6px);
+  opacity: 0.7;
+}
+
+.resist-tick {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+}
+
+.resist-value {
+  justify-self: end;
+  width: 42px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.resist-value small {
+  font-weight: 400;
+}
+
+.resist-value small.up {
+  color: var(--danger);
+}
+
+.resist-value small.down {
+  color: var(--ok);
+}
+
+.notice-defend {
+  border-left: 6px solid #3e8948;
+}
+
+.defend-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.defender {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 10px 8px;
+  border-top: 1px dashed rgba(62, 39, 49, 0.3);
+}
+
+.defender-portrait {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  border: 2px solid var(--paper-ink);
+  border-radius: 4px;
+}
+
+.defender-body p {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+
+.defender-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.defender-pips {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 6px;
+}
+
+.defender-pips span {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #3e8948;
+  border-radius: 50%;
+}
+
+.defender-pips span.on {
+  background: #3e8948;
+}
+
+.defender .hint {
+  color: var(--paper-muted);
+}
+
+.defender-effect {
+  color: #a22633;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .defender {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .defender-portrait {
+    width: 40px;
+    height: 40px;
+  }
+
+  .defender > .defender-dig,
+  .defender > .dig-progress {
+    grid-column: 1 / -1;
+  }
+}

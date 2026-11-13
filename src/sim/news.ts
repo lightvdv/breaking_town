@@ -103,7 +103,14 @@ export function storyTitle(c: Content, card: CardInstance, distortion: number): 
   // A story told often has several headlines; each card keeps one of them.
   const told = [tpl.titles[truth], ...(tpl.titleVariants?.[truth] ?? [])].filter((x): x is string => !!x);
   const raw = distortion < 0 ? (card.conflict ? tpl.calmTitle : tpl.softTitles?.[-distortion - 1]) ?? '' : told.length ? told[card.uid % told.length] : '';
-  return fillTitle(c, raw, card.conflict);
+  return personTitle(c, fillTitle(c, raw, card.conflict), card.person);
+}
+
+/** Dirt on a defender (CONCEPT.md §5.7): `{p}` is the person's name. */
+export function personTitle(c: Content, text: string, person: string | undefined): string {
+  if (!text.includes('{p}')) return text;
+  const name = c.people.find((x) => x.id === person)?.name ?? '';
+  return text.replace(/\{p\}/g, name);
 }
 
 /** Framing of a conflict story as an index into tensionNews: calm, as is, heat, inflate. */
@@ -267,7 +274,7 @@ export function previewPublication(
     exposureRisk: exposureRiskOf(state, c, mods, truth, pub.placement, 0.25) * reporterCheckMul(state, c, card) * huntWatch(state, c, card, storyEffect(c, card, pub.distortion)) * topicWatchOf(state, c, card, storyEffect(c, card, pub.distortion)),
     tension: card.conflict ? { pair: pairKey(c, ...card.conflict), delta: tensionShift(state, c, card, pub.distortion, impact, 0.1, mods) } : null,
     believers: audience.believers,
-    huntHit: hunted ? huntStainOf(c, impact, audience.readers ? audience.believers / audience.readers : 0, mods.stainMul) : null,
+    huntHit: hunted ? huntStainOf(c, impact, audience.readers ? audience.believers / audience.readers : 0, mods.stainMul * (state.hunt ? (mods.stainTypeMul[state.buildings[state.hunt.building].type] ?? 1) : 1)) : null,
   };
 }
 
@@ -612,7 +619,7 @@ export function processLateExposures(state: GameState, c: Content, rng: RngState
   const exposed: ExposedStory[] = [];
   const keep = [];
   for (const lie of state.pendingLies) {
-    if (chance(rng, lie.risk)) exposed.push(exposeNews(state, c, mods, lie.story, lie.viewers));
+    if (chance(rng, Math.min(1, lie.risk * mods.lateExposureMul))) exposed.push(exposeNews(state, c, mods, lie.story, lie.viewers));
     else if (--lie.turnsLeft > 0) {
       // People forget: every issue the old lie is less likely to surface (CONCEPT.md §5.3).
       lie.risk *= c.balance.lateExposureDecay;

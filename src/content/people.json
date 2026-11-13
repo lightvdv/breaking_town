@@ -2,6 +2,7 @@
   {
     "id": "grisha",
     "name": "Гриша",
+    "nameAcc": "Гришу",
     "role": "бармен",
     "group": "youth",
     "job": "entertainment",
@@ -12,6 +13,7 @@
   {
     "id": "zinaida",
     "name": "Зинаида Петровна",
+    "nameAcc": "Зинаиду Петровну",
     "role": "пенсионерка",
     "group": "pensioners",
     "female": true,
@@ -22,6 +24,7 @@
   {
     "id": "nikolay",
     "name": "Николай Степанович",
+    "nameAcc": "Николая Степановича",
     "role": "токарь",
     "group": "workers",
     "job": "factory",
@@ -32,6 +35,7 @@
   {
     "id": "lyuba",
     "name": "Люба",
+    "nameAcc": "Любу",
     "role": "продавщица",
     "group": "workers",
     "job": "shop",
@@ -43,6 +47,7 @@
   {
     "id": "artem",
     "name": "Артём",
+    "nameAcc": "Артёма",
     "role": "студент",
     "group": "youth",
     "bio": "Газет не читает — почти. Хочет уехать в столицу.",
@@ -52,6 +57,7 @@
   {
     "id": "irina",
     "name": "Ирина Сергеевна",
+    "nameAcc": "Ирину Сергеевну",
     "role": "учительница",
     "group": "intelligentsia",
     "female": true,
@@ -62,6 +68,7 @@
   {
     "id": "samuil",
     "name": "Самуил Аронович",
+    "nameAcc": "Самуила Ароновича",
     "role": "врач",
     "group": "intelligentsia",
     "job": "hospital",
@@ -72,6 +79,7 @@
   {
     "id": "rustam",
     "name": "Рустам",
+    "nameAcc": "Рустама",
     "role": "грузчик",
     "group": "workers",
     "job": "shop",

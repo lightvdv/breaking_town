@@ -205,7 +205,9 @@ function manageInvestigations(s: GameState): void {
   if (s.investigations.length || s.reporters.length < 2) return;
   const r = [...s.reporters].sort((a, b) => reporterOf(content, b).skills.nose - reporterOf(content, a).skills.nose)[0];
   const goal = goalOf(content);
-  startInvestigation(s, content, r, goal.type === 'drive' ? goal.group : 'workers');
+  // The strongest defender first (CONCEPT.md §5.7): dirt on them takes their brake off the paper.
+  const defender = [...s.defenders].sort((a, b) => b.level - a.level)[0];
+  startInvestigation(s, content, r, defender ? defender.id : goal.type === 'drive' ? goal.group : 'workers');
 }
 
 /**

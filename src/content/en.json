@@ -267,7 +267,15 @@
   "samuil/bio": "The town hospital's oldest doctor. Can't abide a panic.",
   "rustam/name": "Rusty",
   "rustam/role": "loader",
-  "rustam/bio": "Unloads trucks behind the shop and feeds a family of five."
+  "rustam/bio": "Unloads trucks behind the shop and feeds a family of five.",
+  "grisha/nameAcc": "Greg",
+  "zinaida/nameAcc": "Mrs. Pickering",
+  "nikolay/nameAcc": "Old Nick",
+  "lyuba/nameAcc": "Lucy",
+  "artem/nameAcc": "Artie",
+  "irina/nameAcc": "Ms. Sterling",
+  "samuil/nameAcc": "Dr. Aaronson",
+  "rustam/nameAcc": "Rusty"
  },
  "reporters": {
   "petrova/name": "Annie Price",
@@ -1171,6 +1179,27 @@
   "cityhall_party/titles/2": "Officials drink away the budget at banquets",
   "cityhall_tax/titles/0": "Town hall discusses new charges",
   "cityhall_tax/titles/1": "Town hall to bring in a courtyard cleaning tax",
-  "cityhall_tax/titles/2": "Town hall will squeeze tribute from every family"
+  "cityhall_tax/titles/2": "Town hall will squeeze tribute from every family",
+  "investigation_person/titles/0": "{p} is hiding old debts — the papers are with us",
+  "investigation_person/titles/1": "Who pays {p}? The strange patrons of a “defender of the town”",
+  "investigation_person/titles/2": "{p} is on the city hall's payroll — exclusive"
+ },
+ "defenders": {
+  "irina/title": "The “Check the Paper” club",
+  "irina/text": "Teaches people to catch the paper lying: fact-checkers check us more often.",
+  "samuil/title": "“Don't panic!”",
+  "samuil/text": "Calms his patients and neighbours: scary news hits softer.",
+  "zinaida/title": "Boycott the paper",
+  "zinaida/text": "Goes door to door talking pensioners out of reading us.",
+  "nikolay/title": "The union",
+  "nikolay/text": "The factory folk stand by each other: hunting the factory hits softer.",
+  "lyuba/title": "Word of mouth in reverse",
+  "lyuba/text": "Tells every customer the paper lies: our news spreads worse.",
+  "artem/title": "Exposés online",
+  "artem/text": "Posts breakdowns of our articles: old lies surface more often.",
+  "grisha/title": "A bar without the paper",
+  "grisha/text": "His bar laughs at the paper: young people stop reading us.",
+  "rustam/title": "Neighbourhood watch",
+  "rustam/text": "Walks the streets with neighbours at night: crime heat cools faster."
  }
 }

@@ -13,7 +13,8 @@
       "workers|intelligentsia": 40,
       "workers|youth": 25,
       "pensioners|intelligentsia": 15
-    }
+    },
+    "resistanceStartTurn": 99
   },
   "steps": [
     {

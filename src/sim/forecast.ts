@@ -9,6 +9,8 @@ export interface Forecast {
   trust: number;
   /** The city index after the next day. */
   cityIndex: number;
+  /** The town's resistance after the issue (CONCEPT.md §5.7). */
+  resistance: number;
 }
 
 /**
@@ -19,7 +21,7 @@ export interface Forecast {
  * (the stamp, the pencil, «вчерашняя ложь может всплыть»). Returns null if the decision is not allowed.
  */
 export function forecastTurn(state: GameState, c: Content, d: Decision, samples = 3): Forecast | null {
-  const sum: Forecast = { readers: 0, trust: 0, cityIndex: 0 };
+  const sum: Forecast = { readers: 0, trust: 0, cityIndex: 0, resistance: 0 };
   const json = JSON.stringify(state);
   const rehearsal: Content = { ...c, balance: { ...c.balance, checkerBase: 0 } };
   for (let i = 0; i < samples; i++) {
@@ -35,6 +37,7 @@ export function forecastTurn(state: GameState, c: Content, d: Decision, samples 
     sum.readers += report.readers.after - report.readers.before;
     sum.trust += averageTrust(copy, c) - report.trustBefore;
     sum.cityIndex += report.metricsAfter.cityIndex;
+    sum.resistance += copy.resistance;
   }
-  return { readers: sum.readers / samples, trust: sum.trust / samples, cityIndex: sum.cityIndex / samples };
+  return { readers: sum.readers / samples, trust: sum.trust / samples, cityIndex: sum.cityIndex / samples, resistance: sum.resistance / samples };
 }

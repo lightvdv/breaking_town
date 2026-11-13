@@ -100,11 +100,10 @@ export function limitSensations(state: GameState, c: Content, publish: Publicati
 export function storyTitle(c: Content, card: CardInstance, distortion: number): string {
   const tpl = templateOf(c, card.templateId);
   const truth = cardTruth(card, distortion);
-  // A story told often (debunks above all) has several headlines; each card keeps one of them.
+  // A story told often has several headlines; each card keeps one of them.
   const told = [tpl.titles[truth], ...(tpl.titleVariants?.[truth] ?? [])].filter((x): x is string => !!x);
   const raw = distortion < 0 ? (card.conflict ? tpl.calmTitle : tpl.softTitles?.[-distortion - 1]) ?? '' : told.length ? told[card.uid % told.length] : '';
-  // A debunk quotes the rival's headline.
-  return fillTitle(c, card.debunk ? raw.replace('{story}', card.debunk.title) : raw, card.conflict);
+  return fillTitle(c, raw, card.conflict);
 }
 
 /** Framing of a conflict story as an index into tensionNews: calm, as is, heat, inflate. */
@@ -147,18 +146,17 @@ function baseImpact(state: GameState, c: Content, mods: Modifiers, card: CardIns
 /**
  * A riskier telling always hits harder (CONCEPT.md §5.2а): every louder step — closer to a lie —
  * gives at least `louderGain` more than the step below in expected believers × strength, even when
- * the level is already a sensation and fewer people believe a lie. The rival's stories keep their
- * plain strength.
+ * the level is already a sensation and fewer people believe a lie.
  */
-function impactOf(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, hunt = false, louder = true): number {
+function impactOf(state: GameState, c: Content, mods: Modifiers, card: CardInstance, tpl: CardTemplate, pub: Publication, hunt = false): number {
   const impact = baseImpact(state, c, mods, card, tpl, pub, hunt);
-  if (!louder || pub.distortion <= 0) return impact;
+  if (pub.distortion <= 0) return impact;
   const effect = storyEffect(c, card, pub.distortion);
   if (!effect) return impact;
   const prevPub = { ...pub, distortion: pub.distortion - 1 };
   const prevEffect = storyEffect(c, card, prevPub.distortion);
   if (!prevEffect) return impact;
-  const prev = impactOf(state, c, mods, card, tpl, prevPub, isHuntStory(state, card, prevEffect), louder);
+  const prev = impactOf(state, c, mods, card, tpl, prevPub, isHuntStory(state, card, prevEffect));
   const now = expectedBelievers(state, c, mods, tpl, cardTruth(card, pub.distortion), pub.placement);
   const before = expectedBelievers(state, c, mods, tpl, cardTruth(card, prevPub.distortion), pub.placement);
   if (now.believers <= 0 || effect.strength <= 0) return impact;
@@ -310,8 +308,6 @@ function beliefChance(
   r: Resident,
   tpl: CardTemplate,
   truth: TruthLevel,
-  /** Trust in the outlet printing the story; the player's by default. */
-  trustIn?: number,
 ): number {
   const b = c.balance;
   let plausibility = b.plausibility[truth] + mods.plausibilityAdd;
@@ -320,7 +316,7 @@ function beliefChance(
   }
   // People do not believe dirt about their own group.
   if (tpl.target === r.group) plausibility *= b.witness[truth];
-  const trust = (trustIn ?? r.trust + mods.trustBonus) / 100;
+  const trust = (r.trust + mods.trustBonus) / 100;
   const skepticism = groupOf(c, r.group).skepticism;
   return clamp(b.beliefScale * trust * plausibility * (1 - skepticism), 0, b.maxBelief);
 }
@@ -348,9 +344,6 @@ function applyEffect(
       return true;
     case 'moodUp':
       r.mood = clamp(r.mood + e.strength * mult);
-      return true;
-    case 'debunk':
-      // Handled by `publish`, which knows the story it answers.
       return true;
     case 'moodDown':
       r.mood = clamp(r.mood - e.strength * mult);
@@ -405,11 +398,6 @@ export interface PublishedNews {
   report: PublicationReport;
 }
 
-export interface PublishOptions {
-  /** Prints a story of the rival paper: its readers see it, judged by their trust in it (CONCEPT.md §8). */
-  rival?: { card: CardInstance };
-}
-
 /** The story goes out on every owned channel; a resident sees it if any channel reaches them. */
 export function publish(
   state: GameState,
@@ -417,11 +405,9 @@ export function publish(
   rng: RngState,
   mods: Modifiers,
   pub: Publication,
-  opts: PublishOptions = {},
 ): PublishedNews {
   const b = c.balance;
-  const rival = opts.rival;
-  const card = rival?.card ?? state.hand.find((x) => x.uid === pub.cardUid);
+  const card = state.hand.find((x) => x.uid === pub.cardUid);
   if (!card) throw new Error(`Card ${pub.cardUid} is not in hand`);
   const tpl = templateOf(c, card.templateId);
   const truth = cardTruth(card, pub.distortion);
@@ -429,8 +415,7 @@ export function publish(
   const calm = pub.distortion < 0 && !!card.conflict;
   const soothed = isSoothed(card, pub.distortion);
   const effect = calm ? null : soothed ? tpl.softEffects?.[-pub.distortion - 1] ?? null : tpl.effects[truth];
-  // The rival's stories have their own strength (`rivalImpactMul`).
-  const impact = impactOf(state, c, mods, card, tpl, pub, !rival && isHuntStory(state, card, effect), !rival) * (rival ? b.rivalImpactMul[state.rival?.kind ?? 'guardian'] : 1);
+  const impact = impactOf(state, c, mods, card, tpl, pub, isHuntStory(state, card, effect));
   // Interesting stories are retold more, and viral channels spread them further.
   const retell = clamp(
     b.wordOfMouthChance * (0.5 + tpl.engagement * b.tierEngagement[effectiveTier(card, pub.distortion)]) * (1 + outletVirality(state, c)) * mods.wordOfMouthMul,
@@ -458,19 +443,15 @@ export function publish(
   const viewers: number[] = [];
   const doubters: number[] = [];
   const believers: Resident[] = [];
-  const good = effect?.type === 'moodUp' || effect?.type === 'debunk';
-  // Reactions to the rival's issue are kept apart: they neither hide ours nor make our readers leave.
-  const reactions = rival ? state.rivalReactions : state.lastReactions;
-  // A debunk brings relief from a scary story, and the fear back when it takes away a false comfort:
-  // everything «Голос города» prints comforts, and its own debunks answer our scary lies.
-  const takesComfort = card.templateId === 'debunk_guardian' || card.templateId === 'kompromat_guardian';
+  const good = effect?.type === 'moodUp';
+  const reactions = state.lastReactions;
   // A story that changes nothing (a plain fact) neither scares nor cheers: its believers just take note.
-  const mood = effect?.type === 'debunk' ? (takesComfort ? 'scared' : 'happy') : good || calm ? 'happy' : effect ? 'scared' : 'calm';
+  const mood = good || calm ? 'happy' : effect ? 'scared' : 'calm';
   report.mood = mood;
 
   const consider = (r: Resident, factor: number): boolean => {
     heard.add(r.id);
-    if (!chance(rng, beliefChance(state, c, mods, r, tpl, truth, rival ? r.rivalTrust : undefined) * factor)) {
+    if (!chance(rng, beliefChance(state, c, mods, r, tpl, truth) * factor)) {
       setReaction(reactions, r.id, 'doubted');
       report.doubted++;
       doubters.push(r.id);
@@ -482,26 +463,9 @@ export function publish(
     if (r.beliefs.length > b.maxBeliefs) r.beliefs.shift();
     // Impact, not reach, decides how hard the story hits this resident.
     const hit = impact * audienceMul(c, tpl, r.group, card);
-    if (effect && effect.type !== 'debunk') {
+    if (effect) {
       const delta = good ? b.hopePerBelief : -b.fearPerBelief;
       r.outlook = clamp(r.outlook + delta * hit);
-    }
-    // A believed debunk: the outlet it answers loses this reader's trust (the rival's when we print
-    // it, ours when the rival does), and who believed the story stops believing it — the fear or the
-    // false comfort it brought goes away (CONCEPT.md §8).
-    if (effect?.type === 'debunk') {
-      if (rival) r.trust = clamp(r.trust - b.rivalDebunkTrust * effect.strength * hit, 0, 100);
-      else r.rivalTrust = clamp(r.rivalTrust - b.debunkTrust * effect.strength * hit, 0, 100);
-    }
-    if (effect?.type === 'debunk' && card.debunk) {
-      if (r.beliefs.some((x) => x.cardUid === card.debunk!.uid)) {
-        r.beliefs = r.beliefs.filter((x) => x.cardUid !== card.debunk!.uid);
-        const comforted = card.debunk.effect === 'moodUp';
-        r.outlook = clamp(r.outlook + (comforted ? -b.hopePerBelief : b.fearPerBelief) * hit);
-        if (card.debunk.effect === 'fear') r.fearTurns = 0;
-        if (card.debunk.effect === 'protest') r.protestTurns = 0;
-        report.effects.debunk = (report.effects.debunk ?? 0) + 1;
-      }
     }
     if (effect && applyEffect(state, c, rng, r, effect, b.effectScale * hit, tpl.target)) {
       report.effects[effect.type] = (report.effects[effect.type] ?? 0) + 1;
@@ -512,8 +476,8 @@ export function publish(
   for (const r of state.residents) {
     if (r.status !== 'active') continue;
     // «Раздать газету бесплатно»: today the whole town reads the issue (CONCEPT.md §3.5в).
-    const channels = rival ? [] : cashActive(state, 'giveaway') ? state.ownedChannels : followedChannels(state, r);
-    if ((rival ? !r.rivalReader : channels.length === 0) || !chance(rng, b.placementRead[pub.placement] * (pub.placement === 2 && !rival ? frontRead : 1))) continue;
+    const channels = cashActive(state, 'giveaway') ? state.ownedChannels : followedChannels(state, r);
+    if (channels.length === 0 || !chance(rng, b.placementRead[pub.placement] * (pub.placement === 2 ? frontRead : 1))) continue;
     for (const ch of channels) report.byChannel[ch]++;
     viewers.push(r.id);
     if (consider(r, 1)) believers.push(r);
@@ -567,7 +531,7 @@ export function publish(
     const members = state.residents.filter((r) => r.status === 'active' && (r.group === a || r.group === z));
     const memberIds = new Set(members.map((r) => r.id));
     const believedInPair = state.residents.filter((r) => memberIds.has(r.id) && r.beliefs.some((x) => x.cardUid === card.uid)).length;
-    const delta = tensionShift(state, c, card, pub.distortion, impact, believedInPair / Math.max(1, members.length), rival ? undefined : mods);
+    const delta = tensionShift(state, c, card, pub.distortion, impact, believedInPair / Math.max(1, members.length), mods);
     addTension(state, key, delta);
     report.tension = { [key]: delta };
     // Calming earns the trust of both groups' readers.

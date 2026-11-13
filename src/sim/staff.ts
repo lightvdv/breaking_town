@@ -28,7 +28,7 @@ export function skilledReporter(state: GameState, c: Content, def: ReporterDef):
 /**
  * After the issue: printed stories give their authors experience; lies about them cost an honest
  * reporter's loyalty, the truth wins it back, bad news on someone's personal tie hurts them.
- * Who cannot take it any more quits — and may tell the rival about our lies.
+ * Who cannot take it any more quits — and may tell the fact-checkers about our lies.
  */
 export function updateStaff(
   state: GameState,
@@ -74,8 +74,8 @@ export function updateStaff(
     if (state.reporters.length <= 1 || staffOf(state, c, id).loyalty >= b.quitLoyalty) continue;
     removeReporter(state, id);
     quit.push(id);
-    if (state.rival && !state.rival.closed && chance(rng, b.leakChance)) {
-      // Our unexposed lies by them surface at once: the rival prints what they told it.
+    if (chance(rng, b.leakChance)) {
+      // Our unexposed lies by them surface at once: the fact-checkers print what they told them.
       const theirs = state.pendingLies.filter((x) => x.story.reporterId === id);
       if (theirs.length) leaked.push(id);
       for (const lie of theirs) exposures.push(exposeNews(state, c, mods, { ...lie.story, leaked: true }, lie.viewers));
@@ -90,14 +90,13 @@ export function removeReporter(state: GameState, id: string): void {
   state.reporters = state.reporters.filter((x) => x !== id);
   state.investigations = state.investigations.filter((x) => x.reporterId !== id);
   delete state.reporterTopics[id];
-  state.rivalWatch = state.rivalWatch.filter((x) => x !== id);
   delete state.staff[id];
 }
 
-/** The rival tries to lure our most experienced reporter (an offer we answer like any other). */
+/** A paper from the regional capital tries to lure our most experienced reporter (an offer we answer like any other). */
 export function poachTarget(state: GameState, c: Content, rng: RngState): string | null {
   const b = c.balance;
-  if (!state.rival || state.rival.closed || state.turn < b.poachStartTurn || state.reporters.length <= 1) return null;
+  if (state.turn < b.poachStartTurn || state.reporters.length <= 1) return null;
   const best = [...state.reporters]
     .filter((id) => levelOf(c, staffOf(state, c, id).xp) >= 1)
     .sort((x, y) => staffOf(state, c, y).xp - staffOf(state, c, x).xp)[0];

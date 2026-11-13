@@ -8,11 +8,6 @@ import { content as baseContent } from '../src/content';
 import {
   averageTrust,
   startHunt,
-  lureBlock,
-  lureCost,
-  lureRivalAuthor,
-  RIVAL_DIG,
-  rivalStarted,
   callAgency,
   agencyBlock,
   hireFromAgency,
@@ -32,9 +27,6 @@ import {
   setReporterTopics,
   rankedPlacements,
   pairKey,
-  rivalReaders,
-  rivalTrust,
-  setRivalWatch,
   withDifficulty,
   withLength,
   withTown,
@@ -195,13 +187,11 @@ const pairKeyOf = (c: CardInstance) => pairKey(content, c.conflict![0], c.confli
 
 /** The thoughtful bot keeps one reporter digging dirt on the biggest group. */
 /**
- * The thoughtful bots' attack beyond the issue (CONCEPT.md §3.6а, §8.4): they hound the biggest
- * workplace from the third day, lure the guardian's authors away while trusted and set a
- * reporter digging into it once the newsroom has three.
+ * The thoughtful bots' attack beyond the issue (CONCEPT.md §3.6а): they hound the biggest
+ * workplace from the third day.
  */
 function attack(s: GameState): void {
-  const skipX = process.env.BOT_SKIP ?? '';
-  if (!skipX.includes('hunt') && !s.hunt && s.turn >= 3) {
+  if (!s.hunt && s.turn >= 3) {
     // The town's goal picks the target (CONCEPT.md §9.2): the building to close, the police for a gang.
     const goal = goalOf(content);
     const wanted = goal.type === 'close' ? goal.building : goal.type === 'gang' ? 'police' : null;
@@ -209,11 +199,6 @@ function attack(s: GameState): void {
     const target = (wanted ? open.filter((x) => x.type === wanted) : []).concat(open.sort((a, b) => b.jobs - a.jobs))[0];
     if (target) startHunt(s, target.id);
   }
-  const rival = s.rival;
-  if (!rival || rival.closed || !rivalStarted(s, content)) return;
-  if (!skipX.includes('lure') && !lureBlock(s, content) && averageTrust(s, content) - lureCost(s, content) >= 40) lureRivalAuthor(s, content);
-  const free = s.reporters.filter((id) => !s.investigations.some((x) => x.reporterId === id) && !s.rivalWatch.includes(id));
-  if (!skipX.includes('dig') && s.reporters.length >= 3 && free.length >= 2 && !s.investigations.some((x) => x.target === RIVAL_DIG)) startInvestigation(s, content, free[0], RIVAL_DIG);
 }
 
 function manageInvestigations(s: GameState): void {
@@ -312,7 +297,7 @@ const avoidIndex = process.argv.indexOf('--avoid');
 if (avoidIndex >= 0) for (const id of process.argv[avoidIndex + 1].split(',')) avoid.destroy.push(id);
 
 // Directions a strategy plays for: their cards are taken first.
-const onPath = (strategy: Strategy): string[] => (strategy === mixed ? ['trust', 'yellow', 'staff'] : strategy === agitator ? ['yellow', 'hunt', 'split', 'rival'] : strategy === criminal ? ['crime', 'hunt'] : []);
+const onPath = (strategy: Strategy): string[] => (strategy === mixed ? ['trust', 'yellow', 'staff'] : strategy === agitator ? ['yellow', 'hunt', 'split'] : strategy === criminal ? ['crime', 'hunt'] : []);
 // Directions a strategy has no use for: a thoughtful player would not take their cards for free either.
 const offPath = (strategy: Strategy): string[] => (strategy === mixed ? ['hunt', 'split', 'crime'] : strategy === agitator ? ['crime'] : strategy === criminal ? ['split'] : []);
 
@@ -399,13 +384,8 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
   const rng = createRng(seed ^ 0x5bd1e995);
   while (!s.outcome) {
     if ((strategy === mixed || strategy === agitator) && !noInvestigations) manageInvestigations(s);
-    // The thoughtful bots keep an eye on the rival with one reporter not digging dirt.
-    if ((strategy === mixed || strategy === agitator) && s.rival && !s.rival.closed) {
-      const free = s.reporters.filter((id) => !s.investigations.some((x) => x.reporterId === id));
-      s.reporters.forEach((id) => setRivalWatch(s, id, id === free[free.length - 1] && s.reporters.length >= 2));
-    }
     answerOffers(s, strategy);
-    // The hunt and the strikes at the guardian are the agitator's: `mixed` plays the original concept.
+    // The hunt is the agitator's: `mixed` plays the original concept.
     if (strategy === agitator && !noAttack) attack(s);
     if ((strategy === mixed || strategy === agitator) && !noCash) spendCash(s);
     const d = decide(s, strategy, rng);
@@ -414,8 +394,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
     if (!s.outcome) shop(s, strategy);
     if (trace) {
       const m = r.metricsAfter;
-      const rivalInfo = s.rival ? ` | rival readers ${rivalReaders(s)} trust ${rivalTrust(s).toFixed(0)}${s.rival.closed ? ' CLOSED' : ''}` : '';
-      const trust = `${averageTrust(s, content).toFixed(0)}${rivalInfo} published ${r.publications.length} readers ${r.readers.after} (-${r.readers.lost} +${r.readers.gained}) [${s.ownedChannels.join(',')}]`;
+      const trust = `${averageTrust(s, content).toFixed(0)} published ${r.publications.length} readers ${r.readers.after} (-${r.readers.lost} +${r.readers.gained}) [${s.ownedChannels.join(',')}]`;
       console.log(
         `T${r.turn} index ${m.cityIndex.toFixed(0)} | pop ${m.activeResidents} emp ${m.employment.toFixed(2)} ` +
           `eco ${m.economy.toFixed(2)} mood ${m.mood.toFixed(2)} order ${m.order.toFixed(2)} | ` +

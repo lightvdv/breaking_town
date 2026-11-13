@@ -38,19 +38,19 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.reporterTopics ??= {};
     s.agencyOffer ??= [];
     s.agencyCalls ??= 0;
+    // «Голос города» left the game (CONCEPT.md §10.4б): what it kept in a save is dropped.
+    const old = s as unknown as Record<string, unknown>;
+    for (const key of ['rival', 'rivalWatch', 'ourPrinted', 'rivalReactions']) delete old[key];
     for (const r of s.residents) {
       r.fearTurns ??= 0;
-      r.rivalReader ??= false;
-      r.rivalTrust ??= 0;
+      delete (r as unknown as Record<string, unknown>).rivalReader;
+      delete (r as unknown as Record<string, unknown>).rivalTrust;
     }
     s.mode ??= 'destroy';
-    s.rival ??= null;
-    if (s.rival) s.rival.printed ??= [];
-    if (s.rival) s.rival.kind ??= 'guardian';
-    s.ourPrinted ??= [];
     s.arcs ??= [];
     s.arcsDone ??= [];
     s.offer ??= null;
+    if (s.offer && !c.offers.some((o) => o.id === s.offer!.id)) s.offer = null;
     s.deals ??= [];
     s.lastOfferTurn ??= 0;
     s.staff ??= {};
@@ -66,12 +66,11 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.shopExtras ??= 0;
     s.clashDays ??= 0;
     s.seats ??= Math.max(c.balance.startSeats, s.reporters.length);
-    s.rivalWatch ??= [];
     // Channels and upgrades that left the game (radio, TV, social networks) are dropped; the rest stays.
     s.ownedChannels = s.ownedChannels.filter((id) => c.channels.some((x) => x.id === id));
     s.upgrades = s.upgrades.filter((id) => c.upgrades.some((x) => x.id === id));
     for (const r of s.residents) r.follows = r.follows.filter((id) => s.ownedChannels.includes(id));
-    s.investigations ??= [];
+    s.investigations = (s.investigations ?? []).filter((x) => c.groups.some((g) => g.id === x.target));
     s.pendingLies ??= [];
     s.tension ??= createTension(c);
     s.reconciliation ??= null;
@@ -90,7 +89,6 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.stains ??= {};
     s.vouchers ??= 0;
     s.town ??= null;
-    s.rivalReactions ??= {};
     s.missedEvents ??= [];
     // Tasks and twists removed from the content are dropped.
     s.tasks = s.tasks.filter((t) => c.tasks.some((x) => x.id === t.id));

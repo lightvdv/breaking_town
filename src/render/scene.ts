@@ -54,8 +54,6 @@ interface Agent {
   door: Pt | null;
   icon: Sprite | null;
   pendingReaction: Reaction | null;
-  /** The reaction is to the rival's issue: its paper is shown instead of the reaction icon. */
-  pendingRival: boolean;
   reactDelay: number;
   lastStop: Stop;
   leaving: boolean;
@@ -403,16 +401,7 @@ export class CityScene {
         const agent = this.agents.get(Number(id));
         if (!agent || agent.leaving) continue;
         agent.pendingReaction = reaction;
-        agent.pendingRival = false;
         agent.reactDelay = rand(0, 0.9);
-      }
-      // Who reacted only to the rival's paper does so a little later, under its paper (CONCEPT.md §8).
-      for (const [id, reaction] of Object.entries(state.rivalReactions ?? {})) {
-        const agent = this.agents.get(Number(id));
-        if (!agent || agent.leaving || state.lastReactions[Number(id)]) continue;
-        agent.pendingReaction = reaction;
-        agent.pendingRival = true;
-        agent.reactDelay = rand(0.6, 1.8);
       }
     }
   }
@@ -467,7 +456,6 @@ export class CityScene {
       door: null,
       icon: null,
       pendingReaction: null,
-      pendingRival: false,
       reactDelay: 0,
       lastStop: 'home',
       leaving: false,
@@ -610,7 +598,7 @@ export class CityScene {
     this.agents.delete(agent.id);
   }
 
-  private startReaction(agent: Agent, reaction: Reaction, rival = false): void {
+  private startReaction(agent: Agent, reaction: Reaction): void {
     if (agent.mode === 'inside' && agent.door) agent.pos = { ...agent.door };
     agent.mode = 'react';
     agent.timer = REACTION_SECONDS;
@@ -619,7 +607,7 @@ export class CityScene {
     this.setAnim(agent, REACTION_ANIM[reaction], Math.random() < 0.5);
     agent.sprite.gotoAndPlay(0);
     agent.icon?.destroy();
-    const icon = new Sprite(this.art.fx[rival ? `rival_${this.state.rival?.kind ?? 'guardian'}` : REACTION_ICON[reaction]]);
+    const icon = new Sprite(this.art.fx[REACTION_ICON[reaction]]);
     icon.anchor.set(0.5, 1);
     this.overlay.addChild(icon);
     agent.icon = icon;
@@ -642,9 +630,8 @@ export class CityScene {
       if (agent.pendingReaction) {
         agent.reactDelay -= dt;
         if (agent.reactDelay <= 0) {
-          this.startReaction(agent, agent.pendingReaction, agent.pendingRival);
+          this.startReaction(agent, agent.pendingReaction);
           agent.pendingReaction = null;
-          agent.pendingRival = false;
         }
       }
       switch (agent.mode) {
@@ -1008,7 +995,6 @@ export class CityScene {
         const agent = this.agents.get(x.r.id);
         if (!agent || agent.leaving || agent.mode === 'react' || Math.hypot(agent.pos.x - spot.x, agent.pos.y - spot.y) > 5) continue;
         agent.pendingReaction = x.reaction;
-        agent.pendingRival = false;
         agent.reactDelay = rand(0, 0.5);
       }
       if (main) {

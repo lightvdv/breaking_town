@@ -2,7 +2,7 @@ import { tr } from '../i18n';
 import { ASSET_BASE } from '../assets';
 import { getModifiers, groupOf, reporterOf, searchLuck, skilledReporter, staffOf, type Content, type Find, type GameState, type ReporterDef } from '../sim';
 import { h, pct } from './dom';
-import { rivalNames, scopeLabels, tierLabels, topicLabels } from './text';
+import { scopeLabels, tierLabels, topicLabels } from './text';
 
 /** A reporter's state during the start-of-turn search animation (CONCEPT.md §7.3). */
 export type RepStatus = { phase: 'searching' } | { phase: 'done'; find: Find; title: string | null };
@@ -164,7 +164,7 @@ export class ReporterBar {
     for (const [id, card] of this.cards) {
       const r = reporterOf(this.c, id);
       const inv = state.investigations.find((x) => x.reporterId === id);
-      const invLine = inv ? tr('Расследует: {0} · ещё {1} {2}', inv.target === 'rival' ? tr('«Голос города»') : groupOf(this.c, inv.target).name.toLowerCase(), inv.turnsLeft, inv.turnsLeft === 1 ? tr('ход') : tr('хода')) : '';
+      const invLine = inv ? tr('Расследует: {0} · ещё {1} {2}', groupOf(this.c, inv.target).name.toLowerCase(), inv.turnsLeft, inv.turnsLeft === 1 ? tr('ход') : tr('хода')) : '';
       // Name and skills on hover; the portrait itself only shows a status dot.
       card.root.title = [
         r.name,
@@ -181,9 +181,7 @@ export class ReporterBar {
           ? ''
           : inv
             ? tr('копает {0}/{1}', inv.total - inv.turnsLeft, inv.total)
-            : state.rivalWatch.includes(id)
-              ? tr('следит')
-              : found
+            : found
                 ? `${r.female ? tr('нашла') : tr('нашёл')} ${found}`
                 : tr('пусто');
       card.name.replaceChildren(h('b', {}, r.name.split(' ').pop() ?? r.name), h('small', {}, doing));
@@ -226,6 +224,5 @@ export class ReporterBar {
 /** What the reporter is looking for: the player's topics, or their own specialties. */
 export function searchLine(state: GameState, r: ReporterDef): string {
   const assigned = state.reporterTopics[r.id] ?? [];
-  if (state.rival && !state.rival.closed && state.rivalWatch.includes(r.id)) return tr('Следит за «{0}»', rivalNames[state.rival.kind].ins);
   return assigned.length ? tr('Ищет: {0}', assigned.map((t) => topicLabels[t].toLowerCase()).join(', ')) : topicLine(r);
 }

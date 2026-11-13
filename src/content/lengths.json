@@ -17,7 +17,6 @@
       "startReporters": ["petrova", "gusev"],
       "factCheckStartTurn": 3,
       "conflictStartTurn": 3,
-      "rivalStartTurn": { "destroy": 5 },
       "arcStartTurn": 2,
       "taskStartTurn": 2,
       "twistTurn": 8,

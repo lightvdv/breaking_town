@@ -23,11 +23,8 @@ export interface Modifiers {
   trustGainMul: number;
   acquisitionMul: number;
   wordOfMouthMul: number;
-  debunkFindAdd: number;
-  seeRivalPlan: boolean;
   huntStepMul: number;
   huntFindAdd: number;
-  rivalStealMul: number;
   /** Impact of stories by topic: the paper's desks (CONCEPT.md §3.5). */
   topicImpactMul: Partial<Record<Topic, number>>;
   /** Chance a free reporter searches this topic: the desk's own reporter (CONCEPT.md §3.5). */
@@ -37,7 +34,6 @@ export interface Modifiers {
   incidentMul: number;
   crimeHeatMul: number;
   stainMul: number;
-  lureCooldownMul: number;
   cashCooldownAdd: number;
   /** Sets of three cards of one direction in force (`synergies.json`), by tag. */
   synergies: string[];
@@ -45,7 +41,7 @@ export interface Modifiers {
 }
 
 /** Fields where a smaller value is the benefit (a multiplier below 1, a negative add). */
-const LOWER_IS_BETTER = new Set<keyof UpgradeEffects>(['exposurePenaltyMul', 'checkerMul', 'churnMul', 'investigationTurnsAdd', 'lureCooldownMul', 'cashCooldownAdd']);
+const LOWER_IS_BETTER = new Set<keyof UpgradeEffects>(['exposurePenaltyMul', 'checkerMul', 'churnMul', 'investigationTurnsAdd', 'cashCooldownAdd']);
 
 /**
  * A card's effects at its collection level (CONCEPT.md §3.5б): every benefit grows by `power`
@@ -74,7 +70,7 @@ export function getModifiers(state: GameState, c: Content): Modifiers {
 
 /**
  * Modifiers of a set of upgrades at their collection levels, with the sets they make; with none,
- * those of an outlet without upgrades (the rival paper).
+ * those of an outlet without upgrades.
  */
 export function modifiersOf(c: Content, upgrades: string[], levels: Record<string, number> = {}): Modifiers {
   const m: Modifiers = {
@@ -90,11 +86,8 @@ export function modifiersOf(c: Content, upgrades: string[], levels: Record<strin
     trustGainMul: 1,
     acquisitionMul: 1,
     wordOfMouthMul: 1,
-    debunkFindAdd: 0,
-    seeRivalPlan: false,
     huntStepMul: 1,
     huntFindAdd: 0,
-    rivalStealMul: 1,
     topicImpactMul: {},
     topicFind: {},
     investigationTurnsAdd: 0,
@@ -102,7 +95,6 @@ export function modifiersOf(c: Content, upgrades: string[], levels: Record<strin
     incidentMul: 1,
     crimeHeatMul: 1,
     stainMul: 1,
-    lureCooldownMul: 1,
     cashCooldownAdd: 0,
     synergies: [],
     channels: {},
@@ -129,11 +121,8 @@ export function modifiersOf(c: Content, upgrades: string[], levels: Record<strin
     m.trustGainMul *= e.trustGainMul ?? 1;
     m.acquisitionMul *= e.acquisitionMul ?? 1;
     m.wordOfMouthMul *= e.wordOfMouthMul ?? 1;
-    m.debunkFindAdd += e.debunkFindAdd ?? 0;
-    m.seeRivalPlan ||= !!e.seeRivalPlan;
     m.huntStepMul *= e.huntStepMul ?? 1;
     m.huntFindAdd += e.huntFindAdd ?? 0;
-    m.rivalStealMul *= e.rivalStealMul ?? 1;
     for (const [t, v] of Object.entries(e.topicImpactMul ?? {}) as [Topic, number][]) m.topicImpactMul[t] = (m.topicImpactMul[t] ?? 1) * v;
     for (const [t, v] of Object.entries(e.topicFind ?? {}) as [Topic, number][]) m.topicFind[t] = Math.max(m.topicFind[t] ?? 0, v);
     m.investigationTurnsAdd += e.investigationTurnsAdd ?? 0;
@@ -141,7 +130,6 @@ export function modifiersOf(c: Content, upgrades: string[], levels: Record<strin
     m.incidentMul *= e.incidentMul ?? 1;
     m.crimeHeatMul *= e.crimeHeatMul ?? 1;
     m.stainMul *= e.stainMul ?? 1;
-    m.lureCooldownMul *= e.lureCooldownMul ?? 1;
     m.cashCooldownAdd += e.cashCooldownAdd ?? 0;
     if (e.channel) {
       const cm = m.channels[e.channel];

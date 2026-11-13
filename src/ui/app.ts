@@ -102,17 +102,8 @@ import {
   readerCount,
   reporterOf,
   startInvestigation,
-  rivalStarted,
-  RIVAL_DIG,
-  lureBlock,
-  lureCost,
-  lureWait,
-  lureRivalAuthor,
   templateOf,
-  rivalReaders,
-  rivalTrust,
   cityStateOf,
-  setRivalWatch,
   type GameMode,
   type Difficulty,
   type GameLength,
@@ -149,7 +140,6 @@ import { sound, SFX_NAMES, type MusicMood, type SfxName } from './sound';
 import { bootDone, bootFailed, bootLabel, bootProgress, preloadImages } from '../boot';
 import { aboutLine, levelNames, levelNamesGen, loyaltyOf, luckNames, noseNames, portrait, ReporterBar, skillTiers, type RepStatus } from './reporterBar';
 import {
-  rivalNames,
   toneOf,
   tensionLabels,
   effectLabels,
@@ -525,9 +515,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
   const reconcileNotice = h('section', { class: 'notice notice-peace', hidden: true, role: 'status' });
   // «Расследование готово» on the day the dirt comes in (CONCEPT.md §3.3а).
   const digNotice = h('section', { class: 'notice notice-dig', hidden: true, role: 'status' });
-  // The abilities bought in the upgrades window, as buttons right above the paper (CONCEPT.md §3.5).
-  // Save mode: what the rival paper prints today, and which of its stories we answer (CONCEPT.md §8).
-  const rivalNotice = h('section', { class: 'notice notice-rival', hidden: true, role: 'status' });
   const staffNotice = h('section', { class: 'notice notice-staff', hidden: true, role: 'status' });
   const offerNotice = h('section', { class: 'notice notice-offer', hidden: true, role: 'status' });
   // Tasks of the game and the mid-game twist (CONCEPT.md §4.8, §4.9).
@@ -542,7 +529,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     h('img', { src: `${assetBase}sprites/ui/readers.png`, alt: '', width: 16, height: 16 }),
     h('span', {}, tr('К выпуску')),
   );
-  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, issueEvents, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, huntNotice, rivalNotice, paper));
+  const issue = h('div', { class: 'issue' }, h('div', { class: 'issue-panel' }, issueHead, issueEvents, guideNote, exposureNotice, digNotice, reconcileNotice, staffNotice, offerNotice, twistNotice, tasksNotice, huntNotice, paper));
   issue.addEventListener('click', (e) => {
     if (searching) skip();
     else if (e.target === issue || e.target === issue.firstElementChild) {
@@ -1134,10 +1121,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...r.exposures.map((x) => h('li', { class: 'bad' }, tr('Разоблачили: «{0}»', x.title))),
       ...r.deals.broken.map((x) => h('li', { class: 'bad' }, tr('Сделка «{0}» сорвана', x))),
       ...r.staff.quit.map((id) => h('li', { class: 'bad' }, `${reporterOf(c, id).name} ${reporterOf(c, id).female ? tr('уволилась') : tr('уволился')}`)),
-      ...(r.rival?.cured ? [h('li', {}, tr('Опровержения разубедили {0} {1}', r.rival.cured, peopleWord(r.rival.cured)))] : []),
       ...(r.cleanStreak.bonus ? [h('li', { class: 'good' }, tr('✓ {0} выпусков подряд без лжи: +{1}% репутации', c.balance.cleanStreakDays, Math.round(r.cleanStreak.bonus)))] : []),
       ...(r.cleanStreak.broken ? [h('li', { class: 'bad' }, tr('Серия выпусков без лжи прервалась'))] : []),
-      ...(r.moleCaught ? [h('li', { class: 'bad' }, tr('Крота раскрыли: −{0}% репутации', c.balance.molePenalty))] : []),
       ...r.tasks.done.map((id) => h('li', { class: 'good' }, tr('✓ Задание выполнено: {0} ({1})', taskOf(c, id).title, prizeText(taskOf(c, id))))),
       ...r.tasks.failed.map((id) => h('li', { class: 'bad' }, tr('✗ Задание провалено: {0}', taskOf(c, id).title))),
       ...twistLines(r).map((x) => h('li', {}, x)),
@@ -1616,7 +1601,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
       .map((g) => groupOf(c, g).name.toLowerCase())
       .join(sep);
   const turnsWord = (n: number) => (n === 1 ? tr('ход') : n < 5 ? tr('хода') : tr('ходов'));
-  const peopleWord = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? tr('человека') : tr('человек'));
 
   /** The mayor elected mid-game, if any. */
   const mayorName = () => {
@@ -1659,7 +1643,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** The tasks the plaque last showed: new ones always arrive folded. */
   let shownTasks: string | null = null;
 
-  /** The game's tasks: folded to one line by default, like the rival's plaque (CONCEPT.md §4.8). */
+  /** The game's tasks: folded to one line by default, like the newsroom's plaque (CONCEPT.md §4.8). */
   function renderTasks(): void {
     const list = state.tasks.filter((t) => t.status === 'active' || t.endTurn === state.turn - 1);
     const key = state.tasks.filter((t) => t.status === 'active').map((t) => `${t.id}@${t.untilTurn}`).join(',');
@@ -1683,12 +1667,12 @@ export function mountApp(root: HTMLElement, base: Content): void {
     tasksNotice.classList.toggle('folded', !settings.tasksOpen);
     if (!settings.tasksOpen) {
       tasksNotice.replaceChildren(
-        h('button', { class: 'rival-toggle', onclick: toggle(true) }, icon, h('span', {}, giver), h('span', { class: 'rival-count task-count' }, doneCount), h('span', { class: 'chip-arrow' }, '▾')),
+        h('button', { class: 'plaque-toggle', onclick: toggle(true) }, icon, h('span', {}, giver), h('span', { class: 'plaque-count task-count' }, doneCount), h('span', { class: 'chip-arrow' }, '▾')),
       );
       return;
     }
     tasksNotice.replaceChildren(
-      h('div', { class: 'notice-head' }, icon, h('b', {}, giver), h('span', { class: 'rival-stats' }, tr('выполнено {0}', doneCount)), h('button', { class: 'rival-hide', title: tr('Свернуть'), 'aria-label': tr('Свернуть'), onclick: toggle(false) }, '▴')),
+      h('div', { class: 'notice-head' }, icon, h('b', {}, giver), h('span', { class: 'plaque-stats' }, tr('выполнено {0}', doneCount)), h('button', { class: 'plaque-hide', title: tr('Свернуть'), 'aria-label': tr('Свернуть'), onclick: toggle(false) }, '▴')),
       h(
         'ul',
         { class: 'task-list' },
@@ -1720,7 +1704,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         ? h('p', { class: 'notice-note twist-lead' }, tr('Если бы голосовали сегодня, победил бы {0}: город {1}.', def.candidates[electionLeader(state, c) === 'peacemaker' ? 0 : 1], electionLeader(state, c) === 'peacemaker' ? tr('спокоен') : tr('напуган')))
         : null;
     twistNotice.replaceChildren(
-      h('div', { class: 'notice-head' }, icon, h('b', {}, def.title), h('span', { class: 'rival-stats' }, when)),
+      h('div', { class: 'notice-head' }, icon, h('b', {}, def.title), h('span', { class: 'plaque-stats' }, when)),
       h('p', { class: 'notice-note' }, def.text),
       ...(lead ? [lead] : []),
     );
@@ -2083,7 +2067,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
             const r = reporterOf(c, id);
             const a = r.female ? tr('а') : '';
             return st.leaked.includes(id)
-              ? tr('{0} уволил{1} из-за лжи в газете — и рассказал{2} конкурентам, что мы врали.', r.name, r.female ? tr('ась') : tr('ся'), a)
+              ? tr('{0} уволил{1} из-за лжи в газете — и рассказал{2} фактчекерам, что мы врали.', r.name, r.female ? tr('ась') : tr('ся'), a)
               : tr('{0} не выдержал{1} и уволил{2}.', r.name, a, r.female ? tr('ась') : tr('ся'));
           }),
         ]
@@ -2097,15 +2081,15 @@ export function mountApp(root: HTMLElement, base: Content): void {
       render();
     };
     staffNotice.classList.toggle('folded', !settings.staffOpen);
-    // Folded by default: one line with the first news, like the rival's plaque; the choice is remembered.
+    // Folded by default: one line with the first news, like the tasks' plaque; the choice is remembered.
     if (!settings.staffOpen) {
       staffNotice.replaceChildren(
         h(
           'button',
-          { class: 'rival-toggle', onclick: toggle(true) },
+          { class: 'plaque-toggle', onclick: toggle(true) },
           h('b', {}, tr('Редакция')),
           h('span', { class: 'staff-first' }, lines[0]),
-          lines.length > 1 ? h('span', { class: 'rival-count' }, tr('ещё {0}', lines.length - 1)) : null,
+          lines.length > 1 ? h('span', { class: 'plaque-count' }, tr('ещё {0}', lines.length - 1)) : null,
           h('span', { class: 'chip-arrow' }, '▾'),
         ),
       );
@@ -2116,7 +2100,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         'div',
         { class: 'notice-head' },
         h('b', {}, tr('Редакция')),
-        h('button', { class: 'rival-hide', title: tr('Свернуть'), 'aria-label': tr('Свернуть'), onclick: toggle(false) }, '▴'),
+        h('button', { class: 'plaque-hide', title: tr('Свернуть'), 'aria-label': tr('Свернуть'), onclick: toggle(false) }, '▴'),
         h(
           'button',
           {
@@ -2176,148 +2160,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('button', { onclick: answer(false) }, poach ? tr('Отпустить') : tr('Отказаться')),
         offerError ? h('span', { class: 'bad' }, offerError) : null,
       ),
-    );
-  }
-
-  /**
-   * Save mode (CONCEPT.md §8): what the rival printed in the last days, which of it we can still
-   * answer, its readers and trust, and how our debunks went yesterday.
-   */
-  function renderRival(): void {
-    const rival = state.rival;
-    if (!rival) {
-      rivalNotice.hidden = true;
-      return;
-    }
-    rivalNotice.classList.toggle('notice-guardian', rival.kind === 'guardian');
-    const r = report?.rival;
-    const notes: string[] = [];
-    if (r?.cured) notes.push(tr('Вчера опровержения разубедили {0} {1}.', r.cured, peopleWord(r.cured)));
-    const rn = rivalNames[rival.kind];
-    for (const p of r?.publications ?? []) if (p.exposed) notes.push(tr('«{0}» пойман на лжи: «{1}».', rn.short, p.title));
-    // Nothing printed yet and nothing to tell: no notice at all.
-    rivalNotice.hidden = !rival || searching || !!state.outcome || (!rival.closed && !rival.printed.length && !notes.length);
-    if (!rival || rivalNotice.hidden) return;
-    const icon = h('img', { src: `${assetBase}sprites/ui/guardian.png`, alt: '', width: 24, height: 24 });
-    const toggle = (open: boolean) => () => {
-      settings.rivalOpen = open;
-      saveSettings(settings);
-      render();
-    };
-    rivalNotice.classList.toggle('folded', !settings.rivalOpen);
-    // Folded by default: one line with how many stories it printed yesterday (CONCEPT.md §7.3).
-    if (!settings.rivalOpen) {
-      const fresh = rival.printed.filter((p) => p.turn === state.turn - 1).length;
-      rivalNotice.replaceChildren(
-        h(
-          'button',
-          { class: 'rival-toggle', onclick: toggle(true) },
-          icon,
-          h('span', {}, rival.closed ? tr('«{0}» закрылся', rn.name) : `${quoted(rn.name)}`),
-          fresh ? h('span', { class: 'rival-count' }, `${fresh} ${fresh === 1 ? tr('новая') : fresh < 5 ? tr('новые') : tr('новых')}`) : null,
-          h('span', { class: 'chip-arrow' }, '▾'),
-        ),
-      );
-      return;
-    }
-    const inIssue = new Set(state.hand.filter((x) => x.debunk && drafts.get(x.uid)?.publish).map((x) => x.debunk!.uid));
-    const inHand = new Set(state.hand.filter((x) => x.debunk).map((x) => x.debunk!.uid));
-    const status = (uid: number, debunked: boolean, exposed?: boolean) =>
-      debunked ? tr('✓ опровергнуто') : exposed ? tr('✓ пойман на лжи') : inIssue.has(uid) ? tr('опровержение в выпуске') : inHand.has(uid) ? tr('опровержение не в выпуске') : '';
-    rivalNotice.replaceChildren(
-      h(
-        'div',
-        { class: 'notice-head' },
-        icon,
-        h('b', {}, rival.closed ? tr('«{0}» закрылся', rn.name) : `${quoted(rn.name)}`),
-        h('span', { class: 'rival-stats' }, tr('читателей {0} · доверие {1}%', rivalReaders(state), Math.round(rivalTrust(state)))),
-        h('button', { class: 'rival-hide', title: tr('Свернуть'), 'aria-label': tr('Свернуть'), onclick: toggle(false) }, '▴'),
-      ),
-      ...(rival.printed.length
-        ? [
-            h(
-              'ul',
-              { class: 'rival-list' },
-              ...rival.printed.map((p) =>
-                h(
-                  'li',
-                  { class: p.debunked || p.exposed || inIssue.has(p.uid) ? 'answered' : '' },
-                  h('span', { class: 'rival-place' }, placementLabels[p.placement].toLowerCase()),
-                  h('span', { class: 'rival-title' }, `${quoted(p.title)}`),
-                  h('span', { class: 'rival-answer' }, status(p.uid, p.debunked, p.exposed)),
-                ),
-              ),
-            ),
-          ]
-        : []),
-      // The mole at the rival's: what it prints today, with ours (CONCEPT.md §3.5).
-      ...(getModifiers(state, c).seeRivalPlan && rival.plan.length
-        ? [
-            h('p', { class: 'notice-note mole-line' }, tr('🕵 Крот: сегодня «') + rn.short + tr('» напечатает:')),
-            h(
-              'ul',
-              { class: 'rival-list mole-list' },
-              ...rival.plan.map((x) => h('li', {}, h('span', { class: 'rival-place' }, placementLabels[x.placement].toLowerCase()), h('span', { class: 'rival-title' }, `${quoted(storyTitle(c, x.card, x.distortion))}`))),
-            ),
-          ]
-        : []),
-      ...notes.map((t) => h('p', { class: 'notice-note' }, t)),
-      ...(rival.kind === 'guardian' && !rival.closed && rivalStarted(state, c) ? [rivalStrikes()] : []),
-    );
-  }
-
-  /**
-   * Strikes at «Голос города» (CONCEPT.md §8.4): lure its author away, set a reporter digging into its
-   * money; a gripping issue of ours takes its readers by itself.
-   */
-  function rivalStrikes(): HTMLElement {
-    const block = lureBlock(state, c);
-    const waitDays = Math.max(0, (state.rival?.lureReady ?? 0) - state.turn);
-    const lureWhy: Record<string, string> = {
-      'nobody left': tr('переманивать больше некого'),
-      'no trust': tr('не хватит репутации'),
-      waiting: tr('следующий автор будет готов уйти через {0} {1}', waitDays, daysWord(waitDays)),
-      'not yet': tr('он ещё не выходит'),
-      'no rival': '',
-    };
-    const digging = state.investigations.find((x) => x.target === RIVAL_DIG);
-    const free = state.reporters.filter((id) => !state.investigations.some((x) => x.reporterId === id));
-    const surname = (id: string) => reporterOf(c, id).name.split(' ').pop()!;
-    return h(
-      'div',
-      { class: 'rival-strikes' },
-      h('span', { class: 'strikes-label', title: tr('Интересный выпуск сам перехватывает его читателей: кого зацепила наша новость, тот чаще бросает «Голос»') }, tr('Ударить по «Голосу»:')),
-      h(
-        'button',
-        {
-          class: 'ghost strike',
-          'data-tut': 'lure',
-          disabled: !!block,
-          title: block ? lureWhy[block] : tr('Его ведущий автор уходит к нам: «Голос» печатает на одну новость в день меньше, его читатели доверяют ему меньше. Следующего придётся ждать {0} {1}.', lureWait(state, c), daysWord(lureWait(state, c))),
-          onclick: actNow(() => lureRivalAuthor(state, c)),
-        },
-        block === 'waiting' ? tr('Сманить автора · через {0} {1}', waitDays, daysWord(waitDays)) : tr('Сманить автора · репутация −{0}', lureCost(state, c)),
-      ),
-      digging
-        ? h('span', { class: 'strike-note' }, tr('{0} копает под «Голос» {1}/{2}', surname(digging.reporterId), digging.total - digging.turnsLeft, digging.total))
-        : free.length > 1 || (free.length === 1 && state.reporters.length > 1)
-          ? h(
-              'span',
-              { class: 'strike-dig' },
-              tr('Копать компромат:'),
-              ...free.map((id) =>
-                h(
-                  'button',
-                  {
-                    class: 'ghost strike',
-                    title: tr('{0} несколько дней не ищет новостей и приносит документы о том, кто платит «Голосу». Поверившие перестают ему доверять.', surname(id)),
-                    onclick: actNow(() => startInvestigation(state, c, id, RIVAL_DIG)),
-                  },
-                  surname(id),
-                ),
-              ),
-            )
-          : null,
     );
   }
 
@@ -2463,7 +2305,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const p = previewPublication(state, c, mods, { cardUid: card.uid, placement: d.placement, distortion: d.distortion });
     const audience = tpl.audience?.length ? tpl.audience.map((g) => groupOf(c, g).name.toLowerCase()).join(', ') : tr('все жители');
     const investigation = tpl.source === 'investigation';
-    const target = tpl.target === RIVAL_DIG ? tr('«Голос города»') : tpl.target ? groupOf(c, tpl.target).name : '';
+    const target = tpl.target ? groupOf(c, tpl.target).name : '';
     const reporter = reporterOf(c, card.reporterId);
     const open = details.has(card.uid);
     // Distortion raises the tier, and the item restyles itself at once (CONCEPT.md §3.1).
@@ -2474,7 +2316,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
       render();
     };
 
-    const sourceLabel = { event: tr('событие'), fact: tr('факт'), rumor: tr('слух'), investigation: tr('компромат на группу «{0}»', target), debunk: tr('опровержение'), offer: tr('документы от анонима') }[tpl.source];
+    const sourceLabel = { event: tr('событие'), fact: tr('факт'), rumor: tr('слух'), investigation: tr('компромат на группу «{0}»', target), offer: tr('документы от анонима') }[tpl.source];
     // Truth menu next to the headline (CONCEPT.md §7.3); the place is changed by dragging or by a tap
     // on the story and then on a place in the paper.
     const menuOpen = truthMenuFor === card.uid;
@@ -2671,7 +2513,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     const children: (HTMLElement | null)[] = [
       investigation ? h('div', { class: 'kicker' }, tr('Расследование · эксклюзив · {0}', target.toLowerCase())) : null,
       card.expert ? h('div', { class: 'kicker expert-kicker', title: tr('Событие по специальности репортёра: на уровень сильнее') }, tr('Эксклюзив · {0} знает тему', reporter.name)) : null,
-      card.debunk ? h('div', { class: 'kicker debunk-kicker' }, tr('Опровержение · «{0}»', rivalNames.guardian.name)) : null,
       pair ? h('div', { class: `kicker conflict-kicker level-${tensionLevel(c, state.tension[pair])}` }, tr('Конфликт · {0}', pairNames)) : null,
       tpl.source === 'offer' ? h('div', { class: 'kicker offer-kicker' }, tr('Документы от анонима · подлинность не проверена')) : null,
       brokenDeal ? h('div', { class: 'kicker deal-kicker' }, tr('Нарушит сделку «{0}»', offerOf(c, brokenDeal.id).title)) : null,
@@ -2742,8 +2583,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * The place a story is about: its name for a bar or a shop, and the hunt — «Травля · удар +40%» on
    * a story about the target, a «Начать травлю» button on a story about any other workplace.
    */
-  /** Whom an investigation digs under, in the genitive: a group or «Голос города» (CONCEPT.md §8.4). */
-  const digWhom = (target: string) => (target === RIVAL_DIG ? tr('«Голос города»') : groupOf(c, target).forms.manyGen);
+  /** Whom an investigation digs under, in the genitive. */
+  const digWhom = (target: string) => groupOf(c, target).forms.manyGen;
 
   const actNow = (f: () => void) => () => {
     f();
@@ -2818,7 +2659,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   /** «≈12 поверят · боятся выходить» under a framing in the truth menu, in the goal's colours (CONCEPT.md §7.3). */
   function effectLine(p: PublicationPreview, huntBase: number | null = null, scaled?: { step: 0 | 1 | 2; ratio: number | null }): HTMLElement {
     const short = effectShort(c, p.effect, p.impact, scaled?.step);
-    const helps = p.effect === null ? 0 : p.effect.type === 'moodUp' ? 1 : p.effect.type === 'debunk' ? 0 : -1;
+    const helps = p.effect === null ? 0 : p.effect.type === 'moodUp' ? 1 : -1;
     const toGoal = helps === 0 ? 0 : (helps < 0) === (state.mode === 'destroy') ? 1 : -1;
     const n = Math.round(p.believers);
     // In a hunt: how hard this telling hits the target, next to the story told as it is.
@@ -2852,7 +2693,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('span', { class: 'hunt-icon', 'aria-hidden': 'true' }, '🎯'),
         h('b', {}, tr('Травля: {0}', name)),
         pips,
-        h('span', { class: 'rival-stats' }, bonus ? tr('удар +{0}%', bonus) : tr('ударьте сегодня')),
+        h('span', { class: 'plaque-stats' }, bonus ? tr('удар +{0}%', bonus) : tr('ударьте сегодня')),
         h('button', { class: 'ghost hunt-stop', title: tr('Прекратить травлю'), onclick: actNow(() => endHunt(state)) }, tr('Прекратить')),
       ),
       h(
@@ -3289,8 +3130,8 @@ export function mountApp(root: HTMLElement, base: Content): void {
       ...state.reporters.map((id) =>
         row(
           id,
-          state.rivalWatch.includes(id) && state.rival && !state.rival.closed ? tr('👁 следит за «{0}»', rivalNames[state.rival.kind].ins) : '',
-          // Topics and the «Компромат» list (digging, watching the rival) are right on the card; the last one cannot be fired.
+          '',
+          // Topics and the «Компромат» list are right on the card; the last one cannot be fired.
           h(
             'span',
             { class: 'team-actions' },
@@ -3336,7 +3177,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
     );
 
   /**
-   * A reporter's work in «Редакция» (CONCEPT.md §3.3, §3.3а): search topics, watching the rival, and
+   * A reporter's work in «Редакция» (CONCEPT.md §3.3, §3.3а): search topics and
    * digging — the list of whom to dig into opens under the card, what each would bring behind «?».
    */
   function teamTools(id: string): HTMLElement[] {
@@ -3403,8 +3244,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   /**
-   * Whom to dig into: every group and the rival paper; a press sets the reporter digging. Under them,
-   * watching the rival: the reporter keeps searching but brings debunks of its fresh lies more often.
+   * Whom to dig into: every group; a press sets the reporter digging.
    */
   function digMenu(id: string): HTMLElement {
     const turns = investigationTurns(c, skilledReporter(state, c, reporterOf(c, id)));
@@ -3435,36 +3275,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
       { class: 'dig-menu' },
       h('p', { class: 'dig-menu-head' }, tr('На кого копать? {0} {1} репортёр не пишет новостей.', turns, turnsWord(turns))),
       ...c.groups.map((g) => option(g.id, g.name, () => digPromise(g.id, id))),
-      // One reporter at a time digs into the rival paper.
-      state.rival && !state.rival.closed && !state.investigations.some((x) => x.target === RIVAL_DIG)
-        ? option(RIVAL_DIG, tr('«Голос города»'), () => h('div', { class: 'dig-promise' }, h('p', { class: 'dig-effect' }, tr('Документы о том, кто платит «Голосу». Поверившие перестают ему доверять.'))))
-        : null,
-      state.rival && !state.rival.closed ? watchRow(id) : null,
-    );
-  }
-
-  /** «Следить за «Голосом»» in the «Компромат» list: on or off, how it works behind «?». */
-  function watchRow(id: string): HTMLElement {
-    const rival = state.rival!;
-    const on = state.rivalWatch.includes(id);
-    const key = `watch:${id}`;
-    const b = c.balance;
-    return h(
-      'div',
-      { class: 'dig-option dig-watch' },
-      h(
-        'button',
-        { class: `dig-pick${on ? ' on' : ''}`, 'aria-pressed': String(on), disabled: !!state.outcome, onclick: teamAct(() => setRivalWatch(state, id, !on)) },
-        on ? tr('👁 Следит за «{0}» — перестать', rivalNames[rival.kind].ins) : tr('👁 Не копать, а следить за «{0}»', rivalNames[rival.kind].ins),
-      ),
-      infoButton(key, tr('Что это даст?')),
-      openInfo.has(key)
-        ? h(
-            'div',
-            { class: 'dig-promise' },
-            h('p', { class: 'dig-effect' }, tr('Репортёр по-прежнему ищет новости, но с шансом {0} приносит опровержение свежей лжи «{1}» вместо обычной новости; остальные находят его случайно, с шансом {2}.', pct(b.assignFocus), rivalNames[rival.kind].gen, pct(b.debunkFindChance))),
-          )
-        : null,
     );
   }
 
@@ -3788,7 +3598,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
    * them at work: desks by topic, the yellow ones for frightening stories, hunt cards in a hunt.
    */
   function boostLine(card: CardInstance, tpl: CardTemplate, p: PublicationPreview): HTMLElement | null {
-    const harmful = !!p.effect && p.effect.type !== 'moodUp' && p.effect.type !== 'debunk';
+    const harmful = !!p.effect && p.effect.type !== 'moodUp';
     const hunted = p.huntHit !== null;
     const names = c.upgrades
       .filter((u) => state.upgrades.includes(u.id))
@@ -4787,7 +4597,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
     renderStaff();
     renderLetters();
     renderOffer();
-    renderRival();
     renderTwist();
     renderTasks();
     renderHunt();
@@ -4819,7 +4628,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
   /**
    * The plaques over the paper start folded to their head line (CONCEPT.md §7.3); a press on the head
-   * unfolds one for this session. The tasks, the rival and the newsroom fold by their own settings.
+   * unfolds one for this session. The tasks and the newsroom fold by their own settings.
    */
   function foldPlaques(): void {
     const plaques: [HTMLElement, string][] = [
@@ -5074,7 +4883,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
   }
 
   /**
-   * The chosen town: its picture, type, special rule, the rival, who comes along, and its three passes
+   * The chosen town: its picture, type, special rule, who comes along, and its three passes
    * (CONCEPT.md §9.1) — each with its main goal, days, best stars and a button; a pass opens once
    * the one before it is won.
    */
@@ -5089,7 +4898,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
       h('img', { src: `${assetBase}${townArt(t)}`, alt: '', width: 48, height: 48 }),
     );
     const pop = t.balance?.population ?? base.balance.population;
-    const rival = rivalNames.guardian.name;
     const who = camp.carry ?? { id: base.balance.startReporters[0], xp: 0 };
     const rep = reporterOf(base, who.id);
     const pass = (level: Difficulty) => {
@@ -5119,8 +4927,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
         h('span', {}, tr('Сложность')),
         // The lit bars take the town's colour: green for the easiest, red for the hardest.
         h('span', { class: `town-bars lvl-${t.stars}` }, ...[1, 2, 3, 4, 5].map((k) => h('i', { class: k <= t.stars ? 'on' : '' }))),
-        h('span', {}, tr('Против вас')),
-        h('span', {}, `${quoted(rival)}`),
         h('span', {}, tr('Звёзды')),
         h('span', { class: 'town-best' }, tr('★ {0} из 9', townStars(camp, t.id))),
       ),
@@ -5572,7 +5378,7 @@ export function mountApp(root: HTMLElement, base: Content): void {
         tr('Цель: разрушить город'),
         tr('Вы — газета холдинга «Медиа-Плюс». За {0} {1} нужно {2}: пугайте жителей, ссорьте их между собой, оставляйте без работы.', b.turnLimit, daysWord(b.turnLimit), goalText),
         list(
-          stage ? tr('Победа: город дошёл до стадии «{0}» — или закрылся «Голос города», честная газета, которая успокаивает людей и опровергает вашу ложь.', stageBelow(b.winCityIndex)) : tr('Победа: главная цель города выполнена. Только она и побеждает.'),
+          stage ? tr('Победа: город дошёл до стадии «{0}».', stageBelow(b.winCityIndex)) : tr('Победа: главная цель города выполнена. Только она и побеждает.'),
           tr('Поражение: потеря репутации — вам перестали верить — или прошли {0} {1}, а цель не выполнена.', b.turnLimit, daysWord(b.turnLimit)),
           tr('В кампании и в свободной игре у города своя главная цель: закрыть завод, выжить молодёжь, довести до драк, отдать улицы банде или стереть город до «Руин». Она написана на месте полоски цели.'),
           tr('В свободной игре город вы собираете сами: размер, уклад, правило и цель. Какой бы он ни вышел, сложность остаётся той, что выбрана: игра подстраивает силу новостей, а если её не хватает — число дней.'),
@@ -5591,7 +5397,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
         ...(Object.keys(REACTION_ICON) as Reaction[]).map((r) =>
           h('span', {}, h('img', { src: `${assetBase}sprites/fx/${REACTION_ICON[r]}.png`, alt: '', width: 16, height: 16 }), reactionLabels[r]),
         ),
-        h('span', {}, h('img', { src: `${assetBase}sprites/fx/rival_guardian.png`, alt: '', width: 16, height: 16 }), tr('отозвался на «{0}»', rivalNames.guardian.name)),
       ),
       h('h3', { class: 'section' }, tr('Что беречь')),
       block('ui/reputation', tr('Репутация'), tr('Правда её поднимает, пойманная ложь обрушивает. Чем выше репутация, тем охотнее вам верят и тем реже проверяют.')),
@@ -5600,7 +5405,6 @@ export function mountApp(root: HTMLElement, base: Content): void {
       block('ui/folder', tr('Сводка и карты'), tr('«Сводка» (папка вверху; на телефоне — вкладки «Карты», «Редакция», «Сводка» и «Приёмы» внизу экрана, а «В печать» — большая кнопка посередине между ними) — карты газеты, читатели, репутация, город и жители; плитки показателей открывают её на своей вкладке. Каждые {0} дня совет директоров присылает на выбор три карты — одну можно взять, и окно в этот день открывается само (кроме обучения). Не хотите ждать — запросите ещё три: первый раз бесплатно, дальше за репутацию ({1}, каждый следующий запрос до очередного предложения дороже на {2}). Новые карты в коллекцию покупают между партиями: кнопка «Карты — купить и улучшить» на главном экране и «Карты» на карте кампании, за связи (✦), которые даёт каждая партия.', b.shopRefreshDays, b.shopRequestTrust, b.shopRequestTrustStep)),
       h('h3', { class: 'section' }, tr('Чем ещё бить по городу')),
       block('groups/workers', tr('Ссорьте группы'), tr('Конфликтные новости можно подогреть или успокоить. Вражда групп бьёт по городу сильнее всего; когда станет совсем жарко, вмешается мэрия.')),
-      block('ui/guardian', tr('«Голос города»'), tr('С {0}-го дня честная газета успокаивает людей и опровергает вашу ложь. Что она напечатала, видно над выпуском: там же можно сманить её автора — за репутацию, и следующего придётся подождать. Репортёр, посланный следить за ней, приносит опровержения, а копая на неё, найдёт компромат. Без читателей и доверия она закроется.', b.rivalStartTurn.destroy)),
       list(
         tr('🎯 Травля: кнопка «Травить» у новости о заводе, магазине или другом месте работы — или в «Сводке», вкладка «Город», где видны все такие места. Репортёры приносят о нём разные истории, по очереди; новости об этом месте бьют всё сильнее, если бить каждый день, люди уходят, и оно закрывается. Цель одна: пока идёт травля, другое место не выбрать — сначала «Прекратить» на её плашке над газетой.'),
         tr('Компромат: нажмите на портрет (на телефоне — вкладка «Редакция»), в карточке репортёра — «Компромат» и выберите, на кого копать. Репортёр несколько дней не пишет новостей, зато приносит эксклюзив, который настраивает город против группы.'),

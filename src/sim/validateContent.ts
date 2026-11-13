@@ -75,12 +75,12 @@ export function validateContent(c: Content): string[] {
     if (t.source === 'event' && t.baseTruth !== 0) errors.push(`card ${t.id}: events must be true`);
     if (t.source === 'fact' && t.baseTruth !== 0) errors.push(`card ${t.id}: facts must be true`);
     if (t.source === 'fact' && t.cityEffect) errors.push(`card ${t.id}: facts do not change the city (use an event)`);
-    if (!['event', 'fact', 'rumor', 'investigation', 'debunk', 'offer'].includes(t.source)) errors.push(`card ${t.id}: unknown source ${t.source}`);
+    if (!['event', 'fact', 'rumor', 'investigation', 'offer'].includes(t.source)) errors.push(`card ${t.id}: unknown source ${t.source}`);
     if (t.scope === 'global' && (t.witness || t.cityEffect)) errors.push(`card ${t.id}: global news cannot have witnesses or city effects`);
     if (t.scope && t.scope !== 'local' && t.scope !== 'global') errors.push(`card ${t.id}: unknown scope ${t.scope}`);
     for (const g of t.audience ?? []) if (!c.groups.some((x) => x.id === g)) errors.push(`card ${t.id}: unknown audience ${g}`);
     const stigma = t.effects.some((e) => e?.type === 'stigma');
-    if (t.source === 'investigation' && (!t.target || (t.target !== 'rival' && !c.groups.some((g) => g.id === t.target)))) {
+    if (t.source === 'investigation' && (!t.target || !c.groups.some((g) => g.id === t.target))) {
       errors.push(`card ${t.id}: investigation needs a valid target group`);
     }
     if (stigma && !t.target) errors.push(`card ${t.id}: stigma effect needs a target group`);
@@ -134,12 +134,6 @@ export function validateContent(c: Content): string[] {
       if (n < 8) errors.push(`only ${n} ${scope} ${kind} stories, need at least 8`);
     }
   }
-  for (const [kind, affinity] of Object.entries(b.rivalAffinity)) {
-    for (const id of Object.keys(affinity)) if (!c.groups.some((g) => g.id === id)) errors.push(`rivalAffinity.${kind}: unknown group ${id}`);
-  }
-  for (const id of ['debunk_guardian', 'guardian_debunk']) {
-    if (!c.cards.some((t) => t.id === id && t.source === 'debunk')) errors.push(`missing debunk template ${id}`);
-  }
   // Story arcs (CONCEPT.md §3.1а): each stage and ending is a template of that arc.
   unique('arc', c.arcs.map((x) => x.id));
   for (const a of c.arcs) {
@@ -150,7 +144,7 @@ export function validateContent(c: Content): string[] {
       const t = c.cards.find((x) => x.id === id);
       if (!t) errors.push(`arc ${a.id}: unknown template ${id}`);
       else if (t.arc !== a.id || t.arcStage !== stage) errors.push(`card ${id}: must be arc ${a.id} stage ${stage}`);
-      else if (t.conflict || t.scope === 'global' || t.source === 'investigation' || t.source === 'debunk') errors.push(`card ${id}: arc stages are local events, facts or rumors`);
+      else if (t.conflict || t.scope === 'global' || t.source === 'investigation') errors.push(`card ${id}: arc stages are local events, facts or rumors`);
     }
   }
   // Difficulty levels (CONCEPT.md §4.6): the three levels, overriding only known balance numbers.
@@ -205,8 +199,8 @@ export function validateContent(c: Content): string[] {
   }
   for (const syn of c.synergies) {
     if (c.upgrades.filter((u) => u.tags?.includes(syn.tag)).length < syn.count) errors.push(`synergy ${syn.tag}: fewer cards than it needs`);
-    // Every set but «Газетная война» can be gathered from the starter collection (CONCEPT.md §3.5б).
-    if (syn.tag !== 'rival' && c.upgrades.filter((u) => u.starter && u.tags?.includes(syn.tag)).length < syn.count) errors.push(`synergy ${syn.tag}: the starter collection cannot gather it`);
+    // Every set can be gathered from the starter collection (CONCEPT.md §3.5б).
+    if (c.upgrades.filter((u) => u.starter && u.tags?.includes(syn.tag)).length < syn.count) errors.push(`synergy ${syn.tag}: the starter collection cannot gather it`);
   }
   for (const u of c.upgrades) {
     if (u.ability && !(u.ability.cooldown >= 1)) errors.push(`upgrade ${u.id}: an ability needs a cooldown ≥ 1`);

@@ -2,12 +2,12 @@ import tutorialJson from '../content/tutorial.json';
 import { localized } from '../content';
 
 const tutorial = localized('tutorial', tutorialJson);
-import { cardTruth, lureBlock, templateOf, tipConflict, type Balance, type CardInstance, type Content, type Decision, type Difficulty, type GameLength, type GameState, type TurnReport } from '../sim';
+import { cardTruth, templateOf, tipConflict, type Balance, type CardInstance, type Content, type Decision, type Difficulty, type GameLength, type GameState, type TurnReport } from '../sim';
 
 /**
  * The tutorial mission (CONCEPT.md §7.3 «Обучение»): an easy short game where the player is given one
  * task at a time — hire a reporter, frame a story, buy an upgrade, a run of truth, dig, stir a
- * conflict, hunt, strike the rival — and the button to press glows. A step is done by doing it in the
+ * conflict, hunt — and the button to press glows. A step is done by doing it in the
  * game; any step can be skipped. The texts live in `content/tutorial.json`.
  */
 
@@ -54,14 +54,10 @@ export interface TutorialView {
 
 const isStigma = (v: TutorialView, x: CardInstance) => templateOf(v.c, x.templateId).source === 'investigation' && !!templateOf(v.c, x.templateId).target;
 const huntable = (v: TutorialView, x: CardInstance) => x.building !== undefined && !!v.state.buildings[x.building]?.open && v.state.buildings[x.building].jobs > 0;
-const lureNow = (v: TutorialView) => {
-  const block = lureBlock(v.state, v.c);
-  return block === null || block === 'no trust' || block === 'waiting';
-};
 
 interface StepLogic {
   done: (v: TutorialView, flags: string[]) => boolean;
-  /** False while the step cannot be done yet (no conflict story today, the rival not out yet). */
+  /** False while the step cannot be done yet (no conflict story today). */
   ready?: (v: TutorialView) => boolean;
   /** Where to press, in order: the first selector with a visible element lights up. */
   targets: (v: TutorialView) => string[];
@@ -83,7 +79,7 @@ const logic: Record<string, StepLogic> = {
     targets: (v) =>
       framingTargets(
         v,
-        (x) => !x.conflict && !x.debunk,
+        (x) => !x.conflict,
         v.laidOut.some((x) => x.distortion > 0),
       ).concat(v.laidOut.some((x) => x.placement === 2) ? [] : ['.publish']),
   },
@@ -122,11 +118,6 @@ const logic: Record<string, StepLogic> = {
     done: (v) => v.state.hunt !== null,
     ready: (v) => v.state.hand.some((x) => huntable(v, x)),
     targets: () => ['button.hunt-chip'],
-  },
-  lure: {
-    done: (v) => (v.state.rival?.lured ?? 0) > 0 || !!v.state.rival?.closed,
-    ready: lureNow,
-    targets: () => ['[data-tut=lure]:not([disabled])', '.rival-toggle'],
   },
   goal: { done: (v) => !!v.state.outcome, targets: () => ['.hud-goal'] },
 };

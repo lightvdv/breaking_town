@@ -24,8 +24,7 @@ import { effectiveTier, issueLevel, issueScore, maxDistortion, minDistortion, pr
 import { advanceRelations, createTension, fillTitle, pairKeys, pairOf, tensionLevel } from './relations';
 import { openSeats, readerCount, seedFollowers, updateReaders } from './readers';
 import { advanceInvestigations, findNews, isRecent, scopeOf } from './reporters';
-import { advanceShop, checkMole } from './shop';
-import { markDebunked, planRival, pruneRival, publishRival, recordOurIssue, rivalReaders, rivalTrust, seedRival, updateRivalReaders, verifyRival } from './rival';
+import { advanceShop } from './shop';
 import type {
   CardTemplate,
   Content,
@@ -78,10 +77,6 @@ export function createGame(
     turn: 0,
     mode,
     difficulty,
-    // The honest paper that defends the town from us.
-    rival: { kind: 'guardian', plan: [], printed: [], closed: false, debunked: 0 },
-    rivalWatch: [],
-    ourPrinted: [],
     arcs: [],
     arcsDone: [],
     offer: null,
@@ -119,7 +114,6 @@ export function createGame(
     metrics: { population: 1, employment: 1, economy: 1, mood: 0.6, order: 1, cityIndex: 100, activeResidents: residents.length },
     lastReactions: {},
     missedEvents: [],
-    rivalReactions: {},
     todayEvents: [],
     tasks: [],
     exposedTotal: 0,
@@ -148,7 +142,6 @@ export function createGame(
   seedFollowers(state, c, rng, getModifiers(state, c));
   // A town that starts with many readers starts with their seats open.
   openSeats(state, c);
-  if (state.rival) seedRival(state, c, rng);
   startTurn(state, c);
   return state;
 }
@@ -215,7 +208,6 @@ function startTurn(state: GameState, c: Content): { notes: string[]; twist: { st
     events.push(c.cards.find((t) => t.id === i.templateId)!);
     pairs.set(i.templateId, i.pair);
   }
-  pruneRival(state, c);
   const dug = advanceInvestigations(state, c, state.rng);
   const { cards, finds, missed } = findNews(state, c, state.rng, getModifiers(state, c), events, pairs);
   const incidentTitles = new Map(relations.incidents.map((i) => [i.templateId, i.title]));
@@ -223,8 +215,6 @@ function startTurn(state: GameState, c: Content): { notes: string[]; twist: { st
   state.missedEvents = missed.map((t) => incidentTitles.get(t.id) ?? t.titles.find((x) => x !== null) ?? t.id);
   state.hand = [...state.hand, ...dug.cards, ...cards];
   state.lastFinds = [...dug.finds, ...finds];
-  // The rival writes today's issue; it comes out with ours (CONCEPT.md §8).
-  planRival(state, c, state.rng, events, pairs);
   // At most one sensation a day (CONCEPT.md §4.2а): the others come out as interesting stories.
   let sensations = 0;
   for (const card of state.hand) if (card.tier === 3 && ++sensations > c.balance.maxSensations) card.tier = 2;
@@ -285,10 +275,9 @@ export function validateDecision(state: GameState, c: Content, d: Decision, mods
 
 export function checkOutcome(state: GameState, c: Content): Outcome | null {
   const b = c.balance;
-  // A town's main goal (CONCEPT.md §9.2): only it wins; a town brought to a stage also falls with its rival.
+  // A town's main goal (CONCEPT.md §9.2): only it wins.
   const goal = goalOf(c);
   if (goal.type !== 'stage' && goalProgress(state, c).done) return { result: 'win', reason: 'goalDone' };
-  if (goal.type === 'stage' && state.rival?.closed) return { result: 'win', reason: 'rivalClosed' };
   if (goal.type === 'stage' && state.metrics.cityIndex < goal.index) return { result: 'win', reason: 'cityDestroyed' };
   if (averageTrust(state, c) < b.trustCollapse) return { result: 'lose', reason: 'trustCollapse' };
   if (state.turn > b.turnLimit) return { result: 'lose', reason: 'turnLimit' };
@@ -315,13 +304,12 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const peopleBefore = snapshotPeople(state);
 
   state.lastReactions = {};
-  state.rivalReactions = {};
   const lateExposures = processLateExposures(state, c, rng, mods);
   // Every part of the turn rolls its own dice (CONCEPT.md §7.3 «прогноз»): how one story is told
-  // changes that story's luck only, not the rival's, the readers' or tomorrow's town.
+  // changes that story's luck only, not the readers' or tomorrow's town.
   const seedOf = () => int(rng, 0x100000000);
   const storySeed = seedOf();
-  const [rivalRng, checkRng, staffRng, moleRng, readersRng, rivalReadersRng, peopleRng, dealsRng] = Array.from({ length: 8 }, () => createRng(seedOf()));
+  const [checkRng, staffRng, readersRng, peopleRng, dealsRng] = Array.from({ length: 5 }, () => createRng(seedOf()));
   const daySeed = seedOf();
   const storyRng = (uid: number) => createRng((storySeed + Math.imul(uid, 0x9e3779b1)) >>> 0);
 
@@ -334,13 +322,6 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     pushArc(state, c, card, p.placement, p.distortion);
     topicsThisTurn[topic] = (topicsThisTurn[topic] ?? 0) + 1;
   }
-  // The rival (CONCEPT.md §8): our debunks answered its recent lies; its new issue comes out today.
-  const rivalBefore = state.rival ? { readers: rivalReaders(state), trust: rivalTrust(state) } : null;
-  const debunks = d.publish.map((p) => state.hand.find((x) => x.uid === p.cardUid)!).filter((x) => x.debunk);
-  markDebunked(state, debunks.map((x) => x.debunk!.uid));
-  const cured = published.filter((n) => debunks.some((x) => x.uid === n.pub.cardUid)).reduce((sum, n) => sum + (n.report.effects.debunk ?? 0), 0);
-  for (const s of state.rival?.closed ? [] : (state.rival?.plan ?? [])) pushArc(state, c, s.card, s.placement, s.distortion);
-  const rivalNews = publishRival(state, c, rivalRng);
   const exposures = [...lateExposures, ...verifyNews(state, c, checkRng, mods, published)];
   // The hunt against a place (CONCEPT.md §3.6а): today's hits stain it (after the fact-check, which
   // looks at its stories as hard as the days in a row so far deserve).
@@ -349,21 +330,16 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   heatCrime(state, c, published);
   const pressed = pressHunt(state, c, published, (n) => storyEffect(c, state.hand.find((x) => x.uid === n.pub.cardUid)!, n.pub.distortion));
   const cleanStreak = advanceCleanStreak(state, c, published);
-  verifyRival(state, c, rivalRng, rivalNews);
-  // The rival may answer our lies over the next days.
-  recordOurIssue(state, c, published);
   // Reporters grow, take our lies to heart, and may quit (CONCEPT.md §3.3б).
   const staff = updateStaff(state, c, staffRng, mods, published);
   exposures.push(...staff.exposures);
 
   // Deals with a catch (CONCEPT.md §3.5а): a bad story about what we promised to keep quiet about costs us.
   const deals = settleDeals(state, c, dealsRng, d.publish);
-  const moleCaught = checkMole(state, c, moleRng);
 
   const stories = d.publish.map((p) => ({ tier: effectiveTier(state.hand.find((x) => x.uid === p.cardUid)!, p.distortion), placement: p.placement }));
   const issue = { score: issueScore(c, stories), level: issueLevel(c, stories) };
   const readers = updateReaders(state, c, readersRng, mods, published.length, issue.level, readerIds);
-  updateRivalReaders(state, c, rivalReadersRng, rivalNews, issue.level, mods.rivalStealMul);
   const readersAfter = readerCount(state);
   // Circulation opens seats in the newsroom (CONCEPT.md §3.3).
   const seatsOpened = openSeats(state, c);
@@ -403,7 +379,6 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   return {
     turn,
     cleanStreak,
-    ...(moleCaught ? { moleCaught } : {}),
     publications: published.map((n) => n.report),
     exposures,
     deals,
@@ -427,19 +402,6 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
       ? { hunt: { building: huntTarget, hit: pressed.hit, step: state.hunt?.step ?? 0, stain: pressed.stain, won: huntWon } }
       : {}),
     ...(day.twist.started || day.twist.ended || auditEnded ? { twist: { started: day.twist.started, ended: day.twist.ended || auditEnded } } : {}),
-    ...(state.rival && rivalBefore
-      ? {
-          rival: {
-            publications: rivalNews.map((n) => n.report),
-            cured,
-            readersBefore: rivalBefore.readers,
-            readersAfter: rivalReaders(state),
-            trustBefore: rivalBefore.trust,
-            trustAfter: rivalTrust(state),
-            closed: state.rival.closed,
-          },
-        }
-      : {}),
   };
 }
 

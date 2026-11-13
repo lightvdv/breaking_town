@@ -146,6 +146,5 @@ export const tagNames: Record<string, string> = {
   hunt: tr('травля'),
   split: tr('раскол'),
   trust: tr('честное лицо'),
-  rival: tr('против «Голоса»'),
   staff: tr('редакция'),
 };

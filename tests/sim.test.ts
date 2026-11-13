@@ -5,7 +5,7 @@ import { effectShort, framingScale } from '../src/ui/text';
 // Most tests look at the mechanics themselves: everything starts on day 1 there (the gentle first days are tested apart).
 const content = {
   ...realContent,
-  balance: { ...realContent.balance, conflictStartTurn: 1, rivalStartTurn: { destroy: 1, save: 1 }, factCheckStartTurn: 1 },
+  balance: { ...realContent.balance, conflictStartTurn: 1, factCheckStartTurn: 1 },
 };
 import { snapshotPeople, updatePeople } from '../src/sim/people';
 import { giveTask, scoreOf, taskOf, updateTasks } from '../src/sim/tasks';
@@ -53,9 +53,6 @@ import {
   callAgency,
   hireFromAgency,
   limitSensations,
-  rivalReaders,
-  rivalTrust,
-  setRivalWatch,
   answerOffer,
   withDifficulty,
   withLength,
@@ -83,13 +80,8 @@ import {
   refreshShop,
   shopRequestCost,
   advanceShop,
-  lureCost,
-  lureWait,
   tipConflict,
   huntBonus,
-  lureBlock,
-  lureRivalAuthor,
-  RIVAL_DIG,
   type CardInstance,
   type Content,
   type Decision,
@@ -491,7 +483,7 @@ describe('news variety', () => {
     const s = createGame(content, 9);
     const seen = new Map<string, number>();
     for (let i = 0; i < 25 && !s.outcome; i++) {
-      for (const card of s.hand.filter((x) => !x.debunk)) {
+      for (const card of s.hand) {
         const last = seen.get(card.templateId);
         if (last !== undefined) expect(s.turn - last).toBeGreaterThanOrEqual(content.balance.repeatCooldown);
         seen.set(card.templateId, s.turn);
@@ -972,81 +964,9 @@ describe('soothing (CONCEPT.md §3.1)', () => {
   });
 });
 
-describe('the rival paper (CONCEPT.md §8)', () => {
-  it('the rival prints with us; its lies can be debunked for two days, found by a reporter who watches it', () => {
-    const s = createGame(content, 3);
-    expect(rivalReaders(s)).toBeGreaterThan(0);
-    // Nothing is known of its issue before it comes out.
-    expect(s.hand.some((x) => x.debunk)).toBe(false);
-    expect(s.rival!.kind).toBe('guardian');
-    setRivalWatch(s, s.reporters[0], true);
-    let found = 0;
-    for (let t = 0; t < 8 && !s.outcome; t++) {
-      playTurn(s, content, { publish: [] });
-      for (const p of s.rival!.printed) expect(s.turn - p.turn).toBeLessThanOrEqual(content.balance.debunkWindow);
-      for (const card of s.hand.filter((x) => x.debunk)) {
-        found++;
-        const story = s.rival!.printed.find((p) => p.uid === card.debunk!.uid)!;
-        // Only half-truths and lies are debunked, and the debunk tells the truth about them.
-        expect(story.truth).toBeGreaterThan(0);
-        expect(card.baseTruth).toBe(2 - story.truth);
-      }
-    }
-    expect(found).toBeGreaterThan(0);
-  });
-
-  it('a believed debunk talks people out of the rival story and costs the rival trust', () => {
-    let cured = 0;
-    let trustDrop = 0;
-    for (const seed of [1, 2, 3, 4, 5, 6]) {
-      const s = createGame(content, seed);
-      for (const r of s.residents) if (r.rivalReader) r.follows = ['newspaper'];
-      setRivalWatch(s, s.reporters[0], true);
-      for (let t = 0; t < 4 && !s.outcome; t++) {
-        const debunks = s.hand.filter((x) => x.debunk);
-        const before = rivalTrust(s);
-        const report = playTurn(s, content, { publish: debunks.map((x, i) => ({ cardUid: x.uid, placement: (i === 0 ? 2 : 0) as 0 | 2, distortion: 0 })) });
-        cured += report.rival!.cured;
-        if (debunks.length) trustDrop += before - rivalTrust(s);
-      }
-    }
-    expect(cured).toBeGreaterThan(0);
-    expect(trustDrop).toBeGreaterThan(0);
-  });
-
-  it('closing it wins the game', () => {
-    const s = createGame(content, 2);
-    for (const r of s.residents) r.rivalTrust = 1;
-    playTurn(s, content, { publish: [] });
-    expect(rivalTrust(s)).toBe(0);
-    expect(s.outcome).toEqual({ result: 'win', reason: 'rivalClosed' });
-  });
-});
-
-describe('the guardian of the destroy mode (CONCEPT.md §8)', () => {
-  it('reassures the town and answers our fresh lies the next day', () => {
-    // A lie that was not caught at once (a caught one needs no answer).
-    let s = createGame(content, 6);
-    let lie = s.hand[0];
-    for (let seed = 6; seed < 40; seed++) {
-      s = createGame(content, seed);
-      lie = s.hand.find((x) => maxDistortion(x) > 0)!;
-      if (!lie) continue;
-      const r = playTurn(s, content, { publish: [{ cardUid: lie.uid, placement: 2, distortion: maxDistortion(lie) }] });
-      if (!r.exposures.length) break;
-    }
-    expect(s.rival!.kind).toBe('guardian');
-    const answer = s.rival!.plan.find((x) => x.card.debunk?.uid === lie.uid);
-    expect(answer).toBeDefined();
-    expect(answer!.card.templateId).toBe('guardian_debunk');
-    // Its own stories are good news, soothed bad news or calm ones, never frightening.
-    for (const story of s.rival!.plan.filter((x) => !x.card.debunk)) expect(story.distortion).toBeLessThanOrEqual(0);
-  });
-});
-
 describe('story arcs', () => {
   // A full newsroom, so the arc's stage always has a free reporter.
-  const c = { ...content, balance: { ...content.balance, arcChance: 1, arcStartTurn: 1, rivalArcChance: 0, startReporters: ['petrova', 'sokolov', 'volkova', 'kim', 'lebedev'] } };
+  const c = { ...content, balance: { ...content.balance, arcChance: 1, arcStartTurn: 1, startReporters: ['petrova', 'sokolov', 'volkova', 'kim', 'lebedev'] } };
   /** Plays an arc to its end, framing every stage with `frame` (max = inflame, min = soothe). */
   const run = (seed: number, frame: (card: CardInstance) => number) => {
     const s = createGame(c, seed);
@@ -1170,21 +1090,21 @@ describe('reporters with character', () => {
     playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 0, distortion: 1 }] });
     expect(staffOf(s, content, 'petrova').loyalty).toBeLessThan(before);
   });
-  it('the rival lures a reporter: keep them for reputation (or a voucher) or lose them', () => {
+  it('a regional paper lures a reporter: keep them for reputation (or a voucher) or lose them', () => {
     const s = createGame(content, 2);
     s.reporters = ['petrova', 'kim'];
-    s.offer = { id: 'poach_guardian', reporterId: 'kim' };
+    s.offer = { id: 'poach_capital', reporterId: 'kim' };
     answerOffer(s, content, false);
     expect(s.reporters).toEqual(['petrova']);
     s.reporters.push('kim');
-    s.offer = { id: 'poach_guardian', reporterId: 'kim' };
+    s.offer = { id: 'poach_capital', reporterId: 'kim' };
     const trust = averageTrust(s, content);
     answerOffer(s, content, true);
     expect(s.reporters).toContain('kim');
     expect(averageTrust(s, content)).toBeCloseTo(trust - content.balance.poachRetainTrust, 5);
     // A task's voucher pays instead of reputation.
     s.vouchers = 1;
-    s.offer = { id: 'poach_guardian', reporterId: 'kim' };
+    s.offer = { id: 'poach_capital', reporterId: 'kim' };
     answerOffer(s, content, true);
     expect(s.vouchers).toBe(0);
     expect(averageTrust(s, content)).toBeCloseTo(trust - content.balance.poachRetainTrust, 5);
@@ -1250,16 +1170,15 @@ describe('forecast', () => {
 });
 
 describe('gentle first days (CONCEPT.md §4.7)', () => {
-  it('no fact-checks, rival or conflicts before their days, for every seed', () => {
+  it('no fact-checks or conflicts before their days, for every seed', () => {
     const b = realContent.balance;
     for (let seed = 1; seed <= 6; seed++) {
       const s = createGame(realContent, seed);
-      while (s.turn < Math.max(b.conflictStartTurn, b.rivalStartTurn.destroy, b.factCheckStartTurn) && !s.outcome) {
+      while (s.turn < Math.max(b.conflictStartTurn, b.factCheckStartTurn) && !s.outcome) {
         const turn = s.turn;
         if (turn < b.conflictStartTurn) expect(s.hand.some((x) => templateOf(realContent, x.templateId).conflict)).toBe(false);
         const r = playTurn(s, realContent, simpleDecision(s, 'max'));
         if (turn < b.factCheckStartTurn) expect(r.exposures).toEqual([]);
-        if (turn < b.rivalStartTurn.destroy) expect(r.rival?.publications ?? []).toEqual([]);
       }
     }
   });
@@ -1337,7 +1256,7 @@ describe('reactions follow the story', () => {
   });
 });
 
-describe('attacking the town (CONCEPT.md §3.5, §3.6а, §8.4)', () => {
+describe('attacking the town (CONCEPT.md §3.5, §3.6а)', () => {
   it('a hunt makes stories about its target hit harder day after day, stains it and is won when it closes', () => {
     const s = createGame(content, 21);
     const factory = s.buildings.find((x) => x.type === 'factory')!;
@@ -1367,27 +1286,6 @@ describe('attacking the town (CONCEPT.md §3.5, §3.6а, §8.4)', () => {
     expect(s.hunt).toBeNull();
   });
 
-  it('strikes at the guardian: luring its author for reputation, then waiting, and digging into its money', () => {
-    const s = createGame(content, 22, 'destroy');
-    const trust = rivalTrust(s);
-    const ours = averageTrust(s, content);
-    lureRivalAuthor(s, content);
-    expect(s.rival!.lured).toBe(1);
-    expect(rivalTrust(s)).toBeLessThan(trust);
-    expect(averageTrust(s, content)).toBeCloseTo(ours - lureCost(s, content), 5);
-    // The next author waits, longer with each one gone.
-    expect(lureBlock(s, content)).toBe('waiting');
-    expect(lureWait(s, content)).toBeGreaterThan(content.balance.rivalLureDays);
-    for (let i = 0; i < 40 && lureBlock(s, content) !== 'nobody left'; i++) {
-      s.turn = s.rival!.lureReady ?? s.turn;
-      if (!lureBlock(s, content)) lureRivalAuthor(s, content);
-    }
-    expect(lureBlock(s, content)).toBe('nobody left');
-    // A reporter digging into it brings documents about who pays it.
-    startInvestigation(s, content, s.reporters[0], RIVAL_DIG);
-    for (let i = 0; i < 6 && !s.hand.some((x) => x.templateId === 'kompromat_guardian'); i++) playTurn(s, content, { publish: [] });
-    expect(s.hand.some((x) => x.templateId === 'kompromat_guardian')).toBe(true);
-  });
 });
 
 describe('crime (CONCEPT.md §5.6)', () => {
@@ -1719,11 +1617,9 @@ describe('the collection: draft, levels, sets (CONCEPT.md §3.5б)', () => {
     s.upgrades.push('informant');
     const cooldown = cashCooldown(s, realContent, 'leak');
     const turns = investigationTurns(realContent, reporterOf(realContent, s.reporters[0]), getModifiers(s, realContent));
-    const wait = lureWait(s, realContent);
-    s.upgrades.push('interns', 'smear_lab', 'defectors');
+    s.upgrades.push('interns', 'smear_lab');
     expect(cashCooldown(s, realContent, 'leak')).toBe(cooldown - 1);
     expect(investigationTurns(realContent, reporterOf(realContent, s.reporters[0]), getModifiers(s, realContent))).toBe(turns - 1);
-    expect(lureWait(s, realContent)).toBeLessThan(wait);
     const reach = getModifiers(s, realContent).channels.newspaper.reachAdd;
     s.upgrades.push('media_baron');
     expect(getModifiers(s, realContent).channels.newspaper.reachAdd).toBeGreaterThan(reach);
@@ -1788,7 +1684,6 @@ describe('town goals and the town generator (CONCEPT.md §9.2, §9.5)', () => {
     const zav = withTown(realContent, 'zavodsk', 'destroy', 'easy');
     expect(goalOf(zav)).toEqual({ type: 'close', building: 'factory' });
     const s = createGame(zav, 3, 'destroy', 'easy', { town: 'zavodsk' });
-    s.rival!.closed = true;
     expect(checkOutcome(s, zav)).toBeNull();
     for (const b of s.buildings) if (b.type === 'factory') b.open = false;
     expect(checkOutcome(s, zav)).toEqual({ result: 'win', reason: 'goalDone' });

@@ -2,12 +2,9 @@
   {
     "id": "easy",
     "name": "Легко",
-    "text": "Фактчекеры ленивы, соперник слабее, травля бьёт сильнее, а спасать город нужно меньше дней.",
+    "text": "Фактчекеры ленивы, травля бьёт сильнее, а спасать город нужно меньше дней.",
     "balance": {
-      "checkerBase": 0.17,
-      "rivalCloseShare": 0.026,
-      "rivalTrustCollapse": 12,
-      "debunkTrust": 8
+      "checkerBase": 0.17
     },
     "modes": {
       "destroy": {
@@ -26,14 +23,7 @@
         "crimeResponseChance": 0.6,
         "topicWatch": 0.15,
         "stainShutdown": 0.18,
-        "stainHold": 0.85,
-        "rivalSteal": [
-          0,
-          0.01,
-          0.03,
-          0.07
-        ],
-        "rivalLureMax": 1
+        "stainHold": 0.85
       }
     }
   },
@@ -47,12 +37,9 @@
   {
     "id": "hard",
     "name": "Сложно",
-    "text": "Фактчекеры не спят, соперник цепкий, город держится крепче, а время работает против вас.",
+    "text": "Фактчекеры не спят, город держится крепче, а время работает против вас.",
     "balance": {
-      "checkerBase": 0.22,
-      "rivalCloseShare": 0.015,
-      "rivalTrustCollapse": 8,
-      "debunkTrust": 2
+      "checkerBase": 0.22
     },
     "modes": {
       "destroy": {
@@ -64,7 +51,6 @@
             23
           ]
         },
-        "guardianStoriesMax": 3,
         "turnLimit": 39,
         "impactNorm": 2.61,
         "huntStain": 0.033,

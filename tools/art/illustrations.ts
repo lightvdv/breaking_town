@@ -1005,18 +1005,6 @@ export const scenes: Record<string, Scene> = {
     ],
   },
 
-  // ---------- Save mode ----------
-  debunk_guardian: {
-    sky: 'day',
-    ground: 'plaza',
-    building: { type: 'cityHall', x: 2 },
-    people: [p('intelligentsia', 'idle_front', 84), p('pensioners', 'react_happy', 100, { frame: 1 }), p('workers', 'react_shrug', 116, { frame: 1 })],
-    icons: [
-      { name: 'document', x: 88, y: 10 },
-      { name: 'no', x: 90, y: 12 },
-    ],
-  },
-
   // ---------- Local rumors ----------
   factory_waste: {
     sky: 'dusk',
@@ -1313,11 +1301,8 @@ export const scenes: Record<string, Scene> = {
 };
 
 /** Scenes of the opening story (CONCEPT.md §1.1), same size and style as the news. */
-// Its debunks look like ours.
-scenes.guardian_debunk = scenes.debunk_guardian;
 scenes.kompromat_mayor = scenes.mayor_affair;
 scenes.kompromat_factory = scenes.factory_waste;
-scenes.kompromat_guardian = scenes.debunk_guardian;
 // Crime (CONCEPT.md §5.6): real crime and the police.
 scenes.street_robbery = scenes.crime_wave;
 scenes.kiosk_burglary = scenes.shop_robbery;

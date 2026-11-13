@@ -93,7 +93,7 @@ export function crimeEvents(state: GameState, c: Content, rng: RngState, taken: 
 /**
  * The town answers fear (CONCEPT.md §5.6): while crime runs hot (`crimeResponseHeat`) the police or
  * the mayor may act — a raid, patrols — with chance `crimeResponseChance` a day. The answer cools the
- * heat at once and is a true reassuring event: the rival prints it gladly.
+ * heat at once and is a true reassuring event.
  */
 export function crimeResponse(state: GameState, c: Content, rng: RngState): CardTemplate[] {
   const b = c.balance;

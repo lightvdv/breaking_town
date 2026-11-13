@@ -747,21 +747,8 @@ button.publish.level-3.bump-up {
   padding: 0 8px 8px;
 }
 
-/* Save mode: the rival paper's issue of today above ours (CONCEPT.md §8). */
-.notice-rival {
-  border-left-color: #a22633;
-}
-
-.notice-guardian {
-  border-left-color: #124e89;
-}
-
-/* Folded rival notice: one line, opened by a tap; the choice is remembered. */
-.notice-rival.folded {
-  padding: 0;
-}
-
-.rival-toggle {
+/* A folded plaque: one line, opened by a tap. */
+.plaque-toggle {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -776,7 +763,7 @@ button.publish.level-3.bump-up {
   cursor: pointer;
 }
 
-.rival-count {
+.plaque-count {
   margin-left: auto;
   padding: 0 8px;
   border-radius: 10px;
@@ -786,11 +773,7 @@ button.publish.level-3.bump-up {
   font-weight: 700;
 }
 
-.notice-guardian .rival-count {
-  background: #124e89;
-}
-
-.notice-head .rival-hide {
+.notice-head .plaque-hide {
   flex: none;
   display: grid;
   place-items: center;
@@ -808,62 +791,10 @@ button.publish.level-3.bump-up {
   cursor: pointer;
 }
 
-.notice-guardian .rival-title {
-  color: #124e89;
-}
-
-.rival-stats {
+.plaque-stats {
   flex: none;
   font-size: 13px;
   color: var(--paper-muted);
-}
-
-.rival-list {
-  margin: 0;
-  padding: 0 10px 6px;
-  list-style: none;
-}
-
-.rival-list li {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: baseline;
-  gap: 8px;
-  padding: 3px 0;
-  border-top: 1px dashed rgba(115, 62, 57, 0.4);
-  font-size: 14px;
-}
-
-.rival-place {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--paper-muted);
-}
-
-.rival-title {
-  font-weight: 700;
-  color: #a22633;
-}
-
-.rival-answer {
-  font-size: 12px;
-  color: var(--paper-muted);
-  white-space: nowrap;
-}
-
-.rival-list li.answered .rival-answer {
-  font-weight: 700;
-  color: #265c42;
-}
-
-.notice-rival .hint {
-  color: var(--paper-muted);
-  font-size: 12px;
-}
-
-.kicker.debunk-kicker {
-  color: #265c42;
 }
 
 /* «Письма читателей»: a column of letters under the paper's stories. */
@@ -4154,26 +4085,6 @@ button.publish.level-3.bump-up {
     text-align: left;
   }
 
-  /* The rival's notice: its stats on their own line, every story's place above its headline. */
-  .notice-rival .notice-head {
-    flex-wrap: wrap;
-  }
-
-  .notice-rival .rival-stats {
-    order: 3;
-    flex-basis: 100%;
-    font-size: 12px;
-  }
-
-  .rival-list li {
-    grid-template-columns: 1fr auto;
-    row-gap: 0;
-  }
-
-  .rival-list .rival-place {
-    grid-column: 1 / -1;
-  }
-
   /* The stage's name fits small on a phone. */
   .res.city-state b {
     font-size: 13px;
@@ -6182,11 +6093,6 @@ button.publish.level-3.bump-up {
   font-size: 11px;
 }
 
-.mole-line {
-  margin-top: 8px;
-  font-weight: 700;
-}
-
 @media (max-width: 900px) {
 
   .res.city-state b {
@@ -6239,54 +6145,17 @@ button.publish.level-3.bump-up {
   font-size: 14px;
 }
 
-/* Strikes at «Голос города» (CONCEPT.md §8.4). */
-.rival-strikes {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
-  padding: 4px 10px 8px;
-  font-size: 13px;
-}
-
-.strikes-label {
-  font-weight: 700;
-  cursor: help;
-}
-
-.strike-dig {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-}
-
-.rival-strikes .strike {
-  padding: 2px 10px;
-  font-size: 13px;
-}
-
-.strike-note {
-  font-style: italic;
-}
-
 /* Buttons on the paper plaques: ink on paper, not the dark theme's ghost. */
-.notice .hunt-stop,
-.rival-strikes .strike {
+.notice .hunt-stop {
   border: 2px solid var(--paper-ink, #3a2a1e);
   background: transparent;
   color: var(--paper-ink, #3a2a1e);
   box-shadow: none;
 }
 
-.notice .hunt-stop:hover:not(:disabled),
-.rival-strikes .strike:hover:not(:disabled) {
+.notice .hunt-stop:hover:not(:disabled) {
   background: var(--paper-ink, #3a2a1e);
   color: var(--paper, #f4e4c1);
-}
-
-.rival-strikes .strike:disabled {
-  opacity: 0.45;
 }
 
 /* The hunt chip next to «Подача» (CONCEPT.md §3.6а): the same raised button, in the hunt's red. */
@@ -6516,7 +6385,6 @@ span.hunt-chip {
 .tag-chip.tag-split { background: #a05b2c; }
 .tag-chip.tag-money { background: #3e8948; }
 .tag-chip.tag-trust { background: #2a6f97; }
-.tag-chip.tag-rival { background: #68386c; }
 .tag-chip.tag-staff { background: #5a6988; }
 
 .owned-chip.rarity-rare {
@@ -7286,7 +7154,7 @@ span.hunt-chip {
   justify-content: flex-end;
 }
 
-/* «Редакция»: what a reporter searches, watching the rival and the digging list, under the head. */
+/* «Редакция»: what a reporter searches and the digging list, under the head. */
 .rep-head-tools {
   display: flex;
   flex: 1 1 100%;
@@ -7358,13 +7226,6 @@ span.hunt-chip {
 .dig-menu .dig-pick {
   flex: 1;
   text-align: left;
-}
-
-/* Watching the rival: under the digging targets, apart from them. */
-.dig-menu .dig-watch {
-  margin-top: 6px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--line);
 }
 
 .dig-menu .dig-pick.on {

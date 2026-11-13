@@ -41,8 +41,6 @@ export function goalProgress(state: GameState, c: Content): GoalProgress {
     }
     case 'clashes':
       return { goal, done: state.clashDays >= goal.days, now: state.clashDays, need: goal.days };
-    case 'rival':
-      return { goal, done: !!state.rival?.closed, now: state.rival?.closed ? 1 : 0, need: 1 };
     case 'gang':
       return { goal, done: state.crimeBoost > 0, now: Math.round(state.metrics.order * 100), need: Math.round(c.balance.gangOrder * 100) };
   }

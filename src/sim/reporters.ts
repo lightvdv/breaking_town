@@ -1,5 +1,4 @@
 import { huntTemplates } from './hunt';
-import { debunkTargets, makeDebunk } from './rival';
 import { skilledReporter } from './staff';
 import { chance, int, pick, weightedPick, type RngState } from './rng';
 import { clamp, conflictsStarted } from './lookup';
@@ -69,8 +68,7 @@ function available(state: GameState, t: CardTemplate): boolean {
  * and arc stages included) come first: each takes a free reporter — one whose specialty it is (who
  * writes it a level stronger: an exclusive), then one sent after its topic, then the next free one.
  * Events nobody is free for go unwritten (`missed`). The reporters left search as usual for facts,
- * rumors and world news. A reporter on an investigation, or watching the rival while it has lies to
- * debunk, takes no event. Returns the new cards, the search log and the missed events.
+ * rumors and world news. A reporter on an investigation takes no event. Returns the new cards, the search log and the missed events.
  */
 export function findNews(
   state: GameState,
@@ -94,16 +92,7 @@ export function findNews(
     return list.filter((t) => (state.lastSeen[t.id] ?? -Infinity) === oldest);
   };
 
-  // The rival's recent lies wait for a debunk (CONCEPT.md §8).
-  const targets = debunkTargets(state);
-
   const make = (r: ReporterDef, forcedTier: NewsTier | null): CardInstance | null => {
-    // A reporter watching the rival mostly brings a debunk of its lies; anyone else may stumble on one.
-    if (targets.length && chance(rng, state.rivalWatch.includes(r.id) ? b.assignFocus : b.debunkFindChance + mods.debunkFindAdd)) {
-      const card = makeDebunk(state, targets.shift()!, r.id);
-      cards.push(card);
-      return card;
-    }
     const s = r.skills;
     const own = s.scope === 'any' ? null : s.scope;
     const scope: NewsScope = own
@@ -195,7 +184,7 @@ export function findNews(
   const free = [...hired];
   for (const tpl of events) {
     if (inHand.has(tpl.id) || cards.some((x) => x.templateId === tpl.id)) continue;
-    const pool = free.filter((w) => !(targets.length && state.rivalWatch.includes(w.id)));
+    const pool = free;
     const r =
       pool.find((w) => w.skills.topics.includes(tpl.topic)) ?? pool.find((w) => (state.reporterTopics[w.id] ?? []).includes(tpl.topic)) ?? pool[0];
     if (!r) {
@@ -229,9 +218,6 @@ export function findNews(
 
 // ---------- Investigations (CONCEPT.md §3.3а) ----------
 
-/** The investigation target that means the rival paper, not a group. */
-export const RIVAL_DIG = 'rival';
-
 export function investigationTurns(c: Content, r: ReporterDef, mods?: Modifiers): number {
   const b = c.balance;
   return Math.max(1, b.investigationTurns - (r.skills.nose >= b.investigationFastNose ? 1 : 0) + Math.round(mods?.investigationTurnsAdd ?? 0));
@@ -241,8 +227,7 @@ export function startInvestigation(state: GameState, c: Content, reporterId: str
   if (state.outcome) throw new Error('Game is over');
   if (!state.reporters.includes(reporterId)) throw new Error(`Reporter ${reporterId} is not hired`);
   if (state.investigations.some((x) => x.reporterId === reporterId)) throw new Error(`Reporter ${reporterId} is already investigating`);
-  // Digging into «Голос города» itself (CONCEPT.md §8.4): its money, its masters.
-  if (target === RIVAL_DIG ? !state.rival || state.rival.closed : !c.groups.some((g) => g.id === target)) throw new Error(`Unknown target ${target}`);
+  if (!c.groups.some((g) => g.id === target)) throw new Error(`Unknown target ${target}`);
   if (!c.cards.some((t) => t.source === 'investigation' && t.target === target)) throw new Error(`No investigation story about ${target}`);
   const total = investigationTurns(c, reporterOf(c, reporterId), getModifiers(state, c));
   state.investigations.push({ reporterId, target, turnsLeft: total, total });
@@ -260,8 +245,6 @@ export function advanceInvestigations(state: GameState, c: Content, rng: RngStat
   const keep = [];
   for (const inv of state.investigations) {
     if (!state.reporters.includes(inv.reporterId)) continue;
-    // A closed rival leaves nothing to dig.
-    if (inv.target === RIVAL_DIG && (!state.rival || state.rival.closed)) continue;
     inv.turnsLeft--;
     if (inv.turnsLeft > 0) {
       keep.push(inv);

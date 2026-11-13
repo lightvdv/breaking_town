@@ -13,8 +13,6 @@ export interface Settings {
   introSeen: boolean;
   /** The difficulty of new games (CONCEPT.md §4.6). */
   difficulty: Difficulty;
-  /** The rival paper's stories are unfolded above the issue; once opened they stay open on the next days. */
-  rivalOpen: boolean;
   /** Short or full game (CONCEPT.md §4.6а): chosen in the new game window and remembered. */
   /** First-encounter notes above the paper (CONCEPT.md §7.3 «Подсказки»); off in the settings. */
   hints: boolean;
@@ -38,7 +36,7 @@ export interface Settings {
 }
 
 const KEY = `breaking-town-settings${STORAGE_SUFFIX}`;
-const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, difficulty: 'normal', rivalOpen: false, hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: false, staffOpen: false, analytics: true, musicVolume: 0.6, sfxVolume: 0.8, town: null };
+const defaults: Settings = { fastSearch: false, skipCutscenes: false, introSeen: false, difficulty: 'normal', hints: true, tutorialDone: false, notesSeen: [], guideOpen: false, tasksOpen: false, staffOpen: false, analytics: true, musicVolume: 0.6, sfxVolume: 0.8, town: null };
 
 export function loadSettings(): Settings {
   try {

@@ -20,8 +20,6 @@ export function taskOf(c: Content, id: string): TaskDef {
 /** The value a check counts from when the task is given. */
 function baseOf(state: GameState, def: TaskDef): number {
   switch (def.check.type) {
-    case 'debunks':
-      return state.rival?.debunked ?? 0;
     case 'readersGain':
       return readerCount(state);
     case 'cityDrop':
@@ -91,8 +89,6 @@ export function taskProgress(state: GameState, c: Content, task: TaskState): { v
       return of(Math.round(averageTrust(state, c)), ch.min);
     case 'mood':
       return of(Math.round(state.metrics.mood * 100), Math.round(ch.min * 100));
-    case 'debunks':
-      return of((state.rival?.debunked ?? 0) - task.base, ch.count);
     case 'cityDrop':
       return of(Math.round(task.base - state.metrics.cityIndex), ch.amount);
     case 'cityBelow':

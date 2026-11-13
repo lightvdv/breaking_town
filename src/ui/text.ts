@@ -5,7 +5,6 @@ import {
   type CardInstance,
   type Content,
   type EffectType,
-  type RivalKind,
   type NewsScope,
   type Outcome,
   type TownGoal,
@@ -80,7 +79,6 @@ export const effectLabels: Record<EffectType, string> = {
   moodUp: tr('обрадовались'),
   stigma: tr('ополчились'),
   fear: tr('боятся выходить'),
-  debunk: tr('разубедились'),
 };
 
 export function effectText(c: Content, e: CardEffect | null, target?: string): string {
@@ -99,8 +97,6 @@ export function effectText(c: Content, e: CardEffect | null, target?: string): s
       return tr('Поверившие расстраиваются');
     case 'moodUp':
       return tr('Поверившие радуются');
-    case 'debunk':
-      return tr('Поверившие перестанут верить той новости, а газете, которая её напечатала, — доверять');
     case 'fear':
       return tr('Поверившие боятся выходить из дома: порядок падает, бары и магазины пустеют');
     case 'stigma': {
@@ -136,8 +132,6 @@ export function effectShort(c: Content, e: CardEffect | null, impact = 0.8, step
       return by(tr('немного приуныют'), tr('расстроятся'), tr('впадут в уныние'));
     case 'moodUp':
       return by(tr('чуть повеселеют — городу лучше'), tr('обрадуются — городу лучше'), tr('воспрянут духом — городу лучше'));
-    case 'debunk':
-      return tr('передумают');
     case 'fear':
       return by(tr('станут опасаться выходить по вечерам'), tr('будут бояться выходить'), tr('в панике будут бояться выйти на улицу'));
     case 'stigma':
@@ -153,7 +147,7 @@ export interface FramingOption {
   impact: number;
 }
 
-const harmful = (e: CardEffect | null) => !!e && e.type !== 'moodUp' && e.type !== 'debunk';
+const harmful = (e: CardEffect | null) => !!e && e.type !== 'moodUp';
 /** Expected result of a telling: believers × strength (what the sim guarantees to grow, `louderGain`). */
 const resultOf = (o: FramingOption) => o.believers * o.impact * (o.effect?.strength ?? 0);
 
@@ -181,11 +175,6 @@ export function framingScale(options: FramingOption[]): Map<number, { step: 0 | 
   }
   return out;
 }
-
-/** The rival paper in the forms the interface needs (CONCEPT.md §8). */
-export const rivalNames: Record<RivalKind, { name: string; short: string; gen: string; ins: string }> = {
-  guardian: { name: tr('Голос города'), short: tr('Голос'), gen: tr('Голоса'), ins: tr('Голосом') },
-};
 
 /** Buildings a «close» goal names, in the accusative: «закрыть завод». */
 const closeNames: Partial<Record<BuildingType, string>> = {
@@ -217,8 +206,6 @@ export function goalTitle(c: Content, g: TownGoal): string {
       return tr('Выжить из города {0}% {1}', Math.round(g.share * 100), groupOf(c, g.group).forms.manyGen);
     case 'clashes':
       return tr('Довести горожан до драк и держать так {0} {1} подряд', g.days, g.days === 1 ? tr('день') : g.days < 5 ? tr('дня') : tr('дней'));
-    case 'rival':
-      return tr('Закрыть «Голос города»');
     case 'gang':
       return tr('Отдать улицы банде');
   }
@@ -236,8 +223,6 @@ export function goalLine(p: GoalProgress): string {
       return tr('уехало {0} из {1}', p.now, p.need);
     case 'clashes':
       return tr('драки {0} из {1} дней подряд', p.now, p.need);
-    case 'rival':
-      return p.done ? tr('«Голос» закрыт') : tr('«Голос» ещё выходит');
     case 'gang':
       return p.done ? tr('банда хозяйничает') : tr('порядок {0}%, банда придёт ниже {1}%', p.now, p.need);
   }
@@ -253,8 +238,6 @@ export function outcomeText(o: Outcome, goal = ''): string {
       return tr('Поражение: репутация упала до нуля — вам больше никто не верит. Холдинг отрекается от провалившегося редактора.');
     case 'turnLimit':
       return tr('Поражение: время вышло, а город выстоял. Совет директоров разочарован: теорию придётся проверять с другим редактором.');
-    case 'rivalClosed':
-      return tr('Победа! «Голос города» закрылся: защищать город больше некому. Совет директоров доволен и отдаёт вам следующий город.');
   }
 }
 

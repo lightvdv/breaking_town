@@ -1,9 +1,8 @@
 import { tr } from '../i18n';
 import { payTrust, requirementMet, trustBlock } from './economy';
-import { clamp } from './lookup';
 import { getModifiers } from './modifiers';
 import { findNews, reporterOf, searchLuck } from './reporters';
-import { chance, weightedPick, type RngState } from './rng';
+import { weightedPick, type RngState } from './rng';
 import { skilledReporter } from './staff';
 import type { Content, GameState, NewsTier, UpgradeDef } from './types';
 
@@ -133,12 +132,4 @@ export function useAbility(state: GameState, c: Content, id: string): number[] {
     return [];
   }
   return [];
-}
-
-/** The mole at the rival's may be found out: it is lost and the outlet's reputation suffers. */
-export function checkMole(state: GameState, c: Content, rng: RngState): boolean {
-  if (!state.upgrades.includes('mole') || !chance(rng, c.balance.moleRisk)) return false;
-  state.upgrades = state.upgrades.filter((x) => x !== 'mole');
-  for (const r of state.residents) if (r.status === 'active') r.trust = clamp(r.trust - c.balance.molePenalty, 0, 100);
-  return true;
 }

@@ -309,17 +309,6 @@ function price(level: 0 | 1 | 2 | 3): Raster {
   return r;
 }
 
-/** The guardian paper «Голос города»: a newspaper with a blue masthead and a heart. */
-function guardian(): Raster {
-  const r = new Raster(16, 16);
-  r.rect(2, 2, 12, 12, 'sand');
-  r.rect(3, 3, 10, 2, 'blue');
-  r.art(4, 6, ['r.r.', 'rrrr', '.rr.'], { r: 'red' });
-  for (const y of [6, 8, 10, 12]) r.rect(10, y, 3, 1, 'grey');
-  r.rect(3, 12, 6, 1, 'grey');
-  return outline(r);
-}
-
 /** Upgrades: a shopping cart with goods in it. */
 function cart(): Raster {
   const r = new Raster(16, 16);
@@ -491,7 +480,6 @@ export const uiIcons: Record<string, () => Raster> = {
   offer,
   cart,
   folder,
-  guardian,
   money,
   readers,
   reputation,

@@ -259,22 +259,6 @@
     ]
   },
   {
-    "id": "mole",
-    "name": "Крот у конкурента",
-    "icon": "🕵",
-    "description": "Свой человек в редакции конкурента: вы видите, что он напечатает сегодня.",
-    "drawback": "Каждый день 5% — крота раскроют: −5% репутации, и он пропадёт.",
-    "requires": null,
-    "effects": {
-      "seeRivalPlan": true
-    },
-    "section": "Редакция",
-    "rarity": "legendary",
-    "tags": [
-      "rival"
-    ]
-  },
-  {
     "id": "night_shift",
     "name": "Ночная смена",
     "icon": "🌙",
@@ -428,25 +412,6 @@
     "rarity": "rare",
     "tags": [
       "hunt"
-    ]
-  },
-  {
-    "id": "interceptors",
-    "name": "Перехват читателей",
-    "icon": "🧲",
-    "description": "Раздаём газету у киосков «Голоса»: интересный выпуск уводит у него вдвое больше читателей.",
-    "drawback": "Своих киосков меньше: читатели бросают газету на 5% чаще.",
-    "requires": null,
-    "mode": "destroy",
-    "effects": {
-      "channel": "newspaper",
-      "rivalStealMul": 2,
-      "churnMul": 1.05
-    },
-    "section": "Нападение",
-    "rarity": "rare",
-    "tags": [
-      "rival"
     ]
   },
   {
@@ -720,22 +685,6 @@
     "rarity": "rare",
     "tags": [
       "yellow"
-    ]
-  },
-  {
-    "id": "defectors",
-    "name": "Перебежчики",
-    "icon": "🚪",
-    "description": "Авторы «Голоса» сами просятся к нам: сманивать их можно чаще — пауза на 40% короче.",
-    "requires": null,
-    "mode": "destroy",
-    "effects": {
-      "lureCooldownMul": 0.6
-    },
-    "section": "Нападение",
-    "rarity": "rare",
-    "tags": [
-      "rival"
     ]
   },
   {

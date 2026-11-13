@@ -59,16 +59,16 @@ export function offerText(state: GameState, c: Content, def: OfferDef, offer: { 
 export function advanceOffers(state: GameState, c: Content, rng: RngState): string[] {
   const b = c.balance;
   const notes: string[] = [];
-  // A lured reporter we did not answer for goes over to the rival.
+  // A lured reporter we did not answer for goes over to the other paper.
   if (state.offer && offerOf(c, state.offer.id).kind === 'poach') {
     const id = state.offer.reporterId!;
-    if (state.reporters.includes(id)) notes.push(tr('{0} {1} к конкуренту', reporterOf(c, id).name, reporterOf(c, id).female ? tr('ушла') : tr('ушёл')));
-    defect(state, c, id);
+    if (state.reporters.includes(id)) notes.push(tr('{0} {1} в областную газету', reporterOf(c, id).name, reporterOf(c, id).female ? tr('ушла') : tr('ушёл')));
+    defect(state, id);
   }
   state.offer = null;
   for (const deal of state.deals.filter((x) => x.untilTurn < state.turn)) notes.push(tr('Сделка «{0}» закончилась', offerOf(c, deal.id).title));
   state.deals = state.deals.filter((x) => x.untilTurn >= state.turn);
-  // The rival lures our best reporter: that offer comes first.
+  // A paper from the regional capital lures our best reporter: that offer comes first.
   const lured = poachTarget(state, c, rng);
   const poach = lured && c.offers.find((o) => o.kind === 'poach' && (!o.mode || o.mode === state.mode));
   if (lured && poach) {
@@ -114,7 +114,7 @@ export function answerOffer(state: GameState, c: Content, accept: boolean): Card
       else payTrust(state, cost.trust);
       const s = staffOf(state, c, id);
       s.loyalty = clamp(s.loyalty + 0.3);
-    } else defect(state, c, id);
+    } else defect(state, id);
     return null;
   }
   if (!accept) return null;
@@ -181,9 +181,8 @@ export function settleDeals(state: GameState, c: Content, rng: RngState, publish
   return { readers, broken, lost };
 }
 
-/** A reporter goes over to the rival: its readers trust it more (CONCEPT.md §3.3б). */
-function defect(state: GameState, c: Content, id: string): void {
+/** A reporter goes over to a paper from the regional capital (CONCEPT.md §3.3б). */
+function defect(state: GameState, id: string): void {
   if (!state.reporters.includes(id) || state.reporters.length <= 1) return;
   removeReporter(state, id);
-  for (const r of state.residents) if (r.rivalReader) r.rivalTrust = clamp(r.rivalTrust + c.balance.poachRivalTrust, 0, 100);
 }

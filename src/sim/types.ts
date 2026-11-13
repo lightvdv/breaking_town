@@ -126,16 +126,10 @@ export interface UpgradeEffects {
   frontReadMul?: number;
   /** Multiplies the chance that a believer retells our story. */
   wordOfMouthMul?: number;
-  /** Added to the chance that a reporter stumbles on a rival's lie to debunk. */
-  debunkFindAdd?: number;
-  /** We see the rival's issue being written (a mole there, CONCEPT.md §3.5). */
-  seeRivalPlan?: boolean;
   /** Multiplies the campaign's extra impact per day in a row. */
   huntStepMul?: number;
   /** Added to the chance that a reporter digs up a story about the campaign's target. */
   huntFindAdd?: number;
-  /** Multiplies the share of the rival's readers our gripping issue takes. */
-  rivalStealMul?: number;
   /** Multiplies the impact of stories on these topics (a desk of the paper). */
   topicImpactMul?: Partial<Record<Topic, number>>;
   /** Chance that a reporter without an assignment searches this topic (a desk's own reporter). */
@@ -150,8 +144,6 @@ export interface UpgradeEffects {
   crimeHeatMul?: number;
   /** Multiplies the stain a hunt story leaves on its target. */
   stainMul?: number;
-  /** Multiplies the wait before the next of the rival's authors can be lured. */
-  lureCooldownMul?: number;
   /** Added to the cooldown of every dirty trick (negative = sooner, never below a day). */
   cashCooldownAdd?: number;
 }
@@ -222,8 +214,7 @@ export interface UpgradeDef {
 
 /** stigma = dirt on the template's `target` group: other groups turn on it, it feels hunted. */
 /** fear = afraid of crime: stays at home for a few days and counts against order (CONCEPT.md §2.3). */
-/** debunk = believers stop trusting the rival paper and will not believe the story it answers. */
-export type EffectType = 'quitJob' | 'avoid' | 'leaveCity' | 'protest' | 'moodDown' | 'moodUp' | 'stigma' | 'fear' | 'debunk';
+export type EffectType = 'quitJob' | 'avoid' | 'leaveCity' | 'protest' | 'moodDown' | 'moodUp' | 'stigma' | 'fear';
 
 export interface CardEffect {
   type: EffectType;
@@ -247,9 +238,8 @@ export interface CardTemplate {
    * fact = true everyday story that needs no event, rumor = made-up or exaggerated story,
    * investigation = dirt on a social group, only from assigned reporters (CONCEPT.md §3.3а).
    */
-  /** debunk = our answer to a story of the rival paper (CONCEPT.md §8); never found by search. */
   /** offer = the dirt an anonymous source sends with an offer (CONCEPT.md §3.5а); never found by search. */
-  source: 'event' | 'fact' | 'rumor' | 'investigation' | 'debunk' | 'offer';
+  source: 'event' | 'fact' | 'rumor' | 'investigation' | 'offer';
   /** Investigations: the social group the dirt is about. */
   target?: GroupId;
   /** local = about this city (default), global = about the country or the world. */
@@ -337,7 +327,7 @@ export interface Offer {
   id: string;
   /** silence: the building the deal is about. */
   building?: number;
-  /** poach: the reporter the rival lures away. */
+  /** poach: the reporter a paper from the regional capital lures away. */
   reporterId?: string;
 }
 
@@ -449,16 +439,6 @@ export interface Balance {
    * each from its `min` index; `winCityIndex` must be one of these bounds.
    */
   cityStates: { name: string; min: number }[];
-  /** Rival paper: share of the city reading it at the start, its readers' starting trust, per-group appeal. */
-  rivalStartShare: number;
-  rivalStartTrust: number;
-  rivalAffinity: Record<RivalKind, Record<GroupId, number>>;
-  /** Per-turn chances: a non-reader starts buying it (× trust × appeal), a reader drops it, more after doubting it. */
-  rivalJoin: number;
-  rivalChurn: number;
-  rivalChurnDoubt: number;
-  /** Multiplies the impact of the rival paper's stories by its kind (ours are set by `impactNorm`). */
-  rivalImpactMul: Record<RivalKind, number>;
   /** The upgrades deck (CONCEPT.md §3.5): cards on offer, days between deals, a rare card's weight. */
   shopOfferSize: number;
   shopRefreshDays: number;
@@ -472,32 +452,15 @@ export interface Balance {
   cardLevelPower: number[];
   /** How often each rarity comes up in the draft and in packs. */
   rarityWeight: Record<Rarity, number>;
-  /** The mole at the rival's: the daily chance to be found out and the reputation it costs. */
-  moleRisk: number;
-  molePenalty: number;
-  /** Days after which a story is as likely to come again as a new one: events and the rival's picks are weighted by how long ago they last appeared. */
+  /** Days after which a story is as likely to come again as a new one: events are weighted by how long ago they last appeared. */
   repeatFadeDays: number;
-  /** It prints 1..guardianStoriesMax stories a day. */
-  guardianStoriesMax: number;
-  /** At most this many of its daily stories are debunks of ours. */
-  rivalCountersMax: number;
-  /** Fact-check chance of its half-truths and lies, and the trust its readers lose when one is caught. */
-  rivalExposure: number;
-  rivalExposurePenalty: number;
-  /** Trust a true rival story earns from its viewers. */
-  rivalTrustGain: number;
-  /** It closes when fewer than this share of the city read it or its readers' trust falls below rivalTrustCollapse. */
-  rivalCloseShare: number;
-  rivalTrustCollapse: number;
-  /** A believed debunk: the rival trust lost (× impact × the debunk's strength). */
-  debunkTrust: number;
   /** Story arcs (CONCEPT.md §3.1а): daily start chance, how many run at once, the first turn one may start. */
   arcChance: number;
   arcsMax: number;
   arcStartTurn: number;
   /**
    * The first days are gentle for everyone (CONCEPT.md §4.7): incidents and conflict stories start on
-   * `conflictStartTurn`, the rival prints from `rivalStartTurn` (by mode), lies are checked from `factCheckStartTurn`.
+   * `conflictStartTurn`, lies are checked from `factCheckStartTurn`.
    */
   conflictStartTurn: number;
   /** Tasks (CONCEPT.md §4.8): how many a game gets and on which day. */
@@ -525,16 +488,6 @@ export interface Balance {
   /** A small place (at most `stainShutdownJobs` jobs) stained this much is shut down by the scandal at once. */
   stainShutdown: number;
   stainShutdownJobs: number;
-  /** Strikes at the rival (CONCEPT.md §8.4): share of its readers our issue of each level takes, among those it caught. */
-  rivalSteal: [number, number, number, number];
-  /**
-   * Luring its author away: our reputation it costs, the wait before the next one (it grows with
-   * each author lured), how many, and its readers' trust lost.
-   */
-  rivalLureRep: number;
-  rivalLureDays: number;
-  rivalLureMax: number;
-  rivalLureTrust: number;
   /** Crime (CONCEPT.md §5.6): chance of a real crime a day = base + spiral × pressure (scared and jobless share), up to this many a day. */
   crimeBase: number;
   crimeSpiral: number;
@@ -571,7 +524,6 @@ export interface Balance {
   /** The governor's visit: stricter fact-checkers, and the town gets help every day (mood). */
   governorCheckerMul: number;
   governorMood: number;
-  rivalStartTurn: Record<GameMode, number>;
   factCheckStartTurn: number;
   /** Pressure a published stage adds per distortion step, by placement (brief, article, front page). */
   arcPlacementWeight: number[];
@@ -600,25 +552,15 @@ export interface Balance {
   truthLoyalty: number;
   tieLoyalty: number;
   loyaltyRecovery: number;
-  /** Below this loyalty a reporter quits; with `leakChance` they tell the rival about our lies. */
+  /** Below this loyalty a reporter quits; with `leakChance` they tell the fact-checkers about our lies. */
   quitLoyalty: number;
   leakChance: number;
-  /** The rival lures a reporter of level ≥ 1: daily chance × (1.5 − loyalty), from `poachStartTurn`; keeping them costs `poachRetainTrust` reputation (or a voucher). */
+  /** A paper from the regional capital lures a reporter of level ≥ 1: daily chance × (1.5 − loyalty), from `poachStartTurn`; keeping them costs `poachRetainTrust` reputation (or a voucher). */
   poachChance: number;
   poachStartTurn: number;
   poachRetainTrust: number;
-  /** A reporter who went over to the rival: its readers trust it this much more. */
-  poachRivalTrust: number;
   /** A fake kompromat caught by the fact-checkers costs this many times the usual reputation. */
   setupPenaltyMul: number;
-  /** Chance the rival takes up a stage of a running arc on top of its own stories. */
-  rivalArcChance: number;
-  /** The same for the rival's debunks of our stories: the reputation we lose. */
-  rivalDebunkTrust: number;
-  /** A story of the rival can be debunked this many days after it came out. */
-  debunkWindow: number;
-  /** Chance a reporter who does not watch the rival stumbles on a debunk instead of a story. */
-  debunkFindChance: number;
   /** Most stories of sensation tier in a day's finds and in one issue. */
   maxSensations: number;
   startReporters: string[];
@@ -840,7 +782,6 @@ export type TaskCheck =
   | { type: 'noExposure' }
   | { type: 'trust'; min: number }
   | { type: 'mood'; min: number }
-  | { type: 'debunks'; count: number }
   | { type: 'cityDrop'; amount: number }
   | { type: 'cityBelow'; index: number }
   | { type: 'scared'; count: number };
@@ -873,7 +814,7 @@ export interface TaskState {
   /** The last day it can be done on. */
   untilTurn: number;
   status: 'active' | 'done' | 'failed';
-  /** The value the check counts from (debunks, readers, upgrades or the city index when it was given). */
+  /** The value the check counts from (readers, upgrades or the city index when it was given). */
   base: number;
   /** The day it was done or failed. */
   endTurn?: number;
@@ -951,9 +892,6 @@ export interface Resident {
   protestTurns: number;
   /** Days the resident is still afraid of crime and stays at home. */
   fearTurns: number;
-  /** Buys the rival paper, and how much they trust it (0..100). */
-  rivalReader: boolean;
-  rivalTrust: number;
   /** Building types the resident avoids, with turns remaining. */
   avoid: Partial<Record<BuildingType, number>>;
   /** Building types the resident quit and won't return to. */
@@ -1000,10 +938,8 @@ export interface CardInstance {
   soft?: boolean;
   /** Kompromat from an anonymous source that is fake: told as true, it is a lie for the fact-checkers. Hidden. */
   setup?: boolean;
-  /** Debunks: the rival's printed story it answers (uid in `RivalState.printed`), its headline and effect. */
   /** An event written by a reporter whose specialty it is: a level stronger (CONCEPT.md §3.3). */
   expert?: boolean;
-  debunk?: { uid: number; title: string; effect: EffectType | null };
 }
 
 /** A running story arc: `stage` stages have happened; `pressure` > 0 leans to the bad ending. */
@@ -1012,51 +948,6 @@ export interface ArcState {
   stage: number;
   pressure: number;
   startTurn: number;
-}
-
-/** A story the rival paper prints in its issue (it comes out the same day as ours). */
-export interface RivalStory {
-  card: CardInstance;
-  placement: Placement;
-  distortion: number;
-}
-
-/** A story the rival already printed: it can be debunked for `debunkWindow` days. */
-export interface PrintedStory {
-  uid: number;
-  templateId: string;
-  title: string;
-  truth: TruthLevel;
-  placement: Placement;
-  /** The turn of the issue it came out in. */
-  turn: number;
-  effect: EffectType | null;
-  debunked: boolean;
-  /** Caught by the fact-checkers: nobody believes it any more, there is nothing left to debunk. */
-  exposed?: boolean;
-  /** Told «Без паники» / «Всё хорошо!»: a lie that calms. */
-  soothed?: boolean;
-}
-
-/** guardian = «Голос города», the honest paper that defends the town. */
-export type RivalKind = 'guardian';
-
-/** The rival paper (CONCEPT.md §8). */
-export interface RivalState {
-  kind: RivalKind;
-  /** Its issue being written; it comes out with ours and nobody sees it before. */
-  plan: RivalStory[];
-  /** What it printed in the last `debunkWindow` days, newest first. */
-  printed: PrintedStory[];
-  /** When it last printed each template, so it varies its stories (`repeatFadeDays`). */
-  seen?: Record<string, number>;
-  closed: boolean;
-  /** Its stories our debunks answered, over the game. */
-  debunked: number;
-  /** Its authors we lured away (CONCEPT.md §8.4): a story less a day each. */
-  lured?: number;
-  /** The turn the next author can be lured (CONCEPT.md §8.4). */
-  lureReady?: number;
 }
 
 /** An incident between two groups that happened today (it becomes a true story). */
@@ -1136,7 +1027,7 @@ export interface ExposedStory {
   setup?: boolean;
   /** Who wrote it (a reporter who quits may leak our lies). */
   reporterId?: string;
-  /** Leaked to the rival by a reporter who quit. */
+  /** Leaked to the fact-checkers by a reporter who quit. */
   leaked?: boolean;
 }
 
@@ -1176,7 +1067,7 @@ export type Difficulty = 'easy' | 'normal' | 'hard';
 /**
  * A town's main goal on a pass (CONCEPT.md §9.2): bring it down to a stage (`index` is a `cityStates`
  * bound: 50 «Упадок», 30 «Руины» — the full destruction), close every building of a type, drive a
- * share of a group out of town, keep two groups at clashes for days on end, close the rival paper,
+ * share of a group out of town, keep two groups at clashes for days on end,
  * or let a gang take the streets.
  */
 export type TownGoal =
@@ -1184,7 +1075,6 @@ export type TownGoal =
   | { type: 'close'; building: BuildingType; count?: number }
   | { type: 'drive'; group: GroupId; share: number }
   | { type: 'clashes'; days: number }
-  | { type: 'rival' }
   | { type: 'gang' };
 
 /** The town generator's parts (CONCEPT.md §9.5, `townGen.json`). */
@@ -1287,7 +1177,7 @@ export interface DifficultyDef {
 
 export interface Outcome {
   result: 'win' | 'lose';
-  reason: 'cityDestroyed' | 'trustCollapse' | 'turnLimit' | 'rivalClosed' | 'goalDone';
+  reason: 'cityDestroyed' | 'trustCollapse' | 'turnLimit' | 'goalDone';
 }
 
 export interface GameState {
@@ -1296,12 +1186,6 @@ export interface GameState {
   rng: RngState;
   turn: number;
   mode: GameMode;
-  /** The rival paper. */
-  rival: RivalState | null;
-  /** Reporters sent to watch the rival paper; they mostly bring debunks of its lies. */
-  rivalWatch: string[];
-  /** What we printed in the last `debunkWindow` days: the rival may debunk our lies. */
-  ourPrinted: PrintedStory[];
   /** Running story arcs and the ids of arcs this game already had (each happens once). */
   arcs: ArcState[];
   arcsDone: string[];
@@ -1371,8 +1255,6 @@ export interface GameState {
   lastReactions: Record<number, Reaction>;
   /** Today's events no free reporter could write up (CONCEPT.md §3.3): shown greyed in the day's events. */
   missedEvents: string[];
-  /** Reactions to the rival's issue of the same day, kept apart from ours (shown with its paper over the head). */
-  rivalReactions: Record<number, Reaction>;
   todayEvents: string[];
   /** Tasks of this game (CONCEPT.md §4.8): the ordinary ones and the audit's. */
   tasks: TaskState[];
@@ -1451,8 +1333,6 @@ export interface TurnReport {
   turn: number;
   /** The clean streak after this issue, whether it broke and whether it paid its bonus (CONCEPT.md §5.3). */
   cleanStreak: { days: number; broken: boolean; bonus: number };
-  /** The mole at the rival's was found out today. */
-  moleCaught?: boolean;
   publications: PublicationReport[];
   /** Stories exposed during this turn: this issue's and old lies that surfaced. */
   exposures: ExposedStory[];
@@ -1486,17 +1366,4 @@ export interface TurnReport {
   hunt?: { building: number; hit: boolean; step: number; stain: number; won: string | null };
   /** The twist began or ended this turn. */
   twist?: { started: boolean; ended: boolean };
-  /** What the rival printed this turn and how it stands now. */
-  rival?: RivalReport;
-}
-
-export interface RivalReport {
-  publications: PublicationReport[];
-  /** Residents our debunks talked out of believing its stories. */
-  cured: number;
-  readersBefore: number;
-  readersAfter: number;
-  trustBefore: number;
-  trustAfter: number;
-  closed: boolean;
 }

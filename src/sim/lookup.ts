@@ -67,11 +67,6 @@ export function conflictsStarted(state: GameState, c: Content): boolean {
   return state.turn >= c.balance.conflictStartTurn;
 }
 
-/** The rival paper starts printing on its day (by mode) and until it closes. */
-export function rivalStarted(state: GameState, c: Content): boolean {
-  return !!state.rival && !state.rival.closed && state.turn >= c.balance.rivalStartTurn[state.mode];
-}
-
 /** Fact-checkers look at our stories from this day on: the first lies are forgiven. */
 export function factCheckStarted(state: GameState, c: Content): boolean {
   return state.turn >= c.balance.factCheckStartTurn;

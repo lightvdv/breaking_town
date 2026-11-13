@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { cpSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineConfig } from 'vite';
+import { configDefaults } from 'vitest/config';
 
 /**
  * Art in public/assets keeps its file names, so a browser would show yesterday's sprites from its
@@ -22,6 +23,8 @@ const commit = (() => {
 })();
 
 export default defineConfig(({ command }) => ({
+  // CI checks the beta out into beta-src next to master; its tests read master's files, so skip them.
+  test: { exclude: [...configDefaults.exclude, 'beta-src/**'] },
   define: {
     __ASSET_VERSION__: JSON.stringify(command === 'build' ? version : ''),
     __APP_VERSION__: JSON.stringify(appVersion),

@@ -1,13 +1,15 @@
 import { tr } from '../i18n';
 import { groupOf, templateOf } from './lookup';
 import { chance, pick, weightedPick } from './rng';
-import { buyWillingness } from './readers';
+import { payTrust, trustBlock } from './economy';
+import { getModifiers } from './modifiers';
 import type { CardInstance, CashDef, Content, GameState, NewsTier } from './types';
 
 /**
- * «Чёрная касса» (CONCEPT.md §3.5в): the paper's money buys one-off moves, each with its price and
- * a few days of cooldown — a leaked sensation, a bribe for the fact-checkers, an ad campaign, hired
- * provocateurs, paparazzi on the hunt's target, a free run of the paper.
+ * «Грязные приёмы» (CONCEPT.md §3.5в): one-off moves, each with a few days of cooldown — a leaked
+ * sensation, a bribe for the fact-checkers, an ad campaign, hired provocateurs, paparazzi on the
+ * hunt's target, a free run of the paper. The weak ones cost only the wait, the strong ones
+ * reputation too. (The code keeps the old name «cash».)
  */
 
 export function cashOf(c: Content, id: string): CashDef {
@@ -31,11 +33,20 @@ export function cashMoves(state: GameState, c: Content): CashDef[] {
   return c.cash.filter((x) => cashOpen(state, c, x.id));
 }
 
-/** A move's price: a card of a higher level in the collection makes it cheaper (÷ `cardLevelPower`). */
-export function cashCost(state: GameState, c: Content, id: string): number {
+/** The reputation a trick costs everyone (0 for the weak ones). */
+export function cashCost(_state: GameState, c: Content, id: string): number {
+  return cashOf(c, id).trust;
+}
+
+/**
+ * Days a trick waits after use: a card of a higher level in the collection shortens it
+ * (÷ `cardLevelPower`), interns take a day off; never below one day.
+ */
+export function cashCooldown(state: GameState, c: Content, id: string): number {
   const card = cardOf(state, c, id);
   const level = card ? (state.collection?.[card.id] ?? 1) : 1;
-  return Math.round(cashOf(c, id).cost / (c.balance.cardLevelPower?.[level - 1] ?? 1));
+  const days = cashOf(c, id).cooldown / (c.balance.cardLevelPower?.[level - 1] ?? 1) + getModifiers(state, c).cashCooldownAdd;
+  return Math.max(1, Math.round(days));
 }
 
 /** Is a move bought today (or for tomorrow) still waiting to act on `turn`? */
@@ -43,13 +54,13 @@ export function cashActive(state: GameState, id: string, turn = state.turn): boo
   return state.cashEffects?.[id] === turn;
 }
 
-/** Why a move cannot be bought now, or null. */
+/** Why a trick cannot be used now, or null. */
 export function cashBlock(state: GameState, c: Content, id: string): string | null {
   if (state.outcome) return tr('Партия окончена');
   if (!cashOpen(state, c, id)) return tr('нужна карта');
   const ready = state.cashReady?.[id] ?? 0;
   if (ready > state.turn) return tr('через {0} {1}', ready - state.turn, ready - state.turn === 1 ? tr('день') : tr('дня'));
-  if (state.money < cashCost(state, c, id)) return tr('не хватает денег');
+  if (trustBlock(state, c, cashCost(state, c, id))) return tr('не хватит репутации');
   if (id === 'paparazzi' && !state.hunt) return tr('нет травли');
   if (id === 'leak' && !leakPool(state, c).length) return tr('источник молчит');
   return null;
@@ -61,14 +72,14 @@ function leakPool(state: GameState, c: Content) {
   return c.cards.filter((t) => t.source === 'rumor' && !t.arc && !t.response && !t.conflict && !inHand.has(t.id) && (t.tiers?.[1] ?? 3) >= 3 && (!t.requires || state.buildings.some((b) => b.type === t.requires && b.open)));
 }
 
-/** Buys a move; a leak returns the card it put into today's hand. */
+/** Uses a trick; a leak returns the card it put into today's hand. */
 export function useCash(state: GameState, c: Content, id: string): CardInstance | null {
   const block = cashBlock(state, c, id);
   if (block) throw new Error(`Cannot use ${id}: ${block}`);
   const def = cashOf(c, id);
   const rng = state.rng;
-  state.money -= cashCost(state, c, id);
-  state.cashReady = { ...state.cashReady, [id]: state.turn + def.cooldown };
+  payTrust(state, cashCost(state, c, id));
+  state.cashReady = { ...state.cashReady, [id]: state.turn + cashCooldown(state, c, id) };
   state.cashEffects = { ...state.cashEffects };
   switch (id) {
     case 'leak': {
@@ -96,7 +107,7 @@ export function useCash(state: GameState, c: Content, id: string): CardInstance 
       if (owned) {
         for (const r of state.residents) {
           if (r.status !== 'active' || r.follows.includes(owned)) continue;
-          if (chance(rng, (def.share ?? 0.15) * buyWillingness(state, c, r) * ((groupOf(c, r.group).channels[owned] ?? 0) > 0 ? 1 : 0))) r.follows.push(owned);
+          if (chance(rng, (def.share ?? 0.15) * ((groupOf(c, r.group).channels[owned] ?? 0) > 0 ? 1 : 0))) r.follows.push(owned);
         }
       }
       return null;

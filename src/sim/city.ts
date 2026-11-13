@@ -12,7 +12,6 @@ import type {
   GameState,
   GroupDef,
   Resident,
-  WealthClass,
 } from './types';
 
 export function newResident(c: Content, rng: RngState, id: number, group: GroupDef, home: number): Resident {
@@ -84,12 +83,6 @@ export function leaveCity(r: Resident): void {
   r.follows = [];
   r.protestTurns = 0;
   r.fearTurns = 0;
-}
-
-/** With a job, on a pension or without income: decides which price of the paper one can pay (CONCEPT.md §5.4). */
-export function wealthOf(c: Content, r: Resident): WealthClass {
-  if (r.job !== null) return 'working';
-  return groupOf(c, r.group).pension > 0 ? 'pensioner' : 'jobless';
 }
 
 export function computeMetrics(state: GameState, c: Content): CityMetrics {

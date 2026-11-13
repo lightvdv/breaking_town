@@ -1,5 +1,6 @@
 import { chance, int, next, weightedPick, type RngState } from './rng';
 import { clamp, conflictsStarted, rivalStarted, templateOf } from './lookup';
+import { payTrust, trustBlock } from './economy';
 import { getModifiers, modifiersOf } from './modifiers';
 import { effectiveTier, isSoothed, limitSensations, minDistortion, publish, storyTitle, type PublishedNews } from './news';
 import { pickPair } from './relations';
@@ -289,9 +290,14 @@ export function updateRivalReaders(state: GameState, c: Content, rng: RngState, 
 
 
 
-/** What luring its next author away costs: dearer each time (CONCEPT.md §8.4). */
-export function lureCost(state: GameState, c: Content): number {
-  return Math.round(c.balance.rivalLureCost * (1 + (state.rival?.lured ?? 0)) * getModifiers(state, c).lureCostMul);
+/** What luring an author away costs us in reputation (CONCEPT.md §8.4). */
+export function lureCost(_state: GameState, c: Content): number {
+  return c.balance.rivalLureRep;
+}
+
+/** Days before the next author can be lured: longer with each one gone (CONCEPT.md §8.4). */
+export function lureWait(state: GameState, c: Content): number {
+  return Math.max(1, Math.round(c.balance.rivalLureDays * (1 + (state.rival?.lured ?? 0)) * getModifiers(state, c).lureCooldownMul));
 }
 
 /** Why its author cannot be lured away now, or null. */
@@ -300,7 +306,8 @@ export function lureBlock(state: GameState, c: Content): string | null {
   if (!rival || rival.closed || state.outcome) return 'no rival';
   if (!rivalStarted(state, c)) return 'not yet';
   if ((rival.lured ?? 0) >= c.balance.rivalLureMax) return 'nobody left';
-  if (state.money < lureCost(state, c)) return 'no money';
+  if ((rival.lureReady ?? 0) > state.turn) return 'waiting';
+  if (trustBlock(state, c, lureCost(state, c))) return 'no trust';
   return null;
 }
 
@@ -308,7 +315,8 @@ export function lureBlock(state: GameState, c: Content): string | null {
 export function lureRivalAuthor(state: GameState, c: Content): void {
   const block = lureBlock(state, c);
   if (block) throw new Error(`Cannot lure: ${block}`);
-  state.money -= lureCost(state, c);
+  payTrust(state, lureCost(state, c));
+  state.rival!.lureReady = state.turn + lureWait(state, c);
   const rival = state.rival!;
   rival.lured = (rival.lured ?? 0) + 1;
   for (const r of state.residents) if (r.status === 'active') r.rivalTrust = clamp(r.rivalTrust - c.balance.rivalLureTrust, 0, 100);

@@ -107,7 +107,6 @@ export function updatePeople(
     else if (reaction === 'doubted') write(p, 'doubted', title);
     else if (reaction === 'happy') write(p, 'happy', title);
     else if (reaction === 'scared' || reaction === 'talk') write(p, 'scared', title);
-    else if (state.price >= 2 && r.follows.length) write(p, 'price', null);
   }
 
   // An anonymous reader writes too, about the loudest reaction of the day.

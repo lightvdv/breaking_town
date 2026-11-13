@@ -21,9 +21,9 @@ const KEY = `breaking-town-collection${STORAGE_SUFFIX}`;
 /** Highest level of a card. */
 export const MAX_LEVEL = 3;
 
-/** Cards that can be collected: the draft's cards (forks are taken in a game). */
+/** Cards that can be collected: the draft's cards. */
 export function collectable(c: Content): UpgradeDef[] {
-  return c.upgrades.filter((u) => !u.fork && !!u.rarity);
+  return c.upgrades.filter((u) => !!u.rarity);
 }
 
 export function loadCollection(c: Content): Collection {
@@ -36,7 +36,7 @@ export function loadCollection(c: Content): Collection {
   const cards: Record<string, number> = {};
   // The starter cards are always there; cards that left the game are dropped.
   for (const u of c.upgrades) if (u.starter) cards[u.id] = 1;
-  for (const [id, level] of Object.entries(data.cards ?? {})) if (c.upgrades.some((u) => u.id === id && !u.fork)) cards[id] = Math.min(MAX_LEVEL, Math.max(1, Math.round(level)));
+  for (const [id, level] of Object.entries(data.cards ?? {})) if (c.upgrades.some((u) => u.id === id)) cards[id] = Math.min(MAX_LEVEL, Math.max(1, Math.round(level)));
   return { currency: Math.max(0, Math.round(data.currency ?? 0)), cards, fresh: (data.fresh ?? []).filter((id) => cards[id]) };
 }
 
@@ -145,7 +145,6 @@ export const tagNames: Record<string, string> = {
   crime: tr('криминал'),
   hunt: tr('травля'),
   split: tr('раскол'),
-  money: tr('деньги'),
   trust: tr('честное лицо'),
   rival: tr('против «Голоса»'),
   staff: tr('редакция'),

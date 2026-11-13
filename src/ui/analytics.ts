@@ -98,7 +98,6 @@ export function trackTurn(state: GameState, c: Content, kind: string, decision: 
   track('turn_end', {
     ...gameProps(state, kind),
     day: report.turn,
-    money: state.money,
     readers: readerCount(state),
     reputation: Math.round(averageTrust(state, c)),
     city_index: Math.round(report.metricsAfter.cityIndex),
@@ -112,8 +111,8 @@ export function trackTurn(state: GameState, c: Content, kind: string, decision: 
     cards: state.upgrades.length,
     hunt: !!state.hunt,
     digging: state.investigations.length,
-    loan: !!state.loan,
-    price: state.price,
+    seats: state.seats,
+    tricks: Object.keys(state.cashReady ?? {}).length,
   });
   if (state.outcome) {
     track('game_end', {

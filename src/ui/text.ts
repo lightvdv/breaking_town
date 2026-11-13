@@ -43,8 +43,6 @@ export const scopeLabels: Record<NewsScope | 'any', string> = { local: tr('Го�
 export const placementLabels = [tr('Заметка'), tr('Статья'), tr('Первая полоса')];
 export const issueLevelLabels = [tr('Скучный'), tr('Обычный'), tr('Интересный'), tr('Сенсационный')];
 /** The game mode as the title screen names it. */
-/** Cover price levels of the paper (CONCEPT.md §3.4), from free to dear. */
-export const priceLabels = [tr('Бесплатно'), tr('Дёшево'), tr('Как у всех'), tr('Дорого')];
 /** Framing of a conflict story between two groups (CONCEPT.md §5.5): calm, as is, heat, inflate. */
 export const framingLabels = [tr('Успокоить'), tr('Как есть'), tr('Подогреть'), tr('Раздуть')];
 /**
@@ -251,8 +249,6 @@ export function outcomeText(o: Outcome, goal = ''): string {
       return tr('Победа! {0}Совет директоров «Медиа-Плюс» доволен и отдаёт вам следующий город.', goal ? tr('{0} — сделано. ', goal) : '');
     case 'cityDestroyed':
       return tr('Победа! Город опустел, а газета на плаву: страх продаётся. Совет директоров «Медиа-Плюс» доволен и отдаёт вам следующий город.');
-    case 'bankrupt':
-      return tr('Поражение: газета разорилась. «Медиа-Плюс» сворачивает эксперимент и списывает вас вместе с убытками.');
     case 'trustCollapse':
       return tr('Поражение: репутация упала до нуля — вам больше никто не верит. Холдинг отрекается от провалившегося редактора.');
     case 'turnLimit':

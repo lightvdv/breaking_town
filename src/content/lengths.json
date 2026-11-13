@@ -13,7 +13,6 @@
     "days": { "easy": 23, "normal": 20, "hard": 18 },
     "balance": {
       "winCityIndex": 71,
-      "startMoney": 600,
       "startFollowShare": 2.5,
       "startReporters": ["petrova", "gusev"],
       "factCheckStartTurn": 3,

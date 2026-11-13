@@ -231,7 +231,7 @@ export function exposureRiskOf(
       reconcile *
       // The governor's visit: the press is watched closely (CONCEPT.md §4.9).
       twistMods(state, c).checkerMul *
-      // «Чёрная касса»: the fact-checkers took money today (CONCEPT.md §3.5в).
+      // A dirty trick: the fact-checkers took an envelope today (CONCEPT.md §3.5в).
       bribeMul(state, c) *
       shield,
     0,
@@ -320,10 +320,7 @@ function beliefChance(
   }
   // People do not believe dirt about their own group.
   if (tpl.target === r.group) plausibility *= b.witness[truth];
-  // The yellow press: youth and the jobless go for a loud headline whoever prints it (CONCEPT.md §3.5).
-  const own = r.trust + mods.trustBonus;
-  const hungry = r.group === 'youth' || (r.job === null && groupOf(c, r.group).jobs.length > 0);
-  const trust = (trustIn ?? (hungry ? Math.max(own, mods.sensationTrust) : own)) / 100;
+  const trust = (trustIn ?? r.trust + mods.trustBonus) / 100;
   const skepticism = groupOf(c, r.group).skepticism;
   return clamp(b.beliefScale * trust * plausibility * (1 - skepticism), 0, b.maxBelief);
 }
@@ -580,7 +577,7 @@ export function publish(
   return { pub, truth, impact, viewers, doubters, report };
 }
 
-/** A caught story costs reputation and ad income (CONCEPT.md §4.1); returns it for the exposure popup. */
+/** A caught story costs reputation (CONCEPT.md §4.1); returns it for the exposure popup. */
 export function exposeNews(
   state: GameState,
   c: Content,
@@ -601,7 +598,6 @@ export function exposeNews(
     } else r.trust = clamp(r.trust - penalty * b.trustPenaltyBystanderShare, 0, 100);
     r.beliefs = r.beliefs.filter((x) => x.cardUid !== story.cardUid);
   }
-  state.scandal = b.scandalAdMul;
   return { ...story, trustLoss: before - averageTrust(state, c) };
 }
 

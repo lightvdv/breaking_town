@@ -5,7 +5,6 @@ import type { Content, Decision, GameState } from './types';
 
 /** What the issue as laid out now is expected to do: average changes over a few rehearsals. */
 export interface Forecast {
-  money: number;
   readers: number;
   trust: number;
   /** The city index after the next day. */
@@ -20,7 +19,7 @@ export interface Forecast {
  * (the stamp, the pencil, «вчерашняя ложь может всплыть»). Returns null if the decision is not allowed.
  */
 export function forecastTurn(state: GameState, c: Content, d: Decision, samples = 3): Forecast | null {
-  const sum: Forecast = { money: 0, readers: 0, trust: 0, cityIndex: 0 };
+  const sum: Forecast = { readers: 0, trust: 0, cityIndex: 0 };
   const json = JSON.stringify(state);
   const rehearsal: Content = { ...c, balance: { ...c.balance, checkerBase: 0 } };
   for (let i = 0; i < samples; i++) {
@@ -33,10 +32,9 @@ export function forecastTurn(state: GameState, c: Content, d: Decision, samples 
     } catch {
       return null;
     }
-    sum.money += report.moneyDelta;
     sum.readers += report.readers.after - report.readers.before;
     sum.trust += averageTrust(copy, c) - report.trustBefore;
     sum.cityIndex += report.metricsAfter.cityIndex;
   }
-  return { money: sum.money / samples, readers: sum.readers / samples, trust: sum.trust / samples, cityIndex: sum.cityIndex / samples };
+  return { readers: sum.readers / samples, trust: sum.trust / samples, cityIndex: sum.cityIndex / samples };
 }

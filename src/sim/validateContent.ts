@@ -22,7 +22,7 @@ export function validateContent(c: Content): string[] {
 
   const shares = c.groups.reduce((s, g) => s + g.share, 0);
   if (Math.abs(shares - 1) > 0.01) errors.push(`group shares sum to ${shares}, expected 1`);
-  if (!c.channels.some((ch) => ch.cost === 0 && ch.requires === null)) errors.push('no free starting channel');
+  if (!c.channels.some((ch) => ch.requires === null)) errors.push('no starting channel');
   const lots = c.balance.mapBlocks * c.balance.mapBlocks;
   if (lotsNeeded(c) > lots) errors.push(`buildings need ${lotsNeeded(c)} lots, the map has ${lots}`);
   for (const b of c.buildings) if (b.size !== 1 && b.size !== 2) errors.push(`building ${b.type}: size must be 1 or 2`);
@@ -116,8 +116,12 @@ export function validateContent(c: Content): string[] {
   if (b.startReporters.length < 1) errors.push('at least one start reporter is needed');
   if (b.startReporters.length > b.maxReporters) errors.push('more start reporters than maxReporters');
   if (b.maxReporters > c.reporters.length) errors.push('maxReporters exceeds the number of reporters');
-  if (b.agencyFee < 0 || b.agencyMaxOffer < 1) errors.push('agencyFee must be ≥ 0 and agencyMaxOffer ≥ 1');
-  for (const r of c.reporters) if (!(r.weight >= 0 && r.hireCost >= 0)) errors.push(`reporter ${r.id}: weight and hireCost must be ≥ 0`);
+  if (b.agencyMaxOffer < 1) errors.push('agencyMaxOffer must be ≥ 1');
+  for (const r of c.reporters) if (!(r.weight >= 0)) errors.push(`reporter ${r.id}: weight must be ≥ 0`);
+  // Seats in the newsroom (CONCEPT.md §3.3): the start's seats hold the start reporters, every other seat has its share.
+  if (b.startSeats < b.startReporters.length || b.startSeats > b.maxReporters) errors.push('startSeats must hold the start reporters and fit maxReporters');
+  if (b.seatThresholds.length < b.maxReporters - b.startSeats) errors.push('seatThresholds: a share for every seat above startSeats');
+  if (b.seatThresholds.some((x, i) => !(x > 0 && x < 1) || (i > 0 && x <= b.seatThresholds[i - 1]))) errors.push('seatThresholds: ascending shares between 0 and 1');
   if (b.maxSensations < 1) errors.push('maxSensations must be at least 1');
   if (b.minFinds < 1) errors.push('minFinds must be at least 1');
   if (!c.cards.some((t) => t.scope === 'global')) errors.push('no global news');
@@ -169,7 +173,7 @@ export function validateContent(c: Content): string[] {
     if (!c.groups.some((g) => g.id === p.group)) errors.push(`person ${p.id}: unknown group ${p.group}`);
     if (p.job && !c.groups.find((g) => g.id === p.group)?.jobs.includes(p.job)) errors.push(`person ${p.id}: ${p.group} do not work at ${p.job}`);
   }
-  for (const kind of ['scared', 'happy', 'doubted', 'outraged', 'lostJob', 'left', 'protest', 'price', 'anonymous'] as const) {
+  for (const kind of ['scared', 'happy', 'doubted', 'outraged', 'lostJob', 'left', 'protest', 'anonymous'] as const) {
     if (!c.letters[kind]?.length) errors.push(`letters: no ${kind} texts`);
   }
   // Offers with a catch (CONCEPT.md §3.5а).
@@ -191,31 +195,26 @@ export function validateContent(c: Content): string[] {
     const iy = c.groups.findIndex((g) => g.id === y);
     if (ix < 0 || iy < 0 || ix >= iy) errors.push(`tensionStart: bad pair key ${key} (two groups in content order)`);
   }
-  // Upgrade forks and the deck (CONCEPT.md §3.5).
-  for (const f of c.forks) {
-    for (const id of f.options) {
-      const u = c.upgrades.find((x) => x.id === id);
-      if (!u) errors.push(`fork ${f.id}: unknown upgrade ${id}`);
-      else if (u.fork !== f.id) errors.push(`fork ${f.id}: upgrade ${id} must have fork "${f.id}"`);
-    }
-  }
   // The collection (CONCEPT.md §3.5б): every draft card has a rarity, its tags make sets.
   const tags = new Set(c.synergies.map((x) => x.tag));
   unique('synergy', c.synergies.map((x) => x.tag));
   for (const u of c.upgrades) {
-    if (!u.fork && !['common', 'rare', 'legendary'].includes(u.rarity ?? '')) errors.push(`upgrade ${u.id}: rarity must be common, rare or legendary`);
+    if (!['common', 'rare', 'legendary'].includes(u.rarity ?? '')) errors.push(`upgrade ${u.id}: rarity must be common, rare or legendary`);
     for (const t of u.tags ?? []) if (!tags.has(t)) errors.push(`upgrade ${u.id}: unknown tag ${t}`);
     if (u.starter && u.rarity !== 'common') errors.push(`upgrade ${u.id}: a starter card must be common`);
   }
-  for (const syn of c.synergies) if (c.upgrades.filter((u) => u.tags?.includes(syn.tag)).length < syn.count) errors.push(`synergy ${syn.tag}: fewer cards than it needs`);
+  for (const syn of c.synergies) {
+    if (c.upgrades.filter((u) => u.tags?.includes(syn.tag)).length < syn.count) errors.push(`synergy ${syn.tag}: fewer cards than it needs`);
+    // Every set but «Газетная война» can be gathered from the starter collection (CONCEPT.md §3.5б).
+    if (syn.tag !== 'rival' && c.upgrades.filter((u) => u.starter && u.tags?.includes(syn.tag)).length < syn.count) errors.push(`synergy ${syn.tag}: the starter collection cannot gather it`);
+  }
   for (const u of c.upgrades) {
-    if (u.fork && !c.forks.some((f) => f.id === u.fork && f.options.includes(u.id))) errors.push(`upgrade ${u.id}: fork ${u.fork} does not list it`);
-    if (u.ability && !(u.ability.cooldown >= 1 && u.ability.cost >= 0)) errors.push(`upgrade ${u.id}: an ability needs a cooldown ≥ 1 and a cost ≥ 0`);
+    if (u.ability && !(u.ability.cooldown >= 1)) errors.push(`upgrade ${u.id}: an ability needs a cooldown ≥ 1`);
     if (u.cash && !c.cash.some((x) => x.id === u.cash)) errors.push(`upgrade ${u.id}: unknown cash move ${u.cash}`);
   }
   for (const x of c.cash) if (!x.base && !c.upgrades.some((u) => u.cash === x.id)) errors.push(`cash ${x.id}: no card opens it`);
   for (const mode of ['destroy'] as const) {
-    const deck = c.upgrades.filter((u) => !u.fork && (!u.mode || u.mode === mode));
+    const deck = c.upgrades.filter((u) => !u.mode || u.mode === mode);
     if (deck.length < c.balance.shopOfferSize * 2) errors.push(`the ${mode} deck needs at least ${c.balance.shopOfferSize * 2} cards`);
   }
   // Campaign towns (CONCEPT.md §9): group shares add up, known groups and buildings, the map fits.

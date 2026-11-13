@@ -3,11 +3,8 @@
     "id": "newspaper",
     "name": "Газета",
     "description": "Ваша газета. Улучшения делают её интереснее разным группам.",
-    "cost": 0,
-    "upkeep": 20,
     "baseReach": 0.6,
     "virality": 0.1,
-    "adRate": 1.5,
     "exposureRisk": 0.8,
     "requires": null
   }

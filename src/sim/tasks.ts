@@ -1,3 +1,4 @@
+import { payTrust } from './economy';
 import { averageTrust, clamp } from './lookup';
 import { readerCount } from './readers';
 import { pick, type RngState } from './rng';
@@ -32,12 +33,7 @@ function baseOf(state: GameState, def: TaskDef): number {
   }
 }
 
-/** What a done task pays at this difficulty. */
-export function taskReward(c: Content, def: TaskDef): number {
-  return Math.round(def.reward * c.balance.taskRewardMul);
-}
-
-/** A done task's prize beside the money: a free deck card, reputation or experience. */
+/** A done task's prize: a free deck card, reputation or experience. */
 function givePrize(state: GameState, c: Content, def: TaskDef): void {
   const p = def.prize;
   if (!p) return;
@@ -85,8 +81,6 @@ export function taskProgress(state: GameState, c: Content, task: TaskState): { v
       return of(readerCount(state), ch.count);
     case 'readersGain':
       return of(readerCount(state) - task.base, ch.count);
-    case 'income':
-      return of(state.lastProfit, ch.amount);
     case 'upgrades':
       return of(state.upgrades.length - task.base, ch.count);
     case 'reporters':
@@ -110,11 +104,11 @@ export function taskProgress(state: GameState, c: Content, task: TaskState): { v
 
 /**
  * After the turn: reach tasks are done when their check holds, keep tasks fail when it breaks (an
- * exposure breaks «no exposures»); at the deadline the rest are settled. Done tasks pay their reward,
- * a failed audit cuts the budget. Returns what changed.
+ * exposure breaks «no exposures»); at the deadline the rest are settled. Done tasks give their prize,
+ * a failed audit costs reputation. Returns what changed.
  */
-export function updateTasks(state: GameState, c: Content, exposures: ExposedStory[]): { done: string[]; failed: string[]; reward: number } {
-  const out = { done: [] as string[], failed: [] as string[], reward: 0 };
+export function updateTasks(state: GameState, c: Content, exposures: ExposedStory[]): { done: string[]; failed: string[] } {
+  const out = { done: [] as string[], failed: [] as string[] };
   // The day that just ended: tasks are settled for it.
   const day = state.turn - 1;
   for (const task of state.tasks) {
@@ -128,13 +122,10 @@ export function updateTasks(state: GameState, c: Content, exposures: ExposedStor
     task.status = status;
     task.endTurn = day;
     if (status === 'done') {
-      const reward = taskReward(c, def);
-      state.money += reward;
-      out.reward += reward;
       givePrize(state, c, def);
       out.done.push(task.id);
     } else {
-      state.budgetCut += def.penalty ?? 0;
+      payTrust(state, def.penalty ?? 0);
       out.failed.push(task.id);
     }
   }

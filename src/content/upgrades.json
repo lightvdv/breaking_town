@@ -3,86 +3,66 @@
     "id": "kiosk_1",
     "name": "Киоск у рынка",
     "icon": "🏪",
-    "description": "Ещё одна точка продаж у рынка: +5% охвата и +0.3 денег с каждого читателя.",
-    "cost": 100,
+    "description": "Ещё одна точка продаж у рынка: +7% охвата — газету видят и берут чаще.",
     "requires": null,
     "series": "kiosks",
     "effects": {
       "channel": "newspaper",
-      "reachAdd": 0.05,
-      "adRateAdd": 0.3
+      "reachAdd": 0.07
     },
-    "section": "Продажи",
+    "section": "Тираж",
     "rarity": "common",
-    "tags": [
-      "money"
-    ],
     "starter": true
   },
   {
     "id": "kiosk_2",
     "name": "Киоск у завода",
     "icon": "🏪",
-    "description": "Ещё одна точка продаж у проходной завода: +5% охвата и +0.3 денег с каждого читателя.",
-    "cost": 180,
+    "description": "Ещё одна точка продаж у проходной завода: +7% охвата — газету видят и берут чаще.",
     "requires": {
       "upgrade": "kiosk_1"
     },
     "series": "kiosks",
     "effects": {
       "channel": "newspaper",
-      "reachAdd": 0.05,
-      "adRateAdd": 0.3
+      "reachAdd": 0.07
     },
-    "section": "Продажи",
+    "section": "Тираж",
     "rarity": "common",
-    "tags": [
-      "money"
-    ],
     "starter": true
   },
   {
     "id": "kiosk_3",
     "name": "Киоск на остановке",
     "icon": "🏪",
-    "description": "Ещё одна точка продаж на автобусной остановке: +5% охвата и +0.3 денег с каждого читателя.",
-    "cost": 280,
+    "description": "Ещё одна точка продаж на автобусной остановке: +7% охвата — газету видят и берут чаще.",
     "requires": {
       "upgrade": "kiosk_2"
     },
     "series": "kiosks",
     "effects": {
       "channel": "newspaper",
-      "reachAdd": 0.05,
-      "adRateAdd": 0.3
+      "reachAdd": 0.07
     },
-    "section": "Продажи",
+    "section": "Тираж",
     "rarity": "common",
-    "tags": [
-      "money"
-    ],
     "starter": true
   },
   {
     "id": "kiosk_4",
     "name": "Киоск у больницы",
     "icon": "🏪",
-    "description": "Ещё одна точка продаж у больницы: +5% охвата и +0.3 денег с каждого читателя.",
-    "cost": 400,
+    "description": "Ещё одна точка продаж у больницы: +7% охвата — газету видят и берут чаще.",
     "requires": {
       "upgrade": "kiosk_3"
     },
     "series": "kiosks",
     "effects": {
       "channel": "newspaper",
-      "reachAdd": 0.05,
-      "adRateAdd": 0.3
+      "reachAdd": 0.07
     },
-    "section": "Продажи",
+    "section": "Тираж",
     "rarity": "common",
-    "tags": [
-      "money"
-    ],
     "starter": true
   },
   {
@@ -90,17 +70,16 @@
     "name": "Подписка с доставкой",
     "icon": "📬",
     "description": "Газету приносят домой: читатели бросают её на 25% реже.",
-    "cost": 300,
     "requires": null,
     "effects": {
       "churnMul": 0.75
     },
-    "section": "Продажи",
+    "section": "Тираж",
     "rarity": "common",
+    "starter": true,
     "tags": [
-      "money"
-    ],
-    "starter": true
+      "trust"
+    ]
   },
   {
     "id": "paid_subscription",
@@ -108,24 +87,19 @@
     "icon": "🧾",
     "description": "Подписчики почти не бросают газету: уходят вдвое реже.",
     "drawback": "Новых читателей приходит почти вдвое меньше.",
-    "cost": 200,
     "requires": null,
     "effects": {
       "churnMul": 0.5,
       "acquisitionMul": 0.6
     },
-    "section": "Продажи",
-    "rarity": "common",
-    "tags": [
-      "money"
-    ]
+    "section": "Тираж",
+    "rarity": "common"
   },
   {
     "id": "newspaper_quality_1",
     "name": "Цветная печать",
     "icon": "🎨",
     "description": "Газета выглядит солиднее: +15% охвата, +5 к репутации.",
-    "cost": 150,
     "requires": null,
     "effects": {
       "channel": "newspaper",
@@ -144,7 +118,6 @@
     "name": "Колумнист с именем",
     "icon": "🖋",
     "description": "Его читают ради мнения: +20% охвата, +5 к репутации.",
-    "cost": 400,
     "requires": {
       "upgrade": "newspaper_quality_1"
     },
@@ -164,7 +137,6 @@
     "name": "Телепрограмма и кроссворд",
     "icon": "📺",
     "description": "Пенсионеры берут газету чаще: их интерес к газете +0.15.",
-    "cost": 200,
     "requires": null,
     "effects": {
       "channel": "newspaper",
@@ -174,17 +146,16 @@
     },
     "section": "Содержание",
     "rarity": "common",
+    "starter": true,
     "tags": [
-      "money"
-    ],
-    "starter": true
+      "trust"
+    ]
   },
   {
     "id": "sports_page",
     "name": "Спортивная страница",
     "icon": "⚽",
     "description": "Футбол и рыбалка: рабочие начинают покупать газету (интерес +0.3).",
-    "cost": 450,
     "requires": null,
     "effects": {
       "channel": "newspaper",
@@ -195,7 +166,6 @@
     "section": "Содержание",
     "rarity": "rare",
     "tags": [
-      "money",
       "split"
     ]
   },
@@ -204,7 +174,6 @@
     "name": "Молодёжная вкладка",
     "icon": "🎧",
     "description": "Комиксы, гороскоп и афиша: газету берёт молодёжь (интерес +0.35).",
-    "cost": 650,
     "requires": {
       "upgrade": "newspaper_quality_1"
     },
@@ -225,13 +194,12 @@
     "name": "Фотограф",
     "icon": "📷",
     "description": "Снимки на первой полосе: её читают на 20% чаще.",
-    "drawback": "Его зарплата — 10 ₽ в день.",
-    "cost": 150,
+    "drawback": "Не всем нравятся такие снимки: читатели бросают газету на 5% чаще.",
     "requires": null,
     "effects": {
       "channel": "newspaper",
       "frontReadMul": 1.2,
-      "upkeepAdd": 10
+      "churnMul": 1.05
     },
     "section": "Содержание",
     "rarity": "common",
@@ -245,7 +213,6 @@
     "name": "Опытный редактор",
     "icon": "🧠",
     "description": "+10% к шансу находок у всех репортёров.",
-    "cost": 300,
     "requires": null,
     "effects": {
       "reporterLuck": 0.1
@@ -262,7 +229,6 @@
     "name": "Независимые эксперты",
     "icon": "🎓",
     "description": "+0.1 к правдоподобию всех новостей.",
-    "cost": 600,
     "requires": null,
     "effects": {
       "plausibilityAdd": 0.1
@@ -279,7 +245,6 @@
     "icon": "💬",
     "description": "Страшные новости пересказывают на 40% охотнее.",
     "drawback": "Пойманная ложь стоит на 20% больше репутации.",
-    "cost": 260,
     "requires": null,
     "mode": "destroy",
     "effects": {
@@ -299,7 +264,6 @@
     "icon": "🕵",
     "description": "Свой человек в редакции конкурента: вы видите, что он напечатает сегодня.",
     "drawback": "Каждый день 5% — крота раскроют: −5% репутации, и он пропадёт.",
-    "cost": 420,
     "requires": null,
     "effects": {
       "seeRivalPlan": true
@@ -315,12 +279,10 @@
     "name": "Ночная смена",
     "icon": "🌙",
     "description": "Приём: один репортёр сегодня принесёт ещё одну новость.",
-    "drawback": "15 ₽ за раз, потом 4 дня перезарядки.",
-    "cost": 250,
+    "drawback": "Потом 4 дня перезарядки.",
     "requires": null,
     "ability": {
-      "cooldown": 4,
-      "cost": 15
+      "cooldown": 4
     },
     "effects": {},
     "section": "Приёмы",
@@ -335,12 +297,10 @@
     "name": "Заголовок покрупнее",
     "icon": "🔥",
     "description": "Приём: лучшая новость дня становится на ступень сильнее (до сенсации).",
-    "drawback": "20 ₽ за раз, потом 5 дней перезарядки.",
-    "cost": 300,
+    "drawback": "Потом 5 дней перезарядки.",
     "requires": null,
     "ability": {
-      "cooldown": 5,
-      "cost": 20
+      "cooldown": 5
     },
     "effects": {},
     "section": "Приёмы",
@@ -350,142 +310,21 @@
     ]
   },
   {
-    "id": "yellow_layout",
-    "name": "Жёлтая вёрстка",
-    "icon": "📢",
-    "description": "Газета для улицы: страшное бьёт на 30% сильнее, молодёжь и безработные верят ей даже при низкой репутации и охотнее покупают, а пойманная ложь стоит на 10% меньше.",
-    "drawback": "Пенсионеры и интеллигенция реже её покупают и чаще бросают, правда даёт вдвое меньше репутации, проверяют на 10% чаще.",
-    "cost": 300,
-    "requires": null,
-    "fork": "style",
-    "effects": {
-      "channel": "newspaper",
-      "scaryImpactMul": 1.3,
-      "checkerMul": 1.1,
-      "sensationTrust": 40,
-      "exposurePenaltyMul": 0.9,
-      "trustGainMul": 0.5,
-      "groupReach": {
-        "youth": 0.25,
-        "workers": 0.1,
-        "pensioners": -0.35,
-        "intelligentsia": -0.35
-      },
-      "groupChurn": {
-        "pensioners": 0.04,
-        "intelligentsia": 0.06
-      }
-    },
-    "tags": [
-      "yellow"
-    ]
-  },
-  {
-    "id": "solid_style",
-    "name": "Солидный стиль",
-    "icon": "🎩",
-    "description": "Строгая вёрстка и проверенные факты: правда даёт вдвое больше репутации.",
-    "drawback": "Страшные новости бьют на 20% слабее.",
-    "cost": 300,
-    "requires": null,
-    "fork": "style",
-    "effects": {
-      "trustGainMul": 2,
-      "scaryImpactMul": 0.8
-    },
-    "tags": [
-      "trust"
-    ]
-  },
-  {
-    "id": "cheap_paper",
-    "name": "Дешёвая бумага",
-    "icon": "📰",
-    "description": "Газета обходится на 15 ₽ в день дешевле, и её чаще берут на пробу: новых читателей на 30% больше.",
-    "drawback": "Читатели бросают её на 15% чаще.",
-    "cost": 150,
-    "requires": null,
-    "fork": "money",
-    "effects": {
-      "channel": "newspaper",
-      "upkeepAdd": -15,
-      "acquisitionMul": 1.3,
-      "churnMul": 1.15
-    },
-    "tags": [
-      "money"
-    ]
-  },
-  {
-    "id": "gloss",
-    "name": "Глянец",
-    "icon": "✨",
-    "description": "Плотная бумага и цвет: +0.6 ₽ с каждого читателя.",
-    "drawback": "Печать дороже на 15 ₽ в день.",
-    "cost": 250,
-    "requires": null,
-    "fork": "money",
-    "effects": {
-      "channel": "newspaper",
-      "adRateAdd": 0.6,
-      "upkeepAdd": 15
-    },
-    "tags": [
-      "money"
-    ]
-  },
-  {
-    "id": "lawyers",
-    "name": "Юристы",
-    "icon": "⚖",
-    "description": "Разоблачения бьют по репутации на 30% слабее.",
-    "drawback": "Свои юристы стоят 10 ₽ в день.",
-    "cost": 500,
-    "requires": null,
-    "fork": "defense",
-    "effects": {
-      "exposurePenaltyMul": 0.7,
-      "channel": "newspaper",
-      "upkeepAdd": 10
-    },
-    "tags": [
-      "trust"
-    ]
-  },
-  {
-    "id": "insider",
-    "name": "Свои люди в мэрии",
-    "icon": "🏛",
-    "description": "Шанс разоблачения −25%.",
-    "drawback": "Если узнают — скандал: каждое разоблачение стоит на 15% больше репутации.",
-    "cost": 800,
-    "requires": null,
-    "fork": "defense",
-    "effects": {
-      "checkerMul": 0.75,
-      "exposurePenaltyMul": 1.15
-    },
-    "tags": [
-      "rival"
-    ]
-  },
-  {
     "id": "crime_desk",
     "name": "Криминальная хроника",
     "icon": "🚨",
     "description": "Свой криминальный репортёр: репортёры чаще приносят криминал, и новости о преступности бьют на 30% сильнее.",
-    "drawback": "Отдел стоит 8 ₽ в день.",
-    "cost": 220,
+    "drawback": "Читатели, которым эта тема не интересна, бросают газету на 5% чаще.",
     "requires": null,
     "effects": {
       "channel": "newspaper",
-      "upkeepAdd": 8,
       "topicImpactMul": {
         "crime": 1.3
       },
       "topicFind": {
         "crime": 0.2
-      }
+      },
+      "churnMul": 1.05
     },
     "section": "Отделы",
     "rarity": "common",
@@ -499,15 +338,14 @@
     "name": "Заводской репортёр",
     "icon": "🏭",
     "description": "Человек на проходной: новости о заводе бьют на 30% сильнее.",
-    "drawback": "8 ₽ в день.",
-    "cost": 220,
+    "drawback": "Читатели, которым эта тема не интересна, бросают газету на 5% чаще.",
     "requires": null,
     "effects": {
       "channel": "newspaper",
-      "upkeepAdd": 8,
       "topicImpactMul": {
         "factory": 1.3
-      }
+      },
+      "churnMul": 1.05
     },
     "section": "Отделы",
     "rarity": "common",
@@ -521,15 +359,14 @@
     "name": "Медицинская колонка",
     "icon": "🩺",
     "description": "Свой «доктор» в газете: новости о здоровье бьют на 30% сильнее.",
-    "drawback": "8 ₽ в день.",
-    "cost": 200,
+    "drawback": "Читатели, которым эта тема не интересна, бросают газету на 5% чаще.",
     "requires": null,
     "effects": {
       "channel": "newspaper",
-      "upkeepAdd": 8,
       "topicImpactMul": {
         "health": 1.3
-      }
+      },
+      "churnMul": 1.05
     },
     "section": "Отделы",
     "rarity": "common",
@@ -542,15 +379,14 @@
     "name": "Кулуары мэрии",
     "icon": "🏛",
     "description": "Свой человек в приёмной мэра: новости о власти бьют на 30% сильнее.",
-    "drawback": "10 ₽ в день.",
-    "cost": 240,
+    "drawback": "Читатели, которым эта тема не интересна, бросают газету на 5% чаще.",
     "requires": null,
     "effects": {
       "channel": "newspaper",
-      "upkeepAdd": 10,
       "topicImpactMul": {
         "power": 1.3
-      }
+      },
+      "churnMul": 1.05
     },
     "section": "Отделы",
     "rarity": "common",
@@ -564,7 +400,6 @@
     "name": "Досье",
     "icon": "📁",
     "description": "Папка на каждого: травля разгоняется в полтора раза быстрее — каждый день подряд добавляет к удару больше.",
-    "cost": 260,
     "requires": null,
     "mode": "destroy",
     "effects": {
@@ -581,14 +416,13 @@
     "name": "Источники внутри",
     "icon": "🕳",
     "description": "Свои люди в любом здании: новости о цели травли репортёры приносят заметно чаще.",
-    "drawback": "10 ₽ в день на «благодарности».",
-    "cost": 240,
+    "drawback": "Слухи о «благодарностях» расходятся: −2 к репутации у всех.",
     "requires": null,
     "mode": "destroy",
     "effects": {
       "channel": "newspaper",
-      "upkeepAdd": 10,
-      "huntFindAdd": 0.25
+      "huntFindAdd": 0.25,
+      "trustBonus": -2
     },
     "section": "Нападение",
     "rarity": "rare",
@@ -601,14 +435,13 @@
     "name": "Перехват читателей",
     "icon": "🧲",
     "description": "Раздаём газету у киосков «Голоса»: интересный выпуск уводит у него вдвое больше читателей.",
-    "drawback": "6 ₽ в день.",
-    "cost": 230,
+    "drawback": "Своих киосков меньше: читатели бросают газету на 5% чаще.",
     "requires": null,
     "mode": "destroy",
     "effects": {
       "channel": "newspaper",
-      "upkeepAdd": 6,
-      "rivalStealMul": 2
+      "rivalStealMul": 2,
+      "churnMul": 1.05
     },
     "section": "Нападение",
     "rarity": "rare",
@@ -621,7 +454,6 @@
     "name": "Карикатурист",
     "icon": "✏️",
     "description": "Злые картинки к новостям: их пересказывают на 25% охотнее.",
-    "cost": 180,
     "requires": null,
     "effects": {
       "wordOfMouthMul": 1.25
@@ -638,20 +470,18 @@
     "name": "Раздача у проходной",
     "icon": "🎟",
     "description": "Газету суют в руки рабочим после смены: рабочие охотнее её покупают.",
-    "drawback": "−0.2 ₽ с каждого читателя: часть тиража бесплатно.",
-    "cost": 150,
+    "drawback": "Что досталось даром, легко бросить: читатели уходят на 5% чаще.",
     "requires": null,
     "effects": {
       "channel": "newspaper",
       "groupReach": {
         "workers": 0.2
       },
-      "adRateAdd": -0.2
+      "churnMul": 1.05
     },
-    "section": "Продажи",
+    "section": "Тираж",
     "rarity": "common",
     "tags": [
-      "money",
       "split"
     ],
     "starter": true
@@ -661,13 +491,12 @@
     "name": "Корректор-фальсификатор",
     "icon": "🔍",
     "description": "Подчищает следы: ложь ловят на 15% реже.",
-    "drawback": "12 ₽ в день.",
-    "cost": 300,
+    "drawback": "Он правит и правду: она приносит на 10% меньше репутации.",
     "requires": null,
     "effects": {
       "channel": "newspaper",
-      "upkeepAdd": 12,
-      "checkerMul": 0.85
+      "checkerMul": 0.85,
+      "trustGainMul": 0.9
     },
     "section": "Редакция",
     "rarity": "rare",
@@ -680,45 +509,35 @@
     "name": "Мальчишки-газетчики",
     "icon": "🧢",
     "description": "Кричат заголовки на каждом углу: газету берут чаще.",
-    "cost": 150,
     "requires": null,
     "effects": {
       "channel": "newspaper",
       "reachAdd": 0.04,
       "acquisitionMul": 1.15
     },
-    "section": "Продажи",
-    "rarity": "common",
-    "tags": [
-      "money"
-    ]
+    "section": "Тираж",
+    "rarity": "common"
   },
   {
     "id": "job_ads",
     "name": "Объявления о работе",
     "icon": "📌",
-    "description": "Безработные покупают газету ради объявлений: +0.2 ₽ с читателя.",
-    "cost": 150,
+    "description": "Объявления о работе: рабочие охотнее берут газету (интерес +0.15).",
     "requires": null,
     "effects": {
       "channel": "newspaper",
-      "adRateAdd": 0.2,
       "groupReach": {
-        "workers": 0.1
+        "workers": 0.15
       }
     },
-    "section": "Продажи",
-    "rarity": "common",
-    "tags": [
-      "money"
-    ]
+    "section": "Тираж",
+    "rarity": "common"
   },
   {
     "id": "police_scanner",
     "name": "Полицейская рация",
     "icon": "📻",
     "description": "Свободный репортёр часто едет туда, где случилась беда: новостей о криминале больше.",
-    "cost": 180,
     "requires": null,
     "effects": {
       "channel": "newspaper",
@@ -739,7 +558,6 @@
     "icon": "🗣",
     "description": "Новости пересказывают охотнее.",
     "drawback": "Правда приносит чуть меньше репутации.",
-    "cost": 160,
     "requires": null,
     "effects": {
       "wordOfMouthMul": 1.2,
@@ -756,7 +574,6 @@
     "name": "Архив редакции",
     "icon": "🗄",
     "description": "Старые подшивки: расследование идёт на день быстрее.",
-    "cost": 200,
     "requires": null,
     "effects": {
       "investigationTurnsAdd": -1
@@ -772,11 +589,10 @@
     "id": "interns",
     "name": "Стажёры",
     "icon": "🎒",
-    "description": "Черновую работу делают стажёры: зарплаты репортёров на 15% меньше.",
-    "cost": 180,
+    "description": "Стажёры бегают по поручениям: паузы грязных приёмов на день короче.",
     "requires": null,
     "effects": {
-      "salaryMul": 0.85
+      "cashCooldownAdd": -1
     },
     "section": "Редакция",
     "rarity": "common",
@@ -789,7 +605,6 @@
     "name": "Рубрика «Народный гнев»",
     "icon": "✊",
     "description": "Письма злых горожан: подогретые ссоры разгораются сильнее.",
-    "cost": 200,
     "requires": null,
     "mode": "destroy",
     "effects": {
@@ -807,7 +622,6 @@
     "name": "Завсегдатаи бара",
     "icon": "🍺",
     "description": "Всё слышат первыми: новости о цели травли приходят чаще.",
-    "cost": 170,
     "requires": null,
     "mode": "destroy",
     "effects": {
@@ -824,26 +638,21 @@
     "id": "sponsor",
     "name": "Тайный спонсор",
     "icon": "💼",
-    "description": "Каждый день 40 ₽ в конверте.",
+    "description": "Спонсор оплачивает лишний тираж: новых читателей на 25% больше.",
     "drawback": "Горожане чуют: −3 к репутации у всех.",
-    "cost": 250,
     "requires": null,
     "effects": {
-      "moneyPerDay": 40,
+      "acquisitionMul": 1.25,
       "trustBonus": -3
     },
-    "section": "Продажи",
-    "rarity": "rare",
-    "tags": [
-      "money"
-    ]
+    "section": "Тираж",
+    "rarity": "rare"
   },
   {
     "id": "night_patrol",
     "name": "Ночной патруль",
     "icon": "🔦",
     "description": "Репортёр ездит с патрулём: криминальные новости бьют сильнее и сильнее нагревают город.",
-    "cost": 300,
     "requires": null,
     "mode": "destroy",
     "effects": {
@@ -865,7 +674,6 @@
     "icon": "🧨",
     "description": "Свои люди в толпе: стычки между группами случаются заметно чаще.",
     "drawback": "Если вскроется — скандал: проверяют на 5% строже.",
-    "cost": 320,
     "requires": null,
     "mode": "destroy",
     "effects": {
@@ -882,13 +690,12 @@
     "id": "smear_lab",
     "name": "Лаборатория компромата",
     "icon": "🧪",
-    "description": "Расследования вдвое дешевле и на день быстрее.",
-    "cost": 320,
+    "description": "Расследования на день быстрее, травля разгоняется на 15% быстрее.",
     "requires": null,
     "mode": "destroy",
     "effects": {
-      "investigationCostMul": 0.5,
-      "investigationTurnsAdd": -1
+      "investigationTurnsAdd": -1,
+      "huntStepMul": 1.15
     },
     "section": "Нападение",
     "rarity": "rare",
@@ -902,7 +709,6 @@
     "name": "Эпидемиолог на зарплате",
     "icon": "🦠",
     "description": "Новости о здоровье и еде бьют сильнее.",
-    "cost": 260,
     "requires": null,
     "effects": {
       "topicImpactMul": {
@@ -920,12 +726,11 @@
     "id": "defectors",
     "name": "Перебежчики",
     "icon": "🚪",
-    "description": "Авторы «Голоса» сами просятся к нам: сманить автора на 40% дешевле.",
-    "cost": 240,
+    "description": "Авторы «Голоса» сами просятся к нам: сманивать их можно чаще — пауза на 40% короче.",
     "requires": null,
     "mode": "destroy",
     "effects": {
-      "lureCostMul": 0.6
+      "lureCooldownMul": 0.6
     },
     "section": "Нападение",
     "rarity": "rare",
@@ -938,7 +743,6 @@
     "name": "Пресс-карты",
     "icon": "🪪",
     "description": "Репортёров пускают везде: удача +0.08, ложь проверяют чуть мягче.",
-    "cost": 300,
     "requires": null,
     "effects": {
       "reporterLuck": 0.08,
@@ -955,7 +759,6 @@
     "name": "Санитарная проверка",
     "icon": "🧾",
     "description": "Свой человек в санэпидстанции: травля оставляет пятно на 40% больше.",
-    "cost": 300,
     "requires": null,
     "mode": "destroy",
     "effects": {
@@ -972,26 +775,21 @@
     "name": "Реклама на радио",
     "icon": "📡",
     "description": "Новые читатели приходят на 30% чаще.",
-    "drawback": "15 ₽ в день.",
-    "cost": 260,
+    "drawback": "Назойливая реклама раздражает: −2 к репутации у всех.",
     "requires": null,
     "effects": {
       "channel": "newspaper",
       "acquisitionMul": 1.3,
-      "upkeepAdd": 15
+      "trustBonus": -2
     },
-    "section": "Продажи",
-    "rarity": "rare",
-    "tags": [
-      "money"
-    ]
+    "section": "Тираж",
+    "rarity": "rare"
   },
   {
     "id": "factchecker_friend",
     "name": "Друг среди фактчекеров",
     "icon": "🤝",
     "description": "Предупреждает заранее: разоблачение стоит на 20% меньше репутации, проверяют мягче.",
-    "cost": 350,
     "requires": null,
     "effects": {
       "exposurePenaltyMul": 0.8,
@@ -1008,7 +806,6 @@
     "name": "Адвокат холдинга",
     "icon": "🦈",
     "description": "Любое разоблачение стоит вдвое меньше репутации, а фактчекеры осторожнее.",
-    "cost": 500,
     "requires": null,
     "effects": {
       "exposurePenaltyMul": 0.5,
@@ -1025,7 +822,6 @@
     "name": "Утечки из мэрии",
     "icon": "📂",
     "description": "Новости о власти бьют на 40% сильнее, ссоры разгораются сильнее и чаще.",
-    "cost": 500,
     "requires": null,
     "mode": "destroy",
     "effects": {
@@ -1047,7 +843,6 @@
     "icon": "🃏",
     "description": "Криминальные новости вдвое сильнее нагревают город, репортёры чаще пишут о криминале.",
     "drawback": "Проверяют на 10% строже.",
-    "cost": 450,
     "requires": null,
     "mode": "destroy",
     "effects": {
@@ -1069,7 +864,6 @@
     "icon": "👑",
     "description": "Страшные новости бьют на 30% сильнее, их пересказывают на 30% чаще.",
     "drawback": "Правда приносит меньше репутации.",
-    "cost": 500,
     "requires": null,
     "effects": {
       "scaryImpactMul": 1.3,
@@ -1086,26 +880,21 @@
     "id": "media_baron",
     "name": "Медиамагнат",
     "icon": "🏦",
-    "description": "Холдинг вкладывается: 70 ₽ в день и +0.3 ₽ с каждого читателя.",
-    "cost": 500,
+    "description": "Холдинг вкладывается: +8% охвата и на 20% больше новых читателей.",
     "requires": null,
     "effects": {
       "channel": "newspaper",
-      "moneyPerDay": 70,
-      "adRateAdd": 0.3
+      "reachAdd": 0.08,
+      "acquisitionMul": 1.2
     },
-    "section": "Продажи",
-    "rarity": "legendary",
-    "tags": [
-      "money"
-    ]
+    "section": "Тираж",
+    "rarity": "legendary"
   },
   {
     "id": "smear_machine",
     "name": "Машина травли",
     "icon": "⚙",
     "description": "Травля оставляет пятно на 60% больше и разгоняется вдвое быстрее.",
-    "cost": 500,
     "requires": null,
     "mode": "destroy",
     "effects": {
@@ -1122,13 +911,12 @@
     "id": "informant",
     "name": "Информатор",
     "icon": "📨",
-    "description": "Открывает в «Чёрной кассе» ход «Купить слив»: сенсация сразу ложится в выпуск.",
-    "drawback": "Каждый слив стоит денег, и с шансом 25% это подстава.",
-    "cost": 200,
+    "description": "Открывает грязный приём «Купить слив»: сенсация сразу ложится в выпуск.",
+    "drawback": "Каждый слив стоит репутации, и с шансом 25% это подстава.",
     "requires": null,
     "cash": "leak",
     "effects": {},
-    "section": "Чёрная касса",
+    "section": "Грязные приёмы",
     "rarity": "common",
     "tags": [
       "yellow"
@@ -1139,13 +927,12 @@
     "id": "fact_friend",
     "name": "Знакомый в фактчеке",
     "icon": "💵",
-    "description": "Открывает в «Чёрной кассе» ход «Занести фактчекерам»: в этот день ложь проверяют впятеро реже.",
-    "drawback": "Каждый конверт стоит денег; старая ложь всплывает как обычно.",
-    "cost": 300,
+    "description": "Открывает грязный приём «Занести фактчекерам»: в этот день ложь проверяют впятеро реже.",
+    "drawback": "Каждый конверт стоит репутации; старая ложь всплывает как обычно.",
     "requires": null,
     "cash": "bribe",
     "effects": {},
-    "section": "Чёрная касса",
+    "section": "Грязные приёмы",
     "rarity": "rare",
     "tags": [
       "yellow"
@@ -1155,14 +942,13 @@
     "id": "hired_crowd",
     "name": "Люди из подворотни",
     "icon": "👊",
-    "description": "Открывает в «Чёрной кассе» ход «Нанять провокаторов»: назавтра самая напряжённая пара групп точно сцепится.",
-    "drawback": "Каждый заказ стоит денег.",
-    "cost": 260,
+    "description": "Открывает грязный приём «Нанять провокаторов»: назавтра самая напряжённая пара групп точно сцепится.",
+    "drawback": "Каждый заказ стоит репутации.",
     "requires": null,
     "cash": "provoke",
     "mode": "destroy",
     "effects": {},
-    "section": "Чёрная касса",
+    "section": "Грязные приёмы",
     "rarity": "rare",
     "tags": [
       "split"
@@ -1172,14 +958,13 @@
     "id": "paparazzi_team",
     "name": "Папарацци на подхвате",
     "icon": "📸",
-    "description": "Открывает в «Чёрной кассе» ход «Папарацци»: назавтра точно будет новость о цели травли.",
-    "drawback": "Каждая съёмка стоит денег; без травли ход не работает.",
-    "cost": 180,
+    "description": "Открывает грязный приём «Папарацци»: назавтра точно будет новость о цели травли.",
+    "drawback": "Без травли приём не работает.",
     "requires": null,
     "cash": "paparazzi",
     "mode": "destroy",
     "effects": {},
-    "section": "Чёрная касса",
+    "section": "Грязные приёмы",
     "rarity": "common",
     "tags": [
       "hunt"
@@ -1190,17 +975,13 @@
     "id": "free_run",
     "name": "Свой тираж",
     "icon": "🗞",
-    "description": "Открывает в «Чёрной кассе» ход «Раздать газету бесплатно»: выпуск дня читает весь город.",
-    "drawback": "Каждая раздача стоит денег.",
-    "cost": 200,
+    "description": "Открывает грязный приём «Раздать газету бесплатно»: выпуск дня читает весь город.",
+    "drawback": "Потом 4 дня паузы.",
     "requires": null,
     "cash": "giveaway",
     "effects": {},
-    "section": "Чёрная касса",
+    "section": "Грязные приёмы",
     "rarity": "common",
-    "tags": [
-      "money"
-    ],
     "starter": true
   }
 ]

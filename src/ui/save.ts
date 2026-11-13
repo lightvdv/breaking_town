@@ -6,8 +6,9 @@ import type { TutorialProgress } from './tutorial';
  * Autosave in the browser (CONCEPT.md §7.3): the game state is plain JSON, so it is kept in
  * localStorage and the game continues after a reload or when the tab comes back.
  */
-// The key keeps the old working title so existing saves are not lost.
-const KEY = `news-fights-save-v1${STORAGE_SUFFIX}`;
+// The key keeps the old working title; v2 is the game without money (CONCEPT.md §10.4), so a save
+// of the money version (v1, the beta) and one of this version never read each other.
+const KEY = `news-fights-save-v2${STORAGE_SUFFIX}`;
 
 export interface SaveData<D> {
   state: GameState;
@@ -37,7 +38,6 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.reporterTopics ??= {};
     s.agencyOffer ??= [];
     s.agencyCalls ??= 0;
-    s.price ??= c.balance.startPrice;
     for (const r of s.residents) {
       r.fearTurns ??= 0;
       r.rivalReader ??= false;
@@ -65,7 +65,7 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.shopPicks ??= 0;
     s.shopExtras ??= 0;
     s.clashDays ??= 0;
-    s.loan ??= null;
+    s.seats ??= Math.max(c.balance.startSeats, s.reporters.length);
     s.rivalWatch ??= [];
     // Channels and upgrades that left the game (radio, TV, social networks) are dropped; the rest stays.
     s.ownedChannels = s.ownedChannels.filter((id) => c.channels.some((x) => x.id === id));
@@ -84,13 +84,11 @@ export function loadSave<D>(c: Content): SaveData<D> | null {
     s.shopRefreshTurn ??= 0;
     s.abilityReady ??= {};
     s.twist ??= null;
-    s.budgetCut ??= 0;
     s.hunt ??= null;
     s.crimeBoost ??= 0;
     s.crimeHeat ??= 0;
     s.stains ??= {};
     s.vouchers ??= 0;
-    s.lastProfit ??= 0;
     s.town ??= null;
     s.rivalReactions ??= {};
     s.missedEvents ??= [];

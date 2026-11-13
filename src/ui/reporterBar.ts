@@ -108,7 +108,8 @@ export class ReporterBar {
   }
 
   render(state: GameState, statuses: Map<string, RepStatus>, animating: boolean): void {
-    const max = this.c.balance.maxReporters;
+    // Only the seats the circulation has opened (CONCEPT.md §3.3).
+    const max = Math.min(state.seats, this.c.balance.maxReporters);
     const key = `${state.reporters.join(',')}|${max}`;
     if (key !== this.layoutKey) {
       this.layoutKey = key;
@@ -168,7 +169,7 @@ export class ReporterBar {
       card.root.title = [
         r.name,
         inv ? invLine : skillLine(this.c, state, r),
-        tr('{0} · {1} в день', searchLine(state, r), r.salary),
+        searchLine(state, r),
         r.bio,
         tr('Щёлкните — темы поиска и расследование.'),
       ].join('\n');

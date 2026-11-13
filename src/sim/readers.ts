@@ -1,6 +1,5 @@
-import { chance, type RngState } from './rng';
+import { chance, int, type RngState } from './rng';
 import { channelOf, clamp, groupOf } from './lookup';
-import { wealthOf } from './city';
 import type { Modifiers } from './modifiers';
 import type { ChannelId, ChurnReason, Content, GameState, IssueLevel, ReadersChange, Resident } from './types';
 
@@ -13,11 +12,6 @@ import type { ChannelId, ChurnReason, Content, GameState, IssueLevel, ReadersCha
 function trustFactor(c: Content, mods: Modifiers, r: Resident): number {
   const min = c.balance.reachTrustMin;
   return min + (1 - min) * clamp((r.trust + mods.trustBonus) / 100);
-}
-
-/** How willing a resident is to buy the paper at the current price: 0 = cannot afford it (CONCEPT.md §5.4). */
-export function buyWillingness(state: GameState, c: Content, r: Resident): number {
-  return c.balance.priceBuy[wealthOf(c, r)][state.price] ?? 0;
 }
 
 /** Per-turn chance that a resident who does not follow `channel` starts following it. */
@@ -40,7 +34,7 @@ export function readerCount(state: GameState): number {
 export function seedFollowers(state: GameState, c: Content, rng: RngState, mods: Modifiers): void {
   for (const r of state.residents) {
     for (const ch of state.ownedChannels) {
-      if (chance(rng, joinChance(c, mods, r, ch, c.balance.startFollowShare) * buyWillingness(state, c, r))) r.follows.push(ch);
+      if (chance(rng, joinChance(c, mods, r, ch, c.balance.startFollowShare))) r.follows.push(ch);
     }
   }
 }
@@ -48,14 +42,7 @@ export function seedFollowers(state: GameState, c: Content, rng: RngState, mods:
 /** Why a reader might leave after this turn and how likely it is, given what they experienced; null when they stay. */
 function churnOf(c: Content, mods: Modifiers, state: GameState, r: Resident, issueSize: number, level: IssueLevel): { reason: ChurnReason; chance: number } | null {
   const found = baseChurn(c, state, r, issueSize, level);
-  let churn = found && { reason: found.reason, chance: found.chance * mods.churnMul };
-  // The paper's style drives some groups away (the yellow press loses pensioners, CONCEPT.md §3.5).
-  const style = mods.groupChurn[r.group] ?? 0;
-  if (style > (churn?.chance ?? 0)) churn = { reason: 'style', chance: style };
-  // Too dear: who cannot pay stops buying, who can but grudges it drops it now and then.
-  const will = buyWillingness(state, c, r);
-  const price = will <= 0 ? 1 : Math.max(0, 1 - will) * c.balance.priceChurn;
-  return price > (churn?.chance ?? 0) ? { reason: 'price', chance: price } : churn;
+  return found && { reason: found.reason, chance: found.chance * mods.churnMul };
 }
 
 function baseChurn(c: Content, state: GameState, r: Resident, issueSize: number, level: IssueLevel): { reason: ChurnReason; chance: number } | null {
@@ -86,7 +73,7 @@ export function updateReaders(
   const out: ReadersChange = {
     lost: 0,
     gained: 0,
-    lostBy: { exposed: 0, doubted: 0, boring: 0, empty: 0, price: 0, style: 0 },
+    lostBy: { exposed: 0, doubted: 0, boring: 0, empty: 0 },
     movedAway: 0,
     gainedBy: Object.fromEntries(state.ownedChannels.map((ch) => [ch, 0])),
   };
@@ -105,7 +92,7 @@ export function updateReaders(
       continue;
     }
     for (const ch of state.ownedChannels) {
-      if (!r.follows.includes(ch) && chance(rng, joinChance(c, mods, r, ch, joinScale) * buyWillingness(state, c, r))) {
+      if (!r.follows.includes(ch) && chance(rng, joinChance(c, mods, r, ch, joinScale))) {
         r.follows.push(ch);
         out.gainedBy[ch]++;
       }
@@ -124,7 +111,61 @@ export function expectedJoins(state: GameState, c: Content, mods: Modifiers, lev
   let sum = 0;
   for (const r of state.residents) {
     if (r.status !== 'active' || r.follows.length > 0) continue;
-    for (const ch of state.ownedChannels) sum += joinChance(c, mods, r, ch, scale) * buyWillingness(state, c, r);
+    for (const ch of state.ownedChannels) sum += joinChance(c, mods, r, ch, scale);
   }
   return sum;
+}
+
+/**
+ * Gives the paper up to `count` new readers at once (a deal, CONCEPT.md §3.5а): residents who do
+ * not read it, those whose group reads papers first. Returns how many came.
+ */
+export function addReaders(state: GameState, c: Content, rng: RngState, count: number): number {
+  const ch = state.ownedChannels[0];
+  if (!ch || count <= 0) return 0;
+  const pool = state.residents.filter((r) => r.status === 'active' && !r.follows.includes(ch) && (groupOf(c, r.group).channels[ch] ?? 0) > 0);
+  let added = 0;
+  while (added < count && pool.length) {
+    const r = pool.splice(int(rng, pool.length), 1)[0];
+    r.follows.push(ch);
+    added++;
+  }
+  return added;
+}
+
+/** Takes up to `count` readers away at once (a broken deal). Returns how many left. */
+export function removeReaders(state: GameState, rng: RngState, count: number): number {
+  const pool = state.residents.filter((r) => r.status === 'active' && r.follows.length > 0);
+  let removed = 0;
+  while (removed < count && pool.length) {
+    pool.splice(int(rng, pool.length), 1)[0].follows = [];
+    removed++;
+  }
+  return removed;
+}
+
+/**
+ * Seats in the newsroom (CONCEPT.md §3.3): the next one opens when our readers pass its share of
+ * the town's residents; an opened seat never closes. Returns how many opened now.
+ */
+export function openSeats(state: GameState, c: Content): number {
+  const b = c.balance;
+  const active = state.residents.filter((r) => r.status === 'active').length;
+  const readers = readerCount(state);
+  let opened = 0;
+  while (state.seats < b.maxReporters) {
+    const need = b.seatThresholds[state.seats - b.startSeats];
+    if (need === undefined || readers < need * active) break;
+    state.seats++;
+    opened++;
+  }
+  return opened;
+}
+
+/** Readers needed for the next seat now, or null when every seat is open. */
+export function nextSeatReaders(state: GameState, c: Content): number | null {
+  const b = c.balance;
+  const need = state.seats < b.maxReporters ? b.seatThresholds[state.seats - b.startSeats] : undefined;
+  if (need === undefined) return null;
+  return Math.ceil(need * state.residents.filter((r) => r.status === 'active').length);
 }

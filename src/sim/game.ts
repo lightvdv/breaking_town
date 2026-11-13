@@ -12,7 +12,6 @@ import {
   tryAssignJob,
 } from './city';
 import { advanceArcs, pushArc } from './arcs';
-import { collectIncome } from './economy';
 import { advanceOffers, settleDeals } from './offers';
 import { updateStaff } from './staff';
 import { assignTasks, updateTasks } from './tasks';
@@ -23,13 +22,12 @@ import { averageTrust, groupOf, templateOf, closedLine } from './lookup';
 import { getModifiers, placementSlots, type Modifiers } from './modifiers';
 import { effectiveTier, issueLevel, issueScore, maxDistortion, minDistortion, processLateExposures, publish, storyEffect, verifyNews, type PublishedNews } from './news';
 import { advanceRelations, createTension, fillTitle, pairKeys, pairOf, tensionLevel } from './relations';
-import { followersOf, readerCount, seedFollowers, updateReaders } from './readers';
+import { openSeats, readerCount, seedFollowers, updateReaders } from './readers';
 import { advanceInvestigations, findNews, isRecent, scopeOf } from './reporters';
 import { advanceShop, checkMole } from './shop';
 import { markDebunked, planRival, pruneRival, publishRival, recordOurIssue, rivalReaders, rivalTrust, seedRival, updateRivalReaders, verifyRival } from './rival';
 import type {
   CardTemplate,
-  ChannelId,
   Content,
   Decision,
   GameState,
@@ -93,23 +91,20 @@ export function createGame(
     letters: [],
     fates: [],
     staff: Object.fromEntries(team.map((x) => [x.id, { xp: x.xp, loyalty: c.balance.startLoyalty }])),
-    money: c.balance.startMoney,
-    price: c.balance.startPrice,
-    brokeTurns: 0,
-    loan: null,
     residents,
     buildings,
     mapSize,
     hand: [],
     nextUid: 1,
     nextResidentId: residents.length,
-    ownedChannels: c.channels.filter((ch) => ch.cost === 0 && ch.requires === null).map((ch) => ch.id),
+    ownedChannels: c.channels.filter((ch) => ch.requires === null).map((ch) => ch.id),
     upgrades: [],
     reporters: team.map((x) => x.id),
+    // A campaign town may bring more reporters than the start's seats: each of them keeps one.
+    seats: Math.max(c.balance.startSeats, team.length),
     agencyOffer: [],
     agencyCalls: 0,
     lastFinds: [],
-    scandal: 1,
     investigations: [],
     topicStreak: {},
     lastSeen: {},
@@ -133,14 +128,12 @@ export function createGame(
     shopRefreshTurn: c.balance.shopFirstTurn ?? 0,
     abilityReady: {},
     twist: null,
-    budgetCut: 0,
     hunt: null,
     crimeBoost: 0,
     clashDays: 0,
     crimeHeat: 0,
     stains: {},
     vouchers: 0,
-    lastProfit: 0,
     town: opts.town ?? null,
     length: opts.length ?? 'full',
     collection: opts.collection ?? null,
@@ -153,6 +146,8 @@ export function createGame(
   state.metrics = computeMetrics(state, c);
   assignPeople(state, c, rng);
   seedFollowers(state, c, rng, getModifiers(state, c));
+  // A town that starts with many readers starts with their seats open.
+  openSeats(state, c);
   if (state.rival) seedRival(state, c, rng);
   startTurn(state, c);
   return state;
@@ -295,7 +290,6 @@ export function checkOutcome(state: GameState, c: Content): Outcome | null {
   if (goal.type !== 'stage' && goalProgress(state, c).done) return { result: 'win', reason: 'goalDone' };
   if (goal.type === 'stage' && state.rival?.closed) return { result: 'win', reason: 'rivalClosed' };
   if (goal.type === 'stage' && state.metrics.cityIndex < goal.index) return { result: 'win', reason: 'cityDestroyed' };
-  if (state.brokeTurns >= b.brokeTurnsLimit) return { result: 'lose', reason: 'bankrupt' };
   if (averageTrust(state, c) < b.trustCollapse) return { result: 'lose', reason: 'trustCollapse' };
   if (state.turn > b.turnLimit) return { result: 'lose', reason: 'turnLimit' };
   return null;
@@ -304,7 +298,6 @@ export function checkOutcome(state: GameState, c: Content): Outcome | null {
 /** Resolves the player's decision and advances the city to the next turn. */
 export function playTurn(state: GameState, c: Content, d: Decision): TurnReport {
   if (state.outcome) throw new Error('Game is over');
-  const b = c.balance;
   const rng = state.rng;
   const mods = getModifiers(state, c);
   validateDecision(state, c, d, mods);
@@ -312,11 +305,6 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   const turn = state.turn;
   const metricsBefore = state.metrics;
   const trustBefore = averageTrust(state, c);
-  const moneyBefore = state.money;
-
-  // Last turn's readers buy this issue (CONCEPT.md §5.2, §5.4).
-  const buyers: Record<ChannelId, number> = {};
-  for (const ch of state.ownedChannels) buyers[ch] = followersOf(state, ch);
   const readersBefore = readerCount(state);
   const readerIds = new Set(state.residents.filter((r) => r.status === 'active' && r.follows.length > 0).map((r) => r.id));
   const tensionBefore = { ...state.tension };
@@ -328,14 +316,12 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
 
   state.lastReactions = {};
   state.rivalReactions = {};
-  state.scandal = Math.min(1, state.scandal + b.scandalRecovery);
-
   const lateExposures = processLateExposures(state, c, rng, mods);
   // Every part of the turn rolls its own dice (CONCEPT.md §7.3 «прогноз»): how one story is told
   // changes that story's luck only, not the rival's, the readers' or tomorrow's town.
   const seedOf = () => int(rng, 0x100000000);
   const storySeed = seedOf();
-  const [rivalRng, checkRng, staffRng, moleRng, readersRng, rivalReadersRng, peopleRng] = Array.from({ length: 7 }, () => createRng(seedOf()));
+  const [rivalRng, checkRng, staffRng, moleRng, readersRng, rivalReadersRng, peopleRng, dealsRng] = Array.from({ length: 8 }, () => createRng(seedOf()));
   const daySeed = seedOf();
   const storyRng = (uid: number) => createRng((storySeed + Math.imul(uid, 0x9e3779b1)) >>> 0);
 
@@ -371,19 +357,16 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
   exposures.push(...staff.exposures);
 
   // Deals with a catch (CONCEPT.md §3.5а): a bad story about what we promised to keep quiet about costs us.
-  const deals = settleDeals(state, c, d.publish);
-  const { income, upkeep, upkeepItems } = collectIncome(state, c, buyers);
-  // One more payment to the bank (CONCEPT.md §5.4а).
-  if (state.loan) state.loan = state.loan.daysLeft > 1 ? { ...state.loan, daysLeft: state.loan.daysLeft - 1 } : null;
-  state.lastProfit = Object.values(income).reduce((s, x) => s + x, 0) - upkeep;
+  const deals = settleDeals(state, c, dealsRng, d.publish);
   const moleCaught = checkMole(state, c, moleRng);
-  state.brokeTurns = state.money < 0 ? state.brokeTurns + 1 : 0;
 
   const stories = d.publish.map((p) => ({ tier: effectiveTier(state.hand.find((x) => x.uid === p.cardUid)!, p.distortion), placement: p.placement }));
   const issue = { score: issueScore(c, stories), level: issueLevel(c, stories) };
   const readers = updateReaders(state, c, readersRng, mods, published.length, issue.level, readerIds);
   updateRivalReaders(state, c, rivalReadersRng, rivalNews, issue.level, mods.rivalStealMul);
   const readersAfter = readerCount(state);
+  // Circulation opens seats in the newsroom (CONCEPT.md §3.3).
+  const seatsOpened = openSeats(state, c);
 
   const streak: Partial<Record<Topic, number>> = {};
   for (const [topic, n] of Object.entries(topicsThisTurn) as [Topic, number][]) {
@@ -423,13 +406,9 @@ export function playTurn(state: GameState, c: Content, d: Decision): TurnReport 
     ...(moleCaught ? { moleCaught } : {}),
     publications: published.map((n) => n.report),
     exposures,
-    buyers,
-    income,
-    upkeep,
-    upkeepItems,
     deals,
+    seatsOpened,
     staff: { levelUps: staff.levelUps, quit: staff.quit, leaked: staff.leaked },
-    moneyDelta: state.money - moneyBefore,
     readers: { before: readersBefore, ...readers, after: readersAfter },
     issue,
     tensionBefore,

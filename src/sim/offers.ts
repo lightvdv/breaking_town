@@ -1,6 +1,8 @@
 import { tr } from '../i18n';
+import { payTrust, trustBlock } from './economy';
 import { buildingDefOf, clamp, templateOf } from './lookup';
 import { isHarmful, storyEffect } from './news';
+import { addReaders, removeReaders } from './readers';
 import { reporterOf } from './reporters';
 import { chance, pick, type RngState } from './rng';
 import { poachTarget, removeReporter, staffOf } from './staff';
@@ -20,24 +22,39 @@ function placeName(state: GameState, c: Content, id: number): string {
   return def.names?.length ? def.names[k % def.names.length] : def.name;
 }
 
-/** What keeping a lured reporter costs: a bonus of a few salaries. */
-export function retainCost(c: Content, reporterId: string): number {
-  return reporterOf(c, reporterId).salary * c.balance.poachRetain;
+/** What keeping a lured reporter costs (CONCEPT.md §3.3б): a task's voucher if there is one, else reputation. */
+export function retainCost(state: GameState, c: Content): { voucher: true } | { trust: number } {
+  return state.vouchers > 0 ? { voucher: true } : { trust: c.balance.poachRetainTrust };
 }
 
-/** The offer's text with the place, the reporter, the money and the days filled in. */
+/** Why a lured reporter cannot be kept now, or null. */
+export function retainBlock(state: GameState, c: Content): string | null {
+  const cost = retainCost(state, c);
+  return 'trust' in cost && trustBlock(state, c, cost.trust) ? tr('не хватит репутации') : null;
+}
+
+/** «12 читателей», «2 читателя» — the readers a deal brings. */
+function readersText(n: number): string {
+  return tr('{0} {1}', n, n % 10 === 1 && n % 100 !== 11 ? tr('читатель') : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? tr('читателя') : tr('читателей'));
+}
+
+/** The offer's text with the place, the reporter, the readers (or the price of keeping) and the days filled in. */
 export function offerText(state: GameState, c: Content, def: OfferDef, offer: { building?: number; reporterId?: string }): string {
-  const amount = def.kind === 'poach' && offer.reporterId ? retainCost(c, offer.reporterId) : (def.amount ?? 0);
+  let amount = readersText(def.amount ?? 0);
+  if (def.kind === 'poach') {
+    const cost = retainCost(state, c);
+    amount = 'voucher' in cost ? tr('ваучер на карту') : tr('{0} репутации', cost.trust);
+  }
   return def.text
     .replace('{place}', offer.building !== undefined ? placeName(state, c, offer.building) : '')
     .replace('{reporter}', offer.reporterId ? reporterOf(c, offer.reporterId).name : '')
-    .replace('{amount}', tr('{0} ₽', amount))
+    .replace('{amount}', amount)
     .replace('{days}', String(def.days ?? 0));
 }
 
 /**
  * The day's offer (CONCEPT.md §3.5а): yesterday's lapses, finished deals end, and now and then
- * somebody comes with money or a folder. Returns notes for the turn report.
+ * somebody comes with readers to give or a folder. Returns notes for the turn report.
  */
 export function advanceOffers(state: GameState, c: Content, rng: RngState): string[] {
   const b = c.balance;
@@ -76,7 +93,7 @@ export function advanceOffers(state: GameState, c: Content, rng: RngState): stri
 }
 
 /**
- * The player's answer. Accepting a silence deal pays at once, a subsidy pays every day, a
+ * The player's answer. A silence deal brings readers at once, a subsidy a few every day, a
  * kompromat comes into the hand as a sensation — maybe a fake. Returns the kompromat card if any.
  */
 export function answerOffer(state: GameState, c: Content, accept: boolean): CardInstance | null {
@@ -87,13 +104,14 @@ export function answerOffer(state: GameState, c: Content, accept: boolean): Card
   const def = offerOf(c, offer.id);
   if (def.kind === 'poach') {
     const id = offer.reporterId!;
-    const cost = retainCost(c, id);
-    if (accept && state.money < cost) {
+    if (accept && retainBlock(state, c)) {
       state.offer = offer;
-      throw new Error('Not enough money to keep the reporter');
+      throw new Error('Not enough reputation to keep the reporter');
     }
     if (accept) {
-      state.money -= cost;
+      const cost = retainCost(state, c);
+      if ('voucher' in cost) state.vouchers--;
+      else payTrust(state, cost.trust);
       const s = staffOf(state, c, id);
       s.loyalty = clamp(s.loyalty + 0.3);
     } else defect(state, c, id);
@@ -119,7 +137,7 @@ export function answerOffer(state: GameState, c: Content, accept: boolean): Card
     return card;
   }
   const deal: Deal = { id: def.id, untilTurn: state.turn + (def.days ?? 1) - 1, ...(offer.building !== undefined ? { building: offer.building } : {}) };
-  if (def.kind === 'silence') state.money += def.amount ?? 0;
+  if (def.kind === 'silence') addReaders(state, c, state.rng, def.amount ?? 0);
   state.deals.push(deal);
   return null;
 }
@@ -137,30 +155,30 @@ export function dealBrokenBy(state: GameState, c: Content, card: CardInstance, d
 }
 
 /**
- * After the issue: broken deals cost money and reputation, the subsidy pays and wears reputation
- * down (readers smell a bought paper).
+ * After the issue: broken deals cost readers and reputation, the subsidy brings readers and wears
+ * reputation down (readers smell a bought paper).
  */
-export function settleDeals(state: GameState, c: Content, published: Publication[]): { paid: number; broken: string[] } {
+export function settleDeals(state: GameState, c: Content, rng: RngState, published: Publication[]): { readers: number; broken: string[]; lost: number } {
   const broken: string[] = [];
+  let lost = 0;
   for (const p of published) {
     const card = state.hand.find((x) => x.uid === p.cardUid);
     const deal = card && dealBrokenBy(state, c, card, p.distortion);
     if (!deal) continue;
     const def = offerOf(c, deal.id);
-    state.money -= def.penalty ?? 0;
-    for (const r of state.residents) if (r.status === 'active') r.trust = clamp(r.trust - (def.trustPenalty ?? 0), 0, 100);
+    lost += removeReaders(state, rng, def.penalty ?? 0);
+    payTrust(state, def.trustPenalty ?? 0);
     state.deals = state.deals.filter((x) => x !== deal);
     broken.push(def.title);
   }
-  let paid = 0;
+  let readers = 0;
   for (const deal of state.deals) {
     const def = offerOf(c, deal.id);
     if (def.kind !== 'subsidy') continue;
-    paid += def.amount ?? 0;
-    for (const r of state.residents) if (r.status === 'active') r.trust = clamp(r.trust - (def.trustDrain ?? 0), 0, 100);
+    readers += addReaders(state, c, rng, def.amount ?? 0);
+    payTrust(state, def.trustDrain ?? 0);
   }
-  state.money += paid;
-  return { paid, broken };
+  return { readers, broken, lost };
 }
 
 /** A reporter goes over to the rival: its readers trust it more (CONCEPT.md §3.3б). */

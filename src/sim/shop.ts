@@ -1,34 +1,24 @@
 import { tr } from '../i18n';
-import { requirementMet } from './economy';
+import { payTrust, requirementMet, trustBlock } from './economy';
 import { clamp } from './lookup';
 import { getModifiers } from './modifiers';
 import { findNews, reporterOf, searchLuck } from './reporters';
 import { chance, weightedPick, type RngState } from './rng';
 import { skilledReporter } from './staff';
-import type { Content, ForkDef, GameState, NewsTier, UpgradeDef } from './types';
+import type { Content, GameState, NewsTier, UpgradeDef } from './types';
 
 /**
- * The upgrades (CONCEPT.md §3.5): forks of two options taken for good, a deck that offers a few
- * cards at a time, and abilities used from the bar above the paper.
+ * The upgrades (CONCEPT.md §3.5): the board's deck that offers a few cards at a time, and
+ * abilities used from the bar above the paper.
  */
 
-/** Forks open on their day; one whose option is owned is decided. */
-export function openForks(state: GameState, c: Content): ForkDef[] {
-  return c.forks.filter((f) => state.turn >= f.day && !f.options.some((id) => state.upgrades.includes(id)));
-}
-
-/** The fork's option the player took, if any. */
-export function forkChoice(state: GameState, f: ForkDef): string | null {
-  return f.options.find((id) => state.upgrades.includes(id)) ?? null;
-}
-
 /**
- * Cards the draft can offer now: in the player's collection, not owned, not a fork option, of this
- * mode, requirements met, a series only by its next step.
+ * Cards the draft can offer now: in the player's collection, not owned, of this mode,
+ * requirements met, a series only by its next step.
  */
 export function deckCards(state: GameState, c: Content): UpgradeDef[] {
   return c.upgrades.filter((u) => {
-    if (state.upgrades.includes(u.id) || u.fork || (u.mode && u.mode !== state.mode)) return false;
+    if (state.upgrades.includes(u.id) || (u.mode && u.mode !== state.mode)) return false;
     if (state.collection && !state.collection[u.id]) return false;
     if (!requirementMet(state, u.requires)) return false;
     if (u.effects.channel && !state.ownedChannels.includes(u.effects.channel)) return false;
@@ -59,28 +49,37 @@ export function advanceShop(state: GameState, c: Content, rng: RngState): void {
   state.shopExtras = 0;
 }
 
-/** What the next request for three more cards costs: dearer with every request until the board's next offer. */
+/**
+ * What the next request for three more cards costs in reputation (CONCEPT.md §3.5б): the first of
+ * an offer is free, then `shopRequestTrust`, growing by `shopRequestTrustStep` each time.
+ */
 export function shopRequestCost(state: GameState, c: Content): number {
-  return c.balance.shopRefreshCost + c.balance.shopRequestStep * (state.shopExtras ?? 0);
+  const n = state.shopExtras ?? 0;
+  return n === 0 ? 0 : c.balance.shopRequestTrust + c.balance.shopRequestTrustStep * (n - 1);
+}
+
+/** Why three more cards cannot be asked for now, or null. */
+export function refreshBlock(state: GameState, c: Content): string | null {
+  if (state.outcome) return tr('Партия окончена');
+  if (!deckCards(state, c).length) return tr('В колоде не осталось карт');
+  if (trustBlock(state, c, shopRequestCost(state, c))) return tr('Не хватит репутации');
+  return null;
 }
 
 /**
- * Three more cards out of turn (CONCEPT.md §3.5б): before or after a pick, for `shopRequestCost`;
- * one of them is again taken for free. The board's own schedule does not move.
+ * Three more cards out of turn (CONCEPT.md §3.5б): before or after a pick, for `shopRequestCost`
+ * reputation; one of them is again taken for free. The board's own schedule does not move.
  */
 export function refreshShop(state: GameState, c: Content): void {
-  if (state.outcome) throw new Error('Game is over');
-  const cost = shopRequestCost(state, c);
-  if (state.money < cost) throw new Error(tr('Не хватает денег'));
-  if (!deckCards(state, c).length) throw new Error(tr('В колоде не осталось карт'));
-  state.money -= cost;
+  const block = refreshBlock(state, c);
+  if (block) throw new Error(block);
+  payTrust(state, shopRequestCost(state, c));
   state.shopExtras = (state.shopExtras ?? 0) + 1;
   dealShop(state, c, state.rng);
 }
 
-/** Can this upgrade be bought now: on today's deck or an option of an open fork. */
-export function onSale(state: GameState, c: Content, u: UpgradeDef): boolean {
-  if (u.fork) return openForks(state, c).some((f) => f.id === u.fork);
+/** Can this card be taken now: it is in the board's offer. */
+export function onSale(state: GameState, u: UpgradeDef): boolean {
   return state.shopOffer.includes(u.id);
 }
 
@@ -97,7 +96,6 @@ export function abilityBlock(state: GameState, c: Content, id: string): string |
   if (!def?.ability || !state.upgrades.includes(id)) return 'not owned';
   if (state.outcome) return 'game over';
   if ((state.abilityReady[id] ?? 0) > state.turn) return 'cooling down';
-  if (state.money < def.ability.cost) return 'no money';
   if (id === 'night_shift' && !freeReporters(state).length) return 'nobody free';
   if (id === 'sensation_day' && !boostTarget(state)) return 'nothing to raise';
   return null;
@@ -121,7 +119,6 @@ export function useAbility(state: GameState, c: Content, id: string): number[] {
   const block = abilityBlock(state, c, id);
   if (block) throw new Error(`Cannot use ${id}: ${block}`);
   const def = c.upgrades.find((u) => u.id === id)!;
-  state.money -= def.ability!.cost;
   state.abilityReady[id] = state.turn + def.ability!.cooldown;
   const mods = getModifiers(state, c);
   if (id === 'night_shift') {

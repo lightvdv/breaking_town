@@ -21,11 +21,6 @@ import { applyCityEffect, computeMetrics } from '../src/sim/city';
 import {
   averageTrust,
   bribeMul,
-  loanBlock,
-  loanPayoff,
-  loanPerDay,
-  repayLoan,
-  takeLoan,
   cashActive,
   cashBlock,
   cashCost,
@@ -50,7 +45,6 @@ import {
   isRoadTile,
   listPurchases,
   tierWeights,
-  totalUpkeep,
   maxDistortion,
   isHuntStory,
   policeLost,
@@ -71,10 +65,10 @@ import {
   staffOf,
   cardTruth,
   minDistortion,
-  salesOf,
-  setPrice,
-  buyWillingness,
-  wealthOf,
+  cashCooldown,
+  freeSeats,
+  nextSeatReaders,
+  agencyBlock,
   effectiveTier,
   validateContent,
   pairKey,
@@ -90,6 +84,7 @@ import {
   shopRequestCost,
   advanceShop,
   lureCost,
+  lureWait,
   tipConflict,
   huntBonus,
   lureBlock,
@@ -242,7 +237,6 @@ describe('distortion', () => {
   it('reporters never bring outright lies', () => {
     for (const seed of [1, 2, 3, 4, 5, 6]) {
       const s = createGame(content, seed);
-      s.money = 10_000;
       for (const id of ['gusev', 'volkova', 'kim', 'zaitsev']) hire(s, id);
       for (let i = 0; i < 4; i++) {
         playTurn(s, content, { publish: [] });
@@ -254,39 +248,42 @@ describe('distortion', () => {
 
 describe('readers', () => {
   it('the newspaper starts with readers; a group page brings in a new group over turns', () => {
-    const s = createGame(content, 6);
-    expect(followersOf(s, 'newspaper')).toBeGreaterThan(0);
-    const workers = () => s.residents.filter((r) => r.status === 'active' && r.group === 'workers' && r.follows.length > 0).length;
-    const before = workers();
-    s.money = 10_000;
-    s.shopOffer.push('sports_page');
-    purchase(s, content, 'sports_page');
-    // Boring issues attract nobody, so publish interesting stories.
-    for (let i = 0; i < 4; i++) {
-      for (const card of s.hand) card.tier = 2;
-      playTurn(s, content, simpleDecision(s, 'none'));
-    }
-    expect(workers()).toBeGreaterThan(before);
-    const report = playTurn(s, content, simpleDecision(s, 'none'));
-    expect(report.income.newspaper).toBe(Math.round(report.buyers.newspaper * (content.balance.prices[s.price] + content.channels[0].adRate) * s.scandal));
+    const run = (buy: boolean) => {
+      const s = createGame(content, 6);
+      expect(followersOf(s, 'newspaper')).toBeGreaterThan(0);
+      if (buy) {
+        s.shopOffer.push('sports_page');
+        purchase(s, content, 'sports_page');
+      }
+      // Boring issues attract nobody, so publish interesting stories.
+      for (let i = 0; i < 4; i++) {
+        for (const card of s.hand) card.tier = 2;
+        playTurn(s, content, simpleDecision(s, 'none', 2));
+      }
+      return s.residents.filter((r) => r.status === 'active' && r.group === 'workers' && r.follows.length > 0).length;
+    };
+    expect(run(true)).toBeGreaterThan(run(false));
   });
 
-  it('the cover price decides who can buy the paper: the jobless only take it free', () => {
-    const s = createGame(content, 3);
-    const jobless = s.residents.find((r) => r.status === 'active' && wealthOf(content, r) === 'jobless') ?? Object.assign(s.residents.find((r) => r.group === 'workers')!, { job: null });
-    const worker = s.residents.find((r) => r.status === 'active' && r.job !== null)!;
-    setPrice(s, content, 0);
-    expect(buyWillingness(s, content, jobless)).toBeGreaterThan(0);
-    setPrice(s, content, content.balance.prices.length - 1);
-    expect(buyWillingness(s, content, jobless)).toBe(0);
-    expect(buyWillingness(s, content, worker)).toBeGreaterThan(0);
-    // A dear paper is bought less willingly even by those who can pay.
-    expect(buyWillingness(s, content, worker)).toBeLessThan(content.balance.priceBuy.working[1]);
-    expect(() => setPrice(s, content, 99)).toThrow();
-    // Readers who cannot afford it stop buying.
-    jobless.follows = ['newspaper'];
-    playTurn(s, content, { publish: [] });
-    expect(jobless.follows).toEqual([]);
+  it('there is no money: anyone may read the paper, the jobless too (CONCEPT.md §10.3)', () => {
+    const s = createGame(content, 3) as GameState & Record<string, unknown>;
+    expect(s.money).toBeUndefined();
+    expect(s.price).toBeUndefined();
+    const report = playTurn(s, content, { publish: [] }) as unknown as Record<string, unknown>;
+    expect(report.income).toBeUndefined();
+    expect(report.moneyDelta).toBeUndefined();
+    // Groups differ only by whether they read papers: jobless workers join like working ones.
+    let joined = 0;
+    for (let seed = 1; seed <= 6; seed++) {
+      const g = createGame(content, seed);
+      for (const r of g.residents) if (r.group === 'workers') r.job = null;
+      for (let i = 0; i < 4; i++) {
+        for (const card of g.hand) card.tier = 2;
+        playTurn(g, content, simpleDecision(g, 'none'));
+      }
+      joined += g.residents.filter((r) => r.group === 'workers' && r.job === null && r.follows.length > 0).length;
+    }
+    expect(joined).toBeGreaterThan(0);
   });
 
   it('crime stories scare believers: they stay at home and order falls', () => {
@@ -299,18 +296,18 @@ describe('readers', () => {
     expect(crime.length).toBeGreaterThanOrEqual(5);
   });
 
-  it('every kiosk adds to the sales per reader', () => {
+  it('every kiosk widens the reach, one after another', () => {
     const s = createGame(content, 6);
-    s.money = 10_000;
-    const base = salesOf(s, content, 'newspaper', 100);
+    const reach = () => getModifiers(s, content).channels.newspaper.reachAdd;
+    const base = reach();
     s.shopOffer.push('kiosk_1', 'kiosk_2');
     expect(() => purchase(s, content, 'kiosk_2')).toThrow();
     purchase(s, content, 'kiosk_1');
-    const one = salesOf(s, content, 'newspaper', 100);
+    const one = reach();
     s.shopOffer.push('kiosk_2');
     purchase(s, content, 'kiosk_2');
     expect(one).toBeGreaterThan(base);
-    expect(salesOf(s, content, 'newspaper', 100)).toBeGreaterThan(one);
+    expect(reach()).toBeGreaterThan(one);
   });
 
   it('an empty issue drives readers away, and exposed lies drive away even more', () => {
@@ -358,7 +355,7 @@ describe('trust', () => {
     expect(s.outcome).toEqual({ result: 'lose', reason: 'trustCollapse' });
   });
 
-  it('caught lies cost reputation and ad income and are reported', () => {
+  it('caught lies cost reputation and are reported', () => {
     const c = withBalance({ checkerBase: 10 });
     // Fact-check chance is capped at 95%, so look at the first game where a lie got caught.
     for (let seed = 11; seed < 31; seed++) {
@@ -369,7 +366,6 @@ describe('trust', () => {
       expect(averageTrust(s, c)).toBeLessThan(before);
       expect(report.exposures.length).toBeGreaterThan(0);
       expect(report.exposures[0].turn).toBe(report.turn);
-      expect(s.scandal).toBeLessThan(1);
       return;
     }
     throw new Error('no lie was ever exposed');
@@ -506,13 +502,10 @@ describe('news variety', () => {
 });
 
 describe('turn report breakdowns', () => {
-  it('money and readers breakdowns add up to the totals', () => {
+  it('readers breakdowns add up to the totals', () => {
     const s = createGame(content, 4);
     for (let i = 0; i < 6; i++) {
       const r = playTurn(s, content, simpleDecision(s, i % 2 ? 'max' : 'none'));
-      expect(r.upkeepItems.reduce((sum, x) => sum + x.amount, 0)).toBe(r.upkeep);
-      const income = Object.values(r.income).reduce((sum, x) => sum + x, 0);
-      expect(income - r.upkeep).toBe(r.moneyDelta);
       expect(Object.values(r.readers.lostBy).reduce((sum, x) => sum + x, 0)).toBe(r.readers.lost);
       expect(r.readers.before - r.readers.lost - r.readers.movedAway + r.readers.gained).toBe(r.readers.after);
     }
@@ -579,7 +572,6 @@ describe('reporters', () => {
 
   it('a forced story is boring, and every card names a hired reporter', () => {
     const s = createGame(content, 9);
-    s.money = 10_000;
     for (const r of content.reporters) if (s.reporters.length < content.balance.maxReporters) hire(s, r.id);
     expect(s.reporters.length).toBe(content.balance.maxReporters);
     playTurn(s, content, { publish: [] });
@@ -588,35 +580,53 @@ describe('reporters', () => {
     expect(s.hand.length).toBeLessThanOrEqual(content.balance.maxReporters);
   });
 
-  it('the HR agency offers one or two new reporters, the first search a day free; only they can be hired', () => {
+  it('the HR agency offers one or two new reporters for free, once a day; only they can be hired, into a free seat', () => {
     const b = content.balance;
     const sizes = new Set<number>();
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
       const s = createGame(content, seed);
-      s.money = 1000;
+      expect(freeSeats(s, content)).toBe(b.startSeats - b.startReporters.length);
       const offer = callAgency(s, content);
       sizes.add(offer.length);
-      expect(s.money).toBe(1000);
       expect(offer.length).toBeGreaterThanOrEqual(1);
       expect(offer.length).toBeLessThanOrEqual(b.agencyMaxOffer);
       for (const id of offer) expect(s.reporters).not.toContain(id);
       const spare = content.reporters.find((r) => !offer.includes(r.id) && !s.reporters.includes(r.id))!;
       expect(() => hireFromAgency(s, content, spare.id)).toThrow();
+      // One search a day.
+      expect(agencyBlock(s, content)).toBe('called');
+      expect(() => callAgency(s, content)).toThrow();
       hireFromAgency(s, content, offer[0]);
       expect(s.reporters).toContain(offer[0]);
-      // The reporter's own price on top of the fee; the salary goes into the upkeep.
-      expect(s.money).toBe(1000 - reporterOf(content, offer[0]).hireCost);
-      // A second search the same day costs the fee.
-      const before = s.money;
-      callAgency(s, content);
-      expect(s.money).toBe(before - b.agencyFee);
-      expect(totalUpkeep(s, content)).toBeGreaterThanOrEqual(reporterOf(content, offer[0]).salary);
+      // The seats are full: nobody else can be hired.
+      expect(freeSeats(s, content)).toBe(0);
+      if (offer[1]) expect(() => hireFromAgency(s, content, offer[1])).toThrow();
       // The offer lapses at the end of the turn.
       playTurn(s, content, { publish: [] });
       expect(s.agencyOffer).toEqual([]);
       expect(s.agencyCalls).toBe(0);
     }
     expect([...sizes].sort()).toEqual([1, 2]);
+  });
+
+  it('circulation opens seats in the newsroom, and an opened seat never closes (CONCEPT.md §3.3)', () => {
+    const b = content.balance;
+    const s = createGame(content, 2);
+    expect(s.seats).toBe(b.startSeats);
+    const active = s.residents.filter((r) => r.status === 'active');
+    expect(nextSeatReaders(s, content)).toBe(Math.ceil(b.seatThresholds[0] * active.length));
+    // Two thresholds passed at once open two seats.
+    for (const r of active.slice(0, Math.ceil(b.seatThresholds[1] * active.length) + 2)) r.follows = ['newspaper'];
+    for (const card of s.hand) card.tier = 3;
+    const report = playTurn(s, content, { publish: [] });
+    expect(report.seatsOpened).toBeGreaterThanOrEqual(1);
+    expect(s.seats).toBeGreaterThan(b.startSeats);
+    const seats = s.seats;
+    for (const r of s.residents) r.follows = [];
+    playTurn(s, content, { publish: [] });
+    expect(s.seats).toBe(seats);
+    s.seats = b.maxReporters;
+    expect(nextSeatReaders(s, content)).toBeNull();
   });
 
   it('a day brings at most one sensation, and an issue carries at most one', () => {
@@ -676,22 +686,17 @@ describe('reporters', () => {
 
   it('cannot hire more than maxReporters or fire the last one', () => {
     const s = createGame(content, 1);
-    s.money = 100_000;
+    s.seats = content.balance.maxReporters;
     expect(content.balance.maxReporters).toBe(5);
     expect(content.reporters.length).toBeGreaterThan(content.balance.maxReporters);
     while (s.reporters.length < content.balance.maxReporters) {
+      s.agencyCalls = 0;
       for (const id of callAgency(s, content)) if (s.reporters.length < content.balance.maxReporters) hireFromAgency(s, content, id);
     }
+    s.agencyCalls = 0;
     expect(() => callAgency(s, content)).toThrow();
     while (s.reporters.length > 1) fireReporter(s, s.reporters[0]);
     expect(() => fireReporter(s, s.reporters[0])).toThrow();
-  });
-
-  it('salaries are part of the upkeep', () => {
-    const s = createGame(content, 1);
-    const before = totalUpkeep(s, content);
-    hire(s, 'kim');
-    expect(totalUpkeep(s, content)).toBe(before + content.reporters.find((r) => r.id === 'kim')!.salary);
   });
 
   it('nose shifts the odds towards sensations', () => {
@@ -762,9 +767,8 @@ describe('investigations', () => {
 });
 
 describe('purchases', () => {
-  it('requires money and prerequisites', () => {
+  it('requires prerequisites', () => {
     const s = createGame(content, 1);
-    s.money = 10_000;
     s.shopOffer.push('newspaper_quality_1', 'newspaper_quality_2');
     expect(() => purchase(s, content, 'newspaper_quality_2')).toThrow();
     expect(listPurchases(s, content).find((p) => p.id === 'newspaper_quality_2')?.unlocked).toBe(false);
@@ -774,16 +778,9 @@ describe('purchases', () => {
     expect(s.upgrades).toContain('newspaper_quality_2');
   });
 
-  it('the head office pays: a fork\'s option is free', () => {
-    const s = createGame(content, 1);
-    s.money = 0;
-    s.turn = content.forks[0].day;
-    purchase(s, content, content.forks[0].options[0]);
-    expect(s.money).toBe(0);
-  });
 });
 
-describe('the upgrades deck, forks and abilities (CONCEPT.md §3.5)', () => {
+describe('the upgrades deck and abilities (CONCEPT.md §3.5)', () => {
   it('the deck offers a few cards of the mode, deals again every few days, and only what is on offer can be bought', () => {
     const b = content.balance;
     const s = createGame(content, 3);
@@ -793,11 +790,9 @@ describe('the upgrades deck, forks and abilities (CONCEPT.md §3.5)', () => {
     expect(s.shopOffer.length).toBe(b.shopOfferSize);
     for (const id of s.shopOffer) {
       const u = content.upgrades.find((x) => x.id === id)!;
-      expect(u.fork).toBeUndefined();
       expect(!u.mode || u.mode === s.mode).toBe(true);
     }
-    const off = content.upgrades.find((u) => !u.fork && !s.shopOffer.includes(u.id))!;
-    s.money = 10_000;
+    const off = content.upgrades.find((u) => !s.shopOffer.includes(u.id))!;
     expect(() => purchase(s, content, off.id)).toThrow();
     const first = [...s.shopOffer];
     purchase(s, content, first[0]);
@@ -807,19 +802,13 @@ describe('the upgrades deck, forks and abilities (CONCEPT.md §3.5)', () => {
     expect(s.shopOffer).not.toContain(first[0]);
   });
 
-  it('a fork opens on its day and taking one option closes the other', () => {
-    const s = createGame(content, 4);
-    const fork = content.forks[0];
-    s.money = 10_000;
-    expect(() => purchase(s, content, fork.options[0])).toThrow();
-    while (s.turn < fork.day && !s.outcome) playTurn(s, content, { publish: [] });
-    purchase(s, content, fork.options[0]);
-    expect(() => purchase(s, content, fork.options[1])).toThrow();
+  it('there are no forks: the six fork cards left the game (CONCEPT.md §10.4а)', () => {
+    expect((realContent as unknown as Record<string, unknown>).forks).toBeUndefined();
+    for (const id of ['yellow_layout', 'solid_style', 'cheap_paper', 'gloss', 'lawyers', 'insider']) expect(realContent.upgrades.some((u) => u.id === id)).toBe(false);
   });
 
-  it('an ability costs money, works once and waits its cooldown', () => {
+  it('an ability works once and waits its cooldown', () => {
     const s = createGame(content, 5);
-    s.money = 10_000;
     s.upgrades.push('night_shift');
     const hand = s.hand.length;
     const added = useAbility(s, content, 'night_shift');
@@ -1100,27 +1089,28 @@ describe('offers with a catch', () => {
     s.hand.push(x);
     return x;
   };
-  it('a silence deal pays at once and costs double when broken', () => {
+  it('a silence deal brings readers at once and costs double when broken', () => {
     const s = createGame(content, 4);
     const shop = s.buildings.find((x) => x.type === 'shop' && x.open)!.id;
     s.offer = { id: 'silence_shop', building: shop };
-    const money = s.money;
+    const readers = readerCount(s);
     answerOffer(s, content, true);
-    expect(s.money).toBe(money + 60);
+    expect(readerCount(s)).toBe(readers + 12);
     expect(s.deals).toHaveLength(1);
     const robbery = card(s, 'shop_robbery', shop);
     const trust = averageTrust(s, content);
     const report = playTurn(s, content, { publish: [{ cardUid: robbery.uid, placement: 0, distortion: 0 }] });
     expect(report.deals.broken).toEqual(['Реклама за молчание']);
+    expect(report.deals.lost).toBe(24);
     expect(s.deals).toHaveLength(0);
     expect(averageTrust(s, content)).toBeLessThan(trust);
   });
   it('declining or ignoring an offer changes nothing; it lapses with the turn', () => {
     const s = createGame(content, 4);
     s.offer = { id: 'subsidy' };
-    const money = s.money;
+    const readers = readerCount(s);
     answerOffer(s, content, false);
-    expect(s.money).toBe(money);
+    expect(readerCount(s)).toBe(readers);
     expect(s.deals).toHaveLength(0);
     expect(s.offer).toBeNull();
   });
@@ -1180,7 +1170,7 @@ describe('reporters with character', () => {
     playTurn(s, content, { publish: [{ cardUid: card.uid, placement: 0, distortion: 1 }] });
     expect(staffOf(s, content, 'petrova').loyalty).toBeLessThan(before);
   });
-  it('the rival lures a reporter: keep them for a bonus or lose them', () => {
+  it('the rival lures a reporter: keep them for reputation (or a voucher) or lose them', () => {
     const s = createGame(content, 2);
     s.reporters = ['petrova', 'kim'];
     s.offer = { id: 'poach_guardian', reporterId: 'kim' };
@@ -1188,10 +1178,16 @@ describe('reporters with character', () => {
     expect(s.reporters).toEqual(['petrova']);
     s.reporters.push('kim');
     s.offer = { id: 'poach_guardian', reporterId: 'kim' };
-    const money = s.money;
+    const trust = averageTrust(s, content);
     answerOffer(s, content, true);
     expect(s.reporters).toContain('kim');
-    expect(s.money).toBe(money - reporterOf(content, 'kim').salary * content.balance.poachRetain);
+    expect(averageTrust(s, content)).toBeCloseTo(trust - content.balance.poachRetainTrust, 5);
+    // A task's voucher pays instead of reputation.
+    s.vouchers = 1;
+    s.offer = { id: 'poach_guardian', reporterId: 'kim' };
+    answerOffer(s, content, true);
+    expect(s.vouchers).toBe(0);
+    expect(averageTrust(s, content)).toBeCloseTo(trust - content.balance.poachRetainTrust, 5);
   });
 });
 
@@ -1236,7 +1232,6 @@ describe('difficulty', () => {
     expect(hard.balance.turnLimit).toBeLessThan(content.balance.turnLimit);
     const s = createGame(hard, 3, 'destroy', 'hard');
     expect(s.difficulty).toBe('hard');
-    expect(s.money).toBe(hard.balance.startMoney);
   });
 });
 
@@ -1271,36 +1266,34 @@ describe('gentle first days (CONCEPT.md §4.7)', () => {
 });
 
 describe('tasks and stars (CONCEPT.md §4.8)', () => {
-  it('gives the mode its tasks on their day, pays done ones and fails broken ones', () => {
+  it('gives the mode its tasks on their day, rewards done ones and fails broken ones', () => {
     const b = content.balance;
     const first = createGame(content, 11);
     while (first.turn < b.taskStartTurn) playTurn(first, content, simpleDecision(first, 'none'));
     const own = first.tasks.filter((t) => !taskOf(content, t.id).twist);
     expect(own).toHaveLength(b.taskCount);
     expect(new Set(own.map((t) => t.id)).size).toBe(b.taskCount);
-    // A reach task is done the day its check holds and pays its reward.
+    // A reach task is done the day its check holds and gives its prize.
     const s = createGame(content, 12);
     s.tasks = [];
     giveTask(s, content, 'upgrades_destroy');
     s.turn++;
     s.upgrades.push('kiosk_1', 'kiosk_2', 'kiosk_3');
-    const money = s.money;
+    const xp0 = staffOf(s, content, s.reporters[0]).xp;
     const r = updateTasks(s, content, []);
     expect(r.done).toEqual(['upgrades_destroy']);
-    expect(s.money).toBe(money + Math.round(taskOf(content, 'upgrades_destroy').reward * content.balance.taskRewardMul));
-    // A prize instead of money: the voucher makes one deck card free, never a fork option.
-    giveTask(s, content, 'income_destroy');
+    expect(staffOf(s, content, s.reporters[0]).xp).toBe(xp0 + 30);
+    // The voucher: one more card of the same offer.
+    giveTask(s, content, 'youth_leave');
     s.turn++;
-    s.lastProfit = 1000;
-    expect(updateTasks(s, content, []).done).toEqual(['income_destroy']);
+    for (const x of s.residents.filter((y) => y.group === 'youth').slice(0, 30)) x.status = 'left';
+    expect(updateTasks(s, content, []).done).toEqual(['youth_leave']);
     expect(s.vouchers).toBe(1);
-    s.money = 0;
     s.shopOffer = ['photographer'];
     s.shopPicks = 1;
-    expect(listPurchases(s, content).find((p) => p.id === 'photographer')).toMatchObject({ cost: 0, affordable: true });
+    expect(listPurchases(s, content).find((p) => p.id === 'photographer')).toMatchObject({ affordable: true });
     purchase(s, content, 'photographer');
     expect(s.vouchers).toBe(0);
-    expect(s.money).toBe(0);
     // Experience for the whole newsroom.
     giveTask(s, content, 'team_destroy');
     s.turn++;
@@ -1322,7 +1315,7 @@ describe('tasks and stars (CONCEPT.md §4.8)', () => {
     expect(scoreOf(s, content).stars).toBe(3);
     s.exposedTotal = 2;
     expect(scoreOf(s, content).stars).toBe(2);
-    s.outcome = { result: 'lose', reason: 'bankrupt' };
+    s.outcome = { result: 'lose', reason: 'trustCollapse' };
     expect(scoreOf(s, content).stars).toBe(0);
   });
 });
@@ -1374,21 +1367,21 @@ describe('attacking the town (CONCEPT.md §3.5, §3.6а, §8.4)', () => {
     expect(s.hunt).toBeNull();
   });
 
-  it('the yellow press: youth believe it whatever its reputation, pensioners drift away', () => {
-    const m = getModifiers({ ...createGame(content, 3), upgrades: ['yellow_layout'] }, content);
-    expect(m.sensationTrust).toBeGreaterThan(0);
-    expect(m.groupChurn.pensioners).toBeGreaterThan(0);
-    expect(m.channels.newspaper.groupReach.youth).toBeGreaterThan(0);
-  });
-
-  it('strikes at the guardian: luring its author and digging into its money', () => {
+  it('strikes at the guardian: luring its author for reputation, then waiting, and digging into its money', () => {
     const s = createGame(content, 22, 'destroy');
-    s.money = 5000;
     const trust = rivalTrust(s);
+    const ours = averageTrust(s, content);
     lureRivalAuthor(s, content);
     expect(s.rival!.lured).toBe(1);
     expect(rivalTrust(s)).toBeLessThan(trust);
-    while (!lureBlock(s, content)) lureRivalAuthor(s, content);
+    expect(averageTrust(s, content)).toBeCloseTo(ours - lureCost(s, content), 5);
+    // The next author waits, longer with each one gone.
+    expect(lureBlock(s, content)).toBe('waiting');
+    expect(lureWait(s, content)).toBeGreaterThan(content.balance.rivalLureDays);
+    for (let i = 0; i < 40 && lureBlock(s, content) !== 'nobody left'; i++) {
+      s.turn = s.rival!.lureReady ?? s.turn;
+      if (!lureBlock(s, content)) lureRivalAuthor(s, content);
+    }
     expect(lureBlock(s, content)).toBe('nobody left');
     // A reporter digging into it brings documents about who pays it.
     startInvestigation(s, content, s.reporters[0], RIVAL_DIG);
@@ -1441,13 +1434,14 @@ describe('the mid-game twist (CONCEPT.md §4.9)', () => {
     playTurn(s, content, simpleDecision(s, 'none'));
     expect(s.twist.result).toBe('hardliner');
     expect(twistMods(s, content).reconcileDrop).toBeLessThan(0);
-    // A failed audit cuts the budget for the rest of the game.
+    // A failed audit costs reputation with everyone.
     const a = createGame(content, 4);
     giveTask(a, content, 'audit_city');
     a.tasks[a.tasks.length - 1].untilTurn = a.turn;
     a.turn++;
+    const before = averageTrust(a, content);
     updateTasks(a, content, []);
-    expect(a.budgetCut).toBe(taskOf(content, 'audit_city').penalty);
+    expect(averageTrust(a, content)).toBeCloseTo(before - taskOf(content, 'audit_city').penalty!, 5);
   });
 });
 
@@ -1669,44 +1663,42 @@ describe('the collection: draft, levels, sets (CONCEPT.md §3.5б)', () => {
   it('the draft offers only cards of the collection: one card is taken for free and the offer closes', () => {
     const collection = { photographer: 1, cartoonist: 1, gossip_column: 1, tabloid_king: 2 };
     const s = createGame(realContent, 3, 'destroy', 'normal', { collection });
-    s.money = 10_000;
     dealShop(s, realContent, s.rng);
     expect(s.shopOffer.length).toBe(3);
     for (const id of s.shopOffer) expect(Object.keys(collection)).toContain(id);
-    const money = s.money;
     const [first, second] = s.shopOffer;
     purchase(s, realContent, first);
-    expect(s.money).toBe(money);
     expect(s.shopOffer).toEqual([]);
-    // Nothing more to take from it for free.
+    // Nothing more to take from it.
     expect(() => purchase(s, realContent, second)).toThrow();
-    // Three more cards out of turn, for money: each request dearer until the board's next offer.
+    // Three more cards out of turn: the first request free, then for reputation, dearer each time.
     const b = realContent.balance;
     const schedule = s.shopRefreshTurn;
-    const before = s.money;
-    expect(shopRequestCost(s, realContent)).toBe(b.shopRefreshCost);
+    const trust = averageTrust(s, realContent);
+    expect(shopRequestCost(s, realContent)).toBe(0);
     refreshShop(s, realContent);
-    expect(s.money).toBe(before - b.shopRefreshCost);
+    expect(averageTrust(s, realContent)).toBeCloseTo(trust, 5);
     expect(s.shopOffer.length).toBeGreaterThan(0);
     expect(s.shopRefreshTurn).toBe(schedule);
-    expect(shopRequestCost(s, realContent)).toBe(b.shopRefreshCost + b.shopRequestStep);
-    // One of them is again free.
-    const third = s.shopOffer[0];
-    purchase(s, realContent, third);
-    expect(s.money).toBe(before - b.shopRefreshCost);
+    expect(shopRequestCost(s, realContent)).toBe(b.shopRequestTrust);
+    // One of them is again taken.
+    purchase(s, realContent, s.shopOffer[0]);
+    refreshShop(s, realContent);
+    expect(averageTrust(s, realContent)).toBeCloseTo(trust - b.shopRequestTrust, 5);
+    expect(shopRequestCost(s, realContent)).toBe(b.shopRequestTrust + b.shopRequestTrustStep);
     // The board's own offer resets the price.
     s.turn = s.shopRefreshTurn;
     advanceShop(s, realContent, s.rng);
-    expect(shopRequestCost(s, realContent)).toBe(b.shopRefreshCost);
+    expect(shopRequestCost(s, realContent)).toBe(0);
   });
 
   it('a level grows a card\'s benefits and leaves its drawbacks', () => {
-    const e = { scaryImpactMul: 1.3, trustGainMul: 0.8, checkerMul: 0.9, upkeepAdd: 15, groupReach: { youth: 0.2, pensioners: -0.3 } };
+    const e = { scaryImpactMul: 1.3, trustGainMul: 0.8, checkerMul: 0.9, churnMul: 1.05, groupReach: { youth: 0.2, pensioners: -0.3 } };
     const up = levelEffects(e, 2);
     expect(up.scaryImpactMul).toBeCloseTo(1.6);
     expect(up.trustGainMul).toBe(0.8);
     expect(up.checkerMul).toBeCloseTo(0.8);
-    expect(up.upkeepAdd).toBe(15);
+    expect(up.churnMul).toBe(1.05);
     expect(up.groupReach).toEqual({ youth: 0.4, pensioners: -0.3 });
     const m1 = modifiersOf(realContent, ['tabloid_king'], { tabloid_king: 1 });
     const m3 = modifiersOf(realContent, ['tabloid_king'], { tabloid_king: 3 });
@@ -1724,40 +1716,42 @@ describe('the collection: draft, levels, sets (CONCEPT.md §3.5б)', () => {
 
   it('the new cards change their mechanics', () => {
     const s = createGame(realContent, 5, 'destroy', 'normal');
-    const salary = totalUpkeep(s, realContent);
+    s.upgrades.push('informant');
+    const cooldown = cashCooldown(s, realContent, 'leak');
     const turns = investigationTurns(realContent, reporterOf(realContent, s.reporters[0]), getModifiers(s, realContent));
-    const lure = lureCost(s, realContent);
+    const wait = lureWait(s, realContent);
     s.upgrades.push('interns', 'smear_lab', 'defectors');
-    expect(totalUpkeep(s, realContent)).toBeLessThan(salary);
+    expect(cashCooldown(s, realContent, 'leak')).toBe(cooldown - 1);
     expect(investigationTurns(realContent, reporterOf(realContent, s.reporters[0]), getModifiers(s, realContent))).toBe(turns - 1);
-    expect(lureCost(s, realContent)).toBeLessThan(lure);
-    const money = s.money;
+    expect(lureWait(s, realContent)).toBeLessThan(wait);
+    const reach = getModifiers(s, realContent).channels.newspaper.reachAdd;
     s.upgrades.push('media_baron');
-    playTurn(s, realContent, { publish: [] });
-    expect(s.money).toBeGreaterThan(money - totalUpkeep(s, realContent) + 60);
+    expect(getModifiers(s, realContent).channels.newspaper.reachAdd).toBeGreaterThan(reach);
   });
 });
 
-describe('the black cash (CONCEPT.md §3.5в)', () => {
-  it('only the base move is open; cards open the rest, and a card\'s level makes its move cheaper', () => {
+describe('dirty tricks (CONCEPT.md §3.5в)', () => {
+  it('only the base trick is open; cards open the rest, and a card\'s level shortens its cooldown', () => {
     const s = createGame(content, 5, 'destroy', 'normal', { collection: { informant: 3 } });
-    s.money = 10_000;
     expect(cashMoves(s, content).map((x) => x.id)).toEqual(content.cash.filter((x) => x.base).map((x) => x.id));
     expect(cashBlock(s, content, 'leak')).toBe('нужна карта');
     s.upgrades.push('informant');
     expect(cashBlock(s, content, 'leak')).toBeNull();
     const leak = content.cash.find((x) => x.id === 'leak')!;
-    expect(cashCost(s, content, 'leak')).toBe(Math.round(leak.cost / content.balance.cardLevelPower[2]));
+    expect(cashCost(s, content, 'leak')).toBe(leak.trust);
+    expect(cashCooldown(s, content, 'leak')).toBe(Math.max(1, Math.round(leak.cooldown / content.balance.cardLevelPower[2])));
   });
 
-  it('a move costs money, waits its cooldown and acts on its day', () => {
+  it('a strong trick costs reputation, a weak one only its wait; each waits its cooldown and acts on its day', () => {
     const s = createGame(content, 5);
     s.upgrades.push('fact_friend', 'hired_crowd', 'paparazzi_team');
-    s.money = 10_000;
     const bribe = content.cash.find((x) => x.id === 'bribe')!;
+    expect(bribe.trust).toBeGreaterThan(0);
+    expect(content.cash.find((x) => x.id === 'ads')!.trust).toBe(0);
     expect(cashBlock(s, content, 'bribe')).toBeNull();
+    const trust = averageTrust(s, content);
     useCash(s, content, 'bribe');
-    expect(s.money).toBe(10_000 - bribe.cost);
+    expect(averageTrust(s, content)).toBeCloseTo(trust - bribe.trust, 5);
     expect(cashActive(s, 'bribe')).toBe(true);
     expect(bribeMul(s, content)).toBe(bribe.checkerMul);
     expect(cashBlock(s, content, 'bribe')).toMatch(/через/);
@@ -1767,14 +1761,17 @@ describe('the black cash (CONCEPT.md §3.5в)', () => {
     expect(cashActive(s, 'provoke')).toBe(false);
     expect(cashActive(s, 'provoke', s.turn + 1)).toBe(true);
     expect(cashBlock(s, content, 'paparazzi')).toBe('нет травли');
-    s.money = 0;
-    expect(cashBlock(s, content, 'ads')).toBe('не хватает денег');
+    // A trick never takes the paper's reputation down to its collapse.
+    for (const r of s.residents) r.trust = content.balance.trustCollapse + 1;
+    expect(cashBlock(s, content, 'leak')).toBe('нужна карта');
+    s.upgrades.push('informant');
+    expect(cashBlock(s, content, 'leak')).toBe('не хватит репутации');
+    expect(cashBlock(s, content, 'ads')).toBeNull();
   });
 
   it('a leak puts a loud rumor into today\'s hand; ads bring readers', () => {
     const s = createGame(content, 6);
     s.upgrades.push('informant');
-    s.money = 10_000;
     const hand = s.hand.length;
     const card = useCash(s, content, 'leak')!;
     expect(s.hand.length).toBe(hand + 1);
@@ -1865,29 +1862,6 @@ describe('town goals and the town generator (CONCEPT.md §9.2, §9.5)', () => {
   });
 });
 
-describe('the bank and debt (CONCEPT.md §5.4а)', () => {
-  it('a free board card is taken in debt; a loan pays at once, is paid back day by day and can be paid off early', () => {
-    const s = createGame(content, 8);
-    s.money = -12;
-    dealShop(s, content, s.rng);
-    expect(listPurchases(s, content).find((p) => p.id === s.shopOffer[0])).toMatchObject({ cost: 0, affordable: true });
-    purchase(s, content, s.shopOffer[0]);
-    const b = content.balance;
-    expect(loanBlock(s, content)).toBeNull();
-    takeLoan(s, content, 300);
-    expect(s.money).toBe(288);
-    expect(loanBlock(s, content)).not.toBeNull();
-    expect(totalUpkeep(s, content)).toBeGreaterThanOrEqual(loanPerDay(content, 300));
-    playTurn(s, content, { publish: [] });
-    expect(s.loan?.daysLeft).toBe(b.loanDays - 1);
-    const payoff = loanPayoff(s, content);
-    expect(payoff).toBe(Math.ceil((300 * (b.loanDays - 1)) / b.loanDays));
-    s.money = 1000;
-    repayLoan(s, content);
-    expect(s.loan).toBeNull();
-    expect(s.money).toBe(1000 - payoff);
-  });
-});
 
 describe('crime and order agree (CONCEPT.md §5.6)', () => {
   const calmDown = (s: GameState) => {

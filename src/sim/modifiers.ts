@@ -3,8 +3,6 @@ import type { ChannelId, Content, GameState, GroupId, Placement, Topic, UpgradeE
 export interface ChannelMods {
   reachAdd: number;
   reachMul: number;
-  adRateAdd: number;
-  upkeepAdd: number;
   frontReadMul: number;
   /** Added to the channel affinity of each group. */
   groupReach: Record<GroupId, number>;
@@ -27,10 +25,6 @@ export interface Modifiers {
   wordOfMouthMul: number;
   debunkFindAdd: number;
   seeRivalPlan: boolean;
-  /** Youth and the jobless believe the outlet as if its reputation were at least this (the yellow press). */
-  sensationTrust: number;
-  /** Added to the churn of readers from these groups (the paper's style is not for them). */
-  groupChurn: Record<GroupId, number>;
   huntStepMul: number;
   huntFindAdd: number;
   rivalStealMul: number;
@@ -38,22 +32,20 @@ export interface Modifiers {
   topicImpactMul: Partial<Record<Topic, number>>;
   /** Chance a free reporter searches this topic: the desk's own reporter (CONCEPT.md §3.5). */
   topicFind: Partial<Record<Topic, number>>;
-  moneyPerDay: number;
-  salaryMul: number;
   investigationTurnsAdd: number;
-  investigationCostMul: number;
   tensionMul: number;
   incidentMul: number;
   crimeHeatMul: number;
   stainMul: number;
-  lureCostMul: number;
+  lureCooldownMul: number;
+  cashCooldownAdd: number;
   /** Sets of three cards of one direction in force (`synergies.json`), by tag. */
   synergies: string[];
   channels: Record<ChannelId, ChannelMods>;
 }
 
 /** Fields where a smaller value is the benefit (a multiplier below 1, a negative add). */
-const LOWER_IS_BETTER = new Set<keyof UpgradeEffects>(['exposurePenaltyMul', 'checkerMul', 'upkeepAdd', 'churnMul', 'groupChurn', 'salaryMul', 'investigationTurnsAdd', 'investigationCostMul', 'lureCostMul']);
+const LOWER_IS_BETTER = new Set<keyof UpgradeEffects>(['exposurePenaltyMul', 'checkerMul', 'churnMul', 'investigationTurnsAdd', 'lureCooldownMul', 'cashCooldownAdd']);
 
 /**
  * A card's effects at its collection level (CONCEPT.md §3.5б): every benefit grows by `power`
@@ -100,26 +92,22 @@ export function modifiersOf(c: Content, upgrades: string[], levels: Record<strin
     wordOfMouthMul: 1,
     debunkFindAdd: 0,
     seeRivalPlan: false,
-    sensationTrust: 0,
-    groupChurn: {},
     huntStepMul: 1,
     huntFindAdd: 0,
     rivalStealMul: 1,
     topicImpactMul: {},
     topicFind: {},
-    moneyPerDay: 0,
-    salaryMul: 1,
     investigationTurnsAdd: 0,
-    investigationCostMul: 1,
     tensionMul: 1,
     incidentMul: 1,
     crimeHeatMul: 1,
     stainMul: 1,
-    lureCostMul: 1,
+    lureCooldownMul: 1,
+    cashCooldownAdd: 0,
     synergies: [],
     channels: {},
   };
-  for (const ch of c.channels) m.channels[ch.id] = { reachAdd: 0, reachMul: 1, adRateAdd: 0, upkeepAdd: 0, frontReadMul: 1, groupReach: {} };
+  for (const ch of c.channels) m.channels[ch.id] = { reachAdd: 0, reachMul: 1, frontReadMul: 1, groupReach: {} };
 
   const power = c.balance.cardLevelPower ?? [1];
   const owned = upgrades.map((id) => c.upgrades.find((x) => x.id === id)).filter((u) => !!u);
@@ -143,28 +131,22 @@ export function modifiersOf(c: Content, upgrades: string[], levels: Record<strin
     m.wordOfMouthMul *= e.wordOfMouthMul ?? 1;
     m.debunkFindAdd += e.debunkFindAdd ?? 0;
     m.seeRivalPlan ||= !!e.seeRivalPlan;
-    m.sensationTrust = Math.max(m.sensationTrust, e.sensationTrust ?? 0);
     m.huntStepMul *= e.huntStepMul ?? 1;
     m.huntFindAdd += e.huntFindAdd ?? 0;
     m.rivalStealMul *= e.rivalStealMul ?? 1;
     for (const [t, v] of Object.entries(e.topicImpactMul ?? {}) as [Topic, number][]) m.topicImpactMul[t] = (m.topicImpactMul[t] ?? 1) * v;
     for (const [t, v] of Object.entries(e.topicFind ?? {}) as [Topic, number][]) m.topicFind[t] = Math.max(m.topicFind[t] ?? 0, v);
-    for (const [g, v] of Object.entries(e.groupChurn ?? {})) m.groupChurn[g] = (m.groupChurn[g] ?? 0) + (v ?? 0);
-    m.moneyPerDay += e.moneyPerDay ?? 0;
-    m.salaryMul *= e.salaryMul ?? 1;
     m.investigationTurnsAdd += e.investigationTurnsAdd ?? 0;
-    m.investigationCostMul *= e.investigationCostMul ?? 1;
     m.tensionMul *= e.tensionMul ?? 1;
     m.incidentMul *= e.incidentMul ?? 1;
     m.crimeHeatMul *= e.crimeHeatMul ?? 1;
     m.stainMul *= e.stainMul ?? 1;
-    m.lureCostMul *= e.lureCostMul ?? 1;
+    m.lureCooldownMul *= e.lureCooldownMul ?? 1;
+    m.cashCooldownAdd += e.cashCooldownAdd ?? 0;
     if (e.channel) {
       const cm = m.channels[e.channel];
       cm.reachAdd += e.reachAdd ?? 0;
       cm.reachMul *= e.reachMul ?? 1;
-      cm.adRateAdd += e.adRateAdd ?? 0;
-      cm.upkeepAdd += e.upkeepAdd ?? 0;
       cm.frontReadMul *= e.frontReadMul ?? 1;
       for (const [g, v] of Object.entries(e.groupReach ?? {})) cm.groupReach[g] = (cm.groupReach[g] ?? 0) + (v ?? 0);
     }

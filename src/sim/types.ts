@@ -4,8 +4,6 @@ import type { RngState } from './rng';
 
 export type ChannelId = string;
 export type GroupId = string;
-/** Wealth class for buying the paper: with a job, on a pension, or without income. */
-export type WealthClass = 'working' | 'pensioner' | 'jobless';
 export type BuildingType =
   | 'home'
   | 'factory'
@@ -32,10 +30,6 @@ export interface ReporterDef {
   bio: string;
   /** How often the HR agency offers this reporter (higher = more often; 0 = never, e.g. the start reporter). */
   weight: number;
-  /** Paid once when hired from the agency's offer, on top of the agency fee. */
-  hireCost: number;
-  /** Paid every turn while hired. */
-  salary: number;
   /** For Russian verb forms in the UI: «уволилась» / «уволился». */
   female?: boolean;
   /** 0..1: how much printing their stories as lies hurts their loyalty (CONCEPT.md §3.3б). */
@@ -98,11 +92,8 @@ export interface ChannelDef {
   id: ChannelId;
   name: string;
   description: string;
-  cost: number;
-  upkeep: number;
   baseReach: number;
   virality: number;
-  adRate: number;
   /** The highest value among owned channels scales the fact-check risk of every story. */
   exposureRisk: number;
   requires: Requirement | null;
@@ -121,10 +112,6 @@ export interface UpgradeEffects {
   exposurePenaltyMul?: number;
   checkerMul?: number;
   plausibilityAdd?: number;
-  /** For `channel`: added to sales per reader. */
-  adRateAdd?: number;
-  /** For `channel`: added to the upkeep per turn (negative = cheaper). */
-  upkeepAdd?: number;
   /** For `channel`: added to the channel affinity of these groups. */
   groupReach?: Partial<Record<GroupId, number>>;
   /** Multiplies the chance that a reader stops buying. */
@@ -143,10 +130,6 @@ export interface UpgradeEffects {
   debunkFindAdd?: number;
   /** We see the rival's issue being written (a mole there, CONCEPT.md §3.5). */
   seeRivalPlan?: boolean;
-  /** The yellow press (CONCEPT.md §3.5): youth and the jobless believe us as if our reputation were at least this. */
-  sensationTrust?: number;
-  /** Added to the chance that a reader of these groups stops buying: the paper is not for them any more. */
-  groupChurn?: Partial<Record<GroupId, number>>;
   /** Multiplies the campaign's extra impact per day in a row. */
   huntStepMul?: number;
   /** Added to the chance that a reporter digs up a story about the campaign's target. */
@@ -157,14 +140,8 @@ export interface UpgradeEffects {
   topicImpactMul?: Partial<Record<Topic, number>>;
   /** Chance that a reporter without an assignment searches this topic (a desk's own reporter). */
   topicFind?: Partial<Record<Topic, number>>;
-  /** Money the paper gets every day on top of its sales (a sponsor). */
-  moneyPerDay?: number;
-  /** Multiplies the reporters' salaries. */
-  salaryMul?: number;
   /** Added to the days an investigation takes (negative = faster). */
   investigationTurnsAdd?: number;
-  /** Multiplies the daily cost of an investigation. */
-  investigationCostMul?: number;
   /** Multiplies how much our conflict stories heat (or cool) a pair. */
   tensionMul?: number;
   /** Multiplies the chance of incidents between groups. */
@@ -173,17 +150,20 @@ export interface UpgradeEffects {
   crimeHeatMul?: number;
   /** Multiplies the stain a hunt story leaves on its target. */
   stainMul?: number;
-  /** Multiplies the price of luring the rival's authors. */
-  lureCostMul?: number;
+  /** Multiplies the wait before the next of the rival's authors can be lured. */
+  lureCooldownMul?: number;
+  /** Added to the cooldown of every dirty trick (negative = sooner, never below a day). */
+  cashCooldownAdd?: number;
 }
 
-/** A move of «Чёрная касса» (CONCEPT.md §3.5в): its price, days of cooldown and own numbers. */
+/** A dirty trick («Грязные приёмы», CONCEPT.md §3.5в): its reputation cost, days of cooldown and own numbers. */
 export interface CashDef {
   id: string;
   name: string;
   icon: string;
   text: string;
-  cost: number;
+  /** Reputation every resident loses when the trick is used (0 = only the cooldown). */
+  trust: number;
   cooldown: number;
   /** Open from the start; every other move is opened by a card with `UpgradeDef.cash`. */
   base?: boolean;
@@ -214,7 +194,6 @@ export interface UpgradeDef {
   id: string;
   name: string;
   description: string;
-  cost: number;
   requires: Requirement | null;
   effects: UpgradeEffects;
   /** Upgrades of one series (e.g. kiosks) are bought one after another and shown as one line. */
@@ -223,32 +202,22 @@ export interface UpgradeDef {
   section?: string;
   /** A glyph for its card. */
   icon?: string;
-  /** What it costs besides the price, shown in red (CONCEPT.md §3.5). */
+  /** What it costs, shown in red (CONCEPT.md §3.5). */
   drawback?: string;
-  /** One of the two options of a fork (`forks.json`): never in the deck, taking one closes the other. */
-  fork?: string;
   /** Only offered in this mode. */
   mode?: GameMode;
   /** Comes up in the deck less often (`shopRareWeight`). */
   rare?: boolean;
-  /** Its rarity in the collection (CONCEPT.md §3.5б); forks have none. */
+  /** Its rarity in the collection (CONCEPT.md §3.5б). */
   rarity?: Rarity;
   /** Directions of the card: three of one direction make a set (`synergies.json`). */
   tags?: string[];
   /** Owned from the first game (the starter collection). */
   starter?: boolean;
-  /** An active ability: used from the bar above the paper for `cost`, then waits `cooldown` days. */
-  ability?: { cooldown: number; cost: number };
-  /** Opens this move of the black cash (CONCEPT.md §3.5в); the card's level makes it cheaper. */
+  /** An active ability: used from the bar above the paper, then waits `cooldown` days. */
+  ability?: { cooldown: number };
+  /** Opens this dirty trick (CONCEPT.md §3.5в); the card's level shortens its cooldown. */
   cash?: string;
-}
-
-/** A fork of the upgrades (CONCEPT.md §3.5): from `day` on, the player may take one of two options for good. */
-export interface ForkDef {
-  id: string;
-  title: string;
-  day: number;
-  options: [string, string];
 }
 
 /** stigma = dirt on the template's `target` group: other groups turn on it, it feels hunted. */
@@ -349,10 +318,10 @@ export interface OfferDef {
   text: string;
   /** What can go wrong, shown with the offer. */
   catch: string;
-  /** silence: paid at once; subsidy: paid every day. */
+  /** Readers the deal brings (CONCEPT.md §3.5а): silence at once, subsidy every day. */
   amount?: number;
   days?: number;
-  /** silence: money to pay back and reputation lost when the deal is broken. */
+  /** Readers lost and reputation lost when the deal is broken. */
   penalty?: number;
   trustPenalty?: number;
   /** subsidy: reputation every reader loses each day of the deal; the topic it keeps us quiet about. */
@@ -401,7 +370,7 @@ export interface PersonDef {
   portrait: Record<string, string>;
 }
 
-export type LetterKind = 'scared' | 'happy' | 'doubted' | 'outraged' | 'lostJob' | 'left' | 'protest' | 'price';
+export type LetterKind = 'scared' | 'happy' | 'doubted' | 'outraged' | 'lostJob' | 'left' | 'protest';
 
 /** Letter templates by kind ({title}, {женская|мужская} forms) and signatures of anonymous readers. */
 export type LetterTemplates = Record<LetterKind, string[]> & { anonymous: string[] };
@@ -457,19 +426,16 @@ export interface Balance {
   goal?: TownGoal;
   /** Extra days for the full destruction (a stage goal down to «Руины»). */
   ruinDays: number;
-  startMoney: number;
 
   maxReporters: number;
-  /** HR agency (CONCEPT.md §3.3): the fee for one search and how many candidates it offers at most. */
-  agencyFee: number;
+  /**
+   * Seats in the newsroom (CONCEPT.md §3.3): `startSeats` from the start, one more each time our
+   * readers pass a share of the town's residents (`seatThresholds`, ascending); an opened seat stays.
+   */
+  startSeats: number;
+  seatThresholds: number[];
+  /** HR agency (CONCEPT.md §3.3): one free search a day, at most this many candidates. */
   agencyMaxOffer: number;
-  /** Price of one issue at each level the player can choose: free, cheap, middle, dear (CONCEPT.md §5.4). */
-  prices: number[];
-  startPrice: number;
-  /** How willing each wealth class is to buy at each price level (0 = cannot afford). */
-  priceBuy: Record<WealthClass, number[]>;
-  /** Per-turn chance that a reader who finds the price too high stops buying, × (1 − willingness). */
-  priceChurn: number;
   /** Multiplies every chance to leave the city: people mostly stay, jobless and afraid. */
   leaveScale: number;
   /** How much a jobless resident adds to the crime that lowers order. */
@@ -493,12 +459,12 @@ export interface Balance {
   rivalChurnDoubt: number;
   /** Multiplies the impact of the rival paper's stories by its kind (ours are set by `impactNorm`). */
   rivalImpactMul: Record<RivalKind, number>;
-  /** The upgrades deck (CONCEPT.md §3.5): cards on offer, days between deals, the price of dealing early, a rare card's weight. */
+  /** The upgrades deck (CONCEPT.md §3.5): cards on offer, days between deals, a rare card's weight. */
   shopOfferSize: number;
   shopRefreshDays: number;
-  /** Each further request for three more cards before the next offer costs this much more. */
-  shopRequestStep: number;
-  shopRefreshCost: number;
+  /** Three more cards: the first request of an offer is free, the next cost reputation (this, then more by the step). */
+  shopRequestTrust: number;
+  shopRequestTrustStep: number;
   shopRareWeight: number;
   /** The day the board's first offer comes (then every `shopRefreshDays`). */
   shopFirstTurn: number;
@@ -537,8 +503,6 @@ export interface Balance {
   /** Tasks (CONCEPT.md §4.8): how many a game gets and on which day. */
   taskCount: number;
   taskStartTurn: number;
-  /** Scales every task's reward (and the audit's premium) for balance by difficulty. */
-  taskRewardMul: number;
   /** A campaign against a place (CONCEPT.md §3.6а): extra impact per day in a row, up to this many steps. */
   huntStep: number;
   huntMaxSteps: number;
@@ -563,8 +527,12 @@ export interface Balance {
   stainShutdownJobs: number;
   /** Strikes at the rival (CONCEPT.md §8.4): share of its readers our issue of each level takes, among those it caught. */
   rivalSteal: [number, number, number, number];
-  /** Luring its author away: the price (it grows by itself each time), how many, and its readers' trust lost. */
-  rivalLureCost: number;
+  /**
+   * Luring its author away: our reputation it costs, the wait before the next one (it grows with
+   * each author lured), how many, and its readers' trust lost.
+   */
+  rivalLureRep: number;
+  rivalLureDays: number;
   rivalLureMax: number;
   rivalLureTrust: number;
   /** Crime (CONCEPT.md §5.6): chance of a real crime a day = base + spiral × pressure (scared and jobless share), up to this many a day. */
@@ -635,10 +603,10 @@ export interface Balance {
   /** Below this loyalty a reporter quits; with `leakChance` they tell the rival about our lies. */
   quitLoyalty: number;
   leakChance: number;
-  /** The rival lures a reporter of level ≥ 1: daily chance × (1.5 − loyalty), from `poachStartTurn`; keeping them costs salary × `poachRetain`. */
+  /** The rival lures a reporter of level ≥ 1: daily chance × (1.5 − loyalty), from `poachStartTurn`; keeping them costs `poachRetainTrust` reputation (or a voucher). */
   poachChance: number;
   poachStartTurn: number;
-  poachRetain: number;
+  poachRetainTrust: number;
   /** A reporter who went over to the rival: its readers trust it this much more. */
   poachRivalTrust: number;
   /** A fake kompromat caught by the fact-checkers costs this many times the usual reputation. */
@@ -767,8 +735,6 @@ export interface Balance {
   /** Stigma on the target group, scaled by the share of the city that believed. */
   stigmaOutlook: number;
   stigmaLeave: number;
-  /** Money per turn for each running investigation. */
-  investigationCost: number;
 
   /** Group relations (CONCEPT.md §5.5). Start tension by pair key "a|b" (content group order); others get tensionDefault. */
   tensionStart: Record<string, number>;
@@ -845,16 +811,6 @@ export interface Balance {
   lateExposureTurns: number;
   /** Fact-check risk × (1 − trustShield × reputation / 100): a trusted outlet is checked less. */
   trustShield: number;
-  scandalAdMul: number;
-  scandalRecovery: number;
-  brokeTurnsLimit: number;
-  /** The bank (CONCEPT.md §5.4а): loans offered while the cash is below `loanBelow`. */
-  loanAmounts: number[];
-  /** Interest over the whole loan (0.25 = a quarter on top). */
-  loanRate: number;
-  /** Days of payments. */
-  loanDays: number;
-  loanBelow: number;
   /** The game is lost when the average reputation falls below this. */
   trustCollapse: number;
 
@@ -879,7 +835,6 @@ export type TaskCheck =
   | { type: 'protesters'; count: number }
   | { type: 'readers'; count: number }
   | { type: 'readersGain'; count: number }
-  | { type: 'income'; amount: number }
   | { type: 'upgrades'; count: number }
   | { type: 'reporters'; count: number }
   | { type: 'noExposure' }
@@ -899,11 +854,9 @@ export interface TaskDef {
   kind: 'reach' | 'keep';
   check: TaskCheck;
   days: number;
-  /** Money paid when it is done (may be 0 when the task pays with a prize). */
-  reward: number;
-  /** What else it gives: a free card from the upgrade deck, reputation for the whole town, xp for every reporter. */
+  /** What it gives: a free card from the upgrade deck, reputation for the whole town, xp for every reporter. */
   prize?: TaskPrize;
-  /** A twist's task (the audit): never among the ordinary tasks; failing it costs this much upkeep a day. */
+  /** A twist's task (the audit): never among the ordinary tasks; failing it costs this much reputation with everyone. */
   penalty?: number;
   /** How to do it, in a line under the task (CONCEPT.md §4.8). */
   hint?: string;
@@ -952,7 +905,6 @@ export interface Content {
   groups: GroupDef[];
   channels: ChannelDef[];
   upgrades: UpgradeDef[];
-  forks: ForkDef[];
   cards: CardTemplate[];
   buildings: BuildingDef[];
   reporters: ReporterDef[];
@@ -1103,6 +1055,8 @@ export interface RivalState {
   debunked: number;
   /** Its authors we lured away (CONCEPT.md §8.4): a story less a day each. */
   lured?: number;
+  /** The turn the next author can be lured (CONCEPT.md §8.4). */
+  lureReady?: number;
 }
 
 /** An incident between two groups that happened today (it becomes a true story). */
@@ -1333,7 +1287,7 @@ export interface DifficultyDef {
 
 export interface Outcome {
   result: 'win' | 'lose';
-  reason: 'cityDestroyed' | 'bankrupt' | 'trustCollapse' | 'turnLimit' | 'rivalClosed' | 'goalDone';
+  reason: 'cityDestroyed' | 'trustCollapse' | 'turnLimit' | 'rivalClosed' | 'goalDone';
 }
 
 export interface GameState {
@@ -1363,12 +1317,12 @@ export interface GameState {
    * come up in the draft, levelled up. Null: every card at level 1 (bots, tests, old saves).
    */
   collection: Record<string, number> | null;
-  /** «Чёрная касса»: the turn each move can be bought again, and the turn a bought move acts on. */
+  /** «Грязные приёмы»: the turn each trick can be used again, and the turn a used trick acts on. */
   cashReady: Record<string, number>;
   cashEffects: Record<string, number>;
-  /** Cards taken from the board's current offer: the first is free, a second costs its price. */
+  /** Cards taken from the board's current offer: one, more with a task's voucher. */
   shopPicks: number;
-  /** Requests for three more cards since the board's last offer (each dearer, `shopRequestStep`). */
+  /** Requests for three more cards since the board's last offer (the first free, then dearer in reputation). */
   shopExtras: number;
   /** Named residents (CONCEPT.md §2.2а): person id → resident id; today's letters; what happened to them. */
   people: Record<string, number>;
@@ -1377,12 +1331,6 @@ export interface GameState {
   /** Experience and loyalty of the reporters, by id. */
   staff: Record<string, StaffState>;
   lastOfferTurn: number;
-  money: number;
-  /** Price level of the paper (index in `Balance.prices`), chosen by the player. */
-  price: number;
-  brokeTurns: number;
-  /** A bank loan being paid off day by day (CONCEPT.md §5.4а). */
-  loan: { amount: number; perDay: number; daysLeft: number } | null;
   residents: Resident[];
   buildings: Building[];
   /** The map is mapSize × mapSize tiles; see map.ts for roads. */
@@ -1394,13 +1342,13 @@ export interface GameState {
   upgrades: string[];
   /** Hired reporter ids, in hiring order. */
   reporters: string[];
-  /** Candidates the HR agency offered this turn; hiring them costs nothing more. Cleared each turn. */
+  /** Seats in the newsroom opened so far (CONCEPT.md §3.3): circulation opens them, they never close. */
+  seats: number;
+  /** Candidates the HR agency offered this turn; hiring them into a free seat is free. Cleared each turn. */
   agencyOffer: string[];
-  /** Agency searches made this turn: the first is free, the next ones cost `agencyFee`. */
+  /** Agency searches made this turn: one a day. */
   agencyCalls: number;
   lastFinds: Find[];
-  /** Ad-rate multiplier of the outlet, drops after a scandal. */
-  scandal: number;
   investigations: Investigation[];
   /** Consecutive turns each topic was published, ending last turn. */
   topicStreak: Partial<Record<Topic, number>>;
@@ -1440,8 +1388,6 @@ export interface GameState {
   abilityReady: Record<string, number>;
   /** The mid-game twist (CONCEPT.md §4.9), once it began. */
   twist: TwistState | null;
-  /** Upkeep a day added by a failed audit. */
-  budgetCut: number;
   /** The campaign against one place (CONCEPT.md §3.6а), if one is on. */
   hunt: HuntState | null;
   /** How tainted a place is in people's eyes, by building id (0..1): customers stay away, workers quit. */
@@ -1454,8 +1400,6 @@ export interface GameState {
   crimeHeat: number;
   /** Free cards from the upgrade deck won by tasks (CONCEPT.md §4.8). */
   vouchers: number;
-  /** Sales minus upkeep of the last issue: the «прибыль в день» of tasks. */
-  lastProfit: number;
   /** The campaign town this game is played in (CONCEPT.md §9); null for a single game. */
   town: string | null;
   outcome: Outcome | null;
@@ -1487,20 +1431,11 @@ export interface PublicationReport {
   tension?: Record<string, number>;
 }
 
-/** One line of the per-turn expenses: a channel, a reporter's salary or a running investigation. */
-export interface UpkeepItem {
-  kind: 'channel' | 'salary' | 'investigation' | 'budget' | 'loan';
-  /** Channel id or reporter id. */
-  id: string;
-  amount: number;
-}
-
 /** 0 boring, 1 ordinary, 2 interesting, 3 sensational (CONCEPT.md §4.2а). */
 export type IssueLevel = 0 | 1 | 2 | 3;
 
 /** Why readers stopped buying (CONCEPT.md §5.2). */
-/** price = the issue costs more than the resident can or wants to pay (CONCEPT.md §5.4). */
-export type ChurnReason = 'exposed' | 'doubted' | 'boring' | 'empty' | 'price' | 'style';
+export type ChurnReason = 'exposed' | 'doubted' | 'boring' | 'empty';
 
 export interface ReadersChange {
   lost: number;
@@ -1521,17 +1456,12 @@ export interface TurnReport {
   publications: PublicationReport[];
   /** Stories exposed during this turn: this issue's and old lies that surfaced. */
   exposures: ExposedStory[];
-  /** Readers per channel who bought this turn's issue. */
-  buyers: Record<ChannelId, number>;
-  income: Record<ChannelId, number>;
-  upkeep: number;
-  /** What the upkeep was paid for (money window, CONCEPT.md §7.3). */
-  upkeepItems: UpkeepItem[];
-  /** Offers with a catch (CONCEPT.md §3.5а): money the deals paid this turn and the deals we broke. */
-  deals: { paid: number; broken: string[] };
+  /** Offers with a catch (CONCEPT.md §3.5а): readers the deals brought this turn, the deals we broke and the readers that cost. */
+  deals: { readers: number; broken: string[]; lost: number };
+  /** Seats the newsroom opened this turn (CONCEPT.md §3.3). */
+  seatsOpened: number;
   /** Reporters with character (CONCEPT.md §3.3б): who rose a level, who quit, who leaked our lies. */
   staff: { levelUps: string[]; quit: string[]; leaked: string[] };
-  moneyDelta: number;
   /** Followers of at least one channel: at the start of the turn, lost and gained after it. */
   readers: ReadersChange & { before: number; after: number };
   /** How interesting the issue was: the points sum and the level it reached. */
@@ -1550,8 +1480,8 @@ export interface TurnReport {
   events: string[];
   notes: string[];
   outcome: Outcome | null;
-  /** Tasks done and failed this turn (ids) and the money they paid. */
-  tasks: { done: string[]; failed: string[]; reward: number };
+  /** Tasks done and failed this turn (ids). */
+  tasks: { done: string[]; failed: string[] };
   /** The campaign against a place: whether today's issue hit it, its stain, and the place it closed. */
   hunt?: { building: number; hit: boolean; step: number; stain: number; won: string | null };
   /** The twist began or ended this turn. */

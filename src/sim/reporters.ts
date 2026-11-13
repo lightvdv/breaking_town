@@ -293,24 +293,29 @@ export function advanceInvestigations(state: GameState, c: Content, rng: RngStat
 
 // ---------- HR agency (CONCEPT.md §3.3) ----------
 
-/**
- * Pays the HR agency for a search: it offers one or two random reporters who are not on the staff
- * (common ones more often, by `weight`). A new search replaces the previous offer.
- */
-/** What the next agency search costs this turn: the first one a day is free (CONCEPT.md §3.3). */
-export function agencyCost(state: GameState, c: Content): number {
-  return state.agencyCalls > 0 ? c.balance.agencyFee : 0;
+/** Seats left in the newsroom: circulation opens them (CONCEPT.md §3.3). */
+export function freeSeats(state: GameState, c: Content): number {
+  return Math.max(0, Math.min(state.seats, c.balance.maxReporters) - state.reporters.length);
 }
 
+/** Why the agency cannot be called now, or null: one free search a day, only with a free seat. */
+export function agencyBlock(state: GameState, c: Content): string | null {
+  if (state.outcome) return 'game over';
+  if (freeSeats(state, c) <= 0) return 'no seat';
+  if (state.agencyCalls > 0) return 'called';
+  if (!c.reporters.some((r) => r.weight > 0 && !state.reporters.includes(r.id))) return 'nobody';
+  return null;
+}
+
+/**
+ * The HR agency's search: it offers one or two random reporters who are not on the staff (common
+ * ones more often, by `weight`). Free, once a day.
+ */
 export function callAgency(state: GameState, c: Content): string[] {
   const b = c.balance;
-  if (state.outcome) throw new Error('Game is over');
-  if (state.reporters.length >= b.maxReporters) throw new Error('The newsroom is full');
-  const fee = agencyCost(state, c);
-  if (state.money < fee) throw new Error('Not enough money for the agency');
+  const block = agencyBlock(state, c);
+  if (block) throw new Error(`Cannot call the agency: ${block}`);
   const pool = c.reporters.filter((r) => r.weight > 0 && !state.reporters.includes(r.id));
-  if (!pool.length) throw new Error('The agency has nobody left to offer');
-  state.money -= fee;
   state.agencyCalls++;
   const count = Math.min(pool.length, 1 + int(state.rng, b.agencyMaxOffer));
   const offer: string[] = [];
@@ -323,14 +328,11 @@ export function callAgency(state: GameState, c: Content): string[] {
   return offer;
 }
 
-/** Hires one of the agency's candidates for the reporter's own price; the salary follows every turn. */
+/** Hires one of the agency's candidates into a free seat; it costs nothing. */
 export function hireFromAgency(state: GameState, c: Content, id: string): void {
   if (state.outcome) throw new Error('Game is over');
   if (!state.agencyOffer.includes(id)) throw new Error(`Reporter ${id} was not offered`);
-  if (state.reporters.length >= c.balance.maxReporters) throw new Error('The newsroom is full');
-  const cost = reporterOf(c, id).hireCost;
-  if (state.money < cost) throw new Error(`Not enough money to hire ${id}`);
-  state.money -= cost;
+  if (freeSeats(state, c) <= 0) throw new Error('No free seat in the newsroom');
   state.reporters.push(id);
   state.staff[id] = { xp: 0, loyalty: c.balance.startLoyalty };
   state.agencyOffer = state.agencyOffer.filter((x) => x !== id);

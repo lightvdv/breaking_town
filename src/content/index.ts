@@ -13,7 +13,6 @@ import difficulties from './difficulties.json';
 import groups from './groups.json';
 import reporters from './reporters.json';
 import upgrades from './upgrades.json';
-import forks from './forks.json';
 import tasks from './tasks.json';
 import twists from './twists.json';
 import towns from './towns.json';
@@ -29,5 +28,5 @@ export function localized<T>(name: string, data: T): T {
   return lang() === 'en' ? applyOverlay(data, (overlays as Record<string, Record<string, string>>)[name]) : data;
 }
 
-const raw = { arcs, balance, difficulties, buildings, cards, channels, groups, lengths, letters, synergies, cash, offers, people, reporters, tasks, towns, townGen, townCalibration, twists, upgrades, forks };
+const raw = { arcs, balance, difficulties, buildings, cards, channels, groups, lengths, letters, synergies, cash, offers, people, reporters, tasks, towns, townGen, townCalibration, twists, upgrades };
 export const content = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, localized(k, v)])) as unknown as Content;

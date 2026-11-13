@@ -14,7 +14,7 @@ import {
   RIVAL_DIG,
   rivalStarted,
   callAgency,
-  agencyCost,
+  agencyBlock,
   hireFromAgency,
   createGame,
   createRng,
@@ -31,7 +31,6 @@ import {
   purchase,
   setReporterTopics,
   rankedPlacements,
-  totalUpkeep,
   pairKey,
   rivalReaders,
   rivalTrust,
@@ -44,6 +43,7 @@ import {
   type GameLength,
   answerOffer,
   offerOf,
+  retainBlock,
   retainCost,
   templateOf,
   type CardInstance,
@@ -54,12 +54,11 @@ import {
   type Publication,
   type RngState,
   cashBlock,
-  cashCost,
   cashMoves,
   useCash,
   goalOf,
   refreshShop,
-  shopRequestCost,
+  refreshBlock,
 } from '../src/sim';
 import { next } from '../src/sim/rng';
 
@@ -197,7 +196,7 @@ const pairKeyOf = (c: CardInstance) => pairKey(content, c.conflict![0], c.confli
 /** The thoughtful bot keeps one reporter digging dirt on the biggest group. */
 /**
  * The thoughtful bots' attack beyond the issue (CONCEPT.md §3.6а, §8.4): they hound the biggest
- * workplace from the third day, lure the guardian's authors away when money allows and set a
+ * workplace from the third day, lure the guardian's authors away while trusted and set a
  * reporter digging into it once the newsroom has three.
  */
 function attack(s: GameState): void {
@@ -211,7 +210,7 @@ function attack(s: GameState): void {
   }
   const rival = s.rival;
   if (!rival || rival.closed || !rivalStarted(s, content)) return;
-  if (!lureBlock(s, content) && s.money - lureCost(s, content) >= totalUpkeep(s, content) * 3) lureRivalAuthor(s, content);
+  if (!lureBlock(s, content) && averageTrust(s, content) - lureCost(s, content) >= 40) lureRivalAuthor(s, content);
   const free = s.reporters.filter((id) => !s.investigations.some((x) => x.reporterId === id) && !s.rivalWatch.includes(id));
   if (s.reporters.length >= 3 && free.length >= 2 && !s.investigations.some((x) => x.target === RIVAL_DIG)) startInvestigation(s, content, free[0], RIVAL_DIG);
 }
@@ -230,7 +229,7 @@ function manageInvestigations(s: GameState): void {
 function criminal(s: GameState): Decision {
   for (const id of s.reporters) if (!(s.reporterTopics[id] ?? []).includes('crime')) setReporterTopics(s, content, id, ['crime']);
   const desk = listPurchases(s, content).find((p) => p.id === 'crime_desk' && p.affordable && p.unlocked);
-  if (desk && s.money - desk.cost >= totalUpkeep(s, content) * 2) purchase(s, content, desk.id);
+  if (desk) purchase(s, content, desk.id);
   if (!s.hunt && s.turn >= 3) {
     const police = s.buildings.find((x) => x.type === 'police' && x.open);
     if (police) startHunt(s, police.id);
@@ -297,26 +296,22 @@ function decide(s: GameState, strategy: Strategy, rng: RngState): Decision {
 }
 
 /**
- * Buys in priority order and saves up for the next priority item instead of spending on cheap extras.
- * A number in the plan means "have this many reporters": the bot pays the HR agency and hires the
- * best candidate it offers.
+ * Takes the board's cards in priority order (CONCEPT.md §3.5б: one card of three, for free) and fills
+ * every free seat of the newsroom with the best candidate of the day's agency search (CONCEPT.md §3.3).
  */
-const buyOrder: (string | number)[] = [2, 'kiosk_1', 'sports_page', 'newspaper_quality_1', 3, 'kiosk_2', 'editorial_1', 'youth_insert', 4, 'kiosk_3', 'subscription', 5, 'lawyers', 'kiosk_4'];
-// Upgrades come from a deck and forks (CONCEPT.md §3.5): the bot takes the fork option of its side
-// first and never buys what works against it; abilities it would not use.
-const forkPicks: Record<GameState['mode'], string[]> = { destroy: ['yellow_layout', 'trolls', 'insider'] };
+const buyOrder: string[] = ['kiosk_1', 'sports_page', 'newspaper_quality_1', 'kiosk_2', 'editorial_1', 'youth_insert', 'kiosk_3', 'subscription', 'kiosk_4'];
+// Cards that work against the bot's play; abilities it would not use.
 const avoid: Record<GameState['mode'], string[]> = {
-  destroy: ['solid_style', 'cheap_paper', 'lawyers', 'paid_subscription', 'mole'],
+  destroy: ['paid_subscription', 'mole'],
 };
 // --avoid id,id: the bots never buy these (to measure what an upgrade adds).
-// --no-cash: the thoughtful bots leave the black cash alone.
+// --no-cash: the thoughtful bots leave the dirty tricks alone.
 const noCash = process.argv.includes('--no-cash');
 const avoidIndex = process.argv.indexOf('--avoid');
 if (avoidIndex >= 0) for (const id of process.argv[avoidIndex + 1].split(',')) avoid.destroy.push(id);
-// The fork option is taken only if it is not avoided.
 
 // Directions a strategy plays for: their cards are taken first.
-const onPath = (strategy: Strategy): string[] => (strategy === mixed ? ['money', 'trust', 'yellow', 'staff'] : strategy === agitator ? ['money', 'yellow', 'hunt', 'split', 'rival'] : strategy === criminal ? ['crime', 'hunt', 'money'] : []);
+const onPath = (strategy: Strategy): string[] => (strategy === mixed ? ['trust', 'yellow', 'staff'] : strategy === agitator ? ['yellow', 'hunt', 'split', 'rival'] : strategy === criminal ? ['crime', 'hunt'] : []);
 // Directions a strategy has no use for: a thoughtful player would not take their cards for free either.
 const offPath = (strategy: Strategy): string[] => (strategy === mixed ? ['hunt', 'split', 'crime'] : strategy === agitator ? ['crime'] : strategy === criminal ? ['split'] : []);
 
@@ -326,45 +321,38 @@ function shop(s: GameState, strategy: Strategy): void {
     const tags = content.upgrades.find((u) => u.id === id)?.tags ?? [];
     return !tags.length || tags.some((t) => !skip.includes(t));
   };
-  // The fork option comes once the newsroom has three reporters (it is not worth starving the staff for).
-  const at = buyOrder.indexOf(3) + 1;
-  const order = [...buyOrder.slice(0, at), ...forkPicks[s.mode].filter((id) => !avoid[s.mode].includes(id)), ...buyOrder.slice(at)];
+  // Every free seat gets the best candidate of the day's search.
+  if (!agencyBlock(s, content)) {
+    const best = callAgency(s, content).sort((a, b) => score(b) - score(a))[0];
+    if (best) hireFromAgency(s, content, best);
+  }
   for (;;) {
-    const reserve = totalUpkeep(s, content) * 3;
     const options = listPurchases(s, content).filter((p) => p.unlocked && !avoid[s.mode].includes(p.id) && !content.upgrades.find((u) => u.id === p.id)?.ability && !content.upgrades.find((u) => u.id === p.id)?.cash && useful(p.id));
-    const step = order.find((x) => (typeof x === 'number' ? s.reporters.length < x : options.some((p) => p.id === x)));
-    if (typeof step === 'number') {
-      // Enough for the fee and a typical hire on top of the reserve.
-      if (s.money - agencyCost(s, content) - 200 < reserve) return;
-      const offer = callAgency(s, content);
-      const best = offer.filter((id) => reporterOf(content, id).hireCost <= s.money).sort((a, b) => score(b) - score(a))[0];
-      if (best) hireFromAgency(s, content, best);
-      continue;
-    }
-    // Nothing of its plan among the board's three: with money to spare it asks for three more, at most
-    // twice before the board's next offer (CONCEPT.md §3.5б «Запрос вне срока»).
-    const wanted = order.some((x) => typeof x === 'string' && !s.upgrades.includes(x));
-    if (step === undefined && wanted && s.shopOffer.length && !s.shopPicks && (s.shopExtras ?? 0) < 2 && s.money - shopRequestCost(s, content) >= reserve + 400) {
+    const step = buyOrder.find((x) => options.some((p) => p.id === x));
+    // Nothing of its plan among the board's three: it asks for three more — the first request is free,
+    // a second only while well trusted (CONCEPT.md §3.5б «Запрос вне срока»).
+    const wanted = buyOrder.some((x) => !s.upgrades.includes(x));
+    const extras = s.shopExtras ?? 0;
+    if (step === undefined && wanted && s.shopOffer.length && !s.shopPicks && extras < 2 && !refreshBlock(s, content) && (extras === 0 || averageTrust(s, content) >= 55)) {
       refreshShop(s, content);
       continue;
     }
-    // One card of the board's three is taken (CONCEPT.md §3.5б): the rarest, then the dearest — they are the strongest.
+    // One card of the board's three is taken (CONCEPT.md §3.5б): the rarest — they are the strongest.
     const rank = (id: string) => ['common', 'rare', 'legendary'].indexOf(content.upgrades.find((u) => u.id === id)?.rarity ?? 'common');
-    // Without a planned card the bot takes one of its own path first, then the rarest, then the dearest.
+    // Without a planned card the bot takes one of its own path first, then the rarest.
     const mine = (id: string) => ((content.upgrades.find((u) => u.id === id)?.tags ?? []).some((t) => onPath(strategy).includes(t)) ? 1 : 0);
-    const option = step !== undefined ? options.find((p) => p.id === step) : [...options].filter((p) => p.affordable).sort((a, b) => mine(b.id) - mine(a.id) || rank(b.id) - rank(a.id) || b.cost - a.cost)[0];
-    if (!option || !option.affordable || s.money - option.cost < reserve) return;
+    const option = step !== undefined ? options.find((p) => p.id === step) : [...options].filter((p) => p.affordable).sort((a, b) => mine(b.id) - mine(a.id) || rank(b.id) - rank(a.id))[0];
+    if (!option || !option.affordable) return;
     purchase(s, content, option.id);
   }
 }
 
 /**
- * «Чёрная касса» (CONCEPT.md §3.5в): the thoughtful bots spend spare money on the moves that need
- * no judgement — today only the ad campaign (the bots take no cash cards).
+ * «Грязные приёмы» (CONCEPT.md §3.5в): the thoughtful bots use the tricks that need no judgement —
+ * today only the ad campaign, which costs nothing but its wait (the bots take no trick cards).
  */
 function spendCash(s: GameState): void {
-  const reserve = totalUpkeep(s, content) * 3 + 200;
-  for (const def of cashMoves(s, content)) if (def.id === 'ads' && !cashBlock(s, content, def.id) && s.money - cashCost(s, content, def.id) >= reserve) useCash(s, content, def.id);
+  for (const def of cashMoves(s, content)) if (def.id === 'ads' && !cashBlock(s, content, def.id)) useCash(s, content, def.id);
 }
 
 /** How good a candidate looks to the bot: luck and nose. */
@@ -386,8 +374,8 @@ function answerOffers(s: GameState, strategy: Strategy): void {
   const kind = offerOf(content, s.offer.id).kind;
   const trust = averageTrust(s, content);
   const thoughtful = strategy === mixed || strategy === agitator;
-  // A lured reporter is kept when the money allows.
-  if (kind === 'poach') return void answerOffer(s, content, thoughtful && s.money >= 2 * retainCost(content, s.offer.reporterId!));
+  // A lured reporter is kept with a voucher, or for reputation while well trusted.
+  if (kind === 'poach') return void answerOffer(s, content, thoughtful && !retainBlock(s, content) && ('voucher' in retainCost(s, content) || trust >= 45));
   answerOffer(s, content, thoughtful && kind === 'kompromat' && trust >= 45);
 }
 
@@ -397,7 +385,7 @@ const collectionIndex = process.argv.indexOf('--collection');
 const collectionKind = collectionIndex >= 0 ? process.argv[collectionIndex + 1] : 'starter';
 if (!['starter', 'all', 'max'].includes(collectionKind)) throw new Error(`Unknown collection ${collectionKind}`);
 const botCollection: Record<string, number> = Object.fromEntries(
-  baseContent.upgrades.filter((u) => !u.fork && u.rarity && (collectionKind !== 'starter' || u.starter)).map((u) => [u.id, collectionKind === 'max' ? 3 : 1]),
+  baseContent.upgrades.filter((u) => u.rarity && (collectionKind !== 'starter' || u.starter)).map((u) => [u.id, collectionKind === 'max' ? 3 : 1]),
 );
 
 function playGame(seed: number, strategy: Strategy, trace = false): Result {
@@ -430,7 +418,7 @@ function playGame(seed: number, strategy: Strategy, trace = false): Result {
       console.log(
         `T${r.turn} index ${m.cityIndex.toFixed(0)} | pop ${m.activeResidents} emp ${m.employment.toFixed(2)} ` +
           `eco ${m.economy.toFixed(2)} mood ${m.mood.toFixed(2)} order ${m.order.toFixed(2)} | ` +
-          `money ${s.money} | trust ${trust}`,
+          `seats ${s.reporters.length}/${s.seats} | trust ${trust}`,
       );
       for (const p of r.publications) {
         console.log(

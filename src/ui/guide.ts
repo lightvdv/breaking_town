@@ -41,8 +41,7 @@ const firstSeen: Record<string, (v: GuideView) => boolean> = {
   tasks: (v) => v.state.tasks.length > 0,
   twist: (v) => v.state.twist !== null && v.state.twist.result === null,
   investigation: (v) => v.state.hand.some((x) => templateOf(v.c, x.templateId).source === 'investigation'),
-  // When the player is stuck (CONCEPT.md §7.3): money lying idle, a story nobody wrote, a town getting better.
-  money_idle: (v) => v.state.money >= 600 && v.state.upgrades.length === 0 && v.state.turn >= 4,
+  // When the player is stuck (CONCEPT.md §7.3): a story nobody wrote, a town getting better.
   missed_story: (v) => v.state.missedEvents.length > 0 && v.state.reporters.length < 3 && v.state.turn >= 2,
   city_rising: (v) => v.state.turn >= 3 && !!v.report && v.report.metricsAfter.cityIndex > v.report.metricsBefore.cityIndex + 0.5,
   // The first time the attack's tools are at hand (CONCEPT.md §3.6а, §5.6, §8.4).
